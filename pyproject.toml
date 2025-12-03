@@ -1,0 +1,74 @@
+[project]
+name = "depin"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.123.5",
+    "mypy>=1.19.0",
+    "pyright>=1.1.406",
+    "pytest>=8.4.2",
+]
+
+
+[tool.ruff]
+line-length = 120
+exclude = ["**/migrations/versions"]
+
+[tool.ruff.format]
+preview = true
+quote-style = 'single'
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PT']
+
+[tool.ruff.lint.isort]
+case-sensitive = true
+
+[tool.mypy]
+exclude = ["^.venv/", "^venv/"]
+explicit_package_bases = true
+mypy_path = ["."]
+
+strict = true
+
+disallow_untyped_calls = false
+disallow_untyped_defs = false
+warn_return_any = false
+disallow_incomplete_defs = false
+allow_redefinition = false
+
+disable_error_code = ["misc"]
+enable_error_code = ["ignore-without-code", "redundant-self"]
+
+[[tool.mypy.overrides]]
+module = ["pytest.*"]
+ignore_missing_imports = true
+
+
+[tool.basedpyright]
+exclude = [
+    '**/node_modules',
+    '**/__pycache__',
+    '**/migrations/versions',
+    '**/.*',
+]
+
+typeCheckingMode = 'recommended'
+
+reportMissingTypeStubs = false
+reportUnknownVariableType = false
+reportUnannotatedClassAttribute = false
+reportUnknownMemberType = false
+reportUnusedCallResult = false
+reportMissingParameterType = false
+reportUnknownParameterType = false
+reportAny = false
+reportExplicitAny = false
+reportUnknownArgumentType = false
+reportUnusedParameter = "hint"
+reportImportCycles = "hint"
+
+reportImplicitOverride = true
