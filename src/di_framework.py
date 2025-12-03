@@ -4,7 +4,7 @@ import pkgutil
 from abc import ABCMeta
 from contextvars import ContextVar
 from enum import Enum
-from typing import Any, Callable, Dict, Optional, Type, get_type_hints, override
+from typing import Any, Callable, Dict, Optional, Type, TypeVar, cast, get_type_hints, overload, override
 
 
 class Scope(Enum):
@@ -29,8 +29,21 @@ def get_request_store():
     return _request_context.get()
 
 
-def injectable[T = Type[Any]](_cls: T | None = None, *, scope: Scope = Scope.SINGLETON) -> T | Callable[[T], T]:
-    def wrap(cls: T) -> T:
+CLASS = TypeVar('CLASS', bound=type)
+
+
+@overload
+def injectable(_cls: CLASS, /, *, scope: Scope = Scope.SINGLETON) -> CLASS: ...
+@overload
+def injectable(*, scope: Scope = Scope.SINGLETON) -> Callable[[CLASS], CLASS]: ...
+
+
+def injectable(
+    _cls: CLASS | None = None,
+    *,
+    scope: Scope = Scope.SINGLETON,
+) -> CLASS | Callable[[CLASS], CLASS]:
+    def wrap(cls: CLASS) -> CLASS:
         setattr(cls, '__di_component__', True)
         setattr(cls, '__di_scope__', scope)
         return cls
@@ -43,8 +56,8 @@ def injectable[T = Type[Any]](_cls: T | None = None, *, scope: Scope = Scope.SIN
 
 class Container:
     def __init__(self):
-        self._providers: Dict[Type[Any], Callable[[], Any]] = {}
-        self._registrations: Dict[Type[Any], Dict[str, Any]] = {}
+        self._providers: Dict[type[Any], Callable[[], Any]] = {}
+        self._registrations: Dict[type[Any], Dict[str, Any]] = {}
 
     def auto_scan(self, package_names: list[str]):
         for package_name in package_names:
@@ -107,7 +120,7 @@ class Container:
                 all_classes.append(obj)
 
         # construir mapa: abc -> [impls]
-        abc_map: Dict[Type[Any], list[Type[Any]]] = {}
+        abc_map: Dict[type[Any], list[type[Any]]] = {}
 
         for cls in all_classes:
             if isinstance(cls, ABCMeta):
@@ -129,7 +142,7 @@ class Container:
                 self.register(abc, implementation=impl, scope=scope)
 
     # ------- registro explícito --------------------------------------------
-    def register(self, abstract: Type[Any], implementation: Optional[Type[Any]] = None, scope: Scope = Scope.SINGLETON):
+    def register(self, abstract: type[Any], implementation: Optional[type[Any]] = None, scope: Scope = Scope.SINGLETON):
         """
         Registra um tipo (abstract/interface) mapeado para uma implementação.
         Se implementation is None, assume-se abstract é instanciável.
@@ -171,7 +184,7 @@ class Container:
         self._registrations[abstract] = {'implementation': impl, 'scope': scope}
 
     # ------- resolução -----------------------------------------------------
-    def _construct(self, cls: Type[Any]):
+    def _construct(self, cls: type[Any]):
         """Instancia uma classe resolvendo suas dependências via type hints do __init__."""
         sig = inspect.signature(cls.__init__)
         kwargs = {}
@@ -197,27 +210,29 @@ class Container:
 
         return cls(**kwargs)
 
-    def _has_provider_for(self, t: Type[Any]) -> bool:
+    def _has_provider_for(self, t: type[Any]) -> bool:
         return t in self._providers
 
-    def resolve(self, abstract: Type[Any]):
+    def resolve[T](self, abstract: Type[T]) -> T:
         """Obtém instância para um tipo registrado."""
 
-        provider = self._providers.get(abstract)
+        provider = cast(Callable[[], T], self._providers.get(abstract))
 
         if provider is None:
             # se o tipo é instanciável concreto, tenta registrar automaticamente
             if inspect.isclass(abstract) and not inspect.isabstract(abstract):
                 self.register(abstract, implementation=abstract, scope=Scope.TRANSIENT)
-                provider = self._providers.get(abstract)
+
+                provider = cast(Callable[[], T], self._providers.get(abstract))
             else:
                 raise RuntimeError(f'Nenhum provider registrado para {abstract}')
 
-        if provider is not None:
-            return provider()
+        if provider is None:
+            raise ValueError('Provider não pode ser None')
 
-    # ------- FastAPI helpers ----------------------------------------------
-    def provide(self, t: Type[Any]):
+        return provider()
+
+    def provide(self, t: type[Any]):
         """Retorna um callável pronto para usar em Depends: Depends(container.provide(Cls))"""
 
         def _dep():
@@ -247,6 +262,5 @@ class Container:
 
         app.add_middleware(_RequestScopeMiddleware)
 
-    # ------- introspecao ---------------------------------------------------
     def registrations(self):
         return dict(self._registrations)

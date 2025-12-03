@@ -1,4 +1,6 @@
-from src.di_framework import Container, Scope, enter_request_scope, exit_request_scope, injectable
+from typing import reveal_type
+
+from src.di_framework import Container, Scope, injectable
 
 
 @injectable(scope=Scope.SINGLETON)
@@ -29,8 +31,8 @@ def random_provider():
 container = Container()
 
 # registra componentes automaticamente
-# container.register(Repo, Repo, scope=Scope.SINGLETON)
-# container.register(Service, Service, scope=Scope.TRANSIENT)
+container.register(Repo, Repo, scope=Scope.SINGLETON)
+container.register(Service, Service, scope=Scope.TRANSIENT)
 
 # registra provider como função
 # container.register(float, implementation=random_provider)
@@ -40,12 +42,15 @@ r1 = container.resolve(Repo)
 r2 = container.resolve(Repo)
 print(r1 is r2)  # True
 
+
+reveal_type(Repo)
+
 print(container.registrations())
 
-# print('\n=== Transient Service ===')
-# s1 = container.resolve(Service)
-# s2 = container.resolve(Service)
-# print(s1 is s2)  # False
+print('\n=== Transient Service ===')
+s1 = container.resolve(Service)
+s2 = container.resolve(Service)
+print(s1 is s2)  # False
 
 # print('\nRepo.x vai aumentando mesmo com services novos:')
 # print(s1.do())  # 1
