@@ -1,10 +1,9 @@
 import importlib
 import inspect
 import pkgutil
-from abc import ABCMeta
 from contextvars import ContextVar
 from enum import Enum
-from typing import Any, Callable, Dict, Optional, Type, get_type_hints, override
+from typing import Any, Callable, Dict, Optional, Type, TypeVar, cast, get_type_hints, overload, override
 
 
 class Scope(Enum):
@@ -29,8 +28,21 @@ def get_request_store():
     return _request_context.get()
 
 
-def injectable[T = Type[Any]](_cls: T | None = None, *, scope: Scope = Scope.SINGLETON) -> T | Callable[[T], T]:
-    def wrap(cls: T) -> T:
+CLASS = TypeVar('CLASS', bound=type)
+
+
+@overload
+def injectable(_cls: CLASS, /, *, scope: Scope = Scope.SINGLETON) -> CLASS: ...
+@overload
+def injectable(*, scope: Scope = Scope.SINGLETON) -> Callable[[CLASS], CLASS]: ...
+
+
+def injectable(
+    _cls: CLASS | None = None,
+    *,
+    scope: Scope = Scope.SINGLETON,
+) -> CLASS | Callable[[CLASS], CLASS]:
+    def wrap(cls: CLASS) -> CLASS:
         setattr(cls, '__di_component__', True)
         setattr(cls, '__di_scope__', scope)
         return cls
@@ -43,16 +55,12 @@ def injectable[T = Type[Any]](_cls: T | None = None, *, scope: Scope = Scope.SIN
 
 class Container:
     def __init__(self):
-        self._providers: Dict[Type[Any], Callable[[], Any]] = {}
-        self._registrations: Dict[Type[Any], Dict[str, Any]] = {}
+        self._providers: Dict[type[Any], Callable[[], Any]] = {}
+        self._registrations: Dict[type[Any], Dict[str, Any]] = {}
 
     def auto_scan(self, package_names: list[str]):
         for package_name in package_names:
             self._scan_package(package_name)
-
-        # após escanear, separamos interfaces (ABCs) das implementacoes
-        # e vinculamos automaticamente se houver exatamente 1 implementacao concreta.
-        self._auto_bind_abstract_base_classes()
 
     def _scan_package(self, package_name: str):
         try:
@@ -84,8 +92,10 @@ class Container:
             # considerar apenas classes definidas naquele módulo (evitar importar builtins)
             if obj.__module__ != module.__name__:
                 continue
-            # se marcada como componente, registra
-            if getattr(obj, '__di_component__', False):
+
+            is_di_injectable = getattr(obj, '__di_component__', False)
+
+            if is_di_injectable:
                 scope = getattr(obj, '__di_scope__', Scope.SINGLETON)
                 self.register(obj, implementation=obj, scope=scope)
             else:
@@ -93,48 +103,14 @@ class Container:
                 # registramos também classes concretas para possibilidade de autowire
                 pass
 
-    def _auto_bind_abstract_base_classes(self):
-        # coleta todos abcs e suas possíveis implementacoes no sys.modules
-        import sys
-
-        all_classes = []
-        for module in list(sys.modules.values()):
-            if not module:
-                continue
-            for _, obj in inspect.getmembers(module, inspect.isclass):
-                if obj.__module__ and obj.__module__.startswith('builtins'):
-                    continue
-                all_classes.append(obj)
-
-        # construir mapa: abc -> [impls]
-        abc_map: Dict[Type[Any], list[Type[Any]]] = {}
-
-        for cls in all_classes:
-            if isinstance(cls, ABCMeta):
-                abc_map.setdefault(cls, [])
-        for cls in all_classes:
-            for abc in list(abc_map.keys()):
-                try:
-                    if issubclass(cls, abc) and cls is not abc and not inspect.isabstract(cls):
-                        abc_map[abc].append(cls)
-                except Exception:
-                    continue
-
-        # para cada abc com exatamente 1 implementação, registra binding default se não houver provider
-        for abc, impls in abc_map.items():
-            if len(impls) == 1 and abc not in self._providers:
-                impl = impls[0]
-                # usar scope definido na implementação se estiver marcado
-                scope = getattr(impl, '__di_scope__', Scope.SINGLETON)
-                self.register(abc, implementation=impl, scope=scope)
-
-    # ------- registro explícito --------------------------------------------
-    def register(self, abstract: Type[Any], implementation: Optional[Type[Any]] = None, scope: Scope = Scope.SINGLETON):
+    def register(self, abstract: type[Any], implementation: Optional[type[Any]] = None, scope: Scope = Scope.SINGLETON):
         """
         Registra um tipo (abstract/interface) mapeado para uma implementação.
         Se implementation is None, assume-se abstract é instanciável.
         """
+
         impl = implementation or abstract
+        provider = None
 
         if scope == Scope.SINGLETON:
             instance_holder = {}
@@ -164,15 +140,15 @@ class Container:
 
             provider = provider_request
 
-        else:
-            raise ValueError('Scope desconhecido')
+        if provider is None:
+            raise RuntimeError(f'Nao foi possivel registrar {abstract}')
 
         self._providers[abstract] = provider
         self._registrations[abstract] = {'implementation': impl, 'scope': scope}
 
-    # ------- resolução -----------------------------------------------------
-    def _construct(self, cls: Type[Any]):
+    def _construct(self, cls: type[Any]):
         """Instancia uma classe resolvendo suas dependências via type hints do __init__."""
+
         sig = inspect.signature(cls.__init__)
         kwargs = {}
         hints = get_type_hints(cls.__init__)
@@ -187,7 +163,7 @@ class Container:
                 kwargs[name] = self.resolve(param_type)
             else:
                 # sem provider conhecido => se parametro tem default, deixa
-                if param.default is not inspect._empty:  # type: ignore
+                if param.default is not inspect._empty:  # pyright: ignore[reportPrivateUsage]
                     # usar default
                     pass
                 else:
@@ -197,27 +173,29 @@ class Container:
 
         return cls(**kwargs)
 
-    def _has_provider_for(self, t: Type[Any]) -> bool:
+    def _has_provider_for(self, t: type[Any]) -> bool:
         return t in self._providers
 
-    def resolve(self, abstract: Type[Any]):
+    def resolve[T](self, abstract: Type[T]) -> T:
         """Obtém instância para um tipo registrado."""
 
-        provider = self._providers.get(abstract)
+        provider = cast(Callable[[], T], self._providers.get(abstract))
 
         if provider is None:
             # se o tipo é instanciável concreto, tenta registrar automaticamente
             if inspect.isclass(abstract) and not inspect.isabstract(abstract):
                 self.register(abstract, implementation=abstract, scope=Scope.TRANSIENT)
-                provider = self._providers.get(abstract)
+
+                provider = cast(Callable[[], T], self._providers.get(abstract))
             else:
                 raise RuntimeError(f'Nenhum provider registrado para {abstract}')
 
-        if provider is not None:
-            return provider()
+        if provider is None:
+            raise ValueError('Provider não pode ser None')
 
-    # ------- FastAPI helpers ----------------------------------------------
-    def provide(self, t: Type[Any]):
+        return provider()
+
+    def provide(self, t: type[Any]):
         """Retorna um callável pronto para usar em Depends: Depends(container.provide(Cls))"""
 
         def _dep():
@@ -247,6 +225,5 @@ class Container:
 
         app.add_middleware(_RequestScopeMiddleware)
 
-    # ------- introspecao ---------------------------------------------------
     def registrations(self):
         return dict(self._registrations)
