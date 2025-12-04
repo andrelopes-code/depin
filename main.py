@@ -1,72 +1,64 @@
-from typing import reveal_type
+import asyncio
 
-from src.di_framework import Container, Scope, injectable
+from fastapi import Depends, FastAPI
+from rich import print
 
-
-@injectable(scope=Scope.SINGLETON)
-class Repo:
-    def __init__(self):
-        self.x = 0
-
-    def inc(self):
-        self.x += 1
-        return self.x
-
-
-@injectable(scope=Scope.TRANSIENT)
-class Service:
-    def __init__(self, repo: Repo):
-        self.repo = repo
-
-    def do(self):
-        return self.repo.inc()
-
-
-def random_provider():
-    import random
-
-    return random.random()
-
+from di_framework import Container, Provide, Scope
 
 container = Container()
 
-# registra componentes automaticamente
-container.register(Repo, Repo, scope=Scope.SINGLETON)
-container.register(Service, Service, scope=Scope.TRANSIENT)
 
-# registra provider como função
-# container.register(float, implementation=random_provider)
-
-print('\n=== Singleton Repo ===')
-r1 = container.resolve(Repo)
-r2 = container.resolve(Repo)
-print(r1 is r2)  # True
+class Engine:
+    url = '<dburl>'
 
 
-reveal_type(Repo)
+class Session:
+    def __init__(self, engine: Engine) -> None:
+        self.session_id = 12345678
+        self.engine = engine
 
-print(container.registrations())
+    def commit(self):
+        print(f'SESSION <{self.session_id}> COMMITED')
 
-print('\n=== Transient Service ===')
-s1 = container.resolve(Service)
-s2 = container.resolve(Service)
-print(s1 is s2)  # False
 
-# print('\nRepo.x vai aumentando mesmo com services novos:')
-# print(s1.do())  # 1
-# print(s2.do())  # 2
+async def db_engine():
+    await asyncio.sleep(0.2)
+    return Engine()
 
-# print('\n=== Provider customizado ===')
-# print(container.resolve(float))
-# print(container.resolve(float))  # muda sempre
 
-# print('\n=== Request scope ===')
-# # manualmente simulando request
-# token = enter_request_scope()
-# try:
-#     container.register(str, implementation=lambda: 'request-id', scope=Scope.REQUEST)
-#     a = container.resolve(str)
-#     b = container.resolve(str)
-#     print(a, b, a is b)  # mesma instância
-# finally:
-#     exit_request_scope(token)
+async def db_session(engine: Engine = Provide(db_engine)):
+    await asyncio.sleep(0.2)
+    yield Session(engine)
+    print('CLEANING SESSION')
+
+
+class UserRepo:
+    def __init__(self, session: Session = Provide(db_session)) -> None:
+        self.session = session
+
+
+class UserService:
+    def __init__(self, repo: UserRepo) -> None:
+        self.repo = repo
+
+
+container.register(provider_fn=db_engine, scope=Scope.SINGLETON)
+container.register(provider_fn=db_session, scope=Scope.REQUEST)
+container.register(implementation=UserRepo, scope=Scope.REQUEST)
+container.register(implementation=UserService, scope=Scope.REQUEST)
+
+
+app = FastAPI()
+container.wire_fastapi(app)
+
+
+@app.get('/')
+async def index(
+    dep: UserService = Depends(container.provide(UserService)),
+):
+    dep.repo.session.commit()
+
+    return {
+        'message': 'Hello World',
+        'dep': str(dep),
+    }
