@@ -11,10 +11,10 @@ def test_resolve_same_class_different_scopes():
         def __init__(self):
             A.call_count += 1
 
-    c.register(implementation=A, scope=Scope.SINGLETON)
+    c.register(source=A, scope=Scope.SINGLETON)
 
     # Segunda tentativa de registro sobrescreve
-    c.register(implementation=A, scope=Scope.TRANSIENT)
+    c.register(source=A, scope=Scope.TRANSIENT)
 
     a1 = c.resolve(A)
     a2 = c.resolve(A)
@@ -50,11 +50,11 @@ def test_complex_dependency_graph():
             self.repo = repo
             self.logger = logger
 
-    c.register(implementation=Logger, scope=Scope.SINGLETON)
-    c.register(implementation=Database, scope=Scope.SINGLETON)
-    c.register(implementation=Cache, scope=Scope.SINGLETON)
-    c.register(implementation=Repository, scope=Scope.SINGLETON)
-    c.register(implementation=Service, scope=Scope.SINGLETON)
+    c.register(source=Logger, scope=Scope.SINGLETON)
+    c.register(source=Database, scope=Scope.SINGLETON)
+    c.register(source=Cache, scope=Scope.SINGLETON)
+    c.register(source=Repository, scope=Scope.SINGLETON)
+    c.register(source=Service, scope=Scope.SINGLETON)
 
     service = c.resolve(Service)
 
@@ -72,7 +72,7 @@ def test_varargs_and_kwargs_ignored():
             self.args = args
             self.kwargs = kwargs
 
-    c.register(implementation=Service, scope=Scope.SINGLETON)
+    c.register(source=Service, scope=Scope.SINGLETON)
 
     s = c.resolve(Service)
     assert s.args == ()
@@ -86,7 +86,7 @@ def test_request_scope_isolation():
         def __init__(self):
             self.value = 0
 
-    c.register(implementation=Counter, scope=Scope.REQUEST)
+    c.register(source=Counter, scope=Scope.REQUEST)
 
     # Request 1
     token1 = enter_request_scope()
@@ -109,20 +109,20 @@ def test_mixed_scopes_in_dependency_tree():
     c = Container()
 
     class SingletonService:
-        instances = []
+        instances = []  # type: ignore[var-annotated]
 
         def __init__(self):
             SingletonService.instances.append(self)
 
     class TransientService:
-        instances = []
+        instances = []  # type: ignore[var-annotated]
 
         def __init__(self, singleton: SingletonService):
             TransientService.instances.append(self)
             self.singleton = singleton
 
-    c.register(implementation=SingletonService, scope=Scope.SINGLETON)
-    c.register(implementation=TransientService, scope=Scope.TRANSIENT)
+    c.register(source=SingletonService, scope=Scope.SINGLETON)
+    c.register(source=TransientService, scope=Scope.TRANSIENT)
 
     t1 = c.resolve(TransientService)
     t2 = c.resolve(TransientService)
@@ -145,8 +145,8 @@ def test_registrations_property():
     def provider():
         return 1
 
-    c.register(implementation=A, scope=Scope.SINGLETON)
-    c.register(provider_fn=provider, scope=Scope.TRANSIENT)
+    c.register(source=A, scope=Scope.SINGLETON)
+    c.register(source=provider, scope=Scope.TRANSIENT)
 
     assert A in c.registrations
     assert provider in c.registrations

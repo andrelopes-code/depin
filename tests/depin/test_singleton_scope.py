@@ -10,7 +10,7 @@ def test_singleton_class_same_instance():
         def __init__(self):
             A.call_count += 1
 
-    c.register(implementation=A, scope=Scope.SINGLETON)
+    c.register(source=A, scope=Scope.SINGLETON)
 
     a1 = c.resolve(A)
     a2 = c.resolve(A)
@@ -29,7 +29,7 @@ def test_singleton_function_called_once():
         call_count += 1
         return {'value': call_count}
 
-    c.register(provider_fn=provider, scope=Scope.SINGLETON)
+    c.register(source=provider, scope=Scope.SINGLETON)
 
     r1 = c.resolve(provider)
     r2 = c.resolve(provider)

@@ -21,10 +21,10 @@ def test_resolve_dataclass_dependencies():
     class A:
         b: B
 
-    c.register(implementation=A, scope=Scope.TRANSIENT)
-    c.register(implementation=B, scope=Scope.TRANSIENT)
-    c.register(implementation=C, scope=Scope.TRANSIENT)
-    c.register(provider_fn=provider, scope=Scope.TRANSIENT)
+    c.register(source=A, scope=Scope.TRANSIENT)
+    c.register(source=B, scope=Scope.TRANSIENT)
+    c.register(source=C, scope=Scope.TRANSIENT)
+    c.register(source=provider, scope=Scope.TRANSIENT)
 
     a = c.resolve(A)
 

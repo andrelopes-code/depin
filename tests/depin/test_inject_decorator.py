@@ -8,7 +8,7 @@ def test_inject_simple():
         def __init__(self):
             self.value = 42
 
-    c.register(implementation=Service, scope=Scope.SINGLETON)
+    c.register(source=Service, scope=Scope.SINGLETON)
 
     @c.inject
     def handler(service: Service):
@@ -24,7 +24,7 @@ def test_inject_with_explicit_params():
         def __init__(self):
             self.value = 42
 
-    c.register(implementation=Service, scope=Scope.SINGLETON)
+    c.register(source=Service, scope=Scope.SINGLETON)
 
     @c.inject
     def handler(service: Service, multiplier: int):
@@ -44,7 +44,7 @@ def test_inject_partial_override():
         def __init__(self):
             self.value = 20
 
-    c.register(implementation=Service, scope=Scope.SINGLETON)
+    c.register(source=Service, scope=Scope.SINGLETON)
 
     @c.inject
     def handler(service: Service):

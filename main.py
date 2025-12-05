@@ -17,7 +17,7 @@ class Session:
         self.session_id = 12345678
         self.engine = engine
 
-    def commit(self):
+    async def commit(self):
         print(f'SESSION <{self.session_id}> COMMITED')
 
 
@@ -42,10 +42,10 @@ class UserService:
         self.repo = repo
 
 
-container.register(provider_fn=db_engine, scope=Scope.SINGLETON)
-container.register(provider_fn=db_session, scope=Scope.REQUEST)
-container.register(implementation=UserRepo, scope=Scope.REQUEST)
-container.register(implementation=UserService, scope=Scope.REQUEST)
+container.register(source=db_engine, scope=Scope.SINGLETON)
+container.register(source=db_session, scope=Scope.REQUEST)
+container.register(source=UserRepo, scope=Scope.REQUEST)
+container.register(source=UserService, scope=Scope.REQUEST)
 
 
 app = FastAPI()
@@ -56,7 +56,7 @@ container.wire_fastapi(app)
 async def index(
     dep: UserService = Depends(container.provide(UserService)),
 ):
-    dep.repo.session.commit()
+    await dep.repo.session.commit()
 
     return {
         'message': 'Hello World',

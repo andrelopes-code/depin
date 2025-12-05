@@ -11,8 +11,8 @@ def test_provide_explicit_dependency():
         def __init__(self, config: dict[str, str] = Provide(get_config)):
             self.config = config
 
-    c.register(provider_fn=get_config, scope=Scope.SINGLETON)
-    c.register(implementation=Service, scope=Scope.SINGLETON)
+    c.register(source=get_config, scope=Scope.SINGLETON)
+    c.register(source=Service, scope=Scope.SINGLETON)
 
     s = c.resolve(Service)
     assert s.config['env'] == 'prod'
@@ -25,14 +25,14 @@ def test_provide_overrides_type_hint():
         return 'from_provider'
 
     class Service:
-        def __init__(self, value: int = Provide(get_string)):  # type: ignore
+        def __init__(self, value: int = Provide(get_string)):
             self.value = value
 
-    c.register(provider_fn=get_string, scope=Scope.SINGLETON)
-    c.register(implementation=Service, scope=Scope.SINGLETON)
+    c.register(source=get_string, scope=Scope.SINGLETON)
+    c.register(source=Service, scope=Scope.SINGLETON)
 
     s = c.resolve(Service)
-    assert s.value == 'from_provider'
+    assert s.value == 'from_provider'  # type: ignore[comparison-overlap]
 
 
 def test_provide_with_nested_dependencies():
@@ -48,9 +48,9 @@ def test_provide_with_nested_dependencies():
         def __init__(self, repo: str = Provide(get_repo)):
             self.repo = repo
 
-    c.register(provider_fn=get_db, scope=Scope.SINGLETON)
-    c.register(provider_fn=get_repo, scope=Scope.SINGLETON)
-    c.register(implementation=Service, scope=Scope.SINGLETON)
+    c.register(source=get_db, scope=Scope.SINGLETON)
+    c.register(source=get_repo, scope=Scope.SINGLETON)
+    c.register(source=Service, scope=Scope.SINGLETON)
 
     s = c.resolve(Service)
     assert s.repo == 'REPO:DB_CONNECTION'

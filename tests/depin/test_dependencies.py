@@ -11,7 +11,7 @@ def test_dependency_with_no_provider_and_no_default_raises():
     class A:
         def __init__(self, b: B): ...
 
-    c.register(implementation=A, scope=Scope.SINGLETON)
+    c.register(source=A, scope=Scope.SINGLETON)
 
     with pytest.raises(RuntimeError, match='Não é possível resolver parâmetro'):
         c.resolve(A)
@@ -24,7 +24,7 @@ def test_dependency_with_default_value_uses_default():
         def __init__(self, value: int = 42):
             self.value = value
 
-    c.register(implementation=A, scope=Scope.SINGLETON)
+    c.register(source=A, scope=Scope.SINGLETON)
     a = c.resolve(A)
 
     assert a.value == 42
@@ -49,10 +49,10 @@ def test_deep_dependency_chain():
         def __init__(self, b: B):
             self.b = b
 
-    c.register(implementation=D, scope=Scope.SINGLETON)
-    c.register(implementation=C, scope=Scope.SINGLETON)
-    c.register(implementation=B, scope=Scope.SINGLETON)
-    c.register(implementation=A, scope=Scope.SINGLETON)
+    c.register(source=D, scope=Scope.SINGLETON)
+    c.register(source=C, scope=Scope.SINGLETON)
+    c.register(source=B, scope=Scope.SINGLETON)
+    c.register(source=A, scope=Scope.SINGLETON)
 
     a = c.resolve(A)
 
@@ -71,8 +71,8 @@ def test_circular_dependency_singleton():
         def __init__(self, b: B):
             self.b = b
 
-    c.register(implementation=B, scope=Scope.SINGLETON)
-    c.register(implementation=A, scope=Scope.SINGLETON)
+    c.register(source=B, scope=Scope.SINGLETON)
+    c.register(source=A, scope=Scope.SINGLETON)
 
     a = c.resolve(A)
     assert isinstance(a.b, B)
@@ -90,8 +90,8 @@ def test_multiple_dependencies_same_class():
             self.s1 = s1
             self.s2 = s2
 
-    c.register(implementation=Service, scope=Scope.SINGLETON)
-    c.register(implementation=Consumer, scope=Scope.SINGLETON)
+    c.register(source=Service, scope=Scope.SINGLETON)
+    c.register(source=Consumer, scope=Scope.SINGLETON)
 
     consumer = c.resolve(Consumer)
 
@@ -119,9 +119,9 @@ def test_multiple_dependencies_different_scopes():
             self.s = s
             self.t = t
 
-    c.register(implementation=Singleton, scope=Scope.SINGLETON)
-    c.register(implementation=Transient, scope=Scope.TRANSIENT)
-    c.register(implementation=Consumer, scope=Scope.TRANSIENT)
+    c.register(source=Singleton, scope=Scope.SINGLETON)
+    c.register(source=Transient, scope=Scope.TRANSIENT)
+    c.register(source=Consumer, scope=Scope.TRANSIENT)
 
     c1 = c.resolve(Consumer)
     c2 = c.resolve(Consumer)
@@ -150,10 +150,10 @@ def test_nested_classes():
         def __init__(self, b: B) -> None:
             self.b = b
 
-    c.register(implementation=A, scope=Scope.TRANSIENT)
-    c.register(implementation=B, scope=Scope.SINGLETON)
-    c.register(implementation=C, scope=Scope.SINGLETON)
-    c.register(implementation=D, scope=Scope.SINGLETON)
+    c.register(source=A, scope=Scope.TRANSIENT)
+    c.register(source=B, scope=Scope.SINGLETON)
+    c.register(source=C, scope=Scope.SINGLETON)
+    c.register(source=D, scope=Scope.SINGLETON)
 
     a = c.resolve(A)
 
@@ -178,8 +178,8 @@ def test_nested_class_not_registered():
         def __init__(self, b: B) -> None:
             self.b = b
 
-    c.register(implementation=A, scope=Scope.TRANSIENT)
-    c.register(implementation=B, scope=Scope.SINGLETON)
+    c.register(source=A, scope=Scope.TRANSIENT)
+    c.register(source=B, scope=Scope.SINGLETON)
 
     with pytest.raises(RuntimeError, match='Não é possível resolver parâmetro'):
         c.resolve(A)
@@ -197,9 +197,9 @@ def test_nested_functions():
     def D3(d1: int = Provide(D1), d2: int = Provide(D2)):
         return d1 + d2
 
-    c.register(provider_fn=D1, scope=Scope.TRANSIENT)
-    c.register(provider_fn=D2, scope=Scope.TRANSIENT)
-    c.register(provider_fn=D3, scope=Scope.TRANSIENT)
+    c.register(source=D1, scope=Scope.TRANSIENT)
+    c.register(source=D2, scope=Scope.TRANSIENT)
+    c.register(source=D3, scope=Scope.TRANSIENT)
 
     d = c.resolve(D3)
 
@@ -223,10 +223,10 @@ def test_mixed_classes_and_functions():
     def f1(a: A):
         return a
 
-    c.register(provider_fn=f2, scope=Scope.SINGLETON)
-    c.register(provider_fn=f1, scope=Scope.TRANSIENT)
-    c.register(implementation=B, scope=Scope.SINGLETON)
-    c.register(implementation=A, scope=Scope.SINGLETON)
+    c.register(source=f2, scope=Scope.SINGLETON)
+    c.register(source=f1, scope=Scope.TRANSIENT)
+    c.register(source=B, scope=Scope.SINGLETON)
+    c.register(source=A, scope=Scope.SINGLETON)
 
     r1 = c.resolve(f1)
 

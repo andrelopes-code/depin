@@ -6,7 +6,7 @@ def test_transient_class_different_instances():
 
     class A: ...
 
-    c.register(implementation=A, scope=Scope.TRANSIENT)
+    c.register(source=A, scope=Scope.TRANSIENT)
 
     a1 = c.resolve(A)
     a2 = c.resolve(A)
@@ -26,7 +26,7 @@ def test_transient_function_called_every_time():
         call_count += 1
         return call_count
 
-    c.register(provider_fn=provider, scope=Scope.TRANSIENT)
+    c.register(source=provider, scope=Scope.TRANSIENT)
 
     assert c.resolve(provider) == 1
     assert c.resolve(provider) == 2

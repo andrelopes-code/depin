@@ -169,22 +169,36 @@ class Container:
     def register[T](
         self,
         *,
-        scope: Scope = Scope.SINGLETON,
+        source: type[T] | ProviderFn[T] | None,
         abstract: type[T] | None = None,
-        implementation: type[T] | None = None,
-        provider_fn: ProviderFn[T] | None = None,
+        scope: Scope = Scope.SINGLETON,
+    ):
+        if isinstance(source, type):
+            self._register(abstract=abstract, implementation=source, provider_fn=None, scope=scope)
+        elif callable(source):
+            self._register(abstract=abstract, implementation=None, provider_fn=source, scope=scope)
+        else:
+            raise ValueError(f'failed to register {source=}')
+
+    def _register[T](
+        self,
+        *,
+        scope: Scope = Scope.SINGLETON,
+        abstract: type[T] | None,
+        implementation: type[T] | None,
+        provider_fn: ProviderFn[T] | None,
     ):
 
         abstract = abstract or implementation
 
         if abstract is None and implementation is None and provider_fn is None:
-            raise ValueError('abstract, implementation ou provider_fn não pode ser None')
+            raise ValueError('abstract, implementation or provider_fn must be provided')
 
         if abstract is None and provider_fn is None:
-            raise ValueError('abstract nao pode ser None')
+            raise ValueError('abstract and provider_fn cannot both be None')
 
         if implementation is None and provider_fn is None:
-            raise ValueError('abstract nao pode ser None')
+            raise ValueError('implementation and provider_fn cannot both be None')
 
         if provider_fn and (implementation or abstract):
             raise ValueError('Não é possível registrar uma função e uma classe, Informe apenas um provider.')
@@ -197,7 +211,7 @@ class Container:
         provider = None
         is_async = False
 
-        if is_fn:
+        if is_fn and provider_fn is not None:
             is_async = _is_async_callable(provider_fn) or _is_async_gen_callable(provider_fn)
 
         if scope == Scope.SINGLETON:
@@ -216,20 +230,18 @@ class Container:
                 if is_async:
 
                     async def provider_singleton_callable_async():
-                        if provider_fn is None:
-                            raise RuntimeError('provider_fn não pode ser None')
+                        assert provider_fn is not None
 
                         if 'inst' not in instance_holder:
                             params = await self._resolve_func_params_async(provider_fn)
-                            instance_holder['inst'] = await provider_fn(**params)  # type: ignore
+                            instance_holder['inst'] = await provider_fn(**params)  # pyright: ignore[reportGeneralTypeIssues]
                         return instance_holder['inst']
 
                     provider = provider_singleton_callable_async
                 else:
                     # Provider síncrono
                     def provider_singleton_callable_sync():
-                        if provider_fn is None:
-                            raise RuntimeError('provider_fn não pode ser None')
+                        assert provider_fn is not None
 
                         if 'inst' not in instance_holder:
                             params = self._resolve_func_params(provider_fn)
@@ -250,18 +262,16 @@ class Container:
                 if is_async:
                     # Provider assíncrono
                     async def provider_transient_callable_async():
-                        if provider_fn is None:
-                            raise RuntimeError('provider_fn não pode ser None')
+                        assert provider_fn is not None
 
                         params = await self._resolve_func_params_async(provider_fn)
-                        return await provider_fn(**params)  # type: ignore
+                        return await provider_fn(**params)  # pyright: ignore[reportGeneralTypeIssues]
 
                     provider = provider_transient_callable_async
                 else:
                     # Provider síncrono
                     def provider_transient_callable_sync():
-                        if provider_fn is None:
-                            raise RuntimeError('provider_fn não pode ser None')
+                        assert provider_fn is not None
 
                         params = self._resolve_func_params(provider_fn)
                         return provider_fn(**params)
@@ -294,11 +304,12 @@ class Container:
                 provider = provider_request_class_async if needs_async else provider_request_class
 
             if is_fn:
+                assert provider_fn is not None
+
                 if _is_async_gen_callable(provider_fn):
                     # Async generator para REQUEST scope
                     async def provider_request_async_gen():
-                        if provider_fn is None:
-                            raise RuntimeError('provider_fn não pode ser None')
+                        assert provider_fn is not None
 
                         store = get_request_store()
                         key = get_request_key(provider_fn)
@@ -320,8 +331,7 @@ class Container:
                 elif _is_gen_callable(provider_fn):
                     # Sync generator para REQUEST scope
                     def provider_request_gen_sync():
-                        if provider_fn is None:
-                            raise RuntimeError('provider_fn não pode ser None')
+                        assert provider_fn is not None
 
                         store = get_request_store()
                         key = get_request_key(provider_fn)
@@ -343,15 +353,14 @@ class Container:
                 elif is_async:
 
                     async def provider_request_callable_async():
-                        if provider_fn is None:
-                            raise RuntimeError('provider_fn não pode ser None')
+                        assert provider_fn is not None
 
                         store = get_request_store()
                         key = get_request_key(provider_fn)
 
                         if key not in store:
                             params = await self._resolve_func_params_async(provider_fn)
-                            store[key] = await provider_fn(**params)  # type: ignore
+                            store[key] = await provider_fn(**params)  # pyright: ignore[reportGeneralTypeIssues]
                         return store[key]
 
                     provider = provider_request_callable_async
@@ -359,8 +368,7 @@ class Container:
                 else:
                     # Sync callable simples para REQUEST scope
                     def provider_request_callable_sync():
-                        if provider_fn is None:
-                            raise RuntimeError('provider_fn não pode ser None')
+                        assert provider_fn is not None
 
                         store = get_request_store()
                         key = get_request_key(provider_fn)
@@ -377,6 +385,8 @@ class Container:
 
         key = provider_fn if is_fn else abstract
         impl = provider_fn if is_fn else implementation
+
+        assert key is not None
 
         self._providers[key] = provider
         self._registrations[key] = {'implementation': impl, 'scope': scope}
@@ -546,7 +556,7 @@ class Container:
 
         return result
 
-    def inject(self, func: Callable[..., Any]) -> Callable[..., Any]:
+    def inject[T](self, func: Callable[..., T]) -> Callable[..., T]:
         signature = inspect.signature(func)
         type_hints = get_type_hints(func)
 
@@ -588,12 +598,12 @@ class Container:
                         param_type = type_hints[param_name]
                         bound.arguments[param_name] = await self.aresolve(param_type)
 
-                return await func(*bound.args, **bound.kwargs)
+                return await func(*bound.args, **bound.kwargs)  # pyright: ignore[reportGeneralTypeIssues]
 
             async_wrapper.__name__ = func.__name__
             async_wrapper.__doc__ = func.__doc__
             async_wrapper.__annotations__ = func.__annotations__
-            return async_wrapper
+            return async_wrapper  # pyright: ignore[reportReturnType]
 
     def provide(self, t: Any):
         async def _dep():

@@ -10,7 +10,7 @@ def test_request_scope_same_instance_within_request():
         def __init__(self):
             A.call_count += 1
 
-    c.register(implementation=A, scope=Scope.REQUEST)
+    c.register(source=A, scope=Scope.REQUEST)
 
     token = enter_request_scope()
     a1 = c.resolve(A)
@@ -26,7 +26,7 @@ def test_request_scope_different_instances_across_requests():
 
     class A: ...
 
-    c.register(implementation=A, scope=Scope.REQUEST)
+    c.register(source=A, scope=Scope.REQUEST)
 
     token1 = enter_request_scope()
     a1 = c.resolve(A)
@@ -48,7 +48,7 @@ def test_request_scope_function_called_once_per_request():
         call_count += 1
         return call_count
 
-    c.register(provider_fn=provider, scope=Scope.REQUEST)
+    c.register(source=provider, scope=Scope.REQUEST)
 
     token1 = enter_request_scope()
     r1 = c.resolve(provider)

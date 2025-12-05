@@ -3,12 +3,6 @@ import pytest
 from di_framework import Container, Scope
 
 
-def test_register_without_abstract_or_implementation_raises():
-    c = Container()
-    with pytest.raises(ValueError, match='abstract, implementation ou provider_fn'):
-        c.register(scope=Scope.SINGLETON)
-
-
 def test_register_function_with_class_raises():
     c = Container()
 
@@ -18,7 +12,7 @@ def test_register_function_with_class_raises():
         return A()
 
     with pytest.raises(ValueError, match='apenas um provider'):
-        c.register(abstract=A, provider_fn=provider, scope=Scope.SINGLETON)
+        c.register(abstract=A, source=provider, scope=Scope.SINGLETON)
 
 
 def test_resolve_unregistered_raises():

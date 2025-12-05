@@ -11,8 +11,8 @@ def test_function_provider_with_dependencies():
     def get_service(config: Config):
         return config.value * 2
 
-    c.register(implementation=Config, scope=Scope.SINGLETON)
-    c.register(provider_fn=get_service, scope=Scope.SINGLETON)
+    c.register(source=Config, scope=Scope.SINGLETON)
+    c.register(source=get_service, scope=Scope.SINGLETON)
 
     result = c.resolve(get_service)
     assert result == 200
@@ -30,9 +30,9 @@ def test_function_provider_with_multiple_dependencies():
     def service(a: int = Provide(dep1), b: int = Provide(dep2)):
         return a + b
 
-    c.register(provider_fn=dep1, scope=Scope.SINGLETON)
-    c.register(provider_fn=dep2, scope=Scope.SINGLETON)
-    c.register(provider_fn=service, scope=Scope.SINGLETON)
+    c.register(source=dep1, scope=Scope.SINGLETON)
+    c.register(source=dep2, scope=Scope.SINGLETON)
+    c.register(source=service, scope=Scope.SINGLETON)
 
     assert c.resolve(service) == 30
 
@@ -43,6 +43,6 @@ def test_function_provider_with_default_params():
     def service(value: int = 99):
         return value * 2
 
-    c.register(provider_fn=service, scope=Scope.SINGLETON)
+    c.register(source=service, scope=Scope.SINGLETON)
 
     assert c.resolve(service) == 198
