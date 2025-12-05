@@ -1,4 +1,4 @@
-from di_framework import Container, Scope, enter_request_scope, exit_request_scope
+from depin import Container, RequestScopeService, Scope
 
 
 def test_resolve_same_class_different_scopes():
@@ -89,16 +89,16 @@ def test_request_scope_isolation():
     c.register(source=Counter, scope=Scope.REQUEST)
 
     # Request 1
-    token1 = enter_request_scope()
+    token1 = RequestScopeService.enter_request_scope()
     c1 = c.resolve(Counter)
     c1.value = 10
     c1_again = c.resolve(Counter)
-    exit_request_scope(token1)
+    RequestScopeService.exit_request_scope(token1)
 
     # Request 2
-    token2 = enter_request_scope()
+    token2 = RequestScopeService.enter_request_scope()
     c2 = c.resolve(Counter)
-    exit_request_scope(token2)
+    RequestScopeService.exit_request_scope(token2)
 
     assert c1 is c1_again
     assert c1.value == 10

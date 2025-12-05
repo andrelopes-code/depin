@@ -1,4 +1,4 @@
-from di_framework import Container, Scope
+from depin import Container, Scope
 
 
 def test_singleton_class_same_instance():

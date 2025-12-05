@@ -1,6 +1,6 @@
 import pytest
 
-from di_framework import Container, Provide, Scope
+from depin import Container, Provide, Scope
 
 
 def test_dependency_with_no_provider_and_no_default_raises():

@@ -1,4 +1,4 @@
-from di_framework import Container, Provide, Scope
+from depin import Container, Provide, Scope
 
 
 def test_function_provider_with_dependencies():

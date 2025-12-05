@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from di_framework import Container, Provide, Scope
+from depin import Container, Provide, Scope
 
 
 def test_resolve_dataclass_dependencies():

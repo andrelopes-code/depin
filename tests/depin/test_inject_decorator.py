@@ -1,4 +1,4 @@
-from di_framework import Container, Scope
+from depin import Container, Provide, Scope
 
 
 def test_inject_simple():
@@ -11,7 +11,7 @@ def test_inject_simple():
     c.register(source=Service, scope=Scope.SINGLETON)
 
     @c.inject
-    def handler(service: Service):
+    def handler(service: Service = Provide(Service)):
         return service.value
 
     assert handler() == 42
@@ -27,7 +27,7 @@ def test_inject_with_explicit_params():
     c.register(source=Service, scope=Scope.SINGLETON)
 
     @c.inject
-    def handler(service: Service, multiplier: int):
+    def handler(multiplier: int, service: Service = Provide(Service)):
         return service.value * multiplier
 
     assert handler(multiplier=2) == 84
@@ -37,20 +37,16 @@ def test_inject_partial_override():
     c = Container()
 
     class Service:
-        def __init__(self):
-            self.value = 10
-
-    class OtherService:
-        def __init__(self):
-            self.value = 20
+        def __init__(self, value=10):
+            self.value = value
 
     c.register(source=Service, scope=Scope.SINGLETON)
 
     @c.inject
-    def handler(service: Service):
+    def handler(service: Service = Provide(Service)):
         return service.value
 
-    other = OtherService()
+    other = Service(20)
     assert handler(service=other) == 20
 
 

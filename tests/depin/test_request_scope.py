@@ -1,4 +1,4 @@
-from di_framework import Container, Scope, enter_request_scope, exit_request_scope
+from depin import Container, RequestScopeService, Scope
 
 
 def test_request_scope_same_instance_within_request():
@@ -12,10 +12,10 @@ def test_request_scope_same_instance_within_request():
 
     c.register(source=A, scope=Scope.REQUEST)
 
-    token = enter_request_scope()
+    token = RequestScopeService.enter_request_scope()
     a1 = c.resolve(A)
     a2 = c.resolve(A)
-    exit_request_scope(token)
+    RequestScopeService.exit_request_scope(token)
 
     assert a1 is a2
     assert A.call_count == 1
@@ -28,13 +28,13 @@ def test_request_scope_different_instances_across_requests():
 
     c.register(source=A, scope=Scope.REQUEST)
 
-    token1 = enter_request_scope()
+    token1 = RequestScopeService.enter_request_scope()
     a1 = c.resolve(A)
-    exit_request_scope(token1)
+    RequestScopeService.exit_request_scope(token1)
 
-    token2 = enter_request_scope()
+    token2 = RequestScopeService.enter_request_scope()
     a2 = c.resolve(A)
-    exit_request_scope(token2)
+    RequestScopeService.exit_request_scope(token2)
 
     assert a1 is not a2
 
@@ -50,14 +50,14 @@ def test_request_scope_function_called_once_per_request():
 
     c.register(source=provider, scope=Scope.REQUEST)
 
-    token1 = enter_request_scope()
+    token1 = RequestScopeService.enter_request_scope()
     r1 = c.resolve(provider)
     r2 = c.resolve(provider)
-    exit_request_scope(token1)
+    RequestScopeService.exit_request_scope(token1)
 
-    token2 = enter_request_scope()
+    token2 = RequestScopeService.enter_request_scope()
     r3 = c.resolve(provider)
-    exit_request_scope(token2)
+    RequestScopeService.exit_request_scope(token2)
 
     assert r1 == r2 == 1
     assert r3 == 2
