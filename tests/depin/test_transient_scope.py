@@ -1,0 +1,34 @@
+from depin import Container, Scope
+
+
+def test_transient_class_different_instances():
+    c = Container()
+
+    class A: ...
+
+    c.bind(source=A, scope=Scope.TRANSIENT)
+
+    a1 = c.get(A)
+    a2 = c.get(A)
+    a3 = c.get(A)
+
+    assert a1 is not a2
+    assert a2 is not a3
+    assert a1 is not a3
+
+
+def test_transient_function_called_every_time():
+    c = Container()
+    call_count = 0
+
+    def provider():
+        nonlocal call_count
+        call_count += 1
+        return call_count
+
+    c.bind(source=provider, scope=Scope.TRANSIENT)
+
+    assert c.get(provider) == 1
+    assert c.get(provider) == 2
+    assert c.get(provider) == 3
+    assert call_count == 3

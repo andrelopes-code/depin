@@ -1,0 +1,32 @@
+{
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        "**/migrations/versions",
+        "**/.*"
+    ],
+    "reportAny": false,
+    "reportExplicitAny": false,
+    "reportImplicitOverride": true,
+    "reportImportCycles": "information",
+    "reportIncompatibleMethodOverride": true,
+    "reportInconsistentConstructor": true,
+    "reportInvalidTypeVarUse": true,
+    "reportMissingImports": true,
+    "reportMissingParameterType": false,
+    "reportMissingTypeStubs": false,
+    "reportPrivateUsage": true,
+    "reportUnannotatedClassAttribute": false,
+    "reportUnknownArgumentType": false,
+    "reportUnknownMemberType": false,
+    "reportUnknownParameterType": false,
+    "reportUnknownVariableType": false,
+    "reportUnnecessaryCast": true,
+    "reportUnnecessaryComparison": true,
+    "reportUnnecessaryIsInstance": true,
+    "reportUnnecessaryTypeIgnoreComment": false,
+    "reportUnusedCallResult": false,
+    "reportUnusedImport": true,
+    "reportUnusedVariable": true,
+    "typeCheckingMode": "strict"
+}
