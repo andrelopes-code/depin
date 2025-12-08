@@ -174,39 +174,6 @@ wheels = [
 ]
 
 [[package]]
-name = "depin"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "fastapi", extra = ["standard"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "httpie" },
-    { name = "httpx" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "rich" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "fastapi", extras = ["standard"], specifier = ">=0.123.5" }]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "httpie", specifier = ">=3.2.4" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "mypy", specifier = ">=1.19.0" },
-    { name = "pytest", specifier = ">=8.4.2" },
-    { name = "pytest-asyncio", specifier = ">=1.3.0" },
-    { name = "pytest-cov", specifier = ">=7.0.0" },
-    { name = "rich", specifier = ">=14.2.0" },
-]
-
-[[package]]
 name = "dnspython"
 version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -796,6 +763,41 @@ wheels = [
 ]
 
 [[package]]
+name = "pydepin"
+version = "0.1.1"
+source = { editable = "." }
+dependencies = [
+    { name = "fastapi", extra = ["standard"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "httpie" },
+    { name = "httpx" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "rich" },
+    { name = "uv-publish" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "fastapi", extras = ["standard"], specifier = ">=0.123.5" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "httpie", specifier = ">=3.2.4" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "mypy", specifier = ">=1.19.0" },
+    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest-asyncio", specifier = ">=1.3.0" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "rich", specifier = ">=14.2.0" },
+    { name = "uv-publish", specifier = ">=1.3" },
+]
+
+[[package]]
 name = "pygments"
 version = "2.19.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1107,6 +1109,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/15/22/9ee70a2574a4f4599c47dd506532914ce044817c7752a79b6a51286319bc/urllib3-2.5.0.tar.gz", hash = "sha256:3fc47733c7e419d4bc3f6b3dc2b4f890bb743906a30d56ba4a5bfa4bbff92760", size = 393185, upload-time = "2025-06-18T14:07:41.644Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a7/c2/fe1e52489ae3122415c51f387e221dd0773709bad6c6cdaa599e8a2c5185/urllib3-2.5.0-py3-none-any.whl", hash = "sha256:e6b01673c0fa6a13e374b50871808eb3bf7046c4b125b216f6bf1cc604cff0dc", size = 129795, upload-time = "2025-06-18T14:07:40.39Z" },
+]
+
+[[package]]
+name = "uv-publish"
+version = "1.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/c0/66f0c051023ec55423219f96bea12e550a4017778cfe14ccceaef68c0312/uv_publish-1.3.tar.gz", hash = "sha256:ac9e2b563fdca28966aacbb7054e9ff08a6927a7e48e68cc304f7efab119e90c", size = 4448, upload-time = "2025-07-09T07:04:38.653Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/69/23/aec04095b9ee29cbdb3bbbc3b412ebe9804ebbf29cdb3a2131d55436d229/uv_publish-1.3-py3-none-any.whl", hash = "sha256:58c3578120d41ef4ea7a954d78a2ba412bdc65a2eb7753fede6af4cf5479891d", size = 4159, upload-time = "2025-07-09T07:04:37.205Z" },
 ]
 
 [[package]]
