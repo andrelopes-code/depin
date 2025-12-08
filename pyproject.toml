@@ -1,7 +1,7 @@
 [project]
 name = "depin"
 version = "0.1.0"
-description = "Depin."
+description = "Dependency injection package"
 readme = "README.md"
 requires-python = ">=3.13"
 
