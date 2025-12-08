@@ -11,3 +11,4 @@ wheels/
 .coverage
 htmlcov
 .pytest_cache
+.pypirc

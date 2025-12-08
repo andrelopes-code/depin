@@ -1,5 +1,5 @@
 [project]
-name = "depin"
+name = "pydepin"
 version = "0.1.0"
 description = "Dependency injection package"
 readme = "README.md"
