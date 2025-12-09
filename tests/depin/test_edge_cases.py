@@ -89,16 +89,14 @@ def test_request_scope_isolation():
     c.bind(source=Counter, scope=Scope.REQUEST)
 
     # Request 1
-    token1 = RequestScopeService.enter_request_scope()
-    c1 = c.get(Counter)
-    c1.value = 10
-    c1_again = c.get(Counter)
-    RequestScopeService.exit_request_scope(token1)
+    with RequestScopeService.request_scope():
+        c1 = c.get(Counter)
+        c1.value = 10
+        c1_again = c.get(Counter)
 
     # Request 2
-    token2 = RequestScopeService.enter_request_scope()
-    c2 = c.get(Counter)
-    RequestScopeService.exit_request_scope(token2)
+    with RequestScopeService.request_scope():
+        c2 = c.get(Counter)
 
     assert c1 is c1_again
     assert c1.value == 10
