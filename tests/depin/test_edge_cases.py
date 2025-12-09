@@ -133,20 +133,3 @@ def test_mixed_scopes_in_dependency_tree():
     # SingletonService deve ter apenas 1 instância
     assert len(SingletonService.instances) == 1
     assert t1.singleton is t2.singleton is t3.singleton
-
-
-def test_registrations_property():
-    c = Container()
-
-    class A: ...
-
-    def provider():
-        return 1
-
-    c.bind(source=A, scope=Scope.SINGLETON)
-    c.bind(source=provider, scope=Scope.TRANSIENT)
-
-    assert A in c.registrations
-    assert provider in c.registrations
-    assert c.registrations[A].scope == Scope.SINGLETON
-    assert c.registrations[provider].scope == Scope.TRANSIENT

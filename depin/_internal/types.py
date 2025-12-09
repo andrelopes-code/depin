@@ -3,23 +3,15 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, AsyncGenerator, Awaitable, Generator
 
-type CallableProvider[T] = (
+type Resolvable[T] = (
     Callable[..., T]
     | Callable[..., Awaitable[T]]
     | Callable[..., AsyncGenerator[T, Any]]
     | Callable[..., Generator[T, Any, Any]]
 )
 
-type AsyncProviderFn[T] = Callable[..., Awaitable[T]]
-
-
-type ProviderType[T] = (
-    type[T]
-    | Callable[..., T]
-    | Callable[..., Awaitable[T]]
-    | Callable[..., AsyncGenerator[T, Any]]
-    | Callable[..., Generator[T, Any, Any]]
-)
+type Provider[T] = Callable[[], T] | Callable[[], Awaitable[T]]
+type ProviderSource[T = Any] = type[T] | Resolvable[T]
 
 
 class Request[T]: ...
@@ -43,11 +35,13 @@ class Token:
 
 
 @dataclass
-class ProviderInfo:
-    implementation: type[Any] | CallableProvider[Any]
+class ProviderInfo[T = Any]:
+    provider: Provider[T]
+    source: ProviderSource[T]
+    needs_async: bool
     scope: Scope
 
 
 class ProviderDependency:
-    def __init__(self, dependency: CallableProvider[Any]) -> None:
-        self.dependency = dependency
+    def __init__(self, provider_source: ProviderSource[Any]) -> None:
+        self.provider_source = provider_source
