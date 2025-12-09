@@ -1,4 +1,6 @@
 from collections.abc import Callable
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any, AsyncGenerator, Awaitable, Generator
 
 type CallableProvider[T] = (
@@ -18,6 +20,32 @@ type ProviderType[T] = (
     | Callable[..., AsyncGenerator[T, Any]]
     | Callable[..., Generator[T, Any, Any]]
 )
+
+
+class Request[T]: ...
+
+
+class Singleton[T]: ...
+
+
+class Transient[T]: ...
+
+
+class Scope(Enum):
+    SINGLETON = 'singleton'
+    TRANSIENT = 'transient'
+    REQUEST = 'request'
+
+
+@dataclass
+class Token:
+    name: str
+
+
+@dataclass
+class ProviderInfo:
+    implementation: type[Any] | CallableProvider[Any]
+    scope: Scope
 
 
 class ProviderDependency:

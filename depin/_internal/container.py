@@ -1,12 +1,17 @@
 import inspect
-from enum import Enum
-from typing import Any, Callable, Type, cast, get_type_hints
+from typing import Any, Callable, Type, cast
 
-from depin.internal.exceptions import MissingProviderError, UnexpectedCoroutineError
-from depin.internal.helpers import is_async_callable, is_async_generator_callable, is_generator_callable
-from depin.internal.request_scope import RequestScopeService
-from depin.internal.types import CallableProvider, ProviderDependency, ProviderType
-from depin.internal.wraps import wrap_async_gen, wrap_sync_gen
+from depin._internal.exceptions import MissingProviderError, UnexpectedCoroutineError
+from depin._internal.helpers import (
+    get_cached_signature,
+    get_cached_type_hints,
+    is_async_callable,
+    is_async_generator_callable,
+    is_generator_callable,
+)
+from depin._internal.request_scope import RequestScopeService
+from depin._internal.types import CallableProvider, ProviderDependency, ProviderInfo, ProviderType, Scope
+from depin._internal.wraps import wrap_async_gen, wrap_sync_gen
 
 INSPECT_EMPTY = inspect._empty  # pyright: ignore[reportPrivateUsage]
 
@@ -15,18 +20,12 @@ def Inject[T](dependency: ProviderType[T]) -> T:
     return ProviderDependency(dependency)  # type: ignore[return-value]
 
 
-class Scope(Enum):
-    SINGLETON = 'singleton'
-    TRANSIENT = 'transient'
-    REQUEST = 'request'
-
-
 class Container:
     Scope = Scope
 
     def __init__(self):
         self._providers: dict[type[Any] | CallableProvider[Any], Callable[[], Any]] = {}
-        self._registrations: dict[type[Any] | CallableProvider[Any], dict[str, Any]] = {}
+        self._registrations: dict[type[Any] | CallableProvider[Any], ProviderInfo] = {}
 
     @property
     def registrations(self):
@@ -327,11 +326,14 @@ class Container:
 
         for item in [key, *(aliases or [])]:
             self._providers[item] = provider
-            self._registrations[item] = {'implementation': impl, 'scope': scope}
+            self._registrations[item] = ProviderInfo(
+                implementation=impl,
+                scope=scope,
+            )
 
     def _resolve_func_params[T](self, func: CallableProvider[T]) -> dict[str, Any]:
-        signature = inspect.signature(func)
-        type_hints = get_type_hints(func)
+        signature = get_cached_signature(func)
+        type_hints = get_cached_type_hints(func)
         kwargs = {}
 
         for name, param in signature.parameters.items():
@@ -360,8 +362,8 @@ class Container:
         return kwargs
 
     async def _resolve_func_params_async[T](self, func: CallableProvider[T]) -> dict[str, Any]:
-        signature = inspect.signature(func)
-        type_hints = get_type_hints(func)
+        signature = get_cached_signature(func)
+        type_hints = get_cached_type_hints(func)
         kwargs = {}
 
         for name, param in signature.parameters.items():
@@ -390,8 +392,8 @@ class Container:
         return kwargs
 
     def _construct[T](self, cls: type[T]):
-        signature = inspect.signature(cls.__init__)
-        type_hints = get_type_hints(cls.__init__)
+        signature = get_cached_signature(cls.__init__)
+        type_hints = get_cached_type_hints(cls.__init__)
         kwargs = {}
 
         for name, param in signature.parameters.items():
@@ -438,8 +440,8 @@ class Container:
         return cls(**kwargs)
 
     async def _construct_async[T](self, cls: type[T]):
-        signature = inspect.signature(cls.__init__)
-        type_hints = get_type_hints(cls.__init__)
+        signature = get_cached_signature(cls.__init__)
+        type_hints = get_cached_type_hints(cls.__init__)
         kwargs = {}
 
         for name, param in signature.parameters.items():
@@ -488,8 +490,8 @@ class Container:
         return result
 
     def inject[T, **K](self, func: Callable[K, T]) -> Callable[K, T]:
-        signature = inspect.signature(func)
-        type_hints = get_type_hints(func)
+        signature = get_cached_signature(func)
+        type_hints = get_cached_type_hints(func)
 
         injectable_params = set()
 
@@ -571,8 +573,8 @@ class Container:
         return Depends(_dep)
 
     def _class_needs_async_resolution[T](self, cls: type[T]) -> bool:
-        signature = inspect.signature(cls.__init__)
-        type_hints = get_type_hints(cls.__init__)
+        signature = get_cached_signature(cls.__init__)
+        type_hints = get_cached_type_hints(cls.__init__)
 
         for name, param in signature.parameters.items():
             if name == 'self':
@@ -597,8 +599,8 @@ class Container:
         if is_async_callable(func) or is_async_generator_callable(func):
             return True
 
-        signature = inspect.signature(func)
-        type_hints = get_type_hints(func)
+        signature = get_cached_signature(func)
+        type_hints = get_cached_type_hints(func)
 
         for name, param in signature.parameters.items():
             param_type = type_hints.get(name, None)

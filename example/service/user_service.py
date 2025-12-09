@@ -1,6 +1,6 @@
 from fastapi import Request
 
-from example.container import DI
+from example.dependencies.container import DI
 from example.repository.role_repo import RoleRepo
 from example.repository.user_repo import UserRepo
 

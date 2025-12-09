@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from depin import Container, Inject, Scope
-from depin.internal.types import ProviderDependency
+from depin._internal.types import ProviderDependency
 
 
 def test_resolve_dataclass_dependencies():

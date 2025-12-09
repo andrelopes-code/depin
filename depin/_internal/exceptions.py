@@ -4,7 +4,3 @@ class MissingProviderError(RuntimeError):
 
 class UnexpectedCoroutineError(RuntimeError):
     pass
-
-
-class UnexpectedAsyncCallableError(RuntimeError):
-    pass

@@ -150,5 +150,5 @@ def test_registrations_property():
 
     assert A in c.registrations
     assert provider in c.registrations
-    assert c.registrations[A]['scope'] == Scope.SINGLETON
-    assert c.registrations[provider]['scope'] == Scope.TRANSIENT
+    assert c.registrations[A].scope == Scope.SINGLETON
+    assert c.registrations[provider].scope == Scope.TRANSIENT

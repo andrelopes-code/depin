@@ -24,7 +24,6 @@ class RequestScopeService:
 
     @classmethod
     def exit_request_scope(cls, token):
-        print('cleaning request scope')
         store = _request_store.get(token)
 
         context_managers = store.get(cls.CONTEXT_MANAGERS_KEY, [])
@@ -43,7 +42,6 @@ class RequestScopeService:
 
     @classmethod
     async def aexit_request_scope(cls, token):
-        print('cleaning request scope [async]')
         store = _request_store.get()
 
         context_managers = store.get(cls.CONTEXT_MANAGERS_KEY, [])

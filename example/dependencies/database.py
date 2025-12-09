@@ -3,9 +3,9 @@ from contextlib import asynccontextmanager
 import rich
 
 from depin import Inject, Scope
-from example.container import DI
 from example.database import Engine, Session
 from example.dependencies.common import random_id
+from example.dependencies.container import DI
 
 
 @DI.register(Scope.SINGLETON)

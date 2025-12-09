@@ -1,10 +1,17 @@
+import sys
+from pathlib import Path
+
+# Add project root dir to python path
+sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
+
+
 from fastapi import FastAPI, Request
 from rich import print
 
 from depin import Inject, RequestScopeService, Scope
 from depin.extensions.fastapi import RequestScopeMiddleware
-from example.container import DI
 from example.database import Session
+from example.dependencies.container import DI
 from example.dependencies.database import db_session
 from example.service.user_service import UserService
 
@@ -50,7 +57,7 @@ if __name__ == '__main__':
 
     ENTRY = 'app:app'
     HOST = '0.0.0.0'
-    PORT = 8002
+    PORT = 8001
 
     uvicorn.run(
         app=ENTRY,

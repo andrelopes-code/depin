@@ -1,5 +1,6 @@
 import inspect
-from typing import Any, Callable
+from functools import lru_cache
+from typing import Any, Callable, get_type_hints
 
 
 class ClassProperty:
@@ -26,8 +27,11 @@ def is_coroutine(obj: Any) -> bool:
     return inspect.iscoroutine(obj)
 
 
-async def force_async(v) -> Any:
-    if is_coroutine(v):
-        return await v
+@lru_cache(None)
+def get_cached_signature(func: Callable[..., Any]) -> inspect.Signature:
+    return inspect.signature(func)
 
-    return v
+
+@lru_cache(None)
+def get_cached_type_hints(func: Callable[..., Any]) -> dict[str, Any]:
+    return get_type_hints(func)

@@ -1,7 +1,7 @@
 import pytest
 
 from depin import Container, Scope
-from depin.internal.exceptions import MissingProviderError
+from depin._internal.exceptions import MissingProviderError
 
 
 @pytest.mark.skip('did not raise')

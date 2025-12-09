@@ -1,7 +1,7 @@
 import pytest
 
 from depin import Container, Inject, Scope
-from depin.internal.exceptions import MissingProviderError
+from depin._internal.exceptions import MissingProviderError
 
 
 def test_dependency_with_no_provider_and_no_default_raises():
