@@ -1,4 +1,6 @@
-from depin import Container, Scope
+import pytest
+
+from depin import Container, Inject, Scope
 
 
 def test_singleton_class_same_instance():
@@ -79,3 +81,24 @@ def test_resolve_singleton_in_class_variable():
         num = c.get(get_num)
 
     assert A.num == 89
+
+
+@pytest.mark.asyncio
+async def test_singleton_class_that_needs_async():
+    c = Container()
+
+    async def async_dep_func():
+        return 'async'
+
+    class A:
+        def __init__(self, async_dep: str = Inject(async_dep_func)):
+            self.async_dep = async_dep
+
+    c.bind(source=A, scope=Scope.SINGLETON)
+    c.bind(source=async_dep_func, scope=Scope.SINGLETON)
+
+    a1 = await c.get_async(A)
+    a2 = await c.get_async(A)
+    a3 = await c.get_async(A)
+
+    assert a1 is a2 is a3

@@ -1,3 +1,6 @@
+import pytest
+from fastapi import Request
+
 from depin import Container, RequestScopeService, Scope
 
 
@@ -57,3 +60,34 @@ def test_request_scope_function_called_once_per_request():
     assert r1 == r2 == 1
     assert r3 == 2
     assert call_count == 2
+
+
+def test_bind_fastapi_Request_to_the_request_scope():
+    c = Container()
+
+    c.bind(
+        abstract=Request,
+        source=lambda: RequestScopeService.get_current_request(),
+        scope=Scope.REQUEST,
+    )
+
+    fake_request = Request(scope={'type': 'http'})
+
+    with RequestScopeService.request_scope():
+        RequestScopeService.set_current_request(fake_request)
+
+        request = c.get(Request)
+        assert request is fake_request
+
+
+def test_raises_when_fastapi_Request_is_requested_but_not_in_the_request_scope():
+    c = Container()
+
+    c.bind(
+        abstract=Request,
+        source=lambda: RequestScopeService.get_current_request(),
+        scope=Scope.REQUEST,
+    )
+
+    with pytest.raises(RuntimeError, match='No Request instance found in the current request scope'):
+        c.get(Request)

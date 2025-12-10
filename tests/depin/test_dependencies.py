@@ -95,7 +95,6 @@ def test_multiple_dependencies_same_class():
 
     consumer = c.get(Consumer)
 
-    # Com SINGLETON, s1 e s2 devem ser a mesma instância
     assert consumer.s1 is consumer.s2
 
 
@@ -170,7 +169,6 @@ def test_nested_class_not_registered():
     class C: ...
 
     class B:
-        # C is not registered in container
         def __init__(self, c: C) -> None:
             self.c = c
 

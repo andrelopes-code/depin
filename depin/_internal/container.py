@@ -56,9 +56,9 @@ class Container:
     ):
         if scope != Scope.REQUEST:
             if is_async_generator_callable(source):
-                raise ValueError('Async generators are not supported in non-request scopes')
+                raise RuntimeError('Async generators are not supported in non-request scopes')
             elif is_generator_callable(source):
-                raise ValueError('Generators are not supported in non-request scopes')
+                raise RuntimeError('Generators are not supported in non-request scopes')
 
         if isinstance(source, type):
             return self._register(
@@ -330,9 +330,6 @@ class Container:
     def get[T](self, abstract: ProviderSource[T]) -> T:
         provider = self._get_provider(abstract)
 
-        if provider is None:
-            raise MissingProviderError(f'Provider for {abstract} not registered')
-
         if is_async_callable(provider):
             raise UnexpectedCoroutineError(f'Provider for {abstract} is asynchronous, use get_async instead.')
 
@@ -342,9 +339,6 @@ class Container:
 
     async def get_async[T](self, abstract: ProviderSource[T]) -> T:
         provider = cast(Callable[[], T], self._get_provider(abstract))
-
-        if provider is None:
-            raise MissingProviderError(f'Provider for {abstract} not registered')
 
         result = provider()
 

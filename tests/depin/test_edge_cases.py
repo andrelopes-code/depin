@@ -1,4 +1,7 @@
+import pytest
+
 from depin import Container, RequestScopeService, Scope
+from depin._internal.exceptions import MissingProviderError
 
 
 def test_resolve_same_class_different_scopes():
@@ -13,13 +16,11 @@ def test_resolve_same_class_different_scopes():
 
     c.bind(source=A, scope=Scope.SINGLETON)
 
-    # Segunda tentativa de registro sobrescreve
     c.bind(source=A, scope=Scope.TRANSIENT)
 
     a1 = c.get(A)
     a2 = c.get(A)
 
-    # Deve usar o último registro (TRANSIENT)
     assert a1 is not a2
     assert A.call_count == 2
 
@@ -58,7 +59,6 @@ def test_complex_dependency_graph():
 
     service = c.get(Service)
 
-    # Todos devem compartilhar a mesma instância de Logger
     assert service.logger is service.repo.logger
     assert service.repo.db.logger is service.logger
     assert service.repo.cache.logger is service.logger
@@ -88,13 +88,11 @@ def test_request_scope_isolation():
 
     c.bind(source=Counter, scope=Scope.REQUEST)
 
-    # Request 1
     with RequestScopeService.request_scope():
         c1 = c.get(Counter)
         c1.value = 10
         c1_again = c.get(Counter)
 
-    # Request 2
     with RequestScopeService.request_scope():
         c2 = c.get(Counter)
 
@@ -126,10 +124,85 @@ def test_mixed_scopes_in_dependency_tree():
     t2 = c.get(TransientService)
     t3 = c.get(TransientService)
 
-    # TransientService deve ter 3 instâncias
     assert len(TransientService.instances) == 3
     assert t1 is not t2
 
-    # SingletonService deve ter apenas 1 instância
     assert len(SingletonService.instances) == 1
     assert t1.singleton is t2.singleton is t3.singleton
+
+
+@pytest.mark.asyncio
+async def test_generators_in_singleton_scope_raises():
+    c = Container()
+
+    async def async_gen():
+        yield 23
+
+    def sync_gen():
+        yield 23
+
+    with pytest.raises(RuntimeError, match='Async generators are not supported'):
+        c.bind(source=async_gen, scope=Scope.SINGLETON)
+
+    with pytest.raises(RuntimeError, match='Generators are not supported'):
+        c.bind(source=sync_gen, scope=Scope.SINGLETON)
+
+
+@pytest.mark.asyncio
+async def test_generators_in_transient_scope_raises():
+    c = Container()
+
+    async def async_gen():
+        yield 23
+
+    def sync_gen():
+        yield 23
+
+    with pytest.raises(RuntimeError, match='Async generators are not supported'):
+        c.bind(source=async_gen, scope=Scope.TRANSIENT)
+
+    with pytest.raises(RuntimeError, match='Generators are not supported'):
+        c.bind(source=sync_gen, scope=Scope.TRANSIENT)
+
+
+@pytest.mark.asyncio
+async def test_bind_raises_when_no_type_or_callabe_provided_as_source():
+    c = Container()
+
+    with pytest.raises(ValueError, match='failed to register'):
+        c.bind(source=888, scope=Scope.TRANSIENT)  # type: ignore
+
+
+def test_raises_when_no_provider_found():
+    c = Container()
+
+    class Logger:
+        pass
+
+    with pytest.raises(MissingProviderError, match=f'Provider for {Logger} not registered'):
+        c.get(Logger)
+
+
+def test_raises_when_usign_sync_get_to_resolve_async_providers():
+    c = Container()
+
+    async def async_dep_func():
+        return 'async'
+
+    c.bind(source=async_dep_func, scope=Scope.TRANSIENT)
+
+    with pytest.raises(RuntimeError, match=f'Provider for {async_dep_func} is asynchronous'):
+        c.get(async_dep_func)
+
+
+def test_register_throws_exception_for_missing_sources():
+    c = Container()
+
+    with pytest.raises(ValueError, match='abstract, implementation or callable_source must be provided'):
+        c._register(scope=Scope.TRANSIENT, abstract=None, implementation=None, callable_source=None)  # type: ignore
+
+    with pytest.raises(ValueError, match='implementation and callable_source cannot both be None'):
+        c._register(scope=Scope.TRANSIENT, abstract=Container, implementation=None, callable_source=None)  # type: ignore
+
+    with pytest.raises(ValueError, match='callable_source and implementation cannot be both non-none'):
+        c._register(scope=Scope.TRANSIENT, abstract=None, implementation=Container, callable_source=Container)  # type: ignore
