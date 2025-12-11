@@ -1,3 +1,5 @@
+import pytest
+
 from depin import Container, Inject, Scope
 
 
@@ -72,17 +74,16 @@ def test_inject_preserves_metadata():
     assert my_function.__doc__ == 'This is a docstring'
 
 
-def xxx():
+@pytest.mark.asyncio
+async def test_inject_async_function():
     c = Container()
 
-    def get_num():
-        return 75
+    @c.register(Scope.TRANSIENT)
+    async def dependency():
+        return 5
 
-    class A:
-        @c.inject
-        def __init__(self, num: int = Inject(get_num)):
-            self.num = num
+    @c.inject
+    async def my_function(n: int = Inject(dependency)):
+        return n * 2
 
-    a = A()
-
-    assert a.num == 75
+    assert await my_function() == 10
