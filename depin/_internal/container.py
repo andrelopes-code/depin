@@ -1,6 +1,8 @@
 import inspect
 from typing import Any, Callable, cast
 
+from fastapi import Depends
+
 from depin._internal.exceptions import CircularDependencyError, MissingProviderError, UnexpectedCoroutineError
 from depin._internal.helpers import (
     get_cached_signature,
@@ -21,6 +23,8 @@ def Inject[T](dependency: ProviderSource[T]) -> T:
 
 
 class Container:
+    """Dependency injection container"""
+
     Scope = Scope
 
     def __init__(self):
@@ -33,6 +37,22 @@ class Container:
         abstract: type[T] | None = None,
         aliases: list[type] | None = None,
     ):
+        """Decorator that registers a class or function as a provider in the container.
+
+        ### Example:
+            ```py
+            @container.register(Scope.REQUEST)
+            def get_session():
+                with Session() as session:
+                    yield session
+
+            @container.register(Scope.REQUEST)
+            class SomeRepository:
+                def __init__(self, session: Session = Inject(get_session)):
+                    self._session = session
+            ```
+        """
+
         def decorator[U](source: U) -> U:
 
             self.bind(
@@ -54,6 +74,23 @@ class Container:
         abstract: type[T] | None = None,
         aliases: list[type] | None = None,
     ):
+        """Function used to register a class or function as a provider in the container.
+
+        ### Example:
+            ```py
+            def get_session():
+                with Session() as session:
+                    yield session
+
+            class SomeRepository:
+                def __init__(self, session: Session = Inject(get_session)):
+                    self._session = session
+
+            container.bind(source=get_session, scope=Scope.REQUEST)
+            container.bind(source=SomeRepository, scope=Scope.REQUEST)
+            ```
+        """
+
         if scope != Scope.REQUEST:
             if is_async_generator_callable(source):
                 raise RuntimeError('Async generators are not supported in non-request scopes')
@@ -328,6 +365,14 @@ class Container:
             )
 
     def get[T](self, abstract: ProviderSource[T]) -> T:
+        """Function used to resolve some dependency manually.
+
+        ### Example:
+            ```python
+            user_service = container.get(UserService)
+            ```
+        """
+
         provider = self._get_provider(abstract)
 
         if is_async_callable(provider):
@@ -338,6 +383,14 @@ class Container:
         return sync_provider()
 
     async def get_async[T](self, abstract: ProviderSource[T]) -> T:
+        """Function used to resolve some asynchronous dependency manually.
+
+        ### Example:
+            ```python
+            user_service = await container.get_async(UserService)
+            ```
+        """
+
         provider = cast(Callable[[], T], self._get_provider(abstract))
 
         result = provider()
@@ -348,6 +401,16 @@ class Container:
         return result
 
     def inject[T, **K](self, func: Callable[K, T]) -> Callable[K, T]:
+        """Decorator used to inject dependencies into function/method parameters.
+
+        ### Example:
+            ```python
+            @container.inject
+            def get_user(user_service: UserService = Inject(UserService)):
+                return user_service.get_user()
+            ```
+        """
+
         signature = get_cached_signature(func)
         type_hints = get_cached_type_hints(func)
 
@@ -423,7 +486,18 @@ class Container:
             return async_wrapper  # pyright: ignore[reportReturnType]
 
     def Depends(self, t: ProviderSource):
-        from fastapi import Depends
+        """Wrapper used to convert some dependency to be used in FastAPI.
+
+        Args:
+            t: Dependency to be used in FastAPI.
+
+        ### Example:
+            ```python
+            @app.get('/user')
+            def get_user(user_service: UserService = container.Depends(UserService)):
+                return user_service.get_user()
+            ```
+        """
 
         async def _dep():
             return await self.get_async(t)

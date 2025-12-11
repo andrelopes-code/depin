@@ -7,6 +7,22 @@ from depin._internal.request_scope import RequestScopeService
 
 
 class RequestScopeMiddleware(BaseHTTPMiddleware):
+    """FastAPI middleware that adds the current request to the request scope.
+
+    This allows for access to the current request in request-scoped providers.
+
+    ### Example:
+        ```py
+        DI.bind(
+            abstract=Request,
+            source=lambda: RequestScopeService.get_current_request(),
+            scope=DI.Scope.REQUEST,
+        )
+
+        def provider(request: Request): ...
+        ```
+    """
+
     @override
     async def dispatch(self, request: Request, call_next):
         async with RequestScopeService.request_scope_async():
