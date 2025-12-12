@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Callable, cast
+from typing import Any, Callable, Literal, cast
 
 from fastapi import Depends
 
@@ -642,21 +642,23 @@ class Container:
         return cls(**kwargs)
 
     def _class_needs_async_resolution[T](self, cls: type[T]) -> bool:
-        return self._class_needs_async_resolution_recursive(cls, set())
+        return self._class_needs_async_resolution_recursive(cls, {cls: True})
 
     def _callable_needs_async_resolution[T](self, func: Resolvable[T]) -> bool:
         if is_async_callable(func) or is_async_generator_callable(func):
             return True
 
-        return self._callable_needs_async_resolution_recursive(func, set())
+        return self._callable_needs_async_resolution_recursive(func, dict())
 
-    def _source_needs_async_recursive(self, source: ProviderSource, visited: set[Any]) -> bool:
-        source_id = id(source)
+    def _source_needs_async_recursive(
+        self,
+        source: ProviderSource,
+        visited: dict[Any, Literal[True]],
+    ) -> bool:
+        if source in visited:
+            raise CircularDependencyError(visited, source)
 
-        if source_id in visited:
-            raise CircularDependencyError(f'Circular dependency detected: {source}')
-
-        visited.add(source_id)
+        visited[source] = True
 
         try:
             if self._has_provider_for(source):
@@ -678,9 +680,13 @@ class Container:
                 return self._callable_needs_async_resolution_recursive(source, visited)
 
         finally:
-            visited.remove(source_id)
+            visited.pop(source, None)
 
-    def _callable_needs_async_resolution_recursive(self, func: Resolvable[Any], visited: set[Any]) -> bool:
+    def _callable_needs_async_resolution_recursive(
+        self,
+        func: Resolvable[Any],
+        visited: dict[Any, Literal[True]],
+    ) -> bool:
         signature = get_cached_signature(func)
         type_hints = get_cached_type_hints(func)
 
@@ -698,7 +704,11 @@ class Container:
 
         return False
 
-    def _class_needs_async_resolution_recursive(self, cls: type, visited: set[Any]) -> bool:
+    def _class_needs_async_resolution_recursive(
+        self,
+        cls: type,
+        visited: dict[Any, Literal[True]],
+    ) -> bool:
         signature = get_cached_signature(cls.__init__)
         type_hints = get_cached_type_hints(cls.__init__)
 

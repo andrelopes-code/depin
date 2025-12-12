@@ -1,8 +1,6 @@
+import contextlib
 import sys
 from pathlib import Path
-
-from example.database import Session
-from example.dependencies.database import db_session
 
 # Add project root dir to python path
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
@@ -12,7 +10,9 @@ from fastapi import FastAPI, Request
 
 from depin import Inject, RequestScopeService, Scope
 from depin.extensions.fastapi import RequestScopeMiddleware
+from example.database import Session
 from example.dependencies.container import DI
+from example.dependencies.database import db_session
 from example.service.user_service import UserService
 
 DI.bind(
@@ -23,7 +23,13 @@ DI.bind(
 )
 
 
-app = FastAPI()
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
 app.add_middleware(RequestScopeMiddleware)
 
 
