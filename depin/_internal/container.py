@@ -661,6 +661,21 @@ class Container:
         visited[source] = True
 
         try:
+            if not self._has_provider_for(source):
+                if isinstance(source, type):
+                    try:
+                        get_cached_signature(source.__init__)
+                        get_cached_type_hints(source.__init__)
+                    except (TypeError, AttributeError):
+                        return False
+
+                elif callable(source):
+                    try:
+                        get_cached_signature(source)
+                        get_cached_type_hints(source)
+                    except (TypeError, AttributeError):
+                        return False
+
             if self._has_provider_for(source):
                 provider_info = self._providers[source]
 
@@ -687,8 +702,11 @@ class Container:
         func: Resolvable[Any],
         visited: dict[Any, Literal[True]],
     ) -> bool:
-        signature = get_cached_signature(func)
-        type_hints = get_cached_type_hints(func)
+        try:
+            signature = get_cached_signature(func)
+            type_hints = get_cached_type_hints(func)
+        except (TypeError, AttributeError):
+            return False
 
         for name, param in signature.parameters.items():
             param_type = type_hints.get(name, None)
@@ -709,8 +727,11 @@ class Container:
         cls: type,
         visited: dict[Any, Literal[True]],
     ) -> bool:
-        signature = get_cached_signature(cls.__init__)
-        type_hints = get_cached_type_hints(cls.__init__)
+        try:
+            signature = get_cached_signature(cls.__init__)
+            type_hints = get_cached_type_hints(cls.__init__)
+        except (TypeError, AttributeError):
+            return False
 
         for name, param in signature.parameters.items():
             if name == 'self':
