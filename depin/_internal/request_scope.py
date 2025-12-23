@@ -56,8 +56,12 @@ class RequestScopeService:
 
         try:
             yield cls
+        except Exception:
+            import sys
 
-        finally:
+            cls._exit_request_scope(token, sys.exc_info())
+            raise
+        else:
             cls._exit_request_scope(token)
 
     @classmethod
@@ -67,8 +71,12 @@ class RequestScopeService:
 
         try:
             yield cls
+        except Exception:
+            import sys
 
-        finally:
+            await cls._exit_request_scope_async(token, sys.exc_info())
+            raise
+        else:
             await cls._exit_request_scope_async(token)
 
     @classmethod
@@ -77,41 +85,64 @@ class RequestScopeService:
         return token
 
     @classmethod
-    def _exit_request_scope(cls, token):
+    def _exit_request_scope(cls, token, exc_info=None):
         store = _GLOBAL_REQUEST_STORE.get(token)
 
         context_managers = store.get(cls.CONTEXT_MANAGERS_KEY, [])
 
-        for cm in reversed(context_managers):
-            try:
-                if hasattr(cm, '__exit__'):
-                    cm.__exit__(None, None, None)
-                elif hasattr(cm, 'close'):
-                    cm.close()
+        if exc_info and exc_info[0] is not None:
+            for cm in reversed(context_managers):
+                try:
+                    if hasattr(cm, '__exit__'):
+                        cm.__exit__(*exc_info)
+                    elif hasattr(cm, 'close'):
+                        cm.close()
 
-            except Exception:
-                pass
+                except Exception:
+                    pass
+        else:
+            for cm in reversed(context_managers):
+                try:
+                    if hasattr(cm, '__exit__'):
+                        cm.__exit__(None, None, None)
+                    elif hasattr(cm, 'close'):
+                        cm.close()
+
+                except Exception:
+                    pass
 
         _GLOBAL_REQUEST_STORE.reset(token)
 
     @classmethod
-    async def _exit_request_scope_async(cls, token):
+    async def _exit_request_scope_async(cls, token, exc_info=None):
         store = _GLOBAL_REQUEST_STORE.get()
-
         context_managers = store.get(cls.CONTEXT_MANAGERS_KEY, [])
 
-        for cm in reversed(context_managers):
-            try:
-                if hasattr(cm, '__aexit__'):
-                    await cm.__aexit__(None, None, None)
-                elif hasattr(cm, '__exit__'):
-                    cm.__exit__(None, None, None)
-                elif hasattr(cm, 'aclose'):
-                    await cm.aclose()
-                elif hasattr(cm, 'close'):
-                    cm.close()
-
-            except Exception:
-                pass
+        if exc_info and exc_info[0] is not None:
+            for cm in reversed(context_managers):
+                try:
+                    if hasattr(cm, '__aexit__'):
+                        await cm.__aexit__(*exc_info)
+                    elif hasattr(cm, '__exit__'):
+                        cm.__exit__(*exc_info)
+                    elif hasattr(cm, 'aclose'):
+                        await cm.aclose()
+                    elif hasattr(cm, 'close'):
+                        cm.close()
+                except Exception:
+                    pass
+        else:
+            for cm in reversed(context_managers):
+                try:
+                    if hasattr(cm, '__aexit__'):
+                        await cm.__aexit__(None, None, None)
+                    elif hasattr(cm, '__exit__'):
+                        cm.__exit__(None, None, None)
+                    elif hasattr(cm, 'aclose'):
+                        await cm.aclose()
+                    elif hasattr(cm, 'close'):
+                        cm.close()
+                except Exception:
+                    pass
 
         _GLOBAL_REQUEST_STORE.reset(token)
