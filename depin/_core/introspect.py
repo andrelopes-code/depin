@@ -59,7 +59,7 @@ class AnnotatedMeta:
     named: 'Token[object] | str | None'
 
 
-def _is_object_token(value: object) -> TypeGuard[Token[object]]:
+def is_object_token(value: object) -> TypeGuard[Token[object]]:
     """Token's T is type-only; at runtime every Token can be treated as Token[object]."""
     return isinstance(value, Token)
 
@@ -73,7 +73,7 @@ def extract_annotated_meta(annotation: object) -> AnnotatedMeta:
     named: Token[object] | str | None = None
 
     for extra in extras:
-        if _is_object_token(extra):
+        if is_object_token(extra):
             if token is None:
                 token = extra
         elif isinstance(extra, Inject):

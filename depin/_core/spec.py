@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import TypeGuard
 
 from depin._core.markers import Token
 from depin._core.scope import Scope
@@ -26,6 +27,11 @@ class ValueBinding[T]:
 
     token: Token[T]
     value: T
+
+
+def is_value_binding(value: object) -> TypeGuard[ValueBinding[object]]:
+    """ValueBinding's T is erased at runtime; any instance is observable as ValueBinding[object]."""
+    return isinstance(value, ValueBinding)
 
 
 @dataclass(frozen=True, slots=True)
