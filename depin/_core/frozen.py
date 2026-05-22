@@ -1,8 +1,10 @@
+import contextlib
+from collections.abc import AsyncGenerator, Generator
 from typing import TypeGuard, overload
 
 from depin._core.introspect import is_object_token
 from depin._core.markers import Token
-from depin._core.scope import Scope, ScopeFrame
+from depin._core.scope import Scope, ScopeFrame, active_frame, push_frame
 from depin._core.spec import ProviderKey, ProviderShape, ProviderSpec, ResolutionPlan
 from depin.errors import AsyncInSyncContextError, MissingProviderError
 
@@ -53,9 +55,24 @@ class FrozenContainer:
             value = self._construct_sync(spec)
             self._root.put(spec, value)
             return value
-        if spec.scope is Scope.TRANSIENT:
-            return self._construct_sync(spec)
-        raise NotImplementedError('scoped resolution not yet implemented')
+        if spec.scope is Scope.SCOPED:
+            frame = active_frame()
+            if spec in frame:
+                return frame.get(spec)
+            value = self._construct_sync(spec)
+            frame.put(spec, value)
+            return value
+        return self._construct_sync(spec)
+
+    @contextlib.contextmanager
+    def scope(self) -> Generator[ScopeFrame]:
+        with push_frame() as frame:
+            yield frame
+
+    @contextlib.asynccontextmanager
+    async def ascope(self) -> AsyncGenerator[ScopeFrame]:
+        with push_frame() as frame:
+            yield frame
 
     def _construct_sync(self, spec: ProviderSpec) -> object:
         if spec.shape is ProviderShape.VALUE:
