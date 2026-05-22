@@ -1,12 +1,12 @@
 from collections.abc import Callable, Iterable
-from typing import Self, final
+from typing import Self, final, overload
 
 from depin._core.markers import Token
 from depin._core.scope import Scope
 from depin._core.spec import BindRecord, FrameBinding, ValueBinding
 
 
-type _BindFn = Callable[[type[object], Scope, type[object] | None, str | None], None]
+type _BindFn = Callable[[type[object] | Callable[..., object], Scope, type[object] | None, str | None], None]
 
 
 @final
@@ -25,9 +25,14 @@ class ScopeDecorator:
         self._provides = provides
         self._tag = tag
 
-    def __call__[T](self, cls: type[T]) -> type[T]:
-        self._bind(cls, self._scope, self._provides, self._tag)
-        return cls
+    @overload
+    def __call__[T](self, target: type[T]) -> type[T]: ...
+    @overload
+    def __call__[**P, R](self, target: Callable[P, R]) -> Callable[P, R]: ...
+    def __call__(self, target: object) -> object:
+        assert isinstance(target, type) or callable(target)
+        self._bind(target, self._scope, self._provides, self._tag)
+        return target
 
 
 class Registry:
@@ -96,7 +101,7 @@ class Registry:
 
     def _record_bind(
         self,
-        source: type[object],
+        source: type[object] | Callable[..., object],
         scope: Scope,
         provides: type[object] | None,
         tag: str | None,

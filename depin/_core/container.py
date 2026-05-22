@@ -82,7 +82,7 @@ class Container:
 
     def _record_bind(
         self,
-        source: type[object],
+        source: type[object] | Callable[..., object],
         scope: Scope,
         provides: type[object] | None,
         tag: str | None,
