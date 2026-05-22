@@ -1,5 +1,7 @@
+from typing import Annotated, Protocol
+
 from depin._core.container import Container
-from depin._core.markers import Token
+from depin._core.markers import Tag, Token
 from depin._core.scope import Scope
 
 
@@ -40,3 +42,29 @@ def test_class_with_dep() -> None:
     frozen = Container().bind(A, scope=Scope.SINGLETON).bind(B, scope=Scope.SINGLETON).freeze()
     b = frozen[B]
     assert isinstance(b.a, A)
+
+
+def test_tag_disambiguates_two_impls() -> None:
+    class Cache(Protocol):
+        name: str
+
+    class RedisCache:
+        name = 'redis'
+
+    class InMemCache:
+        name = 'inmem'
+
+    def use(
+        primary: Annotated[Cache, Tag('primary')],
+        fallback: Annotated[Cache, Tag('fallback')],
+    ) -> tuple[str, str]:
+        return primary.name, fallback.name
+
+    frozen = (
+        Container()
+        .bind(RedisCache, provides=Cache, tag='primary', scope=Scope.SINGLETON)
+        .bind(InMemCache, provides=Cache, tag='fallback', scope=Scope.SINGLETON)
+        .bind(use, scope=Scope.SINGLETON, provides=tuple)
+        .freeze()
+    )
+    assert frozen[tuple] == ('redis', 'inmem')
