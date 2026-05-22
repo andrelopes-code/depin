@@ -1,8 +1,10 @@
 from collections.abc import Callable, Iterable
 from typing import Self
 
+from depin._core.frozen import FrozenContainer
 from depin._core.markers import Token
 from depin._core.registry import Registry, ScopeDecorator
+from depin._core.resolver import build_plan
 from depin._core.scope import Scope
 from depin._core.spec import BindRecord, ValueBinding
 
@@ -67,6 +69,9 @@ class Container:
 
     def records(self) -> Iterable[BindRecord]:
         return tuple(self._records)
+
+    def freeze(self) -> FrozenContainer:
+        return FrozenContainer(build_plan(self.records()))
 
     def _record_bind(
         self,
