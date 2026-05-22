@@ -1,41 +1,28 @@
 from collections.abc import Callable, Iterable
-from typing import Self, final
+from typing import Self
 
 from depin._core.markers import Token
+from depin._core.registry import Registry, ScopeDecorator
 from depin._core.scope import Scope
 from depin._core.spec import BindRecord, ValueBinding
 
 
-type _BindFn = Callable[[type[object], Scope, type[object] | None, str | None], None]
+class Container:
+    __slots__ = ('_records',)
 
-
-@final
-class ScopeDecorator:
-    __slots__ = ('_bind', '_provides', '_scope', '_tag')
-
-    def __init__(
-        self,
-        bind: _BindFn,
-        scope: Scope,
-        provides: type[object] | None,
-        tag: str | None,
-    ) -> None:
-        self._bind = bind
-        self._scope = scope
-        self._provides = provides
-        self._tag = tag
-
-    def __call__[T](self, cls: type[T]) -> type[T]:
-        self._bind(cls, self._scope, self._provides, self._tag)
-        return cls
-
-
-class Registry:
-    __slots__ = ('_records', 'name')
-
-    def __init__(self, name: str = '') -> None:
-        self.name = name
+    def __init__(self) -> None:
         self._records: list[BindRecord] = []
+
+    @classmethod
+    def from_(cls, *registries: Registry) -> Self:
+        container = cls()
+        for reg in registries:
+            _ = container.merge(reg)
+        return container
+
+    def merge(self, other: 'Registry | Container') -> Self:
+        self._records.extend(other.records())
+        return self
 
     def bind[T](
         self,
@@ -80,12 +67,6 @@ class Registry:
 
     def records(self) -> Iterable[BindRecord]:
         return tuple(self._records)
-
-    def __or__(self, other: 'Registry') -> 'Registry':
-        merged = Registry(name=self.name or other.name)
-        merged._records.extend(self._records)
-        merged._records.extend(other._records)
-        return merged
 
     def _record_bind(
         self,
