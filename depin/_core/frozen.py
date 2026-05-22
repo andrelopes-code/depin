@@ -1,22 +1,46 @@
 import contextlib
-from collections.abc import AsyncGenerator, Awaitable, Generator
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Generator, Iterator
+from contextlib import AbstractAsyncContextManager, AbstractContextManager
+from dataclasses import dataclass
 from typing import TypeGuard, overload
 
 from depin._core.introspect import is_object_token
 from depin._core.markers import Token
 from depin._core.scope import Scope, ScopeFrame, active_frame, push_frame
 from depin._core.spec import ProviderKey, ProviderShape, ProviderSpec, ResolutionPlan
-from depin.errors import AsyncInSyncContextError, MissingProviderError
+from depin.errors import AsyncInSyncContextError, MissingProviderError, OutsideScopeError
+
+
+@dataclass(frozen=True, slots=True)
+class _SyncGenTeardown:
+    gen: Iterator[object]
+
+
+@dataclass(frozen=True, slots=True)
+class _AsyncGenTeardown:
+    gen: AsyncIterator[object]
+
+
+@dataclass(frozen=True, slots=True)
+class _SyncCMTeardown:
+    cm: AbstractContextManager[object]
+
+
+@dataclass(frozen=True, slots=True)
+class _AsyncCMTeardown:
+    cm: AbstractAsyncContextManager[object]
+
+
+type _Teardown = _SyncGenTeardown | _AsyncGenTeardown | _SyncCMTeardown | _AsyncCMTeardown
 
 
 class FrozenContainer:
     """Immutable view of a resolved dependency graph.
 
-    The internal resolver carries provider results as `object` because the
-    graph spec is type-erased; the public API (`__getitem__`, `resolve`,
-    `aresolve`) re-states the static result type. The narrowing is a single
-    documented boundary: providers must produce values matching the static
-    type of their declared key.
+    The internal resolver carries provider results as ``object`` because the graph
+    spec is type-erased; the public API (``__getitem__``, ``resolve``, ``aresolve``)
+    re-states the static result type. The narrowing is a single documented boundary:
+    providers must produce values matching the static type of their declared key.
     """
 
     __slots__ = ('_plan', '_root')
@@ -39,6 +63,25 @@ class FrozenContainer:
     async def aresolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
         spec = self._lookup(key, tag)
         return await self._resolve_async(spec)  # pyright: ignore[reportReturnType]
+
+    @contextlib.contextmanager
+    def scope(self) -> Generator[ScopeFrame]:
+        with push_frame() as frame:
+            try:
+                yield frame
+            finally:
+                self._drain_sync(frame)
+
+    @contextlib.asynccontextmanager
+    async def ascope(self) -> AsyncGenerator[ScopeFrame]:
+        with push_frame() as frame:
+            try:
+                yield frame
+            finally:
+                await self._drain_async(frame)
+
+    async def aclose(self) -> None:
+        await self._drain_async(self._root)
 
     def _lookup(self, key: object, tag: str | None) -> ProviderSpec:
         if not _is_provider_key(key):
@@ -68,19 +111,11 @@ class FrozenContainer:
             return value
         return self._construct_sync(spec)
 
-    @contextlib.contextmanager
-    def scope(self) -> Generator[ScopeFrame]:
-        with push_frame() as frame:
-            yield frame
-
-    @contextlib.asynccontextmanager
-    async def ascope(self) -> AsyncGenerator[ScopeFrame]:
-        with push_frame() as frame:
-            yield frame
-
     def _construct_sync(self, spec: ProviderSpec) -> object:
         if spec.shape is ProviderShape.VALUE:
             return spec.source
+        if spec.shape in {ProviderShape.ASYNC_FUNCTION, ProviderShape.ASYNC_GENERATOR, ProviderShape.ASYNC_CONTEXT_MANAGER}:
+            raise AsyncInSyncContextError(f'{spec.key!r} is async; use aresolve inside ascope()')
         kwargs = self._resolve_params_sync(spec)
         source = spec.source
         if spec.shape is ProviderShape.CLASS:
@@ -89,11 +124,27 @@ class FrozenContainer:
         if spec.shape is ProviderShape.FUNCTION:
             assert callable(source)
             return source(**kwargs)
-        raise NotImplementedError(f'{spec.shape} sync construction not yet implemented')
+        if spec.shape is ProviderShape.GENERATOR:
+            assert callable(source)
+            gen = _as_sync_iter(source(**kwargs))
+            value = next(gen)
+            self._frame_for(spec).teardowns.append(_SyncGenTeardown(gen))
+            return value
+        if spec.shape is ProviderShape.CONTEXT_MANAGER:
+            assert callable(source)
+            cm = _as_sync_cm(source(**kwargs))
+            value = cm.__enter__()
+            self._frame_for(spec).teardowns.append(_SyncCMTeardown(cm))
+            return value
+        raise AssertionError(f'unhandled shape: {spec.shape}')
 
     def _resolve_params_sync(self, spec: ProviderSpec) -> dict[str, object]:
         out: dict[str, object] = {}
         for param in spec.params:
+            frame = self._optional_frame()
+            if frame is not None and param.key in frame:
+                out[param.name] = frame.get(param.key)
+                continue
             dep = self._plan.by_key.get((param.key, param.tag))
             if dep is None:
                 if param.has_default:
@@ -134,11 +185,39 @@ class FrozenContainer:
         if spec.shape is ProviderShape.ASYNC_FUNCTION:
             assert callable(source)
             return await _as_awaitable(source(**kwargs))
-        raise NotImplementedError(f'{spec.shape} async construction not yet implemented')
+        if spec.shape is ProviderShape.GENERATOR:
+            assert callable(source)
+            gen = _as_sync_iter(source(**kwargs))
+            value = next(gen)
+            self._frame_for(spec).teardowns.append(_SyncGenTeardown(gen))
+            return value
+        if spec.shape is ProviderShape.ASYNC_GENERATOR:
+            assert callable(source)
+            agen = _as_async_iter(source(**kwargs))
+            value = await agen.__anext__()
+            self._frame_for(spec).teardowns.append(_AsyncGenTeardown(agen))
+            return value
+        if spec.shape is ProviderShape.CONTEXT_MANAGER:
+            assert callable(source)
+            cm = _as_sync_cm(source(**kwargs))
+            value = cm.__enter__()
+            self._frame_for(spec).teardowns.append(_SyncCMTeardown(cm))
+            return value
+        if spec.shape is ProviderShape.ASYNC_CONTEXT_MANAGER:
+            assert callable(source)
+            acm = _as_async_cm(source(**kwargs))
+            value = await acm.__aenter__()
+            self._frame_for(spec).teardowns.append(_AsyncCMTeardown(acm))
+            return value
+        raise AssertionError(f'unhandled shape: {spec.shape}')
 
     async def _resolve_params_async(self, spec: ProviderSpec) -> dict[str, object]:
         out: dict[str, object] = {}
         for param in spec.params:
+            frame = self._optional_frame()
+            if frame is not None and param.key in frame:
+                out[param.name] = frame.get(param.key)
+                continue
             dep = self._plan.by_key.get((param.key, param.tag))
             if dep is None:
                 if param.has_default:
@@ -148,6 +227,76 @@ class FrozenContainer:
                 )
             out[param.name] = await self._resolve_async(dep)
         return out
+
+    def _frame_for(self, spec: ProviderSpec) -> ScopeFrame:
+        if spec.scope is Scope.SINGLETON:
+            return self._root
+        return active_frame()
+
+    def _optional_frame(self) -> ScopeFrame | None:
+        try:
+            return active_frame()
+        except OutsideScopeError:
+            return None
+
+    def _drain_sync(self, frame: ScopeFrame) -> None:
+        errors: list[Exception] = []
+        for td in reversed(frame.teardowns):
+            try:
+                _run_sync_teardown(td)
+            except Exception as exc:  # noqa: BLE001 (collect every teardown failure; KeyboardInterrupt etc. still propagate)
+                errors.append(exc)
+        frame.teardowns.clear()
+        if errors:
+            raise ExceptionGroup('depin teardown errors', errors)
+
+    async def _drain_async(self, frame: ScopeFrame) -> None:
+        errors: list[Exception] = []
+        for td in reversed(frame.teardowns):
+            try:
+                await _run_async_teardown(td)
+            except Exception as exc:  # noqa: BLE001 (collect every teardown failure; KeyboardInterrupt etc. still propagate)
+                errors.append(exc)
+        frame.teardowns.clear()
+        if errors:
+            raise ExceptionGroup('depin teardown errors', errors)
+
+
+def _run_sync_teardown(td: object) -> None:
+    if isinstance(td, _SyncGenTeardown):
+        try:
+            _ = next(td.gen)
+        except StopIteration:
+            return
+        raise RuntimeError('generator provider yielded more than once')
+    if isinstance(td, _SyncCMTeardown):
+        _ = td.cm.__exit__(None, None, None)
+        return
+    if isinstance(td, _AsyncGenTeardown | _AsyncCMTeardown):
+        raise RuntimeError('async teardown registered in sync scope; use ascope() instead')
+    raise AssertionError(f'unknown teardown record: {td!r}')
+
+
+async def _run_async_teardown(td: object) -> None:
+    if isinstance(td, _SyncGenTeardown):
+        try:
+            _ = next(td.gen)
+        except StopIteration:
+            return
+        raise RuntimeError('generator provider yielded more than once')
+    if isinstance(td, _AsyncGenTeardown):
+        try:
+            _ = await td.gen.__anext__()
+        except StopAsyncIteration:
+            return
+        raise RuntimeError('async generator provider yielded more than once')
+    if isinstance(td, _SyncCMTeardown):
+        _ = td.cm.__exit__(None, None, None)
+        return
+    if isinstance(td, _AsyncCMTeardown):
+        _ = await td.cm.__aexit__(None, None, None)
+        return
+    raise AssertionError(f'unknown teardown record: {td!r}')
 
 
 def _is_provider_key(value: object) -> TypeGuard[ProviderKey]:
@@ -159,11 +308,42 @@ def _is_object_awaitable(value: object) -> TypeGuard[Awaitable[object]]:
 
 
 def _as_awaitable(value: object) -> Awaitable[object]:
-    """Narrow the resolver's `object` to `Awaitable[object]` for `await` dispatch.
-
-    The shape detector classified the source as ASYNC_FUNCTION; its call result is
-    a coroutine. Python's typing has no static way to express "this object is a
-    coroutine" coming from a generic callable, so we assert at the boundary.
-    """
+    """Narrow the resolver's `object` to `Awaitable[object]` for `await` dispatch."""
     assert _is_object_awaitable(value), f'async provider returned non-awaitable {value!r}'
+    return value
+
+
+def _is_sync_iter(value: object) -> TypeGuard[Iterator[object]]:
+    return isinstance(value, Iterator)
+
+
+def _as_sync_iter(value: object) -> Iterator[object]:
+    assert _is_sync_iter(value), f'generator provider returned non-iterator {value!r}'
+    return value
+
+
+def _is_async_iter(value: object) -> TypeGuard[AsyncIterator[object]]:
+    return isinstance(value, AsyncIterator)
+
+
+def _as_async_iter(value: object) -> AsyncIterator[object]:
+    assert _is_async_iter(value), f'async generator provider returned non-async-iterator {value!r}'
+    return value
+
+
+def _is_sync_cm(value: object) -> TypeGuard[AbstractContextManager[object]]:
+    return isinstance(value, AbstractContextManager)
+
+
+def _as_sync_cm(value: object) -> AbstractContextManager[object]:
+    assert _is_sync_cm(value), f'context manager provider returned non-context-manager {value!r}'
+    return value
+
+
+def _is_async_cm(value: object) -> TypeGuard[AbstractAsyncContextManager[object]]:
+    return isinstance(value, AbstractAsyncContextManager)
+
+
+def _as_async_cm(value: object) -> AbstractAsyncContextManager[object]:
+    assert _is_async_cm(value), f'async context manager provider returned non-async-CM {value!r}'
     return value
