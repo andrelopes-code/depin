@@ -227,15 +227,57 @@ def _validate_params(
     specs: Iterable[ProviderSpec],
     by_key: dict[tuple[ProviderKey, str | None], ProviderSpec],
 ) -> None:
-    for spec in specs:
-        for param in spec.params:
-            if param.has_default:
-                continue
-            if (param.key, param.tag) not in by_key:
-                raise MissingProviderError(
-                    f"no provider for {_fmt(param.key)} "
-                    f"(required by {_fmt(spec.key)}, parameter '{param.name}')"
-                )
+    missing: dict[tuple[ProviderKey, str | None], tuple[tuple[ProviderSpec, ...], ProviderSpec, str]] = {}
+    for root in specs:
+        _collect_missing(root, by_key, (root,), missing)
+    if not missing:
+        return
+    ident, (chain, owner, param_name) = max(missing.items(), key=lambda kv: len(kv[1][0]))
+    key, _tag = ident
+    path = ' -> '.join(_fmt(s.key) for s in chain)
+    suggestions = _suggest_candidates(key)
+    extra = f'; candidates: {", ".join(suggestions[:5])}' if suggestions else ''
+    raise MissingProviderError(
+        f'no provider for {_fmt(key)} '
+        f"(required by {_fmt(owner.key)}.{param_name}; "
+        f'resolution chain: {path} -> {_fmt(key)}){extra}'
+    )
+
+
+def _collect_missing(
+    spec: ProviderSpec,
+    by_key: dict[tuple[ProviderKey, str | None], ProviderSpec],
+    chain: tuple[ProviderSpec, ...],
+    missing: dict[tuple[ProviderKey, str | None], tuple[tuple[ProviderSpec, ...], ProviderSpec, str]],
+) -> None:
+    for param in spec.params:
+        if param.has_default:
+            continue
+        dep = by_key.get((param.key, param.tag))
+        if dep is None:
+            ident = (param.key, param.tag)
+            if ident not in missing or len(chain) > len(missing[ident][0]):
+                missing[ident] = (chain, spec, param.name)
+            continue
+        if any(dep is c for c in chain):
+            continue
+        _collect_missing(dep, by_key, (*chain, dep), missing)
+
+
+def _suggest_candidates(target: object) -> list[str]:
+    """Scan live classes for `@provides(target)` hints. Used only at error time."""
+    if not isinstance(target, type):
+        return []
+    import gc
+
+    out: list[str] = []
+    for obj in gc.get_objects():
+        if not isinstance(obj, type):
+            continue
+        prov = get_provides(obj)
+        if prov is target:
+            out.append(f'{obj.__module__}.{obj.__qualname__}')
+    return out
 
 
 def _toposort(

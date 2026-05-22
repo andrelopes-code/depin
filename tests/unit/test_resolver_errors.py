@@ -44,6 +44,43 @@ def test_cycle_detected() -> None:
     assert 'B' in str(exc.value)
 
 
+def test_missing_provider_message_includes_chain() -> None:
+    class A: ...
+
+    class B:
+        def __init__(self, a: A) -> None: ...
+
+    class C:
+        def __init__(self, b: B) -> None: ...
+
+    r = Registry().bind(B, scope=Scope.SINGLETON).bind(C, scope=Scope.SINGLETON)
+    with pytest.raises(MissingProviderError) as exc:
+        _ = build_plan(r.records())
+    msg = str(exc.value)
+    assert 'A' in msg
+    assert 'B' in msg
+    assert 'C' in msg
+
+
+def test_missing_provider_suggests_candidates_with_provides() -> None:
+    from depin._core.markers import provides
+
+    class Database: ...
+
+    @provides(Database)
+    class PgDatabase(Database): ...
+
+    class Repo:
+        def __init__(self, db: Database) -> None: ...
+
+    # PgDatabase is referenced via @provides — keep it live so the gc-scan sees it.
+    assert PgDatabase is not None
+    r = Registry().bind(Repo, scope=Scope.SINGLETON)
+    with pytest.raises(MissingProviderError) as exc:
+        _ = build_plan(r.records())
+    assert 'PgDatabase' in str(exc.value)
+
+
 def test_sync_chain_with_async_dep_rejected() -> None:
     class A: ...
 
