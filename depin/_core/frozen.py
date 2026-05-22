@@ -1,5 +1,5 @@
 import contextlib
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Awaitable, Generator
 from typing import TypeGuard, overload
 
 from depin._core.introspect import is_object_token
@@ -35,6 +35,10 @@ class FrozenContainer:
     def resolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
         spec = self._lookup(key, tag)
         return self._resolve_sync(spec)  # pyright: ignore[reportReturnType]
+
+    async def aresolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
+        spec = self._lookup(key, tag)
+        return await self._resolve_async(spec)  # pyright: ignore[reportReturnType]
 
     def _lookup(self, key: object, tag: str | None) -> ProviderSpec:
         if not _is_provider_key(key):
@@ -100,6 +104,66 @@ class FrozenContainer:
             out[param.name] = self._resolve_sync(dep)
         return out
 
+    async def _resolve_async(self, spec: ProviderSpec) -> object:
+        if spec.scope is Scope.SINGLETON:
+            if spec in self._root:
+                return self._root.get(spec)
+            value = await self._construct_async(spec)
+            self._root.put(spec, value)
+            return value
+        if spec.scope is Scope.SCOPED:
+            frame = active_frame()
+            if spec in frame:
+                return frame.get(spec)
+            value = await self._construct_async(spec)
+            frame.put(spec, value)
+            return value
+        return await self._construct_async(spec)
+
+    async def _construct_async(self, spec: ProviderSpec) -> object:
+        if spec.shape is ProviderShape.VALUE:
+            return spec.source
+        kwargs = await self._resolve_params_async(spec)
+        source = spec.source
+        if spec.shape is ProviderShape.CLASS:
+            assert isinstance(source, type)
+            return source(**kwargs)
+        if spec.shape is ProviderShape.FUNCTION:
+            assert callable(source)
+            return source(**kwargs)
+        if spec.shape is ProviderShape.ASYNC_FUNCTION:
+            assert callable(source)
+            return await _as_awaitable(source(**kwargs))
+        raise NotImplementedError(f'{spec.shape} async construction not yet implemented')
+
+    async def _resolve_params_async(self, spec: ProviderSpec) -> dict[str, object]:
+        out: dict[str, object] = {}
+        for param in spec.params:
+            dep = self._plan.by_key.get((param.key, param.tag))
+            if dep is None:
+                if param.has_default:
+                    continue
+                raise MissingProviderError(
+                    f"missing provider for parameter '{param.name}' of {spec.key!r}"
+                )
+            out[param.name] = await self._resolve_async(dep)
+        return out
+
 
 def _is_provider_key(value: object) -> TypeGuard[ProviderKey]:
     return isinstance(value, type) or is_object_token(value) or isinstance(value, str)
+
+
+def _is_object_awaitable(value: object) -> TypeGuard[Awaitable[object]]:
+    return isinstance(value, Awaitable)
+
+
+def _as_awaitable(value: object) -> Awaitable[object]:
+    """Narrow the resolver's `object` to `Awaitable[object]` for `await` dispatch.
+
+    The shape detector classified the source as ASYNC_FUNCTION; its call result is
+    a coroutine. Python's typing has no static way to express "this object is a
+    coroutine" coming from a generic callable, so we assert at the boundary.
+    """
+    assert _is_object_awaitable(value), f'async provider returned non-awaitable {value!r}'
+    return value
