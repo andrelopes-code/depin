@@ -22,6 +22,7 @@ def test_provider_shape_members() -> None:
         'CONTEXT_MANAGER',
         'ASYNC_CONTEXT_MANAGER',
         'VALUE',
+        'FRAME',
     }
     assert {s.name for s in ProviderShape} == expected
 

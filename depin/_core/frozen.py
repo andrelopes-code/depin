@@ -211,6 +211,8 @@ class FrozenContainer:
     def _construct_sync(self, spec: ProviderSpec) -> object:
         if spec.shape is ProviderShape.VALUE:
             return spec.source
+        if spec.shape is ProviderShape.FRAME:
+            return self._read_frame(spec)
         if spec.shape in {ProviderShape.ASYNC_FUNCTION, ProviderShape.ASYNC_GENERATOR, ProviderShape.ASYNC_CONTEXT_MANAGER}:
             raise AsyncInSyncContextError(f'{spec.key!r} is async; use aresolve inside ascope()')
         kwargs = self._resolve_params_sync(spec)
@@ -271,6 +273,8 @@ class FrozenContainer:
     async def _construct_async(self, spec: ProviderSpec) -> object:
         if spec.shape is ProviderShape.VALUE:
             return spec.source
+        if spec.shape is ProviderShape.FRAME:
+            return self._read_frame(spec)
         kwargs = await self._resolve_params_async(spec)
         source = spec.source
         if spec.shape is ProviderShape.CLASS:
@@ -329,6 +333,15 @@ class FrozenContainer:
         if spec.scope is Scope.SINGLETON:
             return self._root
         return active_frame()
+
+    def _read_frame(self, spec: ProviderSpec) -> object:
+        frame = active_frame()
+        if spec.key in frame:
+            return frame.get(spec.key)
+        raise MissingProviderError(
+            f'no value in active scope for {spec.key!r}; '
+            'was the value placed in the frame by middleware or scope-setup code?'
+        )
 
     def _optional_frame(self) -> ScopeFrame | None:
         try:

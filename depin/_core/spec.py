@@ -16,6 +16,7 @@ class ProviderShape(Enum):
     CONTEXT_MANAGER = auto()
     ASYNC_CONTEXT_MANAGER = auto()
     VALUE = auto()
+    FRAME = auto()
 
 
 type ProviderKey = type[object] | Token[object] | str
@@ -32,6 +33,22 @@ class ValueBinding[T]:
 def is_value_binding(value: object) -> TypeGuard[ValueBinding[object]]:
     """ValueBinding's T is erased at runtime; any instance is observable as ValueBinding[object]."""
     return isinstance(value, ValueBinding)
+
+
+@dataclass(frozen=True, slots=True)
+class FrameBinding:
+    """Marker source for `Container.frame_provides(key)`.
+
+    The provider value is expected to be in the active scope frame keyed by
+    ``key``; the resolver does no factory call. Used for values supplied by
+    middleware or other external context (e.g. ``fastapi.Request``).
+    """
+
+    key: 'type[object] | Token[object]'
+
+
+def is_frame_binding(value: object) -> TypeGuard[FrameBinding]:
+    return isinstance(value, FrameBinding)
 
 
 @dataclass(frozen=True, slots=True)

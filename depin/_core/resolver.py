@@ -12,6 +12,7 @@ from depin._core.spec import (
     ProviderShape,
     ProviderSpec,
     ResolutionPlan,
+    is_frame_binding,
     is_value_binding,
 )
 from depin.errors import CircularDependencyError, MissingProviderError
@@ -80,6 +81,18 @@ def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec
             source=binding.value,
             scope=rec.scope,
             shape=ProviderShape.VALUE,
+            needs_async=False,
+            params=(),
+        )
+
+    if is_frame_binding(rec.source):
+        frame = rec.source
+        return ProviderSpec(
+            key=_as_provider_key(frame.key),
+            tag=rec.tag,
+            source=frame,
+            scope=rec.scope,
+            shape=ProviderShape.FRAME,
             needs_async=False,
             params=(),
         )

@@ -6,7 +6,7 @@ from depin._core.markers import Token
 from depin._core.registry import Registry, ScopeDecorator
 from depin._core.resolver import build_plan
 from depin._core.scope import Scope
-from depin._core.spec import BindRecord, ValueBinding
+from depin._core.spec import BindRecord, FrameBinding, ValueBinding
 
 
 class Container:
@@ -40,6 +40,13 @@ class Container:
     def value[T](self, token: Token[T], value: T) -> Self:
         self._records.append(
             BindRecord(source=ValueBinding(token, value), scope=Scope.SINGLETON, provides=None, tag=None)
+        )
+        return self
+
+    def frame_provides[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> Self:
+        """Declare a binding satisfied by the active scope frame (e.g. middleware-injected values)."""
+        self._records.append(
+            BindRecord(source=FrameBinding(key), scope=Scope.SCOPED, provides=None, tag=tag)
         )
         return self
 
