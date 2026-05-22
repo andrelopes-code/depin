@@ -21,6 +21,14 @@ type ProviderKey = type[object] | Token[object] | str
 
 
 @dataclass(frozen=True, slots=True)
+class ValueBinding[T]:
+    """Marker source carried by BindRecord for `Container.value(token, x)` bindings."""
+
+    token: Token[T]
+    value: T
+
+
+@dataclass(frozen=True, slots=True)
 class BindRecord:
     source: object
     scope: Scope
