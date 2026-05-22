@@ -1,6 +1,7 @@
 import contextlib
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Generator, Iterator
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TypeGuard, overload
 
@@ -32,6 +33,12 @@ class _AsyncCMTeardown:
 
 
 type _Teardown = _SyncGenTeardown | _AsyncGenTeardown | _SyncCMTeardown | _AsyncCMTeardown
+
+
+type _OverrideFrame = dict[tuple[ProviderKey, str | None], object]
+
+
+_overrides: ContextVar[tuple[_OverrideFrame, ...]] = ContextVar('depin_overrides', default=())
 
 
 class FrozenContainer:
@@ -83,9 +90,29 @@ class FrozenContainer:
     async def aclose(self) -> None:
         await self._drain_async(self._root)
 
+    @contextlib.contextmanager
+    def override[T](
+        self,
+        key: type[T] | Token[T],
+        *,
+        with_: T,
+        tag: str | None = None,
+    ) -> Generator['FrozenContainer']:
+        if not _is_provider_key(key):
+            raise MissingProviderError(f'cannot override {key!r}: not a valid key type')
+        frame: _OverrideFrame = {(key, tag): with_}
+        token = _overrides.set((*_overrides.get(), frame))
+        try:
+            yield self
+        finally:
+            _overrides.reset(token)
+
     def _lookup(self, key: object, tag: str | None) -> ProviderSpec:
         if not _is_provider_key(key):
             raise MissingProviderError(f'cannot look up provider for {key!r}: not a valid key type')
+        for frame in reversed(_overrides.get()):
+            if (key, tag) in frame:
+                return _override_spec(key, tag, frame[(key, tag)])
         spec = self._plan.by_key.get((key, tag))
         if spec is None:
             raise MissingProviderError(f'no provider for {key!r} (tag={tag!r})')
@@ -297,6 +324,29 @@ async def _run_async_teardown(td: object) -> None:
         _ = await td.cm.__aexit__(None, None, None)
         return
     raise AssertionError(f'unknown teardown record: {td!r}')
+
+
+def _override_spec(key: ProviderKey, tag: str | None, replacement: object) -> ProviderSpec:
+    """Build a synthetic transient ProviderSpec for an active override entry."""
+    if callable(replacement) and not isinstance(replacement, type):
+        return ProviderSpec(
+            key=key,
+            tag=tag,
+            source=replacement,
+            scope=Scope.TRANSIENT,
+            shape=ProviderShape.FUNCTION,
+            needs_async=False,
+            params=(),
+        )
+    return ProviderSpec(
+        key=key,
+        tag=tag,
+        source=replacement,
+        scope=Scope.TRANSIENT,
+        shape=ProviderShape.VALUE,
+        needs_async=False,
+        params=(),
+    )
 
 
 def _is_provider_key(value: object) -> TypeGuard[ProviderKey]:
