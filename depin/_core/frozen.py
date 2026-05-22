@@ -1,11 +1,13 @@
 import contextlib
-from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Generator, Iterator
+import functools
+import inspect
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Generator, Iterator
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TypeGuard, overload
 
-from depin._core.introspect import is_object_token
+from depin._core.introspect import extract_annotated_meta, is_object_token
 from depin._core.markers import Token
 from depin._core.scope import Scope, ScopeFrame, active_frame, push_frame
 from depin._core.spec import ProviderKey, ProviderShape, ProviderSpec, ResolutionPlan
@@ -71,6 +73,12 @@ class FrozenContainer:
         spec = self._lookup(key, tag)
         return await self._resolve_async(spec)  # pyright: ignore[reportReturnType]
 
+    def _resolve_any(self, key: ProviderKey, tag: str | None) -> object:
+        return self._resolve_sync(self._lookup(key, tag))
+
+    async def _aresolve_any(self, key: ProviderKey, tag: str | None) -> object:
+        return await self._resolve_async(self._lookup(key, tag))
+
     @contextlib.contextmanager
     def scope(self) -> Generator[ScopeFrame]:
         with push_frame() as frame:
@@ -89,6 +97,68 @@ class FrozenContainer:
 
     async def aclose(self) -> None:
         await self._drain_async(self._root)
+
+    @overload
+    def inject[**P, R](self, fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]: ...
+    @overload
+    def inject[**P, R](self, fn: Callable[P, R]) -> Callable[P, R]: ...
+    def inject(self, fn: Callable[..., object]) -> Callable[..., object]:
+        sig = inspect.signature(fn)
+        try:
+            hints = inspect.get_annotations(fn, eval_str=True)
+        except NameError:
+            hints = dict(getattr(fn, '__annotations__', {}))
+
+        injectable = self._compute_injectable_params(sig, hints)
+
+        if inspect.iscoroutinefunction(fn):
+            @functools.wraps(fn)
+            async def wrapper_async(*args: object, **kwargs: object) -> object:
+                bound = sig.bind_partial(*args, **kwargs)
+                for name, (key, tag) in injectable.items():
+                    if name not in bound.arguments:
+                        bound.arguments[name] = await self._aresolve_any(key, tag)
+                return await _as_awaitable(fn(*bound.args, **bound.kwargs))
+
+            return wrapper_async
+
+        @functools.wraps(fn)
+        def wrapper_sync(*args: object, **kwargs: object) -> object:
+            bound = sig.bind_partial(*args, **kwargs)
+            for name, (key, tag) in injectable.items():
+                if name not in bound.arguments:
+                    bound.arguments[name] = self._resolve_any(key, tag)
+            return fn(*bound.args, **bound.kwargs)
+
+        return wrapper_sync
+
+    def _compute_injectable_params(
+        self,
+        sig: inspect.Signature,
+        hints: dict[str, object],
+    ) -> dict[str, tuple[ProviderKey, str | None]]:
+        out: dict[str, tuple[ProviderKey, str | None]] = {}
+        for name, param in sig.parameters.items():
+            if name in ('self', 'cls'):
+                continue
+            if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+                continue
+            annotation = hints.get(name)
+            if annotation is None:
+                continue
+            meta = extract_annotated_meta(annotation)
+            key: ProviderKey | None = None
+            if meta.token is not None:
+                key = meta.token
+            elif isinstance(meta.named, str):
+                key = meta.named
+            elif is_object_token(meta.named):
+                key = meta.named
+            elif _is_provider_key(meta.base):
+                key = meta.base
+            if key is not None and (key, meta.tag) in self._plan.by_key:
+                out[name] = (key, meta.tag)
+        return out
 
     @contextlib.contextmanager
     def override[T](
