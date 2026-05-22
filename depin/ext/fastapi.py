@@ -34,7 +34,7 @@ class RequestScope(BaseHTTPMiddleware):
             return await call_next(request)
 
 
-def Inject[T](key: type[T] | Token[T], *, tag: str | None = None) -> T:  # noqa: N802
+def Inject[T](key: type[T] | Token[T], *, tag: str | None = None) -> T:
     """Mark a FastAPI route parameter for resolution from the depin container.
 
     The return value at runtime is a :class:`fastapi.Depends` instance — FastAPI

@@ -34,12 +34,7 @@ async def test_class_with_async_dep_resolves_async() -> None:
         def __init__(self, a: A) -> None:
             self.a = a
 
-    frozen = (
-        Container()
-        .bind(make_a, scope=Scope.SINGLETON, provides=A)
-        .bind(B, scope=Scope.SINGLETON)
-        .freeze()
-    )
+    frozen = Container().bind(make_a, scope=Scope.SINGLETON, provides=A).bind(B, scope=Scope.SINGLETON).freeze()
     b = await frozen.aresolve(B)
     assert isinstance(b.a, A)
 

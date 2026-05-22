@@ -45,9 +45,7 @@ class Container:
 
     def frame_provides[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> Self:
         """Declare a binding satisfied by the active scope frame (e.g. middleware-injected values)."""
-        self._records.append(
-            BindRecord(source=FrameBinding(key), scope=Scope.SCOPED, provides=None, tag=tag)
-        )
+        self._records.append(BindRecord(source=FrameBinding(key), scope=Scope.SCOPED, provides=None, tag=tag))
         return self
 
     def singleton(

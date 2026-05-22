@@ -2,7 +2,7 @@ import inspect
 from collections.abc import Iterable
 from typing import get_args, get_origin, get_type_hints
 
-from depin._core.introspect import AnnotatedMeta, is_object_token, extract_annotated_meta
+from depin._core.introspect import AnnotatedMeta, extract_annotated_meta, is_object_token
 from depin._core.markers import get_provides
 from depin._core.scope import Scope
 from depin._core.spec import (
@@ -16,7 +16,6 @@ from depin._core.spec import (
     is_value_binding,
 )
 from depin.errors import CircularDependencyError, MissingProviderError
-
 
 _LIFECYCLE_SHAPES = frozenset(
     {
@@ -88,7 +87,7 @@ def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec
     if is_frame_binding(rec.source):
         frame = rec.source
         return ProviderSpec(
-            key=_as_provider_key(frame.key),
+            key=as_provider_key(frame.key),
             tag=rec.tag,
             source=frame,
             scope=rec.scope,
@@ -139,27 +138,24 @@ def _resolve_key(
     hints = _safe_type_hints(source, localns)
     ret = hints.get('return')
     if ret is None:
-        raise TypeError(
-            f'cannot infer provider key for {source!r}: '
-            'add a return type annotation or pass provides=...'
-        )
+        raise TypeError(f'cannot infer provider key for {source!r}: add a return type annotation or pass provides=...')
     if shape in _UNWRAP_SHAPES:
-        unwrapped = _unwrap_container_type(ret)
+        unwrapped = unwrap_container_type(ret)
         if unwrapped is not None:
             return unwrapped
-    return _as_provider_key(ret)
+    return as_provider_key(ret)
 
 
-def _unwrap_container_type(annotation: object) -> ProviderKey | None:
+def unwrap_container_type(annotation: object) -> ProviderKey | None:
     if get_origin(annotation) is None:
         return None
     args = get_args(annotation)
     if not args:
         return None
-    return _as_provider_key(args[0])
+    return as_provider_key(args[0])
 
 
-def _as_provider_key(value: object) -> ProviderKey:
+def as_provider_key(value: object) -> ProviderKey:
     if isinstance(value, type):
         return value
     if is_object_token(value):
@@ -201,7 +197,7 @@ def _extract_params(source: object, shape: ProviderShape, localns: dict[str, obj
             continue
 
         meta = extract_annotated_meta(raw_annotation)
-        key = _param_key(meta)
+        key = param_key_from_meta(meta)
         has_default = param.default is not inspect.Parameter.empty
         default = param.default if has_default else None
 
@@ -210,14 +206,14 @@ def _extract_params(source: object, shape: ProviderShape, localns: dict[str, obj
     return tuple(params)
 
 
-def _param_key(meta: AnnotatedMeta) -> ProviderKey:
+def param_key_from_meta(meta: AnnotatedMeta) -> ProviderKey:
     if meta.token is not None:
         return meta.token
     if isinstance(meta.named, str):
         return meta.named
     if is_object_token(meta.named):
         return meta.named
-    return _as_provider_key(meta.base)
+    return as_provider_key(meta.base)
 
 
 def _safe_type_hints(target: object, localns: dict[str, object]) -> dict[str, object]:
@@ -247,13 +243,13 @@ def _validate_params(
         return
     ident, (chain, owner, param_name) = max(missing.items(), key=lambda kv: len(kv[1][0]))
     key, _tag = ident
-    path = ' -> '.join(_fmt(s.key) for s in chain)
+    path = ' -> '.join(fmt_key(s.key) for s in chain)
     suggestions = _suggest_candidates(key)
     extra = f'; candidates: {", ".join(suggestions[:5])}' if suggestions else ''
     raise MissingProviderError(
-        f'no provider for {_fmt(key)} '
-        f"(required by {_fmt(owner.key)}.{param_name}; "
-        f'resolution chain: {path} -> {_fmt(key)}){extra}'
+        f'no provider for {fmt_key(key)} '
+        f'(required by {fmt_key(owner.key)}.{param_name}; '
+        f'resolution chain: {path} -> {fmt_key(key)}){extra}'
     )
 
 
@@ -307,7 +303,7 @@ def _toposort(
         if ident in visited:
             return
         if ident in visiting:
-            chain = ' -> '.join(_fmt(k) for k, _ in [*stack, ident])
+            chain = ' -> '.join(fmt_key(k) for k, _ in [*stack, ident])
             raise CircularDependencyError(f'cycle detected: {chain}')
         visiting.add(ident)
         stack.append(ident)
@@ -349,7 +345,7 @@ def _compute_needs_async(
         )
 
 
-def _fmt(key: object) -> str:
+def fmt_key(key: object) -> str:
     if isinstance(key, type):
         return key.__qualname__
     return repr(key)

@@ -1,19 +1,19 @@
 import inspect
 from collections.abc import Callable
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 from typing import Annotated, TypeGuard, get_args, get_origin, get_type_hints
 
 from depin._core.markers import Inject, Named, Tag, Token
 from depin._core.spec import ProviderShape
 
 
-@lru_cache(maxsize=None)
+@cache
 def cached_signature(target: Callable[..., object]) -> inspect.Signature:
     return inspect.signature(target)
 
 
-@lru_cache(maxsize=None)
+@cache
 def cached_type_hints(target: Callable[..., object]) -> dict[str, object]:
     return dict(get_type_hints(target, include_extras=True))
 

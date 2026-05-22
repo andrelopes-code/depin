@@ -58,7 +58,7 @@ def test_generator_in_transient_rejected() -> None:
         yield 0
 
     r = Registry().bind(gen, scope=Scope.TRANSIENT)
-    with pytest.raises(ValueError, match='generator.*transient'):
+    with pytest.raises(ValueError, match=r'generator.*transient'):
         _ = build_specs(r.records())
 
 

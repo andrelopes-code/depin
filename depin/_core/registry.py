@@ -5,7 +5,6 @@ from depin._core.markers import Token
 from depin._core.scope import Scope
 from depin._core.spec import BindRecord, FrameBinding, ValueBinding
 
-
 type _BindFn = Callable[[type[object] | Callable[..., object], Scope, type[object] | None, str | None], None]
 
 
@@ -61,9 +60,7 @@ class Registry:
 
     def frame_provides[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> Self:
         """Declare a binding satisfied by the active scope frame (e.g. middleware-injected values)."""
-        self._records.append(
-            BindRecord(source=FrameBinding(key), scope=Scope.SCOPED, provides=None, tag=tag)
-        )
+        self._records.append(BindRecord(source=FrameBinding(key), scope=Scope.SCOPED, provides=None, tag=tag))
         return self
 
     def singleton(

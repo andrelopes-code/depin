@@ -15,26 +15,26 @@ from depin.errors import AsyncInSyncContextError, MissingProviderError, OutsideS
 
 
 @dataclass(frozen=True, slots=True)
-class _SyncGenTeardown:
+class SyncGenTeardown:
     gen: Iterator[object]
 
 
 @dataclass(frozen=True, slots=True)
-class _AsyncGenTeardown:
+class AsyncGenTeardown:
     gen: AsyncIterator[object]
 
 
 @dataclass(frozen=True, slots=True)
-class _SyncCMTeardown:
+class SyncCMTeardown:
     cm: AbstractContextManager[object]
 
 
 @dataclass(frozen=True, slots=True)
-class _AsyncCMTeardown:
+class AsyncCMTeardown:
     cm: AbstractAsyncContextManager[object]
 
 
-type _Teardown = _SyncGenTeardown | _AsyncGenTeardown | _SyncCMTeardown | _AsyncCMTeardown
+type _Teardown = SyncGenTeardown | AsyncGenTeardown | SyncCMTeardown | AsyncCMTeardown
 
 
 type _OverrideFrame = dict[tuple[ProviderKey, str | None], object]
@@ -112,6 +112,7 @@ class FrozenContainer:
         injectable = self._compute_injectable_params(sig, hints)
 
         if inspect.iscoroutinefunction(fn):
+
             @functools.wraps(fn)
             async def wrapper_async(*args: object, **kwargs: object) -> object:
                 bound = sig.bind_partial(*args, **kwargs)
@@ -150,9 +151,7 @@ class FrozenContainer:
             key: ProviderKey | None = None
             if meta.token is not None:
                 key = meta.token
-            elif isinstance(meta.named, str):
-                key = meta.named
-            elif is_object_token(meta.named):
+            elif isinstance(meta.named, str) or is_object_token(meta.named):
                 key = meta.named
             elif _is_provider_key(meta.base):
                 key = meta.base
@@ -190,9 +189,7 @@ class FrozenContainer:
 
     def _resolve_sync(self, spec: ProviderSpec) -> object:
         if spec.needs_async:
-            raise AsyncInSyncContextError(
-                f'{spec.key!r} requires async resolution; call aresolve() instead'
-            )
+            raise AsyncInSyncContextError(f'{spec.key!r} requires async resolution; call aresolve() instead')
         if spec.scope is Scope.SINGLETON:
             if spec in self._root:
                 return self._root.get(spec)
@@ -213,7 +210,11 @@ class FrozenContainer:
             return spec.source
         if spec.shape is ProviderShape.FRAME:
             return self._read_frame(spec)
-        if spec.shape in {ProviderShape.ASYNC_FUNCTION, ProviderShape.ASYNC_GENERATOR, ProviderShape.ASYNC_CONTEXT_MANAGER}:
+        if spec.shape in {
+            ProviderShape.ASYNC_FUNCTION,
+            ProviderShape.ASYNC_GENERATOR,
+            ProviderShape.ASYNC_CONTEXT_MANAGER,
+        }:
             raise AsyncInSyncContextError(f'{spec.key!r} is async; use aresolve inside ascope()')
         kwargs = self._resolve_params_sync(spec)
         source = spec.source
@@ -227,13 +228,13 @@ class FrozenContainer:
             assert callable(source)
             gen = _as_sync_iter(source(**kwargs))
             value = next(gen)
-            self._frame_for(spec).teardowns.append(_SyncGenTeardown(gen))
+            self._frame_for(spec).teardowns.append(SyncGenTeardown(gen))
             return value
         if spec.shape is ProviderShape.CONTEXT_MANAGER:
             assert callable(source)
             cm = _as_sync_cm(source(**kwargs))
             value = cm.__enter__()
-            self._frame_for(spec).teardowns.append(_SyncCMTeardown(cm))
+            self._frame_for(spec).teardowns.append(SyncCMTeardown(cm))
             return value
         raise AssertionError(f'unhandled shape: {spec.shape}')
 
@@ -248,9 +249,7 @@ class FrozenContainer:
             if dep is None:
                 if param.has_default:
                     continue
-                raise MissingProviderError(
-                    f"missing provider for parameter '{param.name}' of {spec.key!r}"
-                )
+                raise MissingProviderError(f"missing provider for parameter '{param.name}' of {spec.key!r}")
             out[param.name] = self._resolve_sync(dep)
         return out
 
@@ -290,25 +289,25 @@ class FrozenContainer:
             assert callable(source)
             gen = _as_sync_iter(source(**kwargs))
             value = next(gen)
-            self._frame_for(spec).teardowns.append(_SyncGenTeardown(gen))
+            self._frame_for(spec).teardowns.append(SyncGenTeardown(gen))
             return value
         if spec.shape is ProviderShape.ASYNC_GENERATOR:
             assert callable(source)
             agen = _as_async_iter(source(**kwargs))
             value = await agen.__anext__()
-            self._frame_for(spec).teardowns.append(_AsyncGenTeardown(agen))
+            self._frame_for(spec).teardowns.append(AsyncGenTeardown(agen))
             return value
         if spec.shape is ProviderShape.CONTEXT_MANAGER:
             assert callable(source)
             cm = _as_sync_cm(source(**kwargs))
             value = cm.__enter__()
-            self._frame_for(spec).teardowns.append(_SyncCMTeardown(cm))
+            self._frame_for(spec).teardowns.append(SyncCMTeardown(cm))
             return value
         if spec.shape is ProviderShape.ASYNC_CONTEXT_MANAGER:
             assert callable(source)
             acm = _as_async_cm(source(**kwargs))
             value = await acm.__aenter__()
-            self._frame_for(spec).teardowns.append(_AsyncCMTeardown(acm))
+            self._frame_for(spec).teardowns.append(AsyncCMTeardown(acm))
             return value
         raise AssertionError(f'unhandled shape: {spec.shape}')
 
@@ -323,9 +322,7 @@ class FrozenContainer:
             if dep is None:
                 if param.has_default:
                     continue
-                raise MissingProviderError(
-                    f"missing provider for parameter '{param.name}' of {spec.key!r}"
-                )
+                raise MissingProviderError(f"missing provider for parameter '{param.name}' of {spec.key!r}")
             out[param.name] = await self._resolve_async(dep)
         return out
 
@@ -353,8 +350,8 @@ class FrozenContainer:
         errors: list[Exception] = []
         for td in reversed(frame.teardowns):
             try:
-                _run_sync_teardown(td)
-            except Exception as exc:  # noqa: BLE001 (collect every teardown failure; KeyboardInterrupt etc. still propagate)
+                run_sync_teardown(td)
+            except Exception as exc:
                 errors.append(exc)
         frame.teardowns.clear()
         if errors:
@@ -364,46 +361,46 @@ class FrozenContainer:
         errors: list[Exception] = []
         for td in reversed(frame.teardowns):
             try:
-                await _run_async_teardown(td)
-            except Exception as exc:  # noqa: BLE001 (collect every teardown failure; KeyboardInterrupt etc. still propagate)
+                await run_async_teardown(td)
+            except Exception as exc:
                 errors.append(exc)
         frame.teardowns.clear()
         if errors:
             raise ExceptionGroup('depin teardown errors', errors)
 
 
-def _run_sync_teardown(td: object) -> None:
-    if isinstance(td, _SyncGenTeardown):
+def run_sync_teardown(td: object) -> None:
+    if isinstance(td, SyncGenTeardown):
         try:
             _ = next(td.gen)
         except StopIteration:
             return
         raise RuntimeError('generator provider yielded more than once')
-    if isinstance(td, _SyncCMTeardown):
+    if isinstance(td, SyncCMTeardown):
         _ = td.cm.__exit__(None, None, None)
         return
-    if isinstance(td, _AsyncGenTeardown | _AsyncCMTeardown):
+    if isinstance(td, AsyncGenTeardown | AsyncCMTeardown):
         raise RuntimeError('async teardown registered in sync scope; use ascope() instead')
     raise AssertionError(f'unknown teardown record: {td!r}')
 
 
-async def _run_async_teardown(td: object) -> None:
-    if isinstance(td, _SyncGenTeardown):
+async def run_async_teardown(td: object) -> None:
+    if isinstance(td, SyncGenTeardown):
         try:
             _ = next(td.gen)
         except StopIteration:
             return
         raise RuntimeError('generator provider yielded more than once')
-    if isinstance(td, _AsyncGenTeardown):
+    if isinstance(td, AsyncGenTeardown):
         try:
             _ = await td.gen.__anext__()
         except StopAsyncIteration:
             return
         raise RuntimeError('async generator provider yielded more than once')
-    if isinstance(td, _SyncCMTeardown):
+    if isinstance(td, SyncCMTeardown):
         _ = td.cm.__exit__(None, None, None)
         return
-    if isinstance(td, _AsyncCMTeardown):
+    if isinstance(td, AsyncCMTeardown):
         _ = await td.cm.__aexit__(None, None, None)
         return
     raise AssertionError(f'unknown teardown record: {td!r}')
