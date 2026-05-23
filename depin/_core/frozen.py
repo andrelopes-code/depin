@@ -5,7 +5,7 @@ from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, 
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import TypeGuard, overload
+from typing import TypeGuard, get_type_hints, overload
 
 from depin._core.introspect import extract_annotated_meta, is_object_token
 from depin._core.markers import Token
@@ -42,6 +42,14 @@ type _OverrideFrame = dict[tuple[ProviderKey, str | None], object]
 
 _overrides: ContextVar[tuple[_OverrideFrame, ...]] = ContextVar('depin_overrides', default=())
 
+_ASYNC_SHAPES = frozenset(
+    {
+        ProviderShape.ASYNC_FUNCTION,
+        ProviderShape.ASYNC_GENERATOR,
+        ProviderShape.ASYNC_CONTEXT_MANAGER,
+    }
+)
+
 
 class FrozenContainer:
     """Immutable view of a resolved dependency graph.
@@ -67,10 +75,15 @@ class FrozenContainer:
 
     def resolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
         spec = self._lookup(key, tag)
+        # spec.source is type-erased `object` in the plan; the runtime contract
+        # (enforced by build_plan) is that providers return values matching the
+        # static type of their declared key, so we restate the static type here.
         return self._resolve_sync(spec)  # pyright: ignore[reportReturnType]
 
     async def aresolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
         spec = self._lookup(key, tag)
+        # See the matching note in `resolve`: plan-level erasure of provider
+        # return types forces a single documented widening at this boundary.
         return await self._resolve_async(spec)  # pyright: ignore[reportReturnType]
 
     def _resolve_any(self, key: ProviderKey, tag: str | None) -> object:
@@ -105,8 +118,8 @@ class FrozenContainer:
     def inject(self, fn: Callable[..., object]) -> Callable[..., object]:
         sig = inspect.signature(fn)
         try:
-            hints = inspect.get_annotations(fn, eval_str=True)
-        except NameError:
+            hints = dict(get_type_hints(fn, include_extras=True))
+        except (NameError, TypeError):
             hints = dict(getattr(fn, '__annotations__', {}))
 
         injectable = self._compute_injectable_params(sig, hints)
@@ -187,61 +200,92 @@ class FrozenContainer:
             raise MissingProviderError(f'no provider for {key!r} (tag={tag!r})')
         return spec
 
+    def _cache_target(self, spec: ProviderSpec) -> ScopeFrame | None:
+        """Return the frame that caches this spec, or None for transient scope."""
+        if spec.scope is Scope.SINGLETON:
+            return self._root
+        if spec.scope is Scope.SCOPED:
+            return active_frame()
+        return None
+
     def _resolve_sync(self, spec: ProviderSpec) -> object:
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{spec.key!r} requires async resolution; call aresolve() instead')
-        if spec.scope is Scope.SINGLETON:
-            if spec in self._root:
-                return self._root.get(spec)
-            value = self._construct_sync(spec)
-            self._root.put(spec, value)
-            return value
-        if spec.scope is Scope.SCOPED:
-            frame = active_frame()
-            if spec in frame:
-                return frame.get(spec)
-            value = self._construct_sync(spec)
+        frame = self._cache_target(spec)
+        if frame is not None and spec in frame:
+            return frame.get(spec)
+        kwargs = self._resolve_params_sync(spec) if spec.params else {}
+        value = self._build_sync_value(spec, kwargs)
+        if frame is not None:
             frame.put(spec, value)
-            return value
-        return self._construct_sync(spec)
+        return value
 
-    def _construct_sync(self, spec: ProviderSpec) -> object:
-        if spec.shape is ProviderShape.VALUE:
-            return spec.source
-        if spec.shape is ProviderShape.FRAME:
-            return self._read_frame(spec)
-        if spec.shape in {
-            ProviderShape.ASYNC_FUNCTION,
-            ProviderShape.ASYNC_GENERATOR,
-            ProviderShape.ASYNC_CONTEXT_MANAGER,
-        }:
-            raise AsyncInSyncContextError(f'{spec.key!r} is async; use aresolve inside ascope()')
-        kwargs = self._resolve_params_sync(spec)
+    async def _resolve_async(self, spec: ProviderSpec) -> object:
+        frame = self._cache_target(spec)
+        if frame is not None and spec in frame:
+            return frame.get(spec)
+        kwargs = await self._resolve_params_async(spec) if spec.params else {}
+        if spec.shape in _ASYNC_SHAPES:
+            value = await self._build_async_value(spec, kwargs)
+        else:
+            value = self._build_sync_value(spec, kwargs)
+        if frame is not None:
+            frame.put(spec, value)
+        return value
+
+    def _build_sync_value(self, spec: ProviderSpec, kwargs: dict[str, object]) -> object:
+        """Construct a value for any non-async shape. Shared by sync and async paths."""
+        shape = spec.shape
         source = spec.source
-        if spec.shape is ProviderShape.CLASS:
+        if shape is ProviderShape.VALUE:
+            return source
+        if shape is ProviderShape.FRAME:
+            return self._read_frame(spec)
+        if shape in _ASYNC_SHAPES:
+            raise AsyncInSyncContextError(f'{spec.key!r} is async; use aresolve inside ascope()')
+        if shape is ProviderShape.CLASS:
             assert isinstance(source, type)
             return source(**kwargs)
-        if spec.shape is ProviderShape.FUNCTION:
+        if shape is ProviderShape.FUNCTION:
             assert callable(source)
             return source(**kwargs)
-        if spec.shape is ProviderShape.GENERATOR:
+        if shape is ProviderShape.GENERATOR:
             assert callable(source)
             gen = _as_sync_iter(source(**kwargs))
             value = next(gen)
             self._frame_for(spec).teardowns.append(SyncGenTeardown(gen))
             return value
-        if spec.shape is ProviderShape.CONTEXT_MANAGER:
+        if shape is ProviderShape.CONTEXT_MANAGER:
             assert callable(source)
             cm = _as_sync_cm(source(**kwargs))
             value = cm.__enter__()
             self._frame_for(spec).teardowns.append(SyncCMTeardown(cm))
             return value
-        raise AssertionError(f'unhandled shape: {spec.shape}')
+        raise AssertionError(f'unhandled shape: {shape}')
+
+    async def _build_async_value(self, spec: ProviderSpec, kwargs: dict[str, object]) -> object:
+        """Construct a value for an async shape. Only reached when shape ∈ _ASYNC_SHAPES."""
+        shape = spec.shape
+        source = spec.source
+        assert callable(source)
+        if shape is ProviderShape.ASYNC_FUNCTION:
+            return await _as_awaitable(source(**kwargs))
+        if shape is ProviderShape.ASYNC_GENERATOR:
+            agen = _as_async_iter(source(**kwargs))
+            value = await agen.__anext__()
+            self._frame_for(spec).teardowns.append(AsyncGenTeardown(agen))
+            return value
+        if shape is ProviderShape.ASYNC_CONTEXT_MANAGER:
+            acm = _as_async_cm(source(**kwargs))
+            value = await acm.__aenter__()
+            self._frame_for(spec).teardowns.append(AsyncCMTeardown(acm))
+            return value
+        raise AssertionError(f'unhandled async shape: {shape}')
 
     def _resolve_params_sync(self, spec: ProviderSpec) -> dict[str, object]:
         out: dict[str, object] = {}
+        frame = self._optional_frame()
         for param in spec.params:
-            frame = self._optional_frame()
             if frame is not None and param.key in frame:
                 out[param.name] = frame.get(param.key)
                 continue
@@ -253,68 +297,10 @@ class FrozenContainer:
             out[param.name] = self._resolve_sync(dep)
         return out
 
-    async def _resolve_async(self, spec: ProviderSpec) -> object:
-        if spec.scope is Scope.SINGLETON:
-            if spec in self._root:
-                return self._root.get(spec)
-            value = await self._construct_async(spec)
-            self._root.put(spec, value)
-            return value
-        if spec.scope is Scope.SCOPED:
-            frame = active_frame()
-            if spec in frame:
-                return frame.get(spec)
-            value = await self._construct_async(spec)
-            frame.put(spec, value)
-            return value
-        return await self._construct_async(spec)
-
-    async def _construct_async(self, spec: ProviderSpec) -> object:
-        if spec.shape is ProviderShape.VALUE:
-            return spec.source
-        if spec.shape is ProviderShape.FRAME:
-            return self._read_frame(spec)
-        kwargs = await self._resolve_params_async(spec)
-        source = spec.source
-        if spec.shape is ProviderShape.CLASS:
-            assert isinstance(source, type)
-            return source(**kwargs)
-        if spec.shape is ProviderShape.FUNCTION:
-            assert callable(source)
-            return source(**kwargs)
-        if spec.shape is ProviderShape.ASYNC_FUNCTION:
-            assert callable(source)
-            return await _as_awaitable(source(**kwargs))
-        if spec.shape is ProviderShape.GENERATOR:
-            assert callable(source)
-            gen = _as_sync_iter(source(**kwargs))
-            value = next(gen)
-            self._frame_for(spec).teardowns.append(SyncGenTeardown(gen))
-            return value
-        if spec.shape is ProviderShape.ASYNC_GENERATOR:
-            assert callable(source)
-            agen = _as_async_iter(source(**kwargs))
-            value = await agen.__anext__()
-            self._frame_for(spec).teardowns.append(AsyncGenTeardown(agen))
-            return value
-        if spec.shape is ProviderShape.CONTEXT_MANAGER:
-            assert callable(source)
-            cm = _as_sync_cm(source(**kwargs))
-            value = cm.__enter__()
-            self._frame_for(spec).teardowns.append(SyncCMTeardown(cm))
-            return value
-        if spec.shape is ProviderShape.ASYNC_CONTEXT_MANAGER:
-            assert callable(source)
-            acm = _as_async_cm(source(**kwargs))
-            value = await acm.__aenter__()
-            self._frame_for(spec).teardowns.append(AsyncCMTeardown(acm))
-            return value
-        raise AssertionError(f'unhandled shape: {spec.shape}')
-
     async def _resolve_params_async(self, spec: ProviderSpec) -> dict[str, object]:
         out: dict[str, object] = {}
+        frame = self._optional_frame()
         for param in spec.params:
-            frame = self._optional_frame()
             if frame is not None and param.key in frame:
                 out[param.name] = frame.get(param.key)
                 continue
