@@ -32,6 +32,15 @@ def test_value_token_resolves() -> None:
     assert frozen[db_url] == 'postgres://x'
 
 
+def test_unhashable_value_binding_resolves_and_caches() -> None:
+    origins = Token[list[str]]('cors.origins')
+    settings = Token[dict[str, int]]('settings')
+    frozen = Container().value(origins, ['a', 'b']).value(settings, {'k': 1}).freeze()
+    assert frozen[origins] == ['a', 'b']
+    assert frozen[settings] == {'k': 1}
+    assert frozen[origins] is frozen[origins]
+
+
 def test_class_with_dep() -> None:
     class A: ...
 

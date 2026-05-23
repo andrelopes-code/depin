@@ -223,30 +223,32 @@ class FrozenContainer:
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{spec.key!r} requires async resolution; call aresolve() instead')
         frame = self._cache_target(spec)
-        if frame is not None and spec in frame:
-            return frame.get(spec)
+        cache_id = (spec.key, spec.tag)
+        if frame is not None and cache_id in frame:
+            return frame.get(cache_id)
         kwargs = self._resolve_params_sync(spec) if spec.params else {}
         value = self._build_sync_value(spec, kwargs)
         if frame is not None:
-            frame.put(spec, value)
+            frame.put(cache_id, value)
         return value
 
     async def _resolve_async(self, spec: ProviderSpec) -> object:
         frame = self._cache_target(spec)
         if frame is None:
             return await self._construct_async(spec)
-        if spec in frame:
-            return frame.get(spec)
+        cache_id = (spec.key, spec.tag)
+        if cache_id in frame:
+            return frame.get(cache_id)
         # Single-flight: concurrent resolutions of the same cached spec must
         # build it once. The await below would otherwise let a second task miss
         # the cache and construct a duplicate (a second singleton, leaked
         # teardown). The lock lives on the caching frame, so it is dropped when
         # the scope ends.
-        async with frame.lock_for(spec):
-            if spec in frame:
-                return frame.get(spec)
+        async with frame.lock_for(cache_id):
+            if cache_id in frame:
+                return frame.get(cache_id)
             value = await self._construct_async(spec)
-            frame.put(spec, value)
+            frame.put(cache_id, value)
             return value
 
     async def _construct_async(self, spec: ProviderSpec) -> object:

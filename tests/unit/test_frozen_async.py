@@ -1,8 +1,16 @@
 import pytest
 
 from depin._core.container import Container
+from depin._core.markers import Token
 from depin._core.scope import Scope
 from depin.errors import AsyncInSyncContextError
+
+
+@pytest.mark.asyncio
+async def test_aresolve_unhashable_value_binding() -> None:
+    origins = Token[list[str]]('origins')
+    frozen = Container().value(origins, ['x']).freeze()
+    assert await frozen.aresolve(origins) == ['x']
 
 
 @pytest.mark.asyncio
