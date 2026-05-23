@@ -1,7 +1,6 @@
 import pytest
 
 from depin.errors import (
-    AlreadyFrozenError,
     AsyncInSyncContextError,
     CircularDependencyError,
     DepinError,
@@ -18,7 +17,6 @@ from depin.errors import (
         CircularDependencyError,
         AsyncInSyncContextError,
         OutsideScopeError,
-        AlreadyFrozenError,
         DuplicateProviderError,
     ],
 )

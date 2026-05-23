@@ -18,9 +18,5 @@ class OutsideScopeError(DepinError):
     """A scoped binding was resolved with no active scope."""
 
 
-class AlreadyFrozenError(DepinError):
-    """An attempt was made to mutate a frozen container."""
-
-
 class DuplicateProviderError(DepinError):
     """A binding conflicts with an existing one for the same (key, tag)."""
