@@ -3,6 +3,7 @@ def test_public_api_imports() -> None:
 
     assert hasattr(depin, 'Container')
     assert hasattr(depin, 'FrozenContainer')
+    assert hasattr(depin, 'HasRecords')
     assert hasattr(depin, 'Registry')
     assert hasattr(depin, 'Scope')
     assert hasattr(depin, 'Token')
