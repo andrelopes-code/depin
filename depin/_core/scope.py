@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 from collections.abc import Generator
 from contextvars import ContextVar
@@ -13,10 +14,11 @@ class Scope(Enum):
 
 
 class ScopeFrame:
-    __slots__ = ('_cache', 'parent', 'teardowns')
+    __slots__ = ('_cache', '_locks', 'parent', 'teardowns')
 
     def __init__(self, parent: 'ScopeFrame | None' = None) -> None:
         self._cache: dict[object, object] = {}
+        self._locks: dict[object, asyncio.Lock] = {}
         self.parent = parent
         self.teardowns: list[object] = []
 
@@ -34,6 +36,14 @@ class ScopeFrame:
         if key in self._cache:
             return True
         return self.parent is not None and key in self.parent
+
+    def lock_for(self, key: object) -> asyncio.Lock:
+        """Return a per-key async lock, created on first use, for single-flight construction."""
+        lock = self._locks.get(key)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._locks[key] = lock
+        return lock
 
 
 _active: ContextVar[ScopeFrame | None] = ContextVar('depin_active_frame', default=None)

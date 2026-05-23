@@ -222,16 +222,27 @@ class FrozenContainer:
 
     async def _resolve_async(self, spec: ProviderSpec) -> object:
         frame = self._cache_target(spec)
-        if frame is not None and spec in frame:
+        if frame is None:
+            return await self._construct_async(spec)
+        if spec in frame:
             return frame.get(spec)
+        # Single-flight: concurrent resolutions of the same cached spec must
+        # build it once. The await below would otherwise let a second task miss
+        # the cache and construct a duplicate (a second singleton, leaked
+        # teardown). The lock lives on the caching frame, so it is dropped when
+        # the scope ends.
+        async with frame.lock_for(spec):
+            if spec in frame:
+                return frame.get(spec)
+            value = await self._construct_async(spec)
+            frame.put(spec, value)
+            return value
+
+    async def _construct_async(self, spec: ProviderSpec) -> object:
         kwargs = await self._resolve_params_async(spec) if spec.params else {}
         if spec.shape in _ASYNC_SHAPES:
-            value = await self._build_async_value(spec, kwargs)
-        else:
-            value = self._build_sync_value(spec, kwargs)
-        if frame is not None:
-            frame.put(spec, value)
-        return value
+            return await self._build_async_value(spec, kwargs)
+        return self._build_sync_value(spec, kwargs)
 
     def _build_sync_value(self, spec: ProviderSpec, kwargs: dict[str, object]) -> object:
         """Construct a value for any non-async shape. Shared by sync and async paths."""
