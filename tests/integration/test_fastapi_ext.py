@@ -1,3 +1,5 @@
+from typing import Annotated
+
 import pytest
 from fastapi import FastAPI
 from fastapi import Request as FastAPIRequest
@@ -22,11 +24,9 @@ async def test_request_scope_middleware_opens_scope_per_request() -> None:
     app = FastAPI()
     app.add_middleware(RequestScope, container=frozen)
 
-    # FastAPI consumes the route via @app.get; the function binding looks unused statically.
-    # `Inject(...)` in the default position is required by FastAPI's dependency-injection API.
     @app.get('/tick')
     async def _tick(  # pyright: ignore[reportUnusedFunction]
-        c: Counter = Inject(Counter),  # noqa: B008
+        c: Annotated[Counter, Inject(Counter)],
     ) -> dict[str, int]:
         return {'n': c.tick(), 'again': c.tick()}
 
@@ -49,11 +49,9 @@ async def test_request_is_available_as_scoped_dependency() -> None:
     app = FastAPI()
     app.add_middleware(RequestScope, container=frozen)
 
-    # FastAPI consumes the route via @app.get; the function binding looks unused statically.
-    # `Inject(...)` in the default position is required by FastAPI's dependency-injection API.
     @app.get('/probe/{x}')
     async def _probe(  # pyright: ignore[reportUnusedFunction]
-        p: Probe = Inject(Probe),  # noqa: B008
+        p: Annotated[Probe, Inject(Probe)],
     ) -> dict[str, str]:
         return {'p': p.path}
 

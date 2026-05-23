@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import FastAPI
 
 from depin import Container
@@ -13,11 +15,9 @@ app = FastAPI()
 app.add_middleware(RequestScope, container=di)
 
 
-# FastAPI consumes the route via @app.get; the function binding looks unused statically.
-# `Inject(...)` in the default position is required by FastAPI's dependency-injection API.
 @app.get('/users/{uid}')
 async def get_user(  # pyright: ignore[reportUnusedFunction]
     uid: int,
-    svc: UserService = Inject(UserService),  # noqa: B008
+    svc: Annotated[UserService, Inject(UserService)],
 ) -> dict[str, int | str]:
     return await svc.get(uid)

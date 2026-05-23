@@ -1,6 +1,5 @@
-from typing import cast
-
-from fastapi import Depends, Request
+from fastapi import Request
+from fastapi.params import Depends
 from starlette.types import ASGIApp, Receive, Send
 from starlette.types import Scope as ASGIScope
 
@@ -41,22 +40,24 @@ class RequestScope:
             await self._app(scope, receive, send)
 
 
-def Inject[T](key: type[T] | Token[T], *, tag: str | None = None) -> T:
-    """Mark a FastAPI route parameter for resolution from the depin container.
+def Inject[T](key: type[T] | Token[T], *, tag: str | None = None) -> Depends:
+    """Resolve ``key`` from the depin container for a FastAPI route parameter.
 
-    The return value at runtime is a :class:`fastapi.Depends` instance — FastAPI
-    consumes it via the dependency-injection machinery — but the call site needs
-    the parameter to be typed as ``T`` so the handler body sees the right type.
-    Python's type system has no way to express "this object is also T", so
-    ``typing.cast`` at this boundary is a documented exception: the unsafety is
-    confined to one return statement and the runtime contract is honoured by
-    FastAPI's own resolver.
+    Use inside :class:`typing.Annotated` so the parameter keeps its static type::
+
+        async def handler(svc: Annotated[UserService, Inject(UserService)]) -> ...:
+            ...
+
+    The return value is a :class:`fastapi.params.Depends` instance; FastAPI picks
+    it up from the ``Annotated`` metadata and the parameter's runtime type comes
+    from the first ``Annotated`` argument. The legacy default-value form
+    (``svc: UserService = Inject(UserService)``) is not supported: it triggers
+    ruff's B008 (function call in default) and forces every call site to silence
+    a lint warning.
     """
 
     async def resolver(request: Request) -> T:
         container: FrozenContainer = request.app.state.depin_container
         return await container.aresolve(key, tag=tag)
 
-    # See docstring: FastAPI requires a Depends sentinel at the call site while
-    # the static type must remain T.
-    return cast(T, Depends(resolver))
+    return Depends(dependency=resolver)
