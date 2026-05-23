@@ -10,3 +10,4 @@ def test_public_api_imports() -> None:
     assert hasattr(depin, 'Named')
     assert hasattr(depin, 'Tag')
     assert hasattr(depin, 'provides')
+    assert hasattr(depin, 'injected')

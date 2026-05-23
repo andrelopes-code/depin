@@ -1,5 +1,7 @@
 from dataclasses import dataclass
-from typing import final, override
+from typing import TypeGuard, final, override
+
+from depin.errors import DepinError
 
 
 @final
@@ -41,6 +43,53 @@ class Named:
 @dataclass(frozen=True, slots=True)
 class Tag:
     name: str
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class _InjectMarker:
+    """Default-value marker produced by :func:`injected`.
+
+    Carries the provider key (and optional tag) for a parameter that
+    :meth:`depin.FrozenContainer.inject` fills. It stands in for the parameter's
+    declared type at the type level; ``inject`` replaces it with the resolved
+    value before the wrapped function body runs.
+    """
+
+    key: 'type[object] | Token[object]'
+    tag: str | None = None
+
+    def __getattr__(self, name: str) -> object:
+        if name.startswith('__') and name.endswith('__'):
+            raise AttributeError(name)
+        raise DepinError(
+            f'depin injection marker for {self.key!r} was accessed as a value. '
+            'A parameter defaulting to injected(...) must be filled by '
+            '@container.inject; wrap the function with the inject decorator.'
+        )
+
+
+def is_inject_marker(value: object) -> TypeGuard[_InjectMarker]:
+    return isinstance(value, _InjectMarker)
+
+
+def injected[T](key: type[T] | Token[T], *, tag: str | None = None) -> T:
+    """Mark a parameter for injection by :meth:`depin.FrozenContainer.inject`.
+
+    Use as the parameter default::
+
+        @container.inject
+        def handler(prefix: str, svc: Svc = injected(Svc)) -> ...: ...
+
+    Because the marker is a default, a marked parameter must follow non-default
+    parameters or be keyword-only. ``key`` may be a class or a ``Token``; ``tag``
+    selects among tagged providers.
+    """
+    # Python's type system has no opaque/branded generics: a function cannot
+    # declare it returns T while producing an unrelated _InjectMarker. This is the
+    # narrowest possible boundary; inject() substitutes the resolved value before
+    # any caller observes the default.
+    return _InjectMarker(key, tag)  # pyright: ignore[reportReturnType]
 
 
 _PROVIDES_ATTR = '__depin_provides__'
