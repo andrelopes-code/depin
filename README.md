@@ -89,6 +89,12 @@ at runtime `Inject[T]` resolves to `Annotated[T, Depends(...)]` so FastAPI picks
 up the dependency from the parameter's annotation. No default-value calls, no
 `# noqa: B008` waivers, no extra imports.
 
+`RequestScope` runs as pure ASGI middleware, so streaming responses, SSE, and
+WebSockets pass through unbuffered. Scoped providers may declare `Request` to
+read headers, URL, cookies, and state — but it is metadata-only: the request
+body belongs to the route's typed parameters, and reading it from a provider
+raises rather than racing the handler's own parsing.
+
 ## Status
 
 v0.2.0 is a clean break from 0.1.x. The migration is breaking; older code will not run unchanged.
