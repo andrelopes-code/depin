@@ -61,6 +61,17 @@ See `examples/` for runnable code. Highlights:
 - **Tag** + `provides` for multiple implementations of a `Protocol`.
 - **Override** for tests: `with di.override(Database, with_=FakeDB()): ...`.
 - **Frame-provided values** (`di.frame_provides(Request)`) for middleware-injected context.
+- **Function injection** with `@frozen.inject`: parameters whose default is `injected(...)` are filled from the container, the rest are passed by the caller:
+
+  ```python
+  @di.inject
+  def handler(uid: int, repo: UserRepo = injected(UserRepo)) -> User:
+      return repo.get(uid)
+
+  handler(uid=1)  # repo injected; call site stays type-clean
+  ```
+
+  Use `injected(Token[...])` for token values and `injected(Svc, tag='...')` for tagged providers.
 
 ## FastAPI
 
@@ -103,11 +114,13 @@ raises rather than racing the handler's own parsing.
 - **Nested scopes inherit.** A `SCOPED` instance resolved in an outer scope is
   reused inside a nested scope, not rebuilt. Open sibling scopes for independent
   instances.
-- **`@frozen.inject` and the type checker.** Python's type system cannot express
-  "these parameters become optional after the decorator", so calling an injected
-  function without the injected arguments needs a `# pyright: ignore[reportCallIssue]`
-  at the call site. The runtime behaviour is correct; only the static signature
-  is unavoidably wider than reality.
+- **`@frozen.inject` uses default-position markers.** An injected parameter
+  carries an `injected(...)` default, so it must follow non-default parameters or
+  be keyword-only (a normal Python rule). The marker keeps call sites type-clean —
+  no `# pyright: ignore` needed. Unlike provider constructors, which resolve from
+  type hints and `Annotated[...]`, `@inject` fills *only* marked parameters and
+  validates them at decoration time, raising `MissingProviderError` immediately if
+  a marked key is unregistered.
 
 ## Status
 
@@ -116,7 +129,7 @@ v0.2.0 is a clean break from 0.1.x. The migration is breaking; older code will n
 | 0.1.x | 0.2.0 |
 | --- | --- |
 | `Container()` resolves directly | `Container().freeze() -> FrozenContainer` |
-| `Inject(fn)` default value | `@frozen.inject` decorator or `Inject[T]` (fastapi ext) |
+| `Inject(fn)` default value | `svc: T = injected(T)` under `@frozen.inject`, or `Inject[T]` (fastapi ext) |
 | `Container.Depends(X)` | `frozen[X]`, `frozen.resolve(X)`, or `Inject[T]` (fastapi ext) |
 | `Scope.REQUEST` | `Scope.SCOPED` |
 | `RequestScopeService.request_scope()` | `frozen.scope()` / `frozen.ascope()` |
