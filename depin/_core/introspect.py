@@ -1,21 +1,9 @@
 import inspect
-from collections.abc import Callable
 from dataclasses import dataclass
-from functools import cache
-from typing import Annotated, TypeGuard, get_args, get_origin, get_type_hints
+from typing import Annotated, TypeGuard, get_args, get_origin
 
-from depin._core.markers import Inject, Named, Tag, Token
+from depin._core.markers import Named, Tag, Token
 from depin._core.spec import ProviderShape
-
-
-@cache
-def cached_signature(target: Callable[..., object]) -> inspect.Signature:
-    return inspect.signature(target)
-
-
-@cache
-def cached_type_hints(target: Callable[..., object]) -> dict[str, object]:
-    return dict(get_type_hints(target, include_extras=True))
 
 
 def detect_shape(source: object) -> ProviderShape:
@@ -54,7 +42,6 @@ def _wraps_async_generator(source: object) -> bool:
 class AnnotatedMeta:
     base: object
     token: Token[object] | None
-    inject: Inject | None
     tag: str | None
     named: 'Token[object] | str | None'
 
@@ -68,7 +55,6 @@ def extract_annotated_meta(annotation: object) -> AnnotatedMeta:
     base, extras = _split_annotated(annotation)
 
     token: Token[object] | None = None
-    inject: Inject | None = None
     tag: str | None = None
     named: Token[object] | str | None = None
 
@@ -76,16 +62,13 @@ def extract_annotated_meta(annotation: object) -> AnnotatedMeta:
         if is_object_token(extra):
             if token is None:
                 token = extra
-        elif isinstance(extra, Inject):
-            if inject is None:
-                inject = extra
         elif isinstance(extra, Tag):
             if tag is None:
                 tag = extra.name
         elif isinstance(extra, Named) and token is None and named is None:
             named = extra.key
 
-    return AnnotatedMeta(base=base, token=token, inject=inject, tag=tag, named=named)
+    return AnnotatedMeta(base=base, token=token, tag=tag, named=named)
 
 
 def _split_annotated(annotation: object) -> tuple[object, tuple[object, ...]]:

@@ -1,39 +1,10 @@
 import contextlib
-import inspect
 from collections.abc import AsyncGenerator, AsyncIterator, Generator, Iterator
 from typing import Annotated
 
-from depin._core.introspect import (
-    cached_signature,
-    cached_type_hints,
-    detect_shape,
-    extract_annotated_meta,
-)
-from depin._core.markers import Inject, Named, Tag, Token
+from depin._core.introspect import detect_shape, extract_annotated_meta
+from depin._core.markers import Named, Tag, Token
 from depin._core.spec import ProviderShape
-
-
-def test_cached_signature_returns_inspect_signature() -> None:
-    def f(a: int, b: str = '') -> bool:
-        return bool(a) and bool(b)
-
-    sig = cached_signature(f)
-    assert isinstance(sig, inspect.Signature)
-    assert list(sig.parameters) == ['a', 'b']
-
-
-def test_cached_signature_is_memoized() -> None:
-    def f() -> None: ...
-
-    assert cached_signature(f) is cached_signature(f)
-
-
-def test_cached_type_hints_unwraps_strings() -> None:
-    def f(x: 'int') -> 'str':
-        return str(x)
-
-    hints = cached_type_hints(f)
-    assert hints == {'x': int, 'return': str}
 
 
 def test_detect_shape_class() -> None:
@@ -97,7 +68,6 @@ def test_extract_meta_returns_empty_for_bare_annotation() -> None:
     meta = extract_annotated_meta(int)
     assert meta.token is None
     assert meta.named is None
-    assert meta.inject is None
     assert meta.tag is None
     assert meta.base is int
 
@@ -105,17 +75,8 @@ def test_extract_meta_returns_empty_for_bare_annotation() -> None:
 def test_extract_meta_picks_token() -> None:
     tok = Token[str]('db.url')
     meta = extract_annotated_meta(Annotated[str, tok])
-    assert meta.token is tok
+    assert meta.token == tok
     assert meta.base is str
-
-
-def test_extract_meta_picks_inject() -> None:
-    def fn() -> int:
-        return 0
-
-    inj = Inject(fn)
-    meta = extract_annotated_meta(Annotated[int, inj])
-    assert meta.inject is inj
 
 
 def test_extract_meta_picks_tag() -> None:
@@ -131,5 +92,5 @@ def test_extract_meta_picks_named_string() -> None:
 def test_extract_meta_token_wins_over_named() -> None:
     tok = Token[int]('x')
     meta = extract_annotated_meta(Annotated[int, tok, Named('legacy')])
-    assert meta.token is tok
+    assert meta.token == tok
     assert meta.named is None

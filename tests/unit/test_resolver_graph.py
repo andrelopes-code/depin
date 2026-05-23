@@ -49,7 +49,7 @@ def test_build_specs_value_record_emits_value_shape() -> None:
     tok = Token[int]('x')
     r = Registry().value(tok, 42)
     [spec] = list(build_specs(r.records()))
-    assert spec.key is tok
+    assert spec.key == tok
     assert spec.shape is ProviderShape.VALUE
 
 
@@ -107,7 +107,7 @@ def test_param_spec_picks_token_from_annotated() -> None:
     r = Registry().bind(factory, scope=Scope.SINGLETON)
     [spec] = list(build_specs(r.records()))
     [p] = spec.params
-    assert p.key is tok
+    assert p.key == tok
 
 
 def test_param_spec_picks_tag() -> None:

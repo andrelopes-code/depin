@@ -91,8 +91,8 @@ v0.2.0 is a clean break from 0.1.x. The migration is breaking; older code will n
 | 0.1.x | 0.2.0 |
 | --- | --- |
 | `Container()` resolves directly | `Container().freeze() -> FrozenContainer` |
-| `Inject(fn)` default value | `Annotated[T, Inject(fn)]` or `Inject(T)` (fastapi ext) |
-| `Container.Depends(X)` | `Annotated`-aware `Inject(X)` |
+| `Inject(fn)` default value | `@frozen.inject` decorator or `Inject(T)` from the fastapi ext |
+| `Container.Depends(X)` | `frozen[X]`, `frozen.resolve(X)`, or `Inject(X)` (fastapi ext) |
 | `Scope.REQUEST` | `Scope.SCOPED` |
 | `RequestScopeService.request_scope()` | `frozen.scope()` / `frozen.ascope()` |
 

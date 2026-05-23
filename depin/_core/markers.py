@@ -1,10 +1,18 @@
-from collections.abc import Callable
 from dataclasses import dataclass
 from typing import final, override
 
 
 @final
 class Token[T]:
+    """A typed, named provider key.
+
+    Two ``Token`` instances are equal iff they share the same ``name``. This makes
+    ``Token`` safe to redeclare across modules: ``Token[str]('db.url')`` in module
+    A resolves to the same provider as ``Token[str]('db.url')`` in module B. The
+    type parameter is phantom — it exists only for the static checker and does not
+    affect equality or hashing.
+    """
+
     __slots__ = ('name',)
 
     def __init__(self, name: str) -> None:
@@ -14,11 +22,13 @@ class Token[T]:
     def __repr__(self) -> str:
         return f'Token({self.name!r})'
 
+    @override
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Token) and self.name == other.name
 
-@final
-@dataclass(frozen=True, slots=True)
-class Inject:
-    factory: Callable[..., object]
+    @override
+    def __hash__(self) -> int:
+        return hash(('depin.Token', self.name))
 
 
 @final

@@ -1,6 +1,4 @@
-from collections.abc import Callable
-
-from depin._core.markers import Inject, Named, Tag, Token, get_provides, provides
+from depin._core.markers import Named, Tag, Token, get_provides, provides
 
 
 def test_token_is_typed_key() -> None:
@@ -8,12 +6,22 @@ def test_token_is_typed_key() -> None:
     assert db_url.name == 'db.url'
 
 
-def test_tokens_are_distinct_by_identity() -> None:
+def test_tokens_with_same_name_are_equal() -> None:
     a = Token[str]('db.url')
     b = Token[str]('db.url')
     assert a is not b
-    assert a != b
-    assert hash(a) != hash(b)
+    assert a == b
+    assert hash(a) == hash(b)
+
+
+def test_tokens_with_different_names_are_distinct() -> None:
+    assert Token[str]('a') != Token[str]('b')
+    assert hash(Token[str]('a')) != hash(Token[str]('b'))
+
+
+def test_token_phantom_type_does_not_affect_equality() -> None:
+    """Token's generic parameter is phantom — runtime equality is name-only."""
+    assert Token[str]('x') == Token[int]('x')
 
 
 def test_token_repr_includes_name() -> None:
@@ -21,18 +29,10 @@ def test_token_repr_includes_name() -> None:
     assert 'max.conn' in repr(t)
 
 
-def test_inject_holds_factory() -> None:
-    def factory() -> int:
-        return 1
-
-    marker = Inject(factory)
-    assert marker.factory is factory
-
-
 def test_named_holds_key() -> None:
     tok = Token[str]('x')
     n = Named(tok)
-    assert n.key is tok
+    assert n.key == tok
 
 
 def test_named_accepts_string_key() -> None:
@@ -43,11 +43,6 @@ def test_named_accepts_string_key() -> None:
 def test_tag_holds_name() -> None:
     t = Tag('primary')
     assert t.name == 'primary'
-
-
-def test_inject_factory_is_callable_only() -> None:
-    inj = Inject(lambda: 0)
-    assert isinstance(inj.factory, Callable)
 
 
 def test_provides_attaches_metadata_to_class() -> None:

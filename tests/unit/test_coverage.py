@@ -6,7 +6,7 @@ from typing import Annotated
 import pytest
 
 from depin._core.container import Container
-from depin._core.markers import Inject, Named, Tag, Token
+from depin._core.markers import Named, Tag, Token
 from depin._core.registry import Registry
 from depin._core.resolver import build_specs
 from depin._core.scope import Scope
@@ -241,18 +241,6 @@ def test_resolver_generator_unwraps_yield_type() -> None:
     assert spec.key is int
 
 
-def test_inject_marker_stored_in_meta() -> None:
-    """Tests that the Inject marker is parsed by extract_annotated_meta."""
-    from depin._core.introspect import extract_annotated_meta
-
-    def helper() -> int:
-        return 3
-
-    inj = Inject(helper)
-    meta = extract_annotated_meta(Annotated[int, inj])
-    assert meta.inject is inj
-
-
 def test_container_merge_with_container() -> None:
     """Container.merge accepting another container."""
 
@@ -351,8 +339,8 @@ def test_resolverparam_key_from_meta_named_token() -> None:
     from depin._core.resolver import param_key_from_meta
 
     tok: Token[int] = Token[int]('k')
-    meta = AnnotatedMeta(base=int, token=None, inject=None, tag=None, named=tok)
-    assert param_key_from_meta(meta) is tok
+    meta = AnnotatedMeta(base=int, token=None, tag=None, named=tok)
+    assert param_key_from_meta(meta) == tok
 
 
 def testfmt_key_non_type_key() -> None:
@@ -438,24 +426,6 @@ def test_resolve_params_sync_frame_hit() -> None:
         frame.put(int, 13)
         a = frozen[A]
     assert a.dep == 13
-
-
-def test_resolver_inject_marker_picks_factory_as_key() -> None:
-    """Cover param_key_from_meta inject branch via the resolver."""
-
-    def get_int() -> int:
-        return 0
-
-    inj = Inject(get_int)
-
-    def factory(x: Annotated[int, inj]) -> str:
-        return str(x)
-
-    r = Registry().bind(factory, scope=Scope.SINGLETON, provides=str)
-    [spec] = list(build_specs(r.records()))
-    [p] = spec.params
-    # Inject marker is captured as base; key resolution falls through to base type.
-    assert p.key is int
 
 
 def test_resolver_handles_str_keys_via_named() -> None:
@@ -595,8 +565,8 @@ def test_param_key_from_meta_falls_through_named_token() -> None:
     from depin._core.resolver import param_key_from_meta
 
     tok: Token[int] = Token[int]('z')
-    meta = AnnotatedMeta(base=int, token=None, inject=None, tag=None, named=tok)
-    assert param_key_from_meta(meta) is tok
+    meta = AnnotatedMeta(base=int, token=None, tag=None, named=tok)
+    assert param_key_from_meta(meta) == tok
 
 
 @pytest.mark.asyncio
