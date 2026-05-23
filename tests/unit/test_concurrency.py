@@ -48,6 +48,58 @@ async def test_concurrent_scoped_async_constructs_once_per_scope() -> None:
     assert count == 1
 
 
+def test_singleton_cache_survives_event_loop_change() -> None:
+    count = 0
+
+    class Pool:
+        def __init__(self) -> None:
+            nonlocal count
+            count += 1
+
+    async def make() -> Pool:
+        await asyncio.sleep(0)
+        return Pool()
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=Pool).freeze()
+
+    async def resolve() -> Pool:
+        async with frozen.ascope():
+            return await frozen.aresolve(Pool)
+
+    a = asyncio.run(resolve())
+    b = asyncio.run(resolve())
+    assert a is b
+    assert count == 1
+
+
+def test_singleton_lock_reusable_across_loops_after_failed_build() -> None:
+    attempts = 0
+
+    class Flaky:
+        def __init__(self) -> None:
+            self.ok = True
+
+    async def make() -> Flaky:
+        nonlocal attempts
+        attempts += 1
+        await asyncio.sleep(0)
+        if attempts == 1:
+            raise RuntimeError('first build fails')
+        return Flaky()
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=Flaky).freeze()
+
+    async def resolve() -> Flaky:
+        async with frozen.ascope():
+            return await frozen.aresolve(Flaky)
+
+    with pytest.raises(RuntimeError, match='first build fails'):
+        asyncio.run(resolve())
+    obj = asyncio.run(resolve())
+    assert obj.ok
+    assert attempts == 2
+
+
 @pytest.mark.asyncio
 async def test_concurrent_singleton_with_async_dep_constructs_once() -> None:
     dep_count = 0

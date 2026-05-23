@@ -22,6 +22,36 @@ async def test_aclose_unwinds_singleton_generators() -> None:
 
 
 @pytest.mark.asyncio
+async def test_built_deps_torn_down_when_later_resolution_fails() -> None:
+    log: list[str] = []
+
+    async def good() -> AsyncGenerator[str]:
+        log.append('good-setup')
+        yield 'g'
+        log.append('good-teardown')
+
+    class Boom(Exception): ...
+
+    async def bad() -> AsyncGenerator[int]:
+        raise Boom
+        yield 0
+
+    frozen = (
+        Container().bind(good, scope=Scope.SCOPED, provides=str).bind(bad, scope=Scope.SCOPED, provides=int).freeze()
+    )
+
+    async def use_scope() -> None:
+        async with frozen.ascope():
+            _ = await frozen.aresolve(str)
+            _ = await frozen.aresolve(int)
+
+    with pytest.raises(Boom):
+        await use_scope()
+
+    assert log == ['good-setup', 'good-teardown']
+
+
+@pytest.mark.asyncio
 async def test_aclose_aggregates_errors() -> None:
     async def boom() -> AsyncGenerator[int]:
         yield 1
