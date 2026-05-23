@@ -254,23 +254,30 @@ def _validate_params(
 
 
 def _collect_missing(
-    spec: ProviderSpec,
+    root: ProviderSpec,
     by_key: dict[tuple[ProviderKey, str | None], ProviderSpec],
     chain: tuple[ProviderSpec, ...],
     missing: dict[tuple[ProviderKey, str | None], tuple[tuple[ProviderSpec, ...], ProviderSpec, str]],
 ) -> None:
-    for param in spec.params:
-        if param.has_default:
-            continue
-        dep = by_key.get((param.key, param.tag))
-        if dep is None:
-            ident = (param.key, param.tag)
-            if ident not in missing or len(chain) > len(missing[ident][0]):
-                missing[ident] = (chain, spec, param.name)
-            continue
-        if any(dep is c for c in chain):
-            continue
-        _collect_missing(dep, by_key, (*chain, dep), missing)
+    # Iterative DFS over the dependency graph. Each entry is the current spec
+    # paired with the chain that led to it; cycles are broken by the
+    # ``dep in chain_specs`` check below.
+    stack: list[tuple[ProviderSpec, tuple[ProviderSpec, ...]]] = [(root, chain)]
+    while stack:
+        spec, current_chain = stack.pop()
+        chain_specs = {id(c) for c in current_chain}
+        for param in spec.params:
+            if param.has_default:
+                continue
+            dep = by_key.get((param.key, param.tag))
+            if dep is None:
+                ident = (param.key, param.tag)
+                if ident not in missing or len(current_chain) > len(missing[ident][0]):
+                    missing[ident] = (current_chain, spec, param.name)
+                continue
+            if id(dep) in chain_specs:
+                continue
+            stack.append((dep, (*current_chain, dep)))
 
 
 _SUGGEST_SCAN_LIMIT = 50_000
@@ -306,31 +313,40 @@ def _toposort(
     specs: Iterable[ProviderSpec],
     by_key: dict[tuple[ProviderKey, str | None], ProviderSpec],
 ) -> tuple[ProviderSpec, ...]:
+    """Iterative post-order DFS. Frames are ``(spec, next_param_index)``."""
     ordered: list[ProviderSpec] = []
-    visiting: set[tuple[ProviderKey, str | None]] = set()
     visited: set[tuple[ProviderKey, str | None]] = set()
-    stack: list[tuple[ProviderKey, str | None]] = []
+    visiting: set[tuple[ProviderKey, str | None]] = set()
 
-    def visit(spec: ProviderSpec) -> None:
-        ident = (spec.key, spec.tag)
-        if ident in visited:
-            return
-        if ident in visiting:
-            chain = ' -> '.join(fmt_key(k) for k, _ in [*stack, ident])
-            raise CircularDependencyError(f'cycle detected: {chain}')
-        visiting.add(ident)
-        stack.append(ident)
-        for param in spec.params:
+    for root in specs:
+        if (root.key, root.tag) in visited:
+            continue
+        stack: list[tuple[ProviderSpec, int]] = [(root, 0)]
+        visiting.add((root.key, root.tag))
+        while stack:
+            spec, i = stack[-1]
+            if i >= len(spec.params):
+                ident = (spec.key, spec.tag)
+                visiting.remove(ident)
+                visited.add(ident)
+                ordered.append(spec)
+                _ = stack.pop()
+                continue
+            stack[-1] = (spec, i + 1)
+            param = spec.params[i]
             dep = by_key.get((param.key, param.tag))
-            if dep is not None:
-                visit(dep)
-        _ = stack.pop()
-        visiting.remove(ident)
-        visited.add(ident)
-        ordered.append(spec)
-
-    for spec in specs:
-        visit(spec)
+            if dep is None:
+                continue
+            dep_ident = (dep.key, dep.tag)
+            if dep_ident in visited:
+                continue
+            if dep_ident in visiting:
+                cycle_path = [(s.key, s.tag) for s, _ in stack]
+                cycle_path.append(dep_ident)
+                chain = ' -> '.join(fmt_key(k) for k, _ in cycle_path)
+                raise CircularDependencyError(f'cycle detected: {chain}')
+            visiting.add(dep_ident)
+            stack.append((dep, 0))
     return tuple(ordered)
 
 
