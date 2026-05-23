@@ -3,7 +3,7 @@
 Type-first dependency-injection for Python 3.12+.
 
 - Resolution driven by type hints; `Protocol` and `Annotated` are first-class.
-- Build-time validation: `Container.freeze()` catches missing providers, cycles, and async/sync mismatches before anything runs.
+- Build-time validation: `Container.freeze()` catches missing providers, cycles, lifetime violations (a singleton that would capture a scoped provider), and async/sync mismatches before anything runs.
 - Full async/sync coverage: classes, sync/async factories, generators, async generators, `@(a)contextmanager`, instance context managers.
 - Optional FastAPI integration in `depin.ext.fastapi`. **Core has zero runtime dependencies.**
 
