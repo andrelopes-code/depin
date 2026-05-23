@@ -15,7 +15,12 @@ from depin._core.spec import (
     is_frame_binding,
     is_value_binding,
 )
-from depin.errors import CircularDependencyError, DuplicateProviderError, MissingProviderError
+from depin.errors import (
+    CaptiveDependencyError,
+    CircularDependencyError,
+    DuplicateProviderError,
+    MissingProviderError,
+)
 
 _LIFECYCLE_SHAPES = frozenset(
     {
@@ -59,6 +64,7 @@ def build_plan(records: Iterable[BindRecord]) -> ResolutionPlan:
     by_key = _index(specs)
     _validate_params(specs, by_key)
     order = _toposort(specs, by_key)
+    _check_captive_dependencies(order, by_key)
     specs_with_async = tuple(_compute_needs_async(order, by_key))
     return ResolutionPlan(order=specs_with_async, by_key=_index(specs_with_async))
 
@@ -376,6 +382,51 @@ def _toposort(
             visiting.add(dep_ident)
             stack.append((dep, 0))
     return tuple(ordered)
+
+
+def _check_captive_dependencies(
+    order: Iterable[ProviderSpec],
+    by_key: dict[tuple[ProviderKey, str | None], ProviderSpec],
+) -> None:
+    """Reject singletons that would capture a scoped provider for their lifetime.
+
+    A singleton is built once and lives forever; a scoped provider lives only for
+    the duration of a ``scope()``. If a singleton depended on a scoped provider it
+    would cache the first scope's instance and silently reuse it across every
+    later scope. Transient providers are inlined into their consumer, so a scoped
+    provider reached through a chain of transients is captured just the same —
+    the walk below looks through transients but stops at singleton boundaries
+    (each singleton is validated as its own root).
+    """
+    for root in order:
+        if root.scope is not Scope.SINGLETON:
+            continue
+        seen: set[tuple[ProviderKey, str | None]] = set()
+        stack: list[tuple[ProviderSpec, tuple[ProviderSpec, ...]]] = [(root, (root,))]
+        while stack:
+            spec, chain = stack.pop()
+            for param in spec.params:
+                dep = by_key.get((param.key, param.tag))
+                if dep is None:
+                    continue
+                if dep.scope is Scope.SCOPED:
+                    raise CaptiveDependencyError(_format_captive(root, dep, (*chain, dep)))
+                if dep.scope is Scope.TRANSIENT:
+                    ident = (dep.key, dep.tag)
+                    if ident in seen:
+                        continue
+                    seen.add(ident)
+                    stack.append((dep, (*chain, dep)))
+
+
+def _format_captive(root: ProviderSpec, dep: ProviderSpec, chain: tuple[ProviderSpec, ...]) -> str:
+    path = ' -> '.join(fmt_key(s.key) for s in chain)
+    return (
+        f'captive dependency: singleton {fmt_key(root.key)} depends on scoped {fmt_key(dep.key)} '
+        f'(chain: {path}). A singleton outlives every scope, so it would capture one '
+        f"scope's {fmt_key(dep.key)} and reuse it across all later scopes. "
+        f'Make {fmt_key(root.key)} scoped, or {fmt_key(dep.key)} a singleton.'
+    )
 
 
 def _compute_needs_async(

@@ -5,6 +5,7 @@ from depin._core.registry import Registry
 from depin._core.resolver import build_plan
 from depin._core.scope import Scope
 from depin.errors import (
+    CaptiveDependencyError,
     CircularDependencyError,
     DuplicateProviderError,
     MissingProviderError,
@@ -166,6 +167,86 @@ def test_duplicate_message_names_key_and_tag() -> None:
     msg = str(exc.value)
     assert 'Iface' in msg
     assert 'primary' in msg
+
+
+def test_singleton_depending_on_scoped_is_rejected() -> None:
+    class Session: ...
+
+    class Service:
+        def __init__(self, session: Session) -> None: ...
+
+    r = Registry().bind(Session, scope=Scope.SCOPED).bind(Service, scope=Scope.SINGLETON)
+    with pytest.raises(CaptiveDependencyError) as exc:
+        _ = build_plan(r.records())
+    msg = str(exc.value)
+    assert 'Service' in msg
+    assert 'Session' in msg
+
+
+def test_singleton_capturing_scoped_through_transient_is_rejected() -> None:
+    class Session: ...
+
+    class Work:
+        def __init__(self, session: Session) -> None: ...
+
+    class Service:
+        def __init__(self, work: Work) -> None: ...
+
+    r = (
+        Registry()
+        .bind(Session, scope=Scope.SCOPED)
+        .bind(Work, scope=Scope.TRANSIENT)
+        .bind(Service, scope=Scope.SINGLETON)
+    )
+    with pytest.raises(CaptiveDependencyError) as exc:
+        _ = build_plan(r.records())
+    chain = str(exc.value).split('chain: ', 1)[1]
+    assert chain.index('Service') < chain.index('Work') < chain.index('Session')
+
+
+def test_scoped_depending_on_scoped_is_allowed() -> None:
+    class Session: ...
+
+    class Repo:
+        def __init__(self, session: Session) -> None: ...
+
+    r = Registry().bind(Session, scope=Scope.SCOPED).bind(Repo, scope=Scope.SCOPED)
+    plan = build_plan(r.records())
+    assert len(plan.order) == 2
+
+
+def test_singleton_depending_on_transient_is_allowed() -> None:
+    class Clock: ...
+
+    class Service:
+        def __init__(self, clock: Clock) -> None: ...
+
+    r = Registry().bind(Clock, scope=Scope.TRANSIENT).bind(Service, scope=Scope.SINGLETON)
+    plan = build_plan(r.records())
+    assert len(plan.order) == 2
+
+
+def test_singleton_transient_diamond_is_allowed() -> None:
+    class Leaf: ...
+
+    class Left:
+        def __init__(self, leaf: Leaf) -> None: ...
+
+    class Right:
+        def __init__(self, leaf: Leaf) -> None: ...
+
+    class Service:
+        def __init__(self, left: Left, right: Right) -> None: ...
+
+    r = (
+        Registry()
+        .bind(Leaf, scope=Scope.TRANSIENT)
+        .bind(Left, scope=Scope.TRANSIENT)
+        .bind(Right, scope=Scope.TRANSIENT)
+        .bind(Service, scope=Scope.SINGLETON)
+    )
+    plan = build_plan(r.records())
+    assert len(plan.order) == 4
 
 
 def test_sync_chain_with_async_dep_rejected() -> None:

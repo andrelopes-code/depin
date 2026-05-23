@@ -20,3 +20,7 @@ class OutsideScopeError(DepinError):
 
 class DuplicateProviderError(DepinError):
     """A binding conflicts with an existing one for the same (key, tag)."""
+
+
+class CaptiveDependencyError(DepinError):
+    """A singleton depends on a scoped provider it would capture for life."""
