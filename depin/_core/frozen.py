@@ -192,13 +192,24 @@ class FrozenContainer:
     def _lookup(self, key: object, tag: str | None) -> ProviderSpec:
         if not _is_provider_key(key):
             raise MissingProviderError(f'cannot look up provider for {key!r}: not a valid key type')
-        for frame in reversed(_overrides.get()):
-            if (key, tag) in frame:
-                return _override_spec(key, tag, frame[(key, tag)])
-        spec = self._plan.by_key.get((key, tag))
+        spec = self._lookup_optional(key, tag)
         if spec is None:
             raise MissingProviderError(f'no provider for {key!r} (tag={tag!r})')
         return spec
+
+    def _lookup_optional(self, key: ProviderKey, tag: str | None) -> ProviderSpec | None:
+        """Resolve ``(key, tag)`` to a spec, honouring any active override.
+
+        Dependency resolution routes through here rather than reading
+        ``self._plan.by_key`` directly, so an ``override`` substitutes a key
+        everywhere it appears in the graph — not only at the top-level lookup.
+        Returns the synthetic override spec when one is active, else the planned
+        provider, else ``None``.
+        """
+        for frame in reversed(_overrides.get()):
+            if (key, tag) in frame:
+                return _override_spec(key, tag, frame[(key, tag)])
+        return self._plan.by_key.get((key, tag))
 
     def _cache_target(self, spec: ProviderSpec) -> ScopeFrame | None:
         """Return the frame that caches this spec, or None for transient scope."""
@@ -300,7 +311,7 @@ class FrozenContainer:
             if frame is not None and param.key in frame:
                 out[param.name] = frame.get(param.key)
                 continue
-            dep = self._plan.by_key.get((param.key, param.tag))
+            dep = self._lookup_optional(param.key, param.tag)
             if dep is None:
                 if param.has_default:
                     continue
@@ -315,7 +326,7 @@ class FrozenContainer:
             if frame is not None and param.key in frame:
                 out[param.name] = frame.get(param.key)
                 continue
-            dep = self._plan.by_key.get((param.key, param.tag))
+            dep = self._lookup_optional(param.key, param.tag)
             if dep is None:
                 if param.has_default:
                     continue
