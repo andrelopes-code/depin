@@ -42,6 +42,11 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PT"]
 [tool.ruff.lint.isort]
 case-sensitive = true
 
+[tool.ruff.lint.flake8-bugbear]
+# injected() is designed to sit in default-value position; it returns a fresh
+# marker each call with no shared mutable state, so B008 does not apply to it.
+extend-immutable-calls = ["depin.injected", "depin._core.markers.injected"]
+
 [tool.basedpyright]
 include = ["depin", "tests", "examples"]
 exclude = ["**/__pycache__", ".venv"]

@@ -5,10 +5,11 @@ from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, 
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import TypeGuard, get_type_hints, overload
+from typing import TypeGuard, overload
 
-from depin._core.introspect import extract_annotated_meta, is_object_token
-from depin._core.markers import Token
+from depin._core.introspect import is_object_token
+from depin._core.markers import Token, is_inject_marker
+from depin._core.resolver import fmt_key
 from depin._core.scope import Scope, ScopeFrame, active_frame, push_frame
 from depin._core.spec import ProviderKey, ProviderShape, ProviderSpec, ResolutionPlan
 from depin.errors import AsyncInSyncContextError, MissingProviderError, OutsideScopeError
@@ -117,12 +118,7 @@ class FrozenContainer:
     def inject[**P, R](self, fn: Callable[P, R]) -> Callable[P, R]: ...
     def inject(self, fn: Callable[..., object]) -> Callable[..., object]:
         sig = inspect.signature(fn)
-        try:
-            hints = dict(get_type_hints(fn, include_extras=True))
-        except (NameError, TypeError):
-            hints = dict(getattr(fn, '__annotations__', {}))
-
-        injectable = self._compute_injectable_params(sig, hints)
+        injectable = self._compute_injectable_params(sig)
 
         if inspect.iscoroutinefunction(fn):
 
@@ -149,27 +145,21 @@ class FrozenContainer:
     def _compute_injectable_params(
         self,
         sig: inspect.Signature,
-        hints: dict[str, object],
     ) -> dict[str, tuple[ProviderKey, str | None]]:
         out: dict[str, tuple[ProviderKey, str | None]] = {}
         for name, param in sig.parameters.items():
-            if name in ('self', 'cls'):
+            marker = param.default
+            if not is_inject_marker(marker):
                 continue
-            if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
-                continue
-            annotation = hints.get(name)
-            if annotation is None:
-                continue
-            meta = extract_annotated_meta(annotation)
-            key: ProviderKey | None = None
-            if meta.token is not None:
-                key = meta.token
-            elif isinstance(meta.named, str) or is_object_token(meta.named):
-                key = meta.named
-            elif _is_provider_key(meta.base):
-                key = meta.base
-            if key is not None and (key, meta.tag) in self._plan.by_key:
-                out[name] = (key, meta.tag)
+            if (marker.key, marker.tag) not in self._plan.by_key:
+                tag_note = f', tag={marker.tag!r}' if marker.tag is not None else ''
+                raise MissingProviderError(
+                    f"@inject: parameter '{name}' requests "
+                    f'injected({fmt_key(marker.key)}{tag_note}) '
+                    'but no provider is registered for that key. '
+                    'Bind it on the Container before calling .freeze(), or remove the injected() default.'
+                )
+            out[name] = (marker.key, marker.tag)
         return out
 
     @contextlib.contextmanager

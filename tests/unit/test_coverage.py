@@ -6,60 +6,35 @@ from typing import Annotated
 import pytest
 
 from depin._core.container import Container
-from depin._core.markers import Named, Tag, Token
+from depin._core.markers import Named, Token, injected
 from depin._core.registry import Registry
 from depin._core.resolver import build_specs
 from depin._core.scope import Scope
 from depin.errors import AsyncInSyncContextError, MissingProviderError
 
 
-def test_inject_with_token_meta() -> None:
+def test_inject_with_token_key() -> None:
     tok: Token[int] = Token[int]('answer')
     frozen = Container().value(tok, 42).freeze()
 
     @frozen.inject
-    def handler(n: Annotated[int, tok]) -> int:
+    def handler(n: int = injected(tok)) -> int:
         return n + 1
 
-    # Python's typing cannot express "after @inject these params become optional".
-    assert handler() == 43  # pyright: ignore[reportCallIssue]
+    assert handler() == 43
 
 
-def test_inject_with_named_string_meta() -> None:
-    frozen = Container().bind(lambda: 'hi', scope=Scope.SINGLETON, provides=str).freeze()
-
-    @frozen.inject
-    def handler(msg: Annotated[str, Named('greeting')]) -> str:
-        return msg
-
-    # Named with string key isn't satisfied (no provider registered under 'greeting');
-    # the decorator simply doesn't inject this param.
-    with pytest.raises(TypeError):
-        handler()  # pyright: ignore[reportCallIssue]
-
-
-def test_inject_with_named_token_meta() -> None:
-    tok: Token[int] = Token[int]('n')
-    frozen = Container().value(tok, 7).freeze()
-
-    @frozen.inject
-    def handler(n: Annotated[int, Named(tok)]) -> int:
-        return n * 2
-
-    assert handler() == 14  # pyright: ignore[reportCallIssue]
-
-
-def test_inject_skips_var_args() -> None:
+def test_inject_keyword_only_param_with_varargs() -> None:
     class Service: ...
 
     frozen = Container().bind(Service, scope=Scope.SINGLETON).freeze()
 
     @frozen.inject
-    def handler(svc: Service, *args: object, **kwargs: object) -> Service:
+    def handler(*args: object, svc: Service = injected(Service), **kwargs: object) -> Service:
         del args, kwargs
         return svc
 
-    assert isinstance(handler(), Service)  # pyright: ignore[reportCallIssue]
+    assert isinstance(handler(), Service)
 
 
 def test_override_with_invalid_key_raises() -> None:
@@ -486,12 +461,12 @@ def test_inject_on_method_skips_self() -> None:
 
     class Handler:
         @frozen.inject
-        def handle(self, svc: Service) -> Service:
+        def handle(self, svc: Service = injected(Service)) -> Service:
             del self
             return svc
 
     h = Handler()
-    assert isinstance(h.handle(), Service)  # pyright: ignore[reportCallIssue]
+    assert isinstance(h.handle(), Service)
 
 
 def test_lookup_unregistered_key_via_resolve() -> None:
@@ -591,7 +566,7 @@ def test_aresolve_with_param_missing_raises_at_runtime() -> None:
 
 
 def test_tag_param_resolution_via_inject() -> None:
-    """Inject decorator with a tagged parameter."""
+    """Inject decorator with tagged parameters."""
 
     class Cache: ...
 
@@ -605,9 +580,12 @@ def test_tag_param_resolution_via_inject() -> None:
     )
 
     @frozen.inject
-    def handler(p: Annotated[Cache, Tag('primary')], f: Annotated[Cache, Tag('fallback')]) -> tuple[Cache, Cache]:
+    def handler(
+        p: Cache = injected(Cache, tag='primary'),
+        f: Cache = injected(Cache, tag='fallback'),
+    ) -> tuple[Cache, Cache]:
         return p, f
 
-    result = handler()  # pyright: ignore[reportCallIssue,reportUnknownVariableType]
+    result = handler()
     assert result[0] is primary
     assert result[1] is fallback

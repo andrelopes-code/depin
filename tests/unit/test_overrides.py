@@ -3,7 +3,7 @@ from typing import Annotated
 import pytest
 
 from depin._core.container import Container
-from depin._core.markers import Tag, Token
+from depin._core.markers import Tag, Token, injected
 from depin._core.scope import Scope
 
 
@@ -70,12 +70,12 @@ def test_override_applies_through_inject_decorator() -> None:
     frozen = Container().bind(_Db, scope=Scope.SINGLETON).bind(_Repo, scope=Scope.TRANSIENT).freeze()
 
     @frozen.inject
-    def handler(repo: _Repo) -> str:
+    def handler(repo: _Repo = injected(_Repo)) -> str:
         return repo.db.name
 
     with frozen.override(_Db, with_=_FakeDb()):
-        assert handler() == 'fake'  # pyright: ignore[reportCallIssue]
-    assert handler() == 'real'  # pyright: ignore[reportCallIssue]
+        assert handler() == 'fake'
+    assert handler() == 'real'
 
 
 def test_override_of_nested_dependency_respects_tag() -> None:
