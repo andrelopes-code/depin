@@ -95,6 +95,20 @@ read headers, URL, cookies, and state — but it is metadata-only: the request
 body belongs to the route's typed parameters, and reading it from a provider
 raises rather than racing the handler's own parsing.
 
+## Caveats
+
+- **Lifecycle teardown.** Singleton providers that use `yield` / context managers
+  are torn down by `await frozen.aclose()`. Call it on app shutdown; scope-local
+  providers are drained automatically when their `scope()` / `ascope()` block exits.
+- **Nested scopes inherit.** A `SCOPED` instance resolved in an outer scope is
+  reused inside a nested scope, not rebuilt. Open sibling scopes for independent
+  instances.
+- **`@frozen.inject` and the type checker.** Python's type system cannot express
+  "these parameters become optional after the decorator", so calling an injected
+  function without the injected arguments needs a `# pyright: ignore[reportCallIssue]`
+  at the call site. The runtime behaviour is correct; only the static signature
+  is unavoidably wider than reality.
+
 ## Status
 
 v0.2.0 is a clean break from 0.1.x. The migration is breaking; older code will not run unchanged.
