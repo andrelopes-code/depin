@@ -12,6 +12,7 @@ from depin._core.spec import (
     ProviderShape,
     ProviderSpec,
     ResolutionPlan,
+    fmt_key,
     is_frame_binding,
     is_value_binding,
 )
@@ -451,9 +452,3 @@ def _compute_needs_async(
             needs_async=own,
             params=spec.params,
         )
-
-
-def fmt_key(key: object) -> str:
-    if isinstance(key, type):
-        return key.__qualname__
-    return repr(key)

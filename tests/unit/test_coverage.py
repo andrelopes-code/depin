@@ -320,7 +320,7 @@ def test_resolverparam_key_from_meta_named_token() -> None:
 
 def testfmt_key_non_type_key() -> None:
     """Cover the `fmt_key` branch for non-type keys (used in error messages)."""
-    from depin._core.resolver import fmt_key
+    from depin._core.spec import fmt_key
 
     tok: Token[int] = Token[int]('k')
     assert "Token('k')" in fmt_key(tok)

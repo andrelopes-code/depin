@@ -94,3 +94,9 @@ class HasRecords(Protocol):
     """
 
     def records(self) -> Iterable[BindRecord]: ...
+
+
+def fmt_key(key: object) -> str:
+    if isinstance(key, type):
+        return key.__qualname__
+    return repr(key)

@@ -9,9 +9,8 @@ from typing import TypeGuard, overload
 
 from depin._core.introspect import is_object_token
 from depin._core.markers import Token, is_inject_marker
-from depin._core.resolver import fmt_key
 from depin._core.scope import Scope, ScopeFrame, active_frame, push_frame
-from depin._core.spec import ProviderKey, ProviderShape, ProviderSpec, ResolutionPlan
+from depin._core.spec import ProviderKey, ProviderShape, ProviderSpec, ResolutionPlan, fmt_key
 from depin.errors import AsyncInSyncContextError, MissingProviderError, OutsideScopeError
 
 
