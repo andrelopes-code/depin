@@ -1,5 +1,3 @@
-from typing import Annotated
-
 from fastapi import FastAPI
 
 from depin import Container
@@ -16,8 +14,5 @@ app.add_middleware(RequestScope, container=di)
 
 
 @app.get('/users/{uid}')
-async def get_user(  # pyright: ignore[reportUnusedFunction]
-    uid: int,
-    svc: Annotated[UserService, Inject(UserService)],
-) -> dict[str, int | str]:
+async def get_user(uid: int, svc: Inject[UserService]) -> dict[str, int | str]:  # pyright: ignore[reportUnusedFunction]
     return await svc.get(uid)

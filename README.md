@@ -65,8 +65,6 @@ See `examples/` for runnable code. Highlights:
 ## FastAPI
 
 ```python
-from typing import Annotated
-
 from fastapi import FastAPI
 from depin import Container, Scope
 from depin.ext.fastapi import RequestScope, Inject
@@ -82,13 +80,14 @@ app.add_middleware(RequestScope, container=di)
 
 
 @app.get('/users/{uid}')
-async def get_user(uid: int, svc: Annotated[UserService, Inject(UserService)]):
+async def get_user(uid: int, svc: Inject[UserService]):
     return await svc.get(uid)
 ```
 
-`Inject(T)` is used inside :class:`typing.Annotated`, which is FastAPI's modern
-dependency-injection style. The call sits in an annotation, so ruff's B008
-(function call in default value) never fires and no per-line waivers are needed.
+`Inject[T]` is a type-level shortcut: the parameter's static type is `T`, while
+at runtime `Inject[T]` resolves to `Annotated[T, Depends(...)]` so FastAPI picks
+up the dependency from the parameter's annotation. No default-value calls, no
+`# noqa: B008` waivers, no extra imports.
 
 ## Status
 
@@ -97,8 +96,8 @@ v0.2.0 is a clean break from 0.1.x. The migration is breaking; older code will n
 | 0.1.x | 0.2.0 |
 | --- | --- |
 | `Container()` resolves directly | `Container().freeze() -> FrozenContainer` |
-| `Inject(fn)` default value | `@frozen.inject` decorator or `Annotated[T, Inject(T)]` (fastapi ext) |
-| `Container.Depends(X)` | `frozen[X]`, `frozen.resolve(X)`, or `Annotated[T, Inject(T)]` (fastapi ext) |
+| `Inject(fn)` default value | `@frozen.inject` decorator or `Inject[T]` (fastapi ext) |
+| `Container.Depends(X)` | `frozen[X]`, `frozen.resolve(X)`, or `Inject[T]` (fastapi ext) |
 | `Scope.REQUEST` | `Scope.SCOPED` |
 | `RequestScopeService.request_scope()` | `frozen.scope()` / `frozen.ascope()` |
 

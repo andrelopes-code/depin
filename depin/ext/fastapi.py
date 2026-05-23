@@ -1,10 +1,11 @@
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import Request
 from fastapi.params import Depends
 from starlette.types import ASGIApp, Receive, Send
 from starlette.types import Scope as ASGIScope
 
 from depin._core.frozen import FrozenContainer
-from depin._core.markers import Token
 
 
 class RequestScope:
@@ -15,7 +16,7 @@ class RequestScope:
     WebSockets pass through without buffering.
 
     The middleware exposes the container at ``app.state.depin_container`` so
-    :func:`Inject` can retrieve it via the FastAPI dependency-injection plumbing,
+    ``Inject[T]`` can retrieve it via the FastAPI dependency-injection plumbing,
     and places the current :class:`fastapi.Request` (for HTTP) into the active
     scope frame so scoped providers can declare it as a constructor parameter.
     """
@@ -40,24 +41,19 @@ class RequestScope:
             await self._app(scope, receive, send)
 
 
-def Inject[T](key: type[T] | Token[T], *, tag: str | None = None) -> Depends:
-    """Resolve ``key`` from the depin container for a FastAPI route parameter.
+if TYPE_CHECKING:
+    # `Inject[T]` is a PEP 695 type alias so the parameter's static type is `T` —
+    # `svc: Inject[UserService]` is read by basedpyright as `svc: UserService`.
+    # At runtime (else-branch) `Inject[T]` is a class whose `__class_getitem__`
+    # returns `Annotated[T, Depends(resolver)]`, which FastAPI picks up via the
+    # usual dependency-injection plumbing. The two views must stay in sync.
+    type Inject[T] = T
+else:
 
-    Use inside :class:`typing.Annotated` so the parameter keeps its static type::
+    class Inject:
+        def __class_getitem__(cls, key: object) -> object:
+            async def resolver(request: Request) -> object:
+                container: FrozenContainer = request.app.state.depin_container
+                return await container.aresolve(key)
 
-        async def handler(svc: Annotated[UserService, Inject(UserService)]) -> ...:
-            ...
-
-    The return value is a :class:`fastapi.params.Depends` instance; FastAPI picks
-    it up from the ``Annotated`` metadata and the parameter's runtime type comes
-    from the first ``Annotated`` argument. The legacy default-value form
-    (``svc: UserService = Inject(UserService)``) is not supported: it triggers
-    ruff's B008 (function call in default) and forces every call site to silence
-    a lint warning.
-    """
-
-    async def resolver(request: Request) -> T:
-        container: FrozenContainer = request.app.state.depin_container
-        return await container.aresolve(key, tag=tag)
-
-    return Depends(dependency=resolver)
+            return Annotated[key, Depends(dependency=resolver)]

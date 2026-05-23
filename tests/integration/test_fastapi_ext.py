@@ -1,5 +1,3 @@
-from typing import Annotated
-
 import pytest
 from fastapi import FastAPI
 from fastapi import Request as FastAPIRequest
@@ -25,9 +23,7 @@ async def test_request_scope_middleware_opens_scope_per_request() -> None:
     app.add_middleware(RequestScope, container=frozen)
 
     @app.get('/tick')
-    async def _tick(  # pyright: ignore[reportUnusedFunction]
-        c: Annotated[Counter, Inject(Counter)],
-    ) -> dict[str, int]:
+    async def _tick(c: Inject[Counter]) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]
         return {'n': c.tick(), 'again': c.tick()}
 
     transport = ASGITransport(app=app)
@@ -50,9 +46,7 @@ async def test_request_is_available_as_scoped_dependency() -> None:
     app.add_middleware(RequestScope, container=frozen)
 
     @app.get('/probe/{x}')
-    async def _probe(  # pyright: ignore[reportUnusedFunction]
-        p: Annotated[Probe, Inject(Probe)],
-    ) -> dict[str, str]:
+    async def _probe(p: Inject[Probe]) -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
         return {'p': p.path}
 
     transport = ASGITransport(app=app)
