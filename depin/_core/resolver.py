@@ -245,7 +245,7 @@ def _validate_params(
     key, _tag = ident
     path = ' -> '.join(fmt_key(s.key) for s in chain)
     suggestions = _suggest_candidates(key)
-    extra = f'; candidates: {", ".join(suggestions[:5])}' if suggestions else ''
+    extra = f'; candidates: {", ".join(suggestions)}' if suggestions else ''
     raise MissingProviderError(
         f'no provider for {fmt_key(key)} '
         f'(required by {fmt_key(owner.key)}.{param_name}; '
@@ -273,19 +273,32 @@ def _collect_missing(
         _collect_missing(dep, by_key, (*chain, dep), missing)
 
 
+_SUGGEST_SCAN_LIMIT = 50_000
+_SUGGEST_RESULT_LIMIT = 5
+
+
 def _suggest_candidates(target: object) -> list[str]:
-    """Scan live classes for `@provides(target)` hints. Used only at error time."""
+    """Scan live classes for `@provides(target)` hints. Used only at error time.
+
+    Bounded by ``_SUGGEST_SCAN_LIMIT`` to keep error-path latency predictable in
+    large processes where ``gc.get_objects()`` returns hundreds of thousands of
+    references.
+    """
     if not isinstance(target, type):
         return []
     import gc
 
     out: list[str] = []
-    for obj in gc.get_objects():
+    for i, obj in enumerate(gc.get_objects()):
+        if i >= _SUGGEST_SCAN_LIMIT:
+            break
         if not isinstance(obj, type):
             continue
         prov = get_provides(obj)
         if prov is target:
             out.append(f'{obj.__module__}.{obj.__qualname__}')
+            if len(out) >= _SUGGEST_RESULT_LIMIT:
+                break
     return out
 
 
