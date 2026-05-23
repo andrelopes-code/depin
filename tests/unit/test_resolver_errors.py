@@ -1,10 +1,12 @@
 import pytest
 
+from depin._core.markers import Token
 from depin._core.registry import Registry
 from depin._core.resolver import build_plan
 from depin._core.scope import Scope
 from depin.errors import (
     CircularDependencyError,
+    DuplicateProviderError,
     MissingProviderError,
 )
 
@@ -79,6 +81,60 @@ def test_missing_provider_suggests_candidates_with_provides() -> None:
     with pytest.raises(MissingProviderError) as exc:
         _ = build_plan(r.records())
     assert 'PgDatabase' in str(exc.value)
+
+
+def test_duplicate_class_binding_raises() -> None:
+    class Foo: ...
+
+    r = Registry().bind(Foo, scope=Scope.SINGLETON).bind(Foo, scope=Scope.SINGLETON)
+    with pytest.raises(DuplicateProviderError, match='Foo'):
+        _ = build_plan(r.records())
+
+
+def test_duplicate_provides_without_tag_raises() -> None:
+    class Iface: ...
+
+    class A(Iface): ...
+
+    class B(Iface): ...
+
+    r = Registry().bind(A, provides=Iface).bind(B, provides=Iface)
+    with pytest.raises(DuplicateProviderError, match='Iface'):
+        _ = build_plan(r.records())
+
+
+def test_duplicate_value_binding_raises() -> None:
+    tok = Token[int]('x')
+    r = Registry().value(tok, 100).value(tok, 200)
+    with pytest.raises(DuplicateProviderError):
+        _ = build_plan(r.records())
+
+
+def test_same_key_distinct_tags_allowed() -> None:
+    class Iface: ...
+
+    class A(Iface): ...
+
+    class B(Iface): ...
+
+    r = Registry().bind(A, provides=Iface, tag='a').bind(B, provides=Iface, tag='b')
+    plan = build_plan(r.records())
+    assert len(plan.order) == 2
+
+
+def test_duplicate_message_names_key_and_tag() -> None:
+    class Iface: ...
+
+    class A(Iface): ...
+
+    class B(Iface): ...
+
+    r = Registry().bind(A, provides=Iface, tag='primary').bind(B, provides=Iface, tag='primary')
+    with pytest.raises(DuplicateProviderError) as exc:
+        _ = build_plan(r.records())
+    msg = str(exc.value)
+    assert 'Iface' in msg
+    assert 'primary' in msg
 
 
 def test_sync_chain_with_async_dep_rejected() -> None:

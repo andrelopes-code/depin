@@ -15,7 +15,7 @@ from depin._core.spec import (
     is_frame_binding,
     is_value_binding,
 )
-from depin.errors import CircularDependencyError, MissingProviderError
+from depin.errors import CircularDependencyError, DuplicateProviderError, MissingProviderError
 
 _LIFECYCLE_SHAPES = frozenset(
     {
@@ -55,6 +55,7 @@ def build_plan(records: Iterable[BindRecord]) -> ResolutionPlan:
     records = tuple(records)
     localns = _registered_classes(records)
     specs = tuple(_record_to_spec(rec, localns) for rec in records)
+    _check_duplicates(specs)
     by_key = _index(specs)
     _validate_params(specs, by_key)
     order = _toposort(specs, by_key)
@@ -223,6 +224,20 @@ def _safe_type_hints(target: object, localns: dict[str, object]) -> dict[str, ob
         return dict(get_type_hints(target, localns=localns, include_extras=True))
     except (NameError, TypeError):
         return {}
+
+
+def _check_duplicates(specs: Iterable[ProviderSpec]) -> None:
+    seen: set[tuple[ProviderKey, str | None]] = set()
+    for spec in specs:
+        ident = (spec.key, spec.tag)
+        if ident in seen:
+            key, tag = ident
+            raise DuplicateProviderError(
+                f'duplicate provider for {fmt_key(key)} (tag={tag!r}): '
+                'two bindings resolve to the same key. Remove one, or give them '
+                'distinct tags to register multiple implementations.'
+            )
+        seen.add(ident)
 
 
 def _index(specs: Iterable[ProviderSpec]) -> dict[tuple[ProviderKey, str | None], ProviderSpec]:
