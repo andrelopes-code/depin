@@ -1,7 +1,7 @@
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import TypeGuard
+from typing import Protocol, TypeGuard, runtime_checkable
 
 from depin._core.markers import Token
 from depin._core.scope import Scope
@@ -83,3 +83,14 @@ class ProviderSpec:
 class ResolutionPlan:
     order: tuple[ProviderSpec, ...]
     by_key: Mapping[tuple[ProviderKey, str | None], ProviderSpec]
+
+
+@runtime_checkable
+class HasRecords(Protocol):
+    """Any source that exposes a sequence of BindRecord entries.
+
+    Implemented by both :class:`depin.Registry` and :class:`depin.Container`, and
+    accepted wherever bindings can be merged in.
+    """
+
+    def records(self) -> Iterable[BindRecord]: ...

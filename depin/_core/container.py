@@ -3,10 +3,10 @@ from typing import Self
 
 from depin._core.frozen import FrozenContainer
 from depin._core.markers import Token
-from depin._core.registry import Registry, ScopeDecorator
+from depin._core.registry import ScopeDecorator
 from depin._core.resolver import build_plan
 from depin._core.scope import Scope
-from depin._core.spec import BindRecord, FrameBinding, ValueBinding
+from depin._core.spec import BindRecord, FrameBinding, HasRecords, ValueBinding
 
 
 class Container:
@@ -16,13 +16,13 @@ class Container:
         self._records: list[BindRecord] = []
 
     @classmethod
-    def from_(cls, *registries: Registry) -> Self:
+    def from_(cls, *sources: HasRecords) -> Self:
         container = cls()
-        for reg in registries:
-            _ = container.merge(reg)
+        for src in sources:
+            _ = container.merge(src)
         return container
 
-    def merge(self, other: 'Registry | Container') -> Self:
+    def merge(self, other: HasRecords) -> Self:
         self._records.extend(other.records())
         return self
 
