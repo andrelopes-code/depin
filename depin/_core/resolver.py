@@ -256,12 +256,25 @@ def _validate_params(
         _collect_missing(root, by_key, (root,), missing)
     if not missing:
         return
-    ident, (chain, owner, param_name) = max(missing.items(), key=lambda kv: len(kv[1][0]))
+    ordered = sorted(missing.items(), key=lambda kv: len(kv[1][0]), reverse=True)
+    lines = [_format_missing(ident, chain, owner, param_name) for ident, (chain, owner, param_name) in ordered]
+    if len(lines) == 1:
+        raise MissingProviderError(lines[0])
+    body = '\n  - '.join(lines)
+    raise MissingProviderError(f'{len(lines)} missing providers:\n  - {body}')
+
+
+def _format_missing(
+    ident: tuple[ProviderKey, str | None],
+    chain: tuple[ProviderSpec, ...],
+    owner: ProviderSpec,
+    param_name: str,
+) -> str:
     key, _tag = ident
     path = ' -> '.join(fmt_key(s.key) for s in chain)
     suggestions = _suggest_candidates(key)
     extra = f'; candidates: {", ".join(suggestions)}' if suggestions else ''
-    raise MissingProviderError(
+    return (
         f'no provider for {fmt_key(key)} '
         f'(required by {fmt_key(owner.key)}.{param_name}; '
         f'resolution chain: {path} -> {fmt_key(key)}){extra}'

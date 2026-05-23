@@ -46,6 +46,37 @@ def test_cycle_detected() -> None:
     assert 'B' in str(exc.value)
 
 
+def test_reports_all_missing_providers_at_once() -> None:
+    class A: ...
+
+    class B: ...
+
+    class Service:
+        def __init__(self, a: A, b: B) -> None: ...
+
+    r = Registry().bind(Service, scope=Scope.SINGLETON)
+    with pytest.raises(MissingProviderError) as exc:
+        _ = build_plan(r.records())
+    msg = str(exc.value)
+    assert 'A' in msg
+    assert 'B' in msg
+    assert '2 missing providers' in msg
+
+
+def test_single_missing_provider_keeps_concise_message() -> None:
+    class A: ...
+
+    class B:
+        def __init__(self, a: A) -> None: ...
+
+    r = Registry().bind(B, scope=Scope.SINGLETON)
+    with pytest.raises(MissingProviderError) as exc:
+        _ = build_plan(r.records())
+    msg = str(exc.value)
+    assert 'missing providers' not in msg
+    assert msg.startswith('no provider for ')
+
+
 def test_missing_provider_message_includes_chain() -> None:
     class A: ...
 
