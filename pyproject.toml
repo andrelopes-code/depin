@@ -34,7 +34,7 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-fastapi = ["fastapi>=0.110", "starlette>=0.36"]
+fastapi = ["fastapi>=0.110", "starlette>=1.1.0"]
 
 [project.urls]
 Homepage = "https://github.com/andrelopes-code/depin"
