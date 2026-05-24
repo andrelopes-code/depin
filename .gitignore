@@ -8,7 +8,20 @@ wheels/
 
 # Virtual environments
 .venv
+.venv-*
+
+# Coverage
 .coverage
+coverage.xml
 htmlcov
+
+# Tooling caches
 .pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Local credentials
 .pypirc
+
+# OS files
+.DS_Store
