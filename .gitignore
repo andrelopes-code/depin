@@ -25,3 +25,6 @@ htmlcov
 
 # OS files
 .DS_Store
+
+# MkDocs build output
+site/

@@ -1,0 +1,76 @@
+site_name: depin
+site_description: Type-first dependency injection for Python
+site_url: https://andrelopes-code.github.io/depin/
+repo_url: https://github.com/andrelopes-code/depin
+repo_name: andrelopes-code/depin
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: false
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: true
+            show_root_heading: true
+            show_root_full_path: false
+            heading_level: 2
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+exclude_docs: |
+  superpowers/
+
+nav:
+  - Home: index.md
+  - Tutorial:
+      - Your first injection: tutorial/first-injection.md
+  - How-to guides:
+      - Overview: how-to/index.md
+      - Tokens for config: how-to/tokens.md
+      - Generators and teardown: how-to/generators-teardown.md
+      - Async scopes per request: how-to/async-per-request.md
+      - Tagged protocols: how-to/tagged-protocols.md
+      - Overrides in tests: how-to/test-overrides.md
+      - FastAPI integration: how-to/fastapi.md
+  - Explanation:
+      - Overview: explanation/index.md
+      - Lifetimes and captive dependencies: explanation/lifetimes.md
+      - What freeze() validates: explanation/freeze-validation.md
+      - The sync/async model: explanation/sync-async.md
+      - Request scope (ASGI): explanation/request-scope.md
+  - Reference:
+      - Overview: reference/index.md
+      - Container & Registry: reference/container.md
+      - FrozenContainer: reference/frozen.md
+      - Markers: reference/markers.md
+      - Scope: reference/scope.md
+      - Errors: reference/errors.md
+      - FastAPI: reference/fastapi.md
