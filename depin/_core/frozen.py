@@ -1,3 +1,5 @@
+"""The immutable runtime: resolve values, open scopes, inject, and override."""
+
 import contextlib
 import functools
 import inspect
@@ -52,12 +54,26 @@ _ASYNC_SHAPES = frozenset(
 
 
 class FrozenContainer:
-    """Immutable view of a resolved dependency graph.
+    """Immutable, validated view of a dependency graph.
 
-    The internal resolver carries provider results as ``object`` because the graph
-    spec is type-erased; the public API (``__getitem__``, ``resolve``, ``aresolve``)
-    re-states the static result type. The narrowing is a single documented boundary:
-    providers must produce values matching the static type of their declared key.
+    Produced by :meth:`depin.Container.freeze`. Resolve values by key with
+    :meth:`resolve` / :meth:`aresolve` or the ``frozen[key]`` shorthand, scope
+    short-lived values with :meth:`scope` / :meth:`ascope`, wire functions with
+    :meth:`inject`, and substitute providers in tests with :meth:`override`.
+
+    The container registers no new providers; it holds only the singleton cache
+    and the root scope. It is safe to share across threads and tasks: scopes are
+    tracked per :class:`contextvars.Context`, so concurrent requests never see
+    each other's scoped instances.
+
+    Example:
+        >>> from depin import Container
+        >>> class Greeter:
+        ...     def hello(self) -> str:
+        ...         return 'hi'
+        >>> di = Container().bind(Greeter).freeze()
+        >>> di[Greeter].hello()
+        'hi'
     """
 
     __slots__ = ('_plan', '_root')
@@ -71,9 +87,44 @@ class FrozenContainer:
     @overload
     def __getitem__[T](self, key: Token[T]) -> T: ...
     def __getitem__[T](self, key: type[T] | Token[T]) -> T:
+        """Resolve ``key`` synchronously; shorthand for :meth:`resolve`.
+
+        Example:
+            >>> from depin import Container, Token
+            >>> port = Token[int]('port')
+            >>> di = Container().value(port, 8080).freeze()
+            >>> di[port]
+            8080
+        """
         return self.resolve(key)
 
     def resolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
+        """Resolve a value by key, synchronously.
+
+        Returns the cached singleton or scoped instance if present, otherwise
+        builds it (resolving its dependencies first). Synchronous resolution cannot
+        drive async providers: if ``key`` or anything it depends on is async, this
+        raises rather than blocking an event loop — use :meth:`aresolve` instead.
+
+        Args:
+            key: A class or :class:`~depin.Token` to resolve.
+            tag: Selects among providers registered under ``key`` with a tag.
+
+        Raises:
+            MissingProviderError: No provider is registered for ``key`` / ``tag``.
+            AsyncInSyncContextError: The provider, or a dependency, is async.
+            OutsideScopeError: ``key`` is scoped and no scope is active.
+
+        Example:
+            >>> from depin import Container
+            >>> from depin.errors import MissingProviderError
+            >>> di = Container().freeze()
+            >>> try:
+            ...     di.resolve(int)
+            ... except MissingProviderError as exc:
+            ...     print(exc)
+            no provider for <class 'int'> (tag=None)
+        """
         spec = self._lookup(key, tag)
         # spec.source is type-erased `object` in the plan; the runtime contract
         # (enforced by build_plan) is that providers return values matching the
@@ -81,6 +132,22 @@ class FrozenContainer:
         return self._resolve_sync(spec)  # pyright: ignore[reportReturnType]
 
     async def aresolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
+        """Resolve a value by key, asynchronously.
+
+        The async counterpart to :meth:`resolve`. Handles both sync and async
+        providers, awaiting async factories, async generators, and async context
+        managers. Concurrent resolutions of the same cached provider are
+        single-flighted, so a singleton or scoped value is built exactly once even
+        under concurrency.
+
+        Args:
+            key: A class or :class:`~depin.Token` to resolve.
+            tag: Selects among providers registered under ``key`` with a tag.
+
+        Raises:
+            MissingProviderError: No provider is registered for ``key`` / ``tag``.
+            OutsideScopeError: ``key`` is scoped and no scope is active.
+        """
         spec = self._lookup(key, tag)
         # See the matching note in `resolve`: plan-level erasure of provider
         # return types forces a single documented widening at this boundary.
@@ -94,6 +161,33 @@ class FrozenContainer:
 
     @contextlib.contextmanager
     def scope(self) -> Generator[ScopeFrame]:
+        """Open a synchronous scope for scoped providers and their teardown.
+
+        Scoped providers resolved inside the ``with`` block are built once for the
+        block and cached in the yielded frame. On exit, their teardowns run in
+        reverse order of construction; if several fail, the errors are collected
+        into an :class:`ExceptionGroup` so no failure hides another. Singletons are
+        unaffected — they live on the container, not the scope.
+
+        Scopes nest: a scoped value built in an outer scope is reused inside a
+        nested scope, not rebuilt. Open sibling scopes for independent instances.
+        Use :meth:`ascope` when any provider in the scope is async.
+
+        Example:
+            >>> from collections.abc import Generator
+            >>> from depin import Container, Scope
+            >>> events: list[str] = []
+            >>> class Conn: ...
+            >>> def connect() -> Generator[Conn]:
+            ...     events.append('open')
+            ...     yield Conn()
+            ...     events.append('close')
+            >>> di = Container().bind(connect, scope=Scope.SCOPED).freeze()
+            >>> with di.scope():
+            ...     conn = di.resolve(Conn)
+            >>> events
+            ['open', 'close']
+        """
         with push_frame() as frame:
             try:
                 yield frame
@@ -102,6 +196,13 @@ class FrozenContainer:
 
     @contextlib.asynccontextmanager
     async def ascope(self) -> AsyncGenerator[ScopeFrame]:
+        """Open an asynchronous scope; the async counterpart to :meth:`scope`.
+
+        Required when scoped providers are async (async factories / generators /
+        async context managers). Teardowns — sync and async alike — run in reverse
+        order on exit, with failures collected into an :class:`ExceptionGroup`. The
+        per-request scope opened by the FastAPI integration is an ``ascope``.
+        """
         with push_frame() as frame:
             try:
                 yield frame
@@ -109,6 +210,14 @@ class FrozenContainer:
                 await self._drain_async(frame)
 
     async def aclose(self) -> None:
+        """Tear down singleton providers that own lifecycle resources.
+
+        Drains the root scope, running the teardown half of every singleton
+        generator / context-manager provider in reverse order of construction.
+        Call this once on application shutdown. Scoped providers do not need it —
+        they are drained when their :meth:`scope` / :meth:`ascope` block exits.
+        Failures are collected into an :class:`ExceptionGroup`.
+        """
         await self._drain_async(self._root)
 
     @overload
@@ -116,6 +225,32 @@ class FrozenContainer:
     @overload
     def inject[**P, R](self, fn: Callable[P, R]) -> Callable[P, R]: ...
     def inject(self, fn: Callable[..., object]) -> Callable[..., object]:
+        """Wrap a function so parameters defaulting to ``injected(...)`` are filled.
+
+        Returns a wrapper that, on each call, resolves every parameter whose
+        default is :func:`~depin.injected` and leaves the rest to the caller.
+        Already-supplied arguments are never overridden, so an injected parameter
+        can still be passed explicitly (handy in tests). The wrapper preserves the
+        sync/async nature of ``fn``. Injected keys are validated at decoration
+        time, not call time: decorating raises immediately if a marked key is
+        unregistered. Because the markers sit in default position, injected
+        parameters must follow non-default ones or be keyword-only.
+
+        Raises:
+            MissingProviderError: A parameter requests an unregistered key.
+
+        Example:
+            >>> from depin import Container, injected
+            >>> class Repo:
+            ...     def count(self) -> int:
+            ...         return 3
+            >>> di = Container().bind(Repo).freeze()
+            >>> @di.inject
+            ... def handler(label: str, repo: Repo = injected(Repo)) -> str:
+            ...     return f'{label}={repo.count()}'
+            >>> handler(label='n')
+            'n=3'
+        """
         sig = inspect.signature(fn)
         injectable = self._compute_injectable_params(sig)
 
@@ -169,6 +304,36 @@ class FrozenContainer:
         with_: T,
         tag: str | None = None,
     ) -> Generator['FrozenContainer']:
+        """Temporarily replace a provider's value within a ``with`` block.
+
+        Inside the block, every resolution of ``key`` (and ``tag``) returns
+        ``with_`` instead of the registered provider — including resolutions deep
+        in the graph, as a dependency of another provider, not only top-level
+        lookups. If ``with_`` is a callable and not a class it is invoked as a
+        factory per resolution; otherwise it is returned as-is. The override is
+        bound to the current :class:`contextvars.Context` and undone on exit, so
+        concurrent contexts are unaffected; overrides nest, innermost wins.
+        Primarily a testing seam — swap a real dependency for a fake without
+        rebuilding the container.
+
+        Raises:
+            MissingProviderError: ``key`` is not a valid provider key type.
+
+        Example:
+            >>> from depin import Container
+            >>> class Clock:
+            ...     def now(self) -> str:
+            ...         return 'real'
+            >>> class FakeClock:
+            ...     def now(self) -> str:
+            ...         return 'fake'
+            >>> di = Container().bind(Clock).freeze()
+            >>> with di.override(Clock, with_=FakeClock()):
+            ...     di.resolve(Clock).now()
+            'fake'
+            >>> di.resolve(Clock).now()
+            'real'
+        """
         if not _is_provider_key(key):
             raise MissingProviderError(f'cannot override {key!r}: not a valid key type')
         frame: _OverrideFrame = {(key, tag): with_}
