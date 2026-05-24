@@ -1,3 +1,5 @@
+"""Public marker types and decorators for keys, tags, and injection."""
+
 from dataclasses import dataclass
 from typing import TypeGuard, final, override
 
@@ -13,6 +15,13 @@ class Token[T]:
     A resolves to the same provider as ``Token[str]('db.url')`` in module B. The
     type parameter is phantom — it exists only for the static checker and does not
     affect equality or hashing.
+
+    Example:
+        >>> from depin import Token
+        >>> Token[str]('db.url') == Token[str]('db.url')
+        True
+        >>> Token[str]('db.url') == Token[int]('db.url')
+        True
     """
 
     __slots__ = ('name',)
@@ -36,12 +45,37 @@ class Token[T]:
 @final
 @dataclass(frozen=True, slots=True)
 class Named:
+    """Annotated-metadata marker that selects a provider by key.
+
+    Use inside ``Annotated[...]`` on a provider parameter when the parameter's
+    type alone does not identify the provider — for example to pull a
+    :class:`Token` value, or a string-keyed binding, into a constructor. Given
+    ``db_url = Token[str]('db.url')``::
+
+        def make_pool(url: Annotated[str, Named(db_url)]) -> Pool: ...
+
+    ``key`` is the provider key to resolve: a :class:`Token` or a plain string. A
+    bare ``Token`` placed directly in ``Annotated[...]`` has the same effect;
+    ``Named`` is the explicit form and the only way to reference a string key.
+    """
+
     key: 'Token[object] | str'
 
 
 @final
 @dataclass(frozen=True, slots=True)
 class Tag:
+    """Annotated-metadata marker that selects a tagged provider.
+
+    When several providers share a key (registered with different ``tag=``
+    values), ``Tag`` picks one for a parameter::
+
+        def report(store: Annotated[Store, Tag('primary')]) -> Report: ...
+
+    ``name`` must match the ``tag`` given at registration. Pairs with the
+    ``tag=`` argument of :meth:`depin.Container.bind`.
+    """
+
     name: str
 
 
@@ -108,6 +142,26 @@ class _ProvidesDecorator[A]:
 
 
 def provides[A](abstract: type[A]) -> _ProvidesDecorator[A]:
+    """Tag a class with the abstract type it implements.
+
+    Decorating ``@provides(Abstract)`` records ``Abstract`` as the class's provider
+    key, so :meth:`depin.Container.bind` registers the concrete class under the
+    abstract type without an explicit ``provides=`` argument. Useful for binding an
+    implementation against a :class:`typing.Protocol` or base class.
+
+    Example:
+        >>> from typing import Protocol
+        >>> from depin import Container, provides
+        >>> class Store(Protocol):
+        ...     def get(self) -> str: ...
+        >>> @provides(Store)
+        ... class MemStore:
+        ...     def get(self) -> str:
+        ...         return 'mem'
+        >>> di = Container().bind(MemStore).freeze()
+        >>> di.resolve(Store).get()
+        'mem'
+    """
     return _ProvidesDecorator(abstract)
 
 
