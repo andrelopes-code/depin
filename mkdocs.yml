@@ -50,22 +50,6 @@ exclude_docs: |
 
 nav:
   - Home: index.md
-  - Tutorial:
-      - Your first injection: tutorial/first-injection.md
-  - How-to guides:
-      - Overview: how-to/index.md
-      - Tokens for config: how-to/tokens.md
-      - Generators and teardown: how-to/generators-teardown.md
-      - Async scopes per request: how-to/async-per-request.md
-      - Tagged protocols: how-to/tagged-protocols.md
-      - Overrides in tests: how-to/test-overrides.md
-      - FastAPI integration: how-to/fastapi.md
-  - Explanation:
-      - Overview: explanation/index.md
-      - Lifetimes and captive dependencies: explanation/lifetimes.md
-      - What freeze() validates: explanation/freeze-validation.md
-      - The sync/async model: explanation/sync-async.md
-      - Request scope (ASGI): explanation/request-scope.md
   - Reference:
       - Overview: reference/index.md
       - Container & Registry: reference/container.md
