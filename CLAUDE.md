@@ -63,6 +63,35 @@ If, after exhausting the above, a suppression is still the only option, it must 
 - If a piece of code needs a comment to be understood, rewrite the code. A required comment is a signal that names, structure, or decomposition are wrong.
 - Inline comments are reserved for genuinely non-obvious reasoning: a workaround for a specific bug, a subtle invariant, a performance trade-off. They must explain *why*, never *what*.
 
+### Docstrings on the public API
+
+The public API — everything re-exported from `depin/__init__.py`, the exceptions
+in `depin/errors.py`, and `depin/ext/fastapi.py` — carries Google-style
+docstrings (`Args:`, `Returns:`, `Raises:`, `Example:`). Because the library is
+type-first, **docstrings never restate types**: the signature already carries
+them. Document only what the signature cannot:
+
+- semantics of lifetimes and scope (singleton / scoped / transient);
+- teardown order and guarantees;
+- error conditions — every public callable lists the exceptions it raises under
+  `Raises:`, with the trigger and, where useful, how to resolve it;
+- sync vs async rules (when `resolve` rejects async; when `aresolve` / `ascope`
+  are required);
+- what `freeze()` validates.
+
+Rules:
+
+- Omit types from `Args:` / `Returns:` — describe meaning and contracts, not the
+  type the annotation already states.
+- Every `Example:` uses doctest (`>>>`) and must pass `pytest --doctest-modules`.
+  Keep examples short and self-contained; prefer one focused example over many.
+- Do not document private helpers in `_core` just to document them. Add a
+  docstring only where it conveys an invariant, precondition, edge case, or
+  example — the same bar this file already sets for comments.
+- One-line module docstrings state the module's role; the package docstring in
+  `depin/__init__.py` gives the mental model (Container → freeze →
+  FrozenContainer) and a minimal runnable example.
+
 ## Error handling
 
 - Never swallow exceptions. `except: pass` and `except Exception: pass` are forbidden.
