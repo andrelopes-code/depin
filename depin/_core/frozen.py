@@ -67,6 +67,7 @@ class FrozenContainer:
     each other's scoped instances.
 
     Example:
+        ```pycon
         >>> from depin import Container
         >>> class Greeter:
         ...     def hello(self) -> str:
@@ -74,6 +75,8 @@ class FrozenContainer:
         >>> di = Container().bind(Greeter).freeze()
         >>> di[Greeter].hello()
         'hi'
+
+        ```
     """
 
     __slots__ = ('_plan', '_root')
@@ -90,11 +93,14 @@ class FrozenContainer:
         """Resolve ``key`` synchronously; shorthand for `resolve()`.
 
         Example:
+            ```pycon
             >>> from depin import Container, Token
             >>> port = Token[int]('port')
             >>> di = Container().value(port, 8080).freeze()
             >>> di[port]
             8080
+
+            ```
         """
         return self.resolve(key)
 
@@ -116,6 +122,7 @@ class FrozenContainer:
             OutsideScopeError: ``key`` is scoped and no scope is active.
 
         Example:
+            ```pycon
             >>> from depin import Container
             >>> from depin.errors import MissingProviderError
             >>> di = Container().freeze()
@@ -124,6 +131,8 @@ class FrozenContainer:
             ... except MissingProviderError as exc:
             ...     print(exc)
             no provider for <class 'int'> (tag=None)
+
+            ```
         """
         spec = self._lookup(key, tag)
         # spec.source is type-erased `object` in the plan; the runtime contract
@@ -174,6 +183,7 @@ class FrozenContainer:
         Use `ascope()` when any provider in the scope is async.
 
         Example:
+            ```pycon
             >>> from collections.abc import Generator
             >>> from depin import Container, Scope
             >>> events: list[str] = []
@@ -187,6 +197,8 @@ class FrozenContainer:
             ...     conn = di.resolve(Conn)
             >>> events
             ['open', 'close']
+
+            ```
         """
         with push_frame() as frame:
             try:
@@ -240,6 +252,7 @@ class FrozenContainer:
             MissingProviderError: A parameter requests an unregistered key.
 
         Example:
+            ```pycon
             >>> from depin import Container, injected
             >>> class Repo:
             ...     def count(self) -> int:
@@ -250,6 +263,8 @@ class FrozenContainer:
             ...     return f'{label}={repo.count()}'
             >>> handler(label='n')
             'n=3'
+
+            ```
         """
         sig = inspect.signature(fn)
         injectable = self._compute_injectable_params(sig)
@@ -320,6 +335,7 @@ class FrozenContainer:
             MissingProviderError: ``key`` is not a valid provider key type.
 
         Example:
+            ```pycon
             >>> from depin import Container
             >>> class Clock:
             ...     def now(self) -> str:
@@ -333,6 +349,8 @@ class FrozenContainer:
             'fake'
             >>> di.resolve(Clock).now()
             'real'
+
+            ```
         """
         if not _is_provider_key(key):
             raise MissingProviderError(f'cannot override {key!r}: not a valid key type')

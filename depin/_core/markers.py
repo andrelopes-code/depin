@@ -17,11 +17,14 @@ class Token[T]:
     affect equality or hashing.
 
     Example:
+        ```pycon
         >>> from depin import Token
         >>> Token[str]('db.url') == Token[str]('db.url')
         True
         >>> Token[str]('db.url') == Token[int]('db.url')
         True
+
+        ```
     """
 
     __slots__ = ('name',)
@@ -150,6 +153,7 @@ def provides[A](abstract: type[A]) -> _ProvidesDecorator[A]:
     implementation against a `typing.Protocol` or base class.
 
     Example:
+        ```pycon
         >>> from typing import Protocol
         >>> from depin import Container, provides
         >>> class Store(Protocol):
@@ -161,6 +165,8 @@ def provides[A](abstract: type[A]) -> _ProvidesDecorator[A]:
         >>> di = Container().bind(MemStore).freeze()
         >>> di.resolve(Store).get()
         'mem'
+
+        ```
     """
     return _ProvidesDecorator(abstract)
 

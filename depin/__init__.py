@@ -7,6 +7,7 @@ to validate the dependency graph, and resolve values from the immutable
 dependencies; the optional FastAPI integration lives in ``depin.ext.fastapi``.
 
 Example:
+    ```pycon
     >>> from depin import Container
     >>> class Config:
     ...     value = 42
@@ -16,6 +17,8 @@ Example:
     >>> di = Container().bind(Config).bind(Service).freeze()
     >>> di[Service].config.value
     42
+
+    ```
 """
 
 from importlib.metadata import version

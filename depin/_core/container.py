@@ -23,6 +23,7 @@ class Container:
     `freeze()` time.
 
     Example:
+        ```pycon
         >>> from depin import Container
         >>> class Config:
         ...     value = 42
@@ -32,6 +33,8 @@ class Container:
         >>> di = Container().bind(Config).bind(Service).freeze()
         >>> di[Service].config.value
         42
+
+        ```
     """
 
     __slots__ = ('_records',)
@@ -48,12 +51,15 @@ class Container:
         creating an empty container and `merge()`-ing each source in order.
 
         Example:
+            ```pycon
             >>> from depin import Container, Registry
             >>> class Svc: ...
             >>> reg = Registry().bind(Svc)
             >>> di = Container.from_(reg).freeze()
             >>> isinstance(di[Svc], Svc)
             True
+
+            ```
         """
         container = cls()
         for src in sources:
@@ -101,6 +107,7 @@ class Container:
             ``self``, for chaining.
 
         Example:
+            ```pycon
             >>> from depin import Container
             >>> class Clock:
             ...     def now(self) -> str:
@@ -108,6 +115,8 @@ class Container:
             >>> di = Container().bind(Clock).freeze()
             >>> di[Clock].now()
             'noon'
+
+            ```
         """
         self._records.append(BindRecord(source=source, scope=scope, provides=provides, tag=tag))
         return self
@@ -120,11 +129,14 @@ class Container:
         plain values that have no factory.
 
         Example:
+            ```pycon
             >>> from depin import Container, Token
             >>> max_conn = Token[int]('max.conn')
             >>> di = Container().value(max_conn, 10).freeze()
             >>> di[max_conn]
             10
+
+            ```
         """
         self._records.append(
             BindRecord(source=ValueBinding(token, value), scope=Scope.SINGLETON, provides=None, tag=None)
@@ -160,6 +172,7 @@ class Container:
         `bind()`.
 
         Example:
+            ```pycon
             >>> from depin import Container
             >>> container = Container()
             >>> @container.singleton()
@@ -168,6 +181,8 @@ class Container:
             >>> di = container.freeze()
             >>> di[Cache] is di[Cache]
             True
+
+            ```
         """
         return ScopeDecorator(self._record_bind, Scope.SINGLETON, provides, tag)
 
@@ -241,6 +256,7 @@ class Container:
                 transient.
 
         Example:
+            ```pycon
             >>> from depin import Container, Scope
             >>> from depin.errors import CaptiveDependencyError
             >>> class Session: ...
@@ -256,6 +272,8 @@ class Container:
             ... except CaptiveDependencyError:
             ...     print('rejected')
             rejected
+
+            ```
         """
         return FrozenContainer(build_plan(self.records()))
 

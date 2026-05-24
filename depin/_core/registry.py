@@ -58,6 +58,7 @@ class Registry:
             registries keeps the first non-empty name.
 
     Example:
+        ```pycon
         >>> from depin import Container, Registry
         >>> class Logger: ...
         >>> class Metrics: ...
@@ -66,6 +67,8 @@ class Registry:
         >>> di = Container.from_(infra | obs).freeze()
         >>> isinstance(di[Logger], Logger) and isinstance(di[Metrics], Metrics)
         True
+
+        ```
     """
 
     __slots__ = ('_records', 'name')
