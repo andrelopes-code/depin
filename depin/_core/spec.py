@@ -1,3 +1,5 @@
+"""Internal binding/resolution data structures and the public HasRecords protocol."""
+
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum, auto
