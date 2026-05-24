@@ -25,7 +25,7 @@ class RequestScope:
     WebSockets pass through without buffering. Lifespan and other non-HTTP
     scopes are forwarded untouched, with no depin scope opened.
 
-    For HTTP requests it places a metadata-only :class:`fastapi.Request` into the
+    For HTTP requests it places a metadata-only `fastapi.Request` into the
     active scope frame so scoped providers can read headers, URL, cookies, and
     state. That ``Request`` carries no receive channel: reading the body through
     it raises rather than consuming the stream the route handler needs (which
@@ -74,10 +74,10 @@ else:
         Write ``svc: Inject[UserService]`` on a route handler: to the type checker
         the parameter is plain ``UserService``, while at runtime ``Inject[T]``
         expands to ``Annotated[T, Depends(...)]`` so FastAPI resolves it through the
-        active :class:`RequestScope`. No default-value markers and no
+        active `RequestScope`. No default-value markers and no
         ``# noqa: B008`` waivers at the call site.
 
-        Resolving ``Inject[T]`` outside a :class:`RequestScope` raises
+        Resolving ``Inject[T]`` outside a `RequestScope` raises
         ``RuntimeError`` — install the middleware with
         ``app.add_middleware(RequestScope, container=...)``.
         """

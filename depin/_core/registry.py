@@ -46,12 +46,12 @@ class ScopeDecorator:
 class Registry:
     """A reusable, composable collection of bindings.
 
-    A ``Registry`` holds the same kind of bindings as a :class:`~depin.Container`
+    A ``Registry`` holds the same kind of bindings as a `Container`
     but performs no validation or resolution: it is a module-level catalogue you
     declare once and feed into one or more containers via
-    :meth:`depin.Container.from_` / :meth:`~depin.Container.merge`. Registries
+    `Container.from_()` / `Container.merge()`. Registries
     compose with ``|`` to form a larger registry. The registration methods mirror
-    :class:`~depin.Container` exactly and each returns ``self`` for chaining.
+    `Container` exactly and each returns ``self`` for chaining.
 
     Args:
         name: Optional label, used only to identify the registry; merging two named
@@ -82,19 +82,19 @@ class Registry:
         provides: type[object] | None = None,
         tag: str | None = None,
     ) -> Self:
-        """Register a class or factory; see :meth:`depin.Container.bind`."""
+        """Register a class or factory; see `Container.bind()`."""
         self._records.append(BindRecord(source=source, scope=scope, provides=provides, tag=tag))
         return self
 
     def value[T](self, token: Token[T], value: T) -> Self:
-        """Bind a ready-made value to a token; see :meth:`depin.Container.value`."""
+        """Bind a ready-made value to a token; see `Container.value()`."""
         self._records.append(
             BindRecord(source=ValueBinding(token, value), scope=Scope.SINGLETON, provides=None, tag=None)
         )
         return self
 
     def frame_provides[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> Self:
-        """Declare a frame-supplied key; see :meth:`depin.Container.frame_provides`."""
+        """Declare a frame-supplied key; see `Container.frame_provides()`."""
         self._records.append(BindRecord(source=FrameBinding(key), scope=Scope.SCOPED, provides=None, tag=tag))
         return self
 
@@ -104,7 +104,7 @@ class Registry:
         provides: type[object] | None = None,
         tag: str | None = None,
     ) -> ScopeDecorator:
-        """Singleton decorator; see :meth:`depin.Container.singleton`."""
+        """Singleton decorator; see `Container.singleton()`."""
         return ScopeDecorator(self._record_bind, Scope.SINGLETON, provides, tag)
 
     def scoped(
@@ -113,7 +113,7 @@ class Registry:
         provides: type[object] | None = None,
         tag: str | None = None,
     ) -> ScopeDecorator:
-        """Scoped decorator; see :meth:`depin.Container.scoped`."""
+        """Scoped decorator; see `Container.scoped()`."""
         return ScopeDecorator(self._record_bind, Scope.SCOPED, provides, tag)
 
     def transient(
@@ -122,11 +122,11 @@ class Registry:
         provides: type[object] | None = None,
         tag: str | None = None,
     ) -> ScopeDecorator:
-        """Transient decorator; see :meth:`depin.Container.transient`."""
+        """Transient decorator; see `Container.transient()`."""
         return ScopeDecorator(self._record_bind, Scope.TRANSIENT, provides, tag)
 
     def records(self) -> Iterable[BindRecord]:
-        """Return a snapshot of the bindings (the :class:`~depin.HasRecords` contract)."""
+        """Return a snapshot of the bindings (the `HasRecords` contract)."""
         return tuple(self._records)
 
     def __or__(self, other: 'Registry') -> 'Registry':

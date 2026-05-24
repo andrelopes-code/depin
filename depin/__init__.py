@@ -1,8 +1,8 @@
 """depin — type-first dependency injection for Python.
 
-Declare bindings on a mutable :class:`Container`, call :meth:`Container.freeze`
+Declare bindings on a mutable `Container`, call `Container.freeze()`
 to validate the dependency graph, and resolve values from the immutable
-:class:`FrozenContainer` it returns. Resolution is driven by type hints;
+`FrozenContainer` it returns. Resolution is driven by type hints;
 ``Protocol`` and ``Annotated`` are first-class. The core has zero runtime
 dependencies; the optional FastAPI integration lives in ``depin.ext.fastapi``.
 

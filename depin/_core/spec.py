@@ -91,7 +91,7 @@ class ResolutionPlan:
 class HasRecords(Protocol):
     """Any source that exposes a sequence of BindRecord entries.
 
-    Implemented by both :class:`depin.Registry` and :class:`depin.Container`, and
+    Implemented by both `Registry` and `Container`, and
     accepted wherever bindings can be merged in.
     """
 

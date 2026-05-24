@@ -14,13 +14,13 @@ from depin._core.spec import BindRecord, FrameBinding, HasRecords, ValueBinding
 class Container:
     """Mutable builder for a dependency graph.
 
-    Collect bindings with :meth:`bind`, :meth:`value`, :meth:`frame_provides`, and
-    the :meth:`singleton` / :meth:`scoped` / :meth:`transient` decorators, then
-    call :meth:`freeze` to validate the graph and obtain an immutable
-    :class:`~depin.FrozenContainer`. A ``Container`` performs no resolution itself;
+    Collect bindings with `bind()`, `value()`, `frame_provides()`, and
+    the `singleton()` / `scoped()` / `transient()` decorators, then
+    call `freeze()` to validate the graph and obtain an immutable
+    `FrozenContainer`. A ``Container`` performs no resolution itself;
     nothing is constructed until you resolve from the frozen view. Registration
     order does not matter — providers are matched by key and ordered at
-    :meth:`freeze` time.
+    `freeze()` time.
 
     Example:
         >>> from depin import Container
@@ -44,8 +44,8 @@ class Container:
         """Build a container pre-loaded with bindings from one or more sources.
 
         Each source is anything exposing ``records()`` — typically a
-        :class:`~depin.Registry` or another :class:`Container`. Equivalent to
-        creating an empty container and :meth:`merge`-ing each source in order.
+        `Registry` or another `Container`. Equivalent to
+        creating an empty container and `merge()`-ing each source in order.
 
         Example:
             >>> from depin import Container, Registry
@@ -64,8 +64,8 @@ class Container:
         """Append another source's bindings to this container.
 
         Records are concatenated, not de-duplicated: a key bound here and in
-        ``other`` raises :class:`~depin.errors.DuplicateProviderError` at
-        :meth:`freeze` time. Returns ``self`` for chaining.
+        ``other`` raises `DuplicateProviderError` at
+        `freeze()` time. Returns ``self`` for chaining.
         """
         self._records.extend(other.records())
         return self
@@ -84,14 +84,14 @@ class Container:
         (or by its ``@provides(...)`` target), a factory by its return annotation
         (unwrapped for generator and context-manager factories). Constructor and
         factory parameters are themselves resolved from their type hints, so the
-        whole graph is wired by type. Validation is deferred to :meth:`freeze`.
+        whole graph is wired by type. Validation is deferred to `freeze()`.
 
         Args:
             source: A class to instantiate, or a callable returning the value.
                 Sync/async functions, generators, async generators, and
                 ``@(async)contextmanager`` factories are all accepted.
             scope: Lifetime of the produced value. Defaults to
-                :attr:`~depin.Scope.SINGLETON`.
+                `Scope.SINGLETON`.
             provides: Key to register under, overriding the inferred one — e.g. to
                 bind a concrete class against a ``Protocol``.
             tag: Disambiguator when several providers share a key; resolve it with
@@ -113,7 +113,7 @@ class Container:
         return self
 
     def value[T](self, token: Token[T], value: T) -> Self:
-        """Bind a ready-made value to a :class:`~depin.Token`.
+        """Bind a ready-made value to a `Token`.
 
         The value is registered as a singleton and returned as-is on resolution —
         no construction, no parameter wiring. Use this for configuration and other
@@ -136,12 +136,12 @@ class Container:
 
         No factory is called: at resolution time the value must already have been
         placed into the active scope (by middleware or scope-setup code) under
-        ``key``. The binding is :attr:`~depin.Scope.SCOPED`, so resolving it
-        outside a scope raises :class:`~depin.errors.OutsideScopeError`, and
+        ``key``. The binding is `Scope.SCOPED`, so resolving it
+        outside a scope raises `OutsideScopeError`, and
         resolving inside a scope that never received the value raises
-        :class:`~depin.errors.MissingProviderError`. This is how the FastAPI
-        integration exposes the per-request :class:`fastapi.Request`; see
-        :class:`depin.ext.fastapi.RequestScope`.
+        `MissingProviderError`. This is how the FastAPI
+        integration exposes the per-request `fastapi.Request`; see
+        `RequestScope`.
         """
         self._records.append(BindRecord(source=FrameBinding(key), scope=Scope.SCOPED, provides=None, tag=tag))
         return self
@@ -152,12 +152,12 @@ class Container:
         provides: type[object] | None = None,
         tag: str | None = None,
     ) -> ScopeDecorator:
-        """Decorator form of :meth:`bind` with ``scope=Scope.SINGLETON``.
+        """Decorator form of `bind()` with ``scope=Scope.SINGLETON``.
 
         Applies to a class or factory and registers it without changing it; the
         value is built once and shared for the lifetime of the
-        :class:`~depin.FrozenContainer`. ``provides`` and ``tag`` behave as in
-        :meth:`bind`.
+        `FrozenContainer`. ``provides`` and ``tag`` behave as in
+        `bind()`.
 
         Example:
             >>> from depin import Container
@@ -177,12 +177,12 @@ class Container:
         provides: type[object] | None = None,
         tag: str | None = None,
     ) -> ScopeDecorator:
-        """Decorator form of :meth:`bind` with ``scope=Scope.SCOPED``.
+        """Decorator form of `bind()` with ``scope=Scope.SCOPED``.
 
-        Like :meth:`singleton`, but the value is built once per active scope
-        (:meth:`~depin.FrozenContainer.scope` / ``ascope``) and torn down when that
+        Like `singleton()`, but the value is built once per active scope
+        (`FrozenContainer.scope()` / ``ascope``) and torn down when that
         scope exits. Resolving one with no active scope raises
-        :class:`~depin.errors.OutsideScopeError`.
+        `OutsideScopeError`.
         """
         return ScopeDecorator(self._record_bind, Scope.SCOPED, provides, tag)
 
@@ -192,20 +192,20 @@ class Container:
         provides: type[object] | None = None,
         tag: str | None = None,
     ) -> ScopeDecorator:
-        """Decorator form of :meth:`bind` with ``scope=Scope.TRANSIENT``.
+        """Decorator form of `bind()` with ``scope=Scope.TRANSIENT``.
 
-        Like :meth:`singleton`, but a fresh value is produced on every resolution
+        Like `singleton()`, but a fresh value is produced on every resolution
         and never cached. Generator and context-manager providers cannot be
         transient (they need a scope to own their teardown); binding one this way
-        raises ``ValueError`` at :meth:`freeze` time.
+        raises ``ValueError`` at `freeze()` time.
         """
         return ScopeDecorator(self._record_bind, Scope.TRANSIENT, provides, tag)
 
     def records(self) -> Iterable[BindRecord]:
         """Return a snapshot of the registered bindings.
 
-        Satisfies the :class:`~depin.HasRecords` protocol, so a container can be a
-        source for :meth:`from_` or :meth:`merge`. The returned tuple is a copy.
+        Satisfies the `HasRecords` protocol, so a container can be a
+        source for `from_()` or `merge()`. The returned tuple is a copy.
         """
         return tuple(self._records)
 
@@ -215,19 +215,19 @@ class Container:
         All static checks happen here, before anything is constructed:
 
         - every required provider exists
-          (:class:`~depin.errors.MissingProviderError`);
+          (`MissingProviderError`);
         - the graph is acyclic
-          (:class:`~depin.errors.CircularDependencyError`);
+          (`CircularDependencyError`);
         - no key is bound twice
-          (:class:`~depin.errors.DuplicateProviderError`);
+          (`DuplicateProviderError`);
         - no singleton depends on a scoped provider it would capture for life
-          (:class:`~depin.errors.CaptiveDependencyError`);
+          (`CaptiveDependencyError`);
         - factories expose enough type information to infer keys and parameters
           (``TypeError``); generator / context-manager providers are not transient
           (``ValueError``).
 
         The frozen container also pre-computes which providers need async
-        resolution, so :meth:`~depin.FrozenContainer.resolve` can reject async
+        resolution, so `FrozenContainer.resolve()` can reject async
         providers up front.
 
         Raises:

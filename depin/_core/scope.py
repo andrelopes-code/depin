@@ -14,15 +14,15 @@ class Scope(Enum):
 
     Attributes:
         SINGLETON: Built once, on first resolution, and cached on the
-            :class:`~depin.FrozenContainer` for its whole lifetime. The default.
-            Its lifecycle teardown runs on :meth:`~depin.FrozenContainer.aclose`. A
+            `FrozenContainer` for its whole lifetime. The default.
+            Its lifecycle teardown runs on `FrozenContainer.aclose()`. A
             singleton may not depend on a scoped provider (it would capture one
-            scope's instance forever) — :meth:`~depin.Container.freeze` rejects
+            scope's instance forever) — `Container.freeze()` rejects
             that.
         SCOPED: Built once per active scope
-            (:meth:`~depin.FrozenContainer.scope` / ``ascope``) and torn down when
+            (`FrozenContainer.scope()` / ``ascope``) and torn down when
             that scope exits. Resolving one with no active scope raises
-            :class:`~depin.errors.OutsideScopeError`. Typically one scope per
+            `OutsideScopeError`. Typically one scope per
             request.
         TRANSIENT: Built fresh on every resolution and never cached. Generator and
             context-manager providers cannot be transient.
@@ -34,12 +34,12 @@ class Scope(Enum):
 
 
 class ScopeFrame:
-    """The per-scope store yielded by :meth:`~depin.FrozenContainer.scope`.
+    """The per-scope store yielded by `FrozenContainer.scope()`.
 
     Holds the scope's cached scoped instances and pending teardowns, and chains to
     its parent so nested scopes inherit outer instances. Scope-setup code (for
-    example middleware) uses :meth:`put` to seed values that
-    :meth:`~depin.Container.frame_provides` then exposes as providers.
+    example middleware) uses `put()` to seed values that
+    `Container.frame_provides()` then exposes as providers.
     """
 
     __slots__ = ('_cache', '_locks', 'parent', 'teardowns')

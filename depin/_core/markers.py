@@ -49,12 +49,12 @@ class Named:
 
     Use inside ``Annotated[...]`` on a provider parameter when the parameter's
     type alone does not identify the provider — for example to pull a
-    :class:`Token` value, or a string-keyed binding, into a constructor. Given
+    `Token` value, or a string-keyed binding, into a constructor. Given
     ``db_url = Token[str]('db.url')``::
 
         def make_pool(url: Annotated[str, Named(db_url)]) -> Pool: ...
 
-    ``key`` is the provider key to resolve: a :class:`Token` or a plain string. A
+    ``key`` is the provider key to resolve: a `Token` or a plain string. A
     bare ``Token`` placed directly in ``Annotated[...]`` has the same effect;
     ``Named`` is the explicit form and the only way to reference a string key.
     """
@@ -73,7 +73,7 @@ class Tag:
         def report(store: Annotated[Store, Tag('primary')]) -> Report: ...
 
     ``name`` must match the ``tag`` given at registration. Pairs with the
-    ``tag=`` argument of :meth:`depin.Container.bind`.
+    ``tag=`` argument of `Container.bind()`.
     """
 
     name: str
@@ -82,10 +82,10 @@ class Tag:
 @final
 @dataclass(frozen=True, slots=True)
 class _InjectMarker:
-    """Default-value marker produced by :func:`injected`.
+    """Default-value marker produced by `injected()`.
 
     Carries the provider key (and optional tag) for a parameter that
-    :meth:`depin.FrozenContainer.inject` fills. It stands in for the parameter's
+    `FrozenContainer.inject()` fills. It stands in for the parameter's
     declared type at the type level; ``inject`` replaces it with the resolved
     value before the wrapped function body runs.
     """
@@ -108,7 +108,7 @@ def is_inject_marker(value: object) -> TypeGuard[_InjectMarker]:
 
 
 def injected[T](key: type[T] | Token[T], *, tag: str | None = None) -> T:
-    """Mark a parameter for injection by :meth:`depin.FrozenContainer.inject`.
+    """Mark a parameter for injection by `FrozenContainer.inject()`.
 
     Use as the parameter default::
 
@@ -145,9 +145,9 @@ def provides[A](abstract: type[A]) -> _ProvidesDecorator[A]:
     """Tag a class with the abstract type it implements.
 
     Decorating ``@provides(Abstract)`` records ``Abstract`` as the class's provider
-    key, so :meth:`depin.Container.bind` registers the concrete class under the
+    key, so `Container.bind()` registers the concrete class under the
     abstract type without an explicit ``provides=`` argument. Useful for binding an
-    implementation against a :class:`typing.Protocol` or base class.
+    implementation against a `typing.Protocol` or base class.
 
     Example:
         >>> from typing import Protocol

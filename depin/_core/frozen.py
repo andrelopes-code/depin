@@ -56,14 +56,14 @@ _ASYNC_SHAPES = frozenset(
 class FrozenContainer:
     """Immutable, validated view of a dependency graph.
 
-    Produced by :meth:`depin.Container.freeze`. Resolve values by key with
-    :meth:`resolve` / :meth:`aresolve` or the ``frozen[key]`` shorthand, scope
-    short-lived values with :meth:`scope` / :meth:`ascope`, wire functions with
-    :meth:`inject`, and substitute providers in tests with :meth:`override`.
+    Produced by `Container.freeze()`. Resolve values by key with
+    `resolve()` / `aresolve()` or the ``frozen[key]`` shorthand, scope
+    short-lived values with `scope()` / `ascope()`, wire functions with
+    `inject()`, and substitute providers in tests with `override()`.
 
     The container registers no new providers; it holds only the singleton cache
     and the root scope. It is safe to share across threads and tasks: scopes are
-    tracked per :class:`contextvars.Context`, so concurrent requests never see
+    tracked per `contextvars.Context`, so concurrent requests never see
     each other's scoped instances.
 
     Example:
@@ -87,7 +87,7 @@ class FrozenContainer:
     @overload
     def __getitem__[T](self, key: Token[T]) -> T: ...
     def __getitem__[T](self, key: type[T] | Token[T]) -> T:
-        """Resolve ``key`` synchronously; shorthand for :meth:`resolve`.
+        """Resolve ``key`` synchronously; shorthand for `resolve()`.
 
         Example:
             >>> from depin import Container, Token
@@ -104,10 +104,10 @@ class FrozenContainer:
         Returns the cached singleton or scoped instance if present, otherwise
         builds it (resolving its dependencies first). Synchronous resolution cannot
         drive async providers: if ``key`` or anything it depends on is async, this
-        raises rather than blocking an event loop — use :meth:`aresolve` instead.
+        raises rather than blocking an event loop — use `aresolve()` instead.
 
         Args:
-            key: A class or :class:`~depin.Token` to resolve.
+            key: A class or `Token` to resolve.
             tag: Selects among providers registered under ``key`` with a tag.
 
         Raises:
@@ -134,14 +134,14 @@ class FrozenContainer:
     async def aresolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
         """Resolve a value by key, asynchronously.
 
-        The async counterpart to :meth:`resolve`. Handles both sync and async
+        The async counterpart to `resolve()`. Handles both sync and async
         providers, awaiting async factories, async generators, and async context
         managers. Concurrent resolutions of the same cached provider are
         single-flighted, so a singleton or scoped value is built exactly once even
         under concurrency.
 
         Args:
-            key: A class or :class:`~depin.Token` to resolve.
+            key: A class or `Token` to resolve.
             tag: Selects among providers registered under ``key`` with a tag.
 
         Raises:
@@ -166,12 +166,12 @@ class FrozenContainer:
         Scoped providers resolved inside the ``with`` block are built once for the
         block and cached in the yielded frame. On exit, their teardowns run in
         reverse order of construction; if several fail, the errors are collected
-        into an :class:`ExceptionGroup` so no failure hides another. Singletons are
+        into an `ExceptionGroup` so no failure hides another. Singletons are
         unaffected — they live on the container, not the scope.
 
         Scopes nest: a scoped value built in an outer scope is reused inside a
         nested scope, not rebuilt. Open sibling scopes for independent instances.
-        Use :meth:`ascope` when any provider in the scope is async.
+        Use `ascope()` when any provider in the scope is async.
 
         Example:
             >>> from collections.abc import Generator
@@ -196,11 +196,11 @@ class FrozenContainer:
 
     @contextlib.asynccontextmanager
     async def ascope(self) -> AsyncGenerator[ScopeFrame]:
-        """Open an asynchronous scope; the async counterpart to :meth:`scope`.
+        """Open an asynchronous scope; the async counterpart to `scope()`.
 
         Required when scoped providers are async (async factories / generators /
         async context managers). Teardowns — sync and async alike — run in reverse
-        order on exit, with failures collected into an :class:`ExceptionGroup`. The
+        order on exit, with failures collected into an `ExceptionGroup`. The
         per-request scope opened by the FastAPI integration is an ``ascope``.
         """
         with push_frame() as frame:
@@ -215,8 +215,8 @@ class FrozenContainer:
         Drains the root scope, running the teardown half of every singleton
         generator / context-manager provider in reverse order of construction.
         Call this once on application shutdown. Scoped providers do not need it —
-        they are drained when their :meth:`scope` / :meth:`ascope` block exits.
-        Failures are collected into an :class:`ExceptionGroup`.
+        they are drained when their `scope()` / `ascope()` block exits.
+        Failures are collected into an `ExceptionGroup`.
         """
         await self._drain_async(self._root)
 
@@ -228,7 +228,7 @@ class FrozenContainer:
         """Wrap a function so parameters defaulting to ``injected(...)`` are filled.
 
         Returns a wrapper that, on each call, resolves every parameter whose
-        default is :func:`~depin.injected` and leaves the rest to the caller.
+        default is `injected()` and leaves the rest to the caller.
         Already-supplied arguments are never overridden, so an injected parameter
         can still be passed explicitly (handy in tests). The wrapper preserves the
         sync/async nature of ``fn``. Injected keys are validated at decoration
@@ -311,7 +311,7 @@ class FrozenContainer:
         in the graph, as a dependency of another provider, not only top-level
         lookups. If ``with_`` is a callable and not a class it is invoked as a
         factory per resolution; otherwise it is returned as-is. The override is
-        bound to the current :class:`contextvars.Context` and undone on exit, so
+        bound to the current `contextvars.Context` and undone on exit, so
         concurrent contexts are unaffected; overrides nest, innermost wins.
         Primarily a testing seam — swap a real dependency for a fake without
         rebuilding the container.
