@@ -235,6 +235,10 @@ class Container:
             CircularDependencyError: The dependency graph contains a cycle.
             DuplicateProviderError: Two bindings resolve to the same key and tag.
             CaptiveDependencyError: A singleton depends on a scoped provider.
+            TypeError: A factory lacks a return annotation (and no ``provides=``)
+                or a parameter has no type annotation.
+            ValueError: A generator or context-manager provider is bound as
+                transient.
 
         Example:
             >>> from depin import Container, Scope
