@@ -1,5 +1,10 @@
 # depin
 
+[![CI](https://github.com/andrelopes-code/depin/actions/workflows/ci.yml/badge.svg)](https://github.com/andrelopes-code/depin/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/pydepin.svg)](https://pypi.org/project/pydepin/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pydepin.svg)](https://pypi.org/project/pydepin/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/andrelopes-code/depin/blob/main/LICENSE)
+
 Type-first dependency-injection for Python 3.12+.
 
 - Resolution driven by type hints; `Protocol` and `Annotated` are first-class.
