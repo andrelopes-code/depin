@@ -1,3 +1,5 @@
+"""Provider lifetimes and the scope machinery that backs scoped resolution."""
+
 import asyncio
 import contextlib
 from collections.abc import Generator
@@ -8,12 +10,38 @@ from depin.errors import OutsideScopeError
 
 
 class Scope(Enum):
+    """How long a provider's value lives and when it is rebuilt.
+
+    Attributes:
+        SINGLETON: Built once, on first resolution, and cached on the
+            :class:`~depin.FrozenContainer` for its whole lifetime. The default.
+            Its lifecycle teardown runs on :meth:`~depin.FrozenContainer.aclose`. A
+            singleton may not depend on a scoped provider (it would capture one
+            scope's instance forever) — :meth:`~depin.Container.freeze` rejects
+            that.
+        SCOPED: Built once per active scope
+            (:meth:`~depin.FrozenContainer.scope` / ``ascope``) and torn down when
+            that scope exits. Resolving one with no active scope raises
+            :class:`~depin.errors.OutsideScopeError`. Typically one scope per
+            request.
+        TRANSIENT: Built fresh on every resolution and never cached. Generator and
+            context-manager providers cannot be transient.
+    """
+
     SINGLETON = 'singleton'
     SCOPED = 'scoped'
     TRANSIENT = 'transient'
 
 
 class ScopeFrame:
+    """The per-scope store yielded by :meth:`~depin.FrozenContainer.scope`.
+
+    Holds the scope's cached scoped instances and pending teardowns, and chains to
+    its parent so nested scopes inherit outer instances. Scope-setup code (for
+    example middleware) uses :meth:`put` to seed values that
+    :meth:`~depin.Container.frame_provides` then exposes as providers.
+    """
+
     __slots__ = ('_cache', '_locks', 'parent', 'teardowns')
 
     def __init__(self, parent: 'ScopeFrame | None' = None) -> None:
@@ -23,6 +51,7 @@ class ScopeFrame:
         self.teardowns: list[object] = []
 
     def put(self, key: object, value: object) -> None:
+        """Place ``value`` into this frame under ``key`` for frame-provided bindings."""
         self._cache[key] = value
 
     def get(self, key: object) -> object:
