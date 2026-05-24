@@ -125,3 +125,11 @@ publish:
 - In the GitHub repository settings, create a protected
   [Environment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)
   named `pypi`.
+
+### Bootstrapping the first release
+
+`0.2.0` predates this automation, so it is published once by hand: after the
+Trusted Publisher above is configured, trigger the `release` workflow manually
+(Actions → release → *Run workflow*). The `workflow_dispatch` run builds the
+current `main` and publishes it to PyPI. Every release after that is handled
+automatically by the release-please pull request.
