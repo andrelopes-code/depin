@@ -149,4 +149,16 @@ uv run basedpyright
 uv run pytest
 ```
 
-See `CLAUDE.md` for repository conventions.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow and
+[CLAUDE.md](CLAUDE.md) for repository conventions.
+
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the
+development setup, the four gates, and commit conventions; all participants are
+expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md). To report a
+vulnerability, follow the [security policy](SECURITY.md).
+
+## License
+
+[MIT](LICENSE) © André Lopes
