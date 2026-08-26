@@ -181,31 +181,6 @@ Linux, macOS, and Windows. Releases are published from CI via PyPI Trusted
 Publishing. Minor releases may still contain breaking changes until 1.0; those
 are marked in the [changelog](CHANGELOG.md).
 
-### Migrating from 0.3.x
-
-| 0.3.x | current |
-| --- | --- |
-| `Container.from_(reg)` | `Container(reg)` |
-| `container.merge(other)` | `container.include(other)` |
-| `container.frame_provides(Key)` | `container.scope_value(Key)` |
-| `frame.put(Key, value)` | `frame.provide(Key, value)` |
-| `di.override(Key, with_=fake)` | `di.override(Key, fake)` |
-| `HasRecords` | `Bindings` |
-| `freeze()` raises `TypeError` / `ValueError` | `InvalidProviderError` / `InvalidScopeError`, both still subclassing the builtins |
-| teardown raises `RuntimeError` | `TeardownError` |
-| `Inject[T]` outside the middleware raises `RuntimeError` | `ContainerNotBoundError` |
-| `await di.aclose()` only | `di.close()` for sync graphs, `aclose()` for async |
-
-### Migrating from 0.1.x
-
-| 0.1.x | 0.2.0 and later |
-| --- | --- |
-| `Container()` resolves directly | `Container().freeze() -> FrozenContainer` |
-| `Inject(fn)` default value | `svc: T = injected(T)` under `@di.inject`, or `Inject[T]` (fastapi ext) |
-| `Container.Depends(X)` | `di[X]`, `di.resolve(X)`, or `Inject[T]` (fastapi ext) |
-| `Scope.REQUEST` | `Scope.SCOPED` |
-| `RequestScopeService.request_scope()` | `di.scope()` / `di.ascope()` |
-
 ## Development
 
 ```bash
