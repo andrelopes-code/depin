@@ -39,6 +39,10 @@ plugins:
             show_root_full_path: false
             heading_level: 2
 
+extra:
+  version:
+    provider: mike
+
 markdown_extensions:
   - admonition
   - toc:
