@@ -3,8 +3,6 @@ name: docs
 on:
   push:
     branches: [main]
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       version:
@@ -41,22 +39,17 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
-      # A push to main refreshes `dev`. A published release adds a version of its
-      # own, moves `latest` onto it, and points the site root there.
+      # A push to main refreshes `dev`. Released versions are published by the
+      # release workflow, which owns the tag. The `version` input is the manual
+      # escape hatch for republishing a version out of band.
       - name: Publish
         env:
           MANUAL_VERSION: ${{ inputs.version }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
-          if [ -n "${MANUAL_VERSION}" ]; then
-            version="${MANUAL_VERSION}"
-          elif [ -n "${RELEASE_TAG}" ]; then
-            tag="${RELEASE_TAG#v}"
-            version="${tag%.*}"
-          else
+          if [ -z "${MANUAL_VERSION}" ]; then
             uv run --group docs mike deploy --push --update-aliases dev
             exit 0
           fi
-          uv run --group docs mike deploy --push --update-aliases "${version}" latest
+          uv run --group docs mike deploy --push --update-aliases "${MANUAL_VERSION}" latest
           uv run --group docs mike set-default --push latest
