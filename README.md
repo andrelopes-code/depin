@@ -1,32 +1,45 @@
 # depin
 
 [![CI](https://github.com/andrelopes-code/depin/actions/workflows/ci.yml/badge.svg)](https://github.com/andrelopes-code/depin/actions/workflows/ci.yml)
+[![Docs](https://github.com/andrelopes-code/depin/actions/workflows/docs.yml/badge.svg)](https://andrelopes-code.github.io/depin/)
 [![PyPI](https://img.shields.io/pypi/v/pydepin.svg)](https://pypi.org/project/pydepin/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pydepin.svg)](https://pypi.org/project/pydepin/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/andrelopes-code/depin/blob/main/LICENSE)
 
-Type-first dependency-injection for Python 3.12+.
+Type-first dependency injection for Python 3.12+.
+
+**Documentation:** <https://andrelopes-code.github.io/depin/> · **PyPI:** [`pydepin`](https://pypi.org/project/pydepin/)
 
 - Resolution driven by type hints; `Protocol` and `Annotated` are first-class.
-- Build-time validation: `Container.freeze()` catches missing providers, cycles, lifetime violations (a singleton that would capture a scoped provider), and async/sync mismatches before anything runs.
-- Full async/sync coverage: classes, sync/async factories, generators, async generators, `@(a)contextmanager`, instance context managers.
-- Optional FastAPI integration in `depin.ext.fastapi`. **Core has zero runtime dependencies.**
+- Build-time validation: `Container.freeze()` catches missing providers, cycles,
+  lifetime violations, and async/sync mismatches before anything runs.
+- Full async/sync coverage: classes, sync/async factories, generators, async
+  generators, `@(a)contextmanager`, instance context managers.
+- Safe to share across threads and tasks: a singleton is built exactly once under
+  contention, and scopes are isolated per `contextvars.Context`.
+- Every failure is a `DepinError`. No stray `TypeError` from the middle of the
+  library.
+- Optional FastAPI integration in `depin.ext.fastapi`. **The core has zero
+  runtime dependencies.**
+- No `# type: ignore` at call sites: `resolve()`, `frozen[key]`, `injected()`,
+  and `Inject[T]` are all precisely typed under `basedpyright --strict`.
 
 ## Install
 
 ```bash
 uv add pydepin                # core
-uv add 'pydepin[fastapi]'     # with FastAPI integration
+uv add 'pydepin[fastapi]'     # with the FastAPI integration
 ```
 
-Requires Python 3.12+.
+Requires Python 3.12+. The distribution is `pydepin`; the import package is
+`depin`.
 
 ## Quickstart
 
 ```python
 from typing import Annotated
 
-from depin import Container, Scope, Token
+from depin import Container, Token
 
 db_url = Token[str]('db.url')
 
@@ -36,7 +49,7 @@ class Database:
         self.url = url
 
 
-def make_db(url: Annotated[str, db_url]) -> Database:
+def open_db(url: Annotated[str, db_url]) -> Database:
     return Database(url)
 
 
@@ -45,99 +58,153 @@ class UserRepo:
         self.db = db
 
 
-di = (
-    Container()
-    .value(db_url, 'postgres://...')
-    .bind(make_db, scope=Scope.SINGLETON, provides=Database)
-    .bind(UserRepo, scope=Scope.SINGLETON)
-    .freeze()
-)
+di = Container().value(db_url, 'postgres://...').bind(open_db, provides=Database).bind(UserRepo).freeze()
 
 repo = di[UserRepo]
 ```
 
+`Scope.SINGLETON` is the default, so most bindings need nothing but `bind`.
+
+## The three stages
+
+| Stage | Object | What it does |
+| --- | --- | --- |
+| Declare | `Container` | Mutable builder. Collects bindings; validates nothing. |
+| Validate | `Container.freeze()` | Runs every static check, then returns the runtime. |
+| Resolve | `FrozenContainer` | Immutable. Builds and caches values, opens scopes, injects. |
+
+## Lifetimes
+
+| Scope | Built | Cached on | Torn down by |
+| --- | --- | --- | --- |
+| `Scope.SINGLETON` | Once, on first resolution | The container | `close()` / `aclose()` |
+| `Scope.SCOPED` | Once per active scope | The scope frame | Exit of `scope()` / `ascope()` |
+| `Scope.TRANSIENT` | Every resolution | Nothing | Nothing |
+
+A provider that owns a resource is written as a generator — everything after the
+`yield` is its teardown:
+
+```python
+def checkout(pool: Pool) -> Generator[Connection]:
+    conn = pool.acquire()
+    yield conn
+    pool.release(conn)
+
+
+di = Container().bind(checkout, scope=Scope.SCOPED).freeze()
+
+with di.scope():
+    conn = di[Connection]  # built here, released when the block ends
+```
+
+Read [Lifetimes and scopes](https://andrelopes-code.github.io/depin/guide/lifetimes/)
+for nesting, captive dependencies, and shutdown.
+
 ## Cookbook
 
-See `examples/` for runnable code. Highlights:
+Runnable code lives in [`examples/`](examples/); each one is executed by the test
+suite.
 
 - **Tokens** for values: `Token[str]('db.url')`, resolved via `di[token]`.
-- **Generator providers** for lifecycle: `def session() -> Generator[Session]: ...` with `yield`; teardown runs on scope exit.
-- **Async generators** + `async with di.ascope(): ...` for per-request DB sessions.
-- **Tag** + `provides` for multiple implementations of a `Protocol`.
-- **Override** for tests: `with di.override(Database, with_=FakeDB()): ...`.
-- **Frame-provided values** (`di.frame_provides(Request)`) for middleware-injected context.
-- **Function injection** with `@frozen.inject`: parameters whose default is `injected(...)` are filled from the container, the rest are passed by the caller:
+- **Registries** for composition: `Container(infra, services).freeze()`.
+- **Protocols**: `@provides(Store)` on the implementation, then `di.resolve(Store)`.
+- **Tags** when several implementations share a key:
+  `di.resolve(Cache, tag='primary')`.
+- **Scope-supplied values**: `di.scope_value(Request)`, filled by middleware with
+  `frame.provide(Request, request)`.
+- **Overrides** for tests: `with di.override(Database, FakeDB()): ...`.
+- **Function injection** with `@di.inject`: parameters whose default is
+  `injected(...)` are filled from the container, the rest are passed by the
+  caller:
 
   ```python
   @di.inject
   def handler(uid: int, repo: UserRepo = injected(UserRepo)) -> User:
       return repo.get(uid)
 
+
   handler(uid=1)  # repo injected; call site stays type-clean
   ```
-
-  Use `injected(Token[...])` for token values and `injected(Svc, tag='...')` for tagged providers.
 
 ## FastAPI
 
 ```python
 from fastapi import FastAPI
-from depin import Container, Scope
-from depin.ext.fastapi import RequestScope, Inject
 
-di = (
-    Container()
-    .bind(UserService, scope=Scope.SCOPED)
-    .freeze()
-)
+from depin import Container, Scope
+from depin.ext.fastapi import Inject, RequestScope
+
+di = Container().bind(UserService, scope=Scope.SCOPED).freeze()
 
 app = FastAPI()
 app.add_middleware(RequestScope, container=di)
 
 
 @app.get('/users/{uid}')
-async def get_user(uid: int, svc: Inject[UserService]):
+async def get_user(uid: int, svc: Inject[UserService]) -> User:
     return await svc.get(uid)
 ```
 
 `Inject[T]` is a type-level shortcut: the parameter's static type is `T`, while
 at runtime `Inject[T]` resolves to `Annotated[T, Depends(...)]` so FastAPI picks
-up the dependency from the parameter's annotation. No default-value calls, no
-`# noqa: B008` waivers, no extra imports.
+up the dependency from the annotation. No default-value calls, no `# noqa: B008`
+waivers.
 
 `RequestScope` runs as pure ASGI middleware, so streaming responses, SSE, and
 WebSockets pass through unbuffered. Scoped providers may declare `Request` to
-read headers, URL, cookies, and state — but it is metadata-only: the request
-body belongs to the route's typed parameters, and reading it from a provider
-raises rather than racing the handler's own parsing.
+read headers, URL, cookies, and state — but it is metadata-only: the request body
+belongs to the route's typed parameters, and reading it from a provider raises
+rather than racing the handler's own parsing.
+
+Full walkthrough: [FastAPI guide](https://andrelopes-code.github.io/depin/guide/fastapi/).
 
 ## Caveats
 
-- **Lifecycle teardown.** Singleton providers that use `yield` / context managers
-  are torn down by `await frozen.aclose()`. Call it on app shutdown; scope-local
-  providers are drained automatically when their `scope()` / `ascope()` block exits.
 - **Nested scopes inherit.** A `SCOPED` instance resolved in an outer scope is
   reused inside a nested scope, not rebuilt. Open sibling scopes for independent
   instances.
-- **`@frozen.inject` uses default-position markers.** An injected parameter
-  carries an `injected(...)` default, so it must follow non-default parameters or
-  be keyword-only (a normal Python rule). The marker keeps call sites type-clean —
-  no `# pyright: ignore` needed. Unlike provider constructors, which resolve from
-  type hints and `Annotated[...]`, `@inject` fills *only* marked parameters and
-  validates them at decoration time, raising `MissingProviderError` immediately if
-  a marked key is unregistered.
+- **Overrides do not evict caches.** A singleton resolved before the `override`
+  block is already built, and the override does not replace it. Override before
+  the first resolution, or build a fresh container per test.
+- **`@di.inject` uses default-position markers.** An injected parameter carries
+  an `injected(...)` default, so it must follow non-default parameters or be
+  keyword-only (a normal Python rule). Unlike provider constructors, which
+  resolve from type hints and `Annotated[...]`, `@inject` fills *only* marked
+  parameters and validates them at decoration time, raising
+  `MissingProviderError` immediately if a marked key is unregistered.
 
-## Status
+## Project status
 
-v0.2.0 is a clean break from 0.1.x. The migration is breaking; older code will not run unchanged.
+Beta, pre-1.0. CI enforces `ruff`, `basedpyright --strict`, the full test suite
+with its embedded doctests, and a 95% coverage floor, on Python 3.12–3.14 across
+Linux, macOS, and Windows. Releases are published from CI via PyPI Trusted
+Publishing. Minor releases may still contain breaking changes until 1.0; those
+are marked in the [changelog](CHANGELOG.md).
 
-| 0.1.x | 0.2.0 |
+### Migrating from 0.3.x
+
+| 0.3.x | current |
+| --- | --- |
+| `Container.from_(reg)` | `Container(reg)` |
+| `container.merge(other)` | `container.include(other)` |
+| `container.frame_provides(Key)` | `container.scope_value(Key)` |
+| `frame.put(Key, value)` | `frame.provide(Key, value)` |
+| `di.override(Key, with_=fake)` | `di.override(Key, fake)` |
+| `HasRecords` | `Bindings` |
+| `freeze()` raises `TypeError` / `ValueError` | `InvalidProviderError` / `InvalidScopeError`, both still subclassing the builtins |
+| teardown raises `RuntimeError` | `TeardownError` |
+| `Inject[T]` outside the middleware raises `RuntimeError` | `ContainerNotBoundError` |
+| `await di.aclose()` only | `di.close()` for sync graphs, `aclose()` for async |
+
+### Migrating from 0.1.x
+
+| 0.1.x | 0.2.0 and later |
 | --- | --- |
 | `Container()` resolves directly | `Container().freeze() -> FrozenContainer` |
-| `Inject(fn)` default value | `svc: T = injected(T)` under `@frozen.inject`, or `Inject[T]` (fastapi ext) |
-| `Container.Depends(X)` | `frozen[X]`, `frozen.resolve(X)`, or `Inject[T]` (fastapi ext) |
+| `Inject(fn)` default value | `svc: T = injected(T)` under `@di.inject`, or `Inject[T]` (fastapi ext) |
+| `Container.Depends(X)` | `di[X]`, `di.resolve(X)`, or `Inject[T]` (fastapi ext) |
 | `Scope.REQUEST` | `Scope.SCOPED` |
-| `RequestScopeService.request_scope()` | `frozen.scope()` / `frozen.ascope()` |
+| `RequestScopeService.request_scope()` | `di.scope()` / `di.ascope()` |
 
 ## Development
 
@@ -149,8 +216,10 @@ uv run basedpyright
 uv run pytest
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow and
-[CLAUDE.md](CLAUDE.md) for repository conventions.
+The four commands above are the gates every change must pass. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow and
+[AGENTS.md](AGENTS.md) for the repository conventions that contributors — human
+or agent — are expected to follow.
 
 ## Contributing
 

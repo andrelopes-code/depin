@@ -13,6 +13,7 @@ from starlette.types import ASGIApp, Receive, Send
 from starlette.types import Scope as ASGIScope
 
 from depin._core.frozen import FrozenContainer
+from depin.errors import ContainerNotBoundError
 
 _active_container: ContextVar[FrozenContainer | None] = ContextVar('depin_fastapi_container', default=None)
 
@@ -53,7 +54,7 @@ class RequestScope:
         try:
             async with self._container.ascope() as frame:
                 if scope['type'] == 'http':
-                    frame.put(Request, Request(scope))
+                    frame.provide(Request, Request(scope))
                 await self._app(scope, receive, send)
         finally:
             _active_container.reset(token)
@@ -77,16 +78,17 @@ else:
         active `RequestScope`. No default-value markers and no
         ``# noqa: B008`` waivers at the call site.
 
-        Resolving ``Inject[T]`` outside a `RequestScope` raises
-        ``RuntimeError`` — install the middleware with
-        ``app.add_middleware(RequestScope, container=...)``.
+        Raises:
+            ContainerNotBoundError: ``Inject[T]`` was resolved outside a
+                `RequestScope`. Install the middleware with
+                ``app.add_middleware(RequestScope, container=...)``.
         """
 
         def __class_getitem__(cls, key: object) -> object:
             async def resolver() -> object:
                 container = _active_container.get()
                 if container is None:
-                    raise RuntimeError(
+                    raise ContainerNotBoundError(
                         'Inject[...] resolved outside a RequestScope; install the middleware with '
                         'app.add_middleware(RequestScope, container=...).'
                     )

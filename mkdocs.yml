@@ -31,6 +31,7 @@ plugins:
           options:
             docstring_style: google
             show_source: false
+            inherited_members: true
             members_order: source
             separate_signature: true
             show_signature_annotations: true
@@ -45,16 +46,19 @@ markdown_extensions:
   - pymdownx.highlight
   - pymdownx.superfences
 
-exclude_docs: |
-  superpowers/
-
 nav:
   - Home: index.md
+  - Guide:
+      - Overview: guide/index.md
+      - Lifetimes and scopes: guide/lifetimes.md
+      - Composing bindings: guide/composition.md
+      - Testing: guide/testing.md
+      - FastAPI: guide/fastapi.md
   - Reference:
       - Overview: reference/index.md
       - Container & Registry: reference/container.md
       - FrozenContainer: reference/frozen.md
-      - Markers: reference/markers.md
       - Scope: reference/scope.md
+      - Markers: reference/markers.md
       - Errors: reference/errors.md
       - FastAPI: reference/fastapi.md

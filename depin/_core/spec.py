@@ -1,4 +1,4 @@
-"""Internal binding/resolution data structures and the public HasRecords protocol."""
+"""Internal binding and resolution data structures, plus the public `Bindings` protocol."""
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -39,11 +39,11 @@ def is_value_binding(value: object) -> TypeGuard[ValueBinding[object]]:
 
 @dataclass(frozen=True, slots=True)
 class FrameBinding:
-    """Marker source for `Container.frame_provides(key)`.
+    """Marker source for `Container.scope_value(key)`.
 
     The provider value is expected to be in the active scope frame keyed by
     ``key``; the resolver does no factory call. Used for values supplied by
-    middleware or other external context (e.g. ``fastapi.Request``).
+    middleware or other scope-setup code (for example ``fastapi.Request``).
     """
 
     key: 'type[object] | Token[object]'
@@ -88,14 +88,30 @@ class ResolutionPlan:
 
 
 @runtime_checkable
-class HasRecords(Protocol):
-    """Any source that exposes a sequence of BindRecord entries.
+class Bindings(Protocol):
+    """Anything that can hand a container a set of bindings.
 
-    Implemented by both `Registry` and `Container`, and
-    accepted wherever bindings can be merged in.
+    Both `Registry` and `Container` satisfy it, so either can seed a new
+    container: ``Container(infra, services)``. Implement it on your own type to
+    plug a custom binding source into the same call.
+
+    Example:
+        ```pycon
+        >>> from depin import Container, Registry, Bindings
+        >>> class Svc: ...
+        >>> registry = Registry('infra').bind(Svc)
+        >>> isinstance(registry, Bindings)
+        True
+        >>> di = Container(registry).freeze()
+        >>> isinstance(di[Svc], Svc)
+        True
+
+        ```
     """
 
-    def records(self) -> Iterable[BindRecord]: ...
+    def records(self) -> Iterable[BindRecord]:
+        """Return this source's bindings, in declaration order."""
+        ...
 
 
 def fmt_key(key: object) -> str:

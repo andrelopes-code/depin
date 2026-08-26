@@ -21,24 +21,32 @@ Example:
     ```
 """
 
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 
+from depin._core.bindings import ScopeDecorator
 from depin._core.container import Container
 from depin._core.frozen import FrozenContainer
 from depin._core.markers import Named, Tag, Token, injected, provides
 from depin._core.registry import Registry
-from depin._core.scope import Scope
-from depin._core.spec import HasRecords
+from depin._core.scope import Scope, ScopeFrame
+from depin._core.spec import Bindings
 
-__version__ = version('pydepin')
+try:
+    __version__ = version('pydepin')
+except PackageNotFoundError:
+    # Running from a source tree or vendored copy, with no installed
+    # distribution metadata to read the version from.
+    __version__ = '0.0.0+unknown'
 
 __all__ = (
+    'Bindings',
     'Container',
     'FrozenContainer',
-    'HasRecords',
     'Named',
     'Registry',
     'Scope',
+    'ScopeDecorator',
+    'ScopeFrame',
     'Tag',
     'Token',
     'injected',

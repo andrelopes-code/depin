@@ -1,9 +1,12 @@
+"""Reads shape and key metadata off a provider's signature and annotations."""
+
 import inspect
 from dataclasses import dataclass
 from typing import Annotated, TypeGuard, get_args, get_origin
 
 from depin._core.markers import Named, Tag, Token
 from depin._core.spec import ProviderShape
+from depin.errors import InvalidProviderError
 
 
 def detect_shape(source: object) -> ProviderShape:
@@ -21,7 +24,10 @@ def detect_shape(source: object) -> ProviderShape:
         return ProviderShape.GENERATOR
     if callable(source):
         return ProviderShape.FUNCTION
-    raise TypeError(f'cannot determine provider shape for {source!r}')
+    raise InvalidProviderError(
+        f'cannot determine how to call {source!r}: '
+        'bind a class, a function, a generator function, or a context-manager factory'
+    )
 
 
 def _wraps_sync_generator(source: object) -> bool:

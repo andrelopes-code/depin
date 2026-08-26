@@ -4,7 +4,8 @@ version = "0.3.0"
 description = "Type-first dependency-injection library for Python"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "André Lopes", email = "andrelopes.code@gmail.com" }]
 keywords = [
     "dependency-injection",
@@ -20,7 +21,6 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -34,30 +34,34 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-fastapi = ["fastapi>=0.110", "starlette>=1.1.0"]
+fastapi = ["fastapi>=0.133", "starlette>=1.1"]
 
 [project.urls]
-Homepage = "https://github.com/andrelopes-code/depin"
+Homepage = "https://andrelopes-code.github.io/depin/"
+Documentation = "https://andrelopes-code.github.io/depin/"
 Repository = "https://github.com/andrelopes-code/depin"
 Issues = "https://github.com/andrelopes-code/depin/issues"
 Changelog = "https://github.com/andrelopes-code/depin/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
-    "basedpyright>=1.39.6",
-    "ruff>=0.15.14",
+    "basedpyright>=1.39.10",
+    "ruff>=0.16.4",
     "pytest>=9.0.3",
-    "pytest-asyncio>=0.23",
+    "pytest-asyncio>=1.3",
     "pytest-cov>=7.1.0",
     "httpx>=0.27",
-    "fastapi>=0.110",
+    "fastapi>=0.133",
 ]
 docs = [
-    "mkdocs>=1.6",
-    "mkdocs-material>=9.5",
+    # MkDocs 2.0 removes the plugin system and the theming system with no
+    # migration path, which breaks mkdocstrings and Material. Cap until the
+    # ecosystem settles.
+    "mkdocs>=1.6,<2",
+    "mkdocs-material>=9.5,<10",
     "mkdocstrings[python]>=1.0.4",
-    "fastapi>=0.110",
-    "starlette>=0.36",
+    "fastapi>=0.133",
+    "starlette>=1.1",
 ]
 
 [build-system]
@@ -94,12 +98,15 @@ reportImplicitOverride = true
 reportMissingTypeStubs = false
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "depin", "docs"]
+# `examples/` is not part of the distribution; tests/integration imports it from the
+# working tree so the published examples stay executable.
+pythonpath = ["."]
 asyncio_mode = "auto"
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers --doctest-modules --doctest-glob=*.md"
 
 [tool.coverage.run]
-source = ["depin/_core"]
+source = ["depin"]
 branch = true
 
 [tool.coverage.report]

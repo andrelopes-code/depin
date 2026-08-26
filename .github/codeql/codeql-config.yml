@@ -1,0 +1,11 @@
+name: depin
+
+queries:
+  - uses: security-and-quality
+
+query-filters:
+  # `...` is the body of a Protocol method, an @overload stub and an empty test
+  # class throughout a typed codebase. The rule predates that idiom and reports
+  # every one of them; the remaining quality queries stay on.
+  - exclude:
+      id: py/ineffectual-statement

@@ -1,70 +1,33 @@
 """The immutable runtime: resolve values, open scopes, inject, and override."""
 
 import contextlib
-import functools
 import inspect
-from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Generator, Iterator
-from contextlib import AbstractAsyncContextManager, AbstractContextManager
-from contextvars import ContextVar
-from dataclasses import dataclass
-from typing import TypeGuard, overload
+from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
+from typing import overload
 
-from depin._core.introspect import is_object_token
-from depin._core.markers import Token, is_inject_marker
-from depin._core.scope import Scope, ScopeFrame, active_frame, push_frame
-from depin._core.spec import ProviderKey, ProviderShape, ProviderSpec, ResolutionPlan, fmt_key
-from depin.errors import AsyncInSyncContextError, MissingProviderError, OutsideScopeError
-
-
-@dataclass(frozen=True, slots=True)
-class SyncGenTeardown:
-    gen: Iterator[object]
-
-
-@dataclass(frozen=True, slots=True)
-class AsyncGenTeardown:
-    gen: AsyncIterator[object]
-
-
-@dataclass(frozen=True, slots=True)
-class SyncCMTeardown:
-    cm: AbstractContextManager[object]
-
-
-@dataclass(frozen=True, slots=True)
-class AsyncCMTeardown:
-    cm: AbstractAsyncContextManager[object]
-
-
-type _Teardown = SyncGenTeardown | AsyncGenTeardown | SyncCMTeardown | AsyncCMTeardown
-
-
-type _OverrideFrame = dict[tuple[ProviderKey, str | None], object]
-
-
-_overrides: ContextVar[tuple[_OverrideFrame, ...]] = ContextVar('depin_overrides', default=())
-
-_ASYNC_SHAPES = frozenset(
-    {
-        ProviderShape.ASYNC_FUNCTION,
-        ProviderShape.ASYNC_GENERATOR,
-        ProviderShape.ASYNC_CONTEXT_MANAGER,
-    }
-)
+from depin._core import construct, injection, overrides
+from depin._core.markers import Token
+from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional_frame, push_frame
+from depin._core.spec import ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
+from depin._core.teardown import Teardown
+from depin._core.typeguards import is_provider_key
+from depin.errors import AsyncInSyncContextError, MissingProviderError
 
 
 class FrozenContainer:
     """Immutable, validated view of a dependency graph.
 
-    Produced by `Container.freeze()`. Resolve values by key with
-    `resolve()` / `aresolve()` or the ``frozen[key]`` shorthand, scope
-    short-lived values with `scope()` / `ascope()`, wire functions with
-    `inject()`, and substitute providers in tests with `override()`.
+    Produced by `Container.freeze()`. Resolve values by key with `resolve()` /
+    `aresolve()` or the ``frozen[key]`` shorthand, scope short-lived values with
+    `scope()` / `ascope()`, wire functions with `inject()`, and substitute
+    providers in tests with `override()`.
 
     The container registers no new providers; it holds only the singleton cache
     and the root scope. It is safe to share across threads and tasks: scopes are
-    tracked per `contextvars.Context`, so concurrent requests never see
-    each other's scoped instances.
+    tracked per `contextvars.Context`, so concurrent requests never see each
+    other's scoped instances, and construction of a cached provider is
+    single-flighted under both a thread lock and an asyncio lock — a singleton is
+    built exactly once no matter how many threads or tasks race for it.
 
     Example:
         ```pycon
@@ -130,7 +93,7 @@ class FrozenContainer:
             ...     di.resolve(int)
             ... except MissingProviderError as exc:
             ...     print(exc)
-            no provider for <class 'int'> (tag=None)
+            no provider for int (tag=None)
 
             ```
         """
@@ -162,12 +125,6 @@ class FrozenContainer:
         # return types forces a single documented widening at this boundary.
         return await self._resolve_async(spec)  # pyright: ignore[reportReturnType]
 
-    def _resolve_any(self, key: ProviderKey, tag: str | None) -> object:
-        return self._resolve_sync(self._lookup(key, tag))
-
-    async def _aresolve_any(self, key: ProviderKey, tag: str | None) -> object:
-        return await self._resolve_async(self._lookup(key, tag))
-
     @contextlib.contextmanager
     def scope(self) -> Generator[ScopeFrame]:
         """Open a synchronous scope for scoped providers and their teardown.
@@ -181,6 +138,9 @@ class FrozenContainer:
         Scopes nest: a scoped value built in an outer scope is reused inside a
         nested scope, not rebuilt. Open sibling scopes for independent instances.
         Use `ascope()` when any provider in the scope is async.
+
+        Raises:
+            TeardownError: An async provider left a teardown in this sync scope.
 
         Example:
             ```pycon
@@ -204,33 +164,64 @@ class FrozenContainer:
             try:
                 yield frame
             finally:
-                self._drain_sync(frame)
+                frame.drain_sync()
 
     @contextlib.asynccontextmanager
     async def ascope(self) -> AsyncGenerator[ScopeFrame]:
         """Open an asynchronous scope; the async counterpart to `scope()`.
 
-        Required when scoped providers are async (async factories / generators /
-        async context managers). Teardowns — sync and async alike — run in reverse
-        order on exit, with failures collected into an `ExceptionGroup`. The
-        per-request scope opened by the FastAPI integration is an ``ascope``.
+        Required when scoped providers are async (async factories, async
+        generators, async context managers). Teardowns — sync and async alike —
+        run in reverse order on exit, with failures collected into an
+        `ExceptionGroup`. The per-request scope opened by the FastAPI integration
+        is an ``ascope``.
         """
         with push_frame() as frame:
             try:
                 yield frame
             finally:
-                await self._drain_async(frame)
+                await frame.drain_async()
 
-    async def aclose(self) -> None:
-        """Tear down singleton providers that own lifecycle resources.
+    def close(self) -> None:
+        """Tear down singleton providers that own lifecycle resources, synchronously.
 
         Drains the root scope, running the teardown half of every singleton
         generator / context-manager provider in reverse order of construction.
-        Call this once on application shutdown. Scoped providers do not need it —
-        they are drained when their `scope()` / `ascope()` block exits.
+        Call this once on shutdown of a synchronous application. Scoped providers
+        do not need it — they are drained when their `scope()` block exits.
         Failures are collected into an `ExceptionGroup`.
+
+        Raises:
+            TeardownError: A singleton is an async provider; use `aclose()`.
+
+        Example:
+            ```pycon
+            >>> from collections.abc import Generator
+            >>> from depin import Container
+            >>> events: list[str] = []
+            >>> class Pool: ...
+            >>> def pool() -> Generator[Pool]:
+            ...     events.append('open')
+            ...     yield Pool()
+            ...     events.append('close')
+            >>> di = Container().bind(pool).freeze()
+            >>> _ = di[Pool]
+            >>> di.close()
+            >>> events
+            ['open', 'close']
+
+            ```
         """
-        await self._drain_async(self._root)
+        self._root.drain_sync()
+
+    async def aclose(self) -> None:
+        """Tear down singleton providers that own lifecycle resources, asynchronously.
+
+        The async counterpart to `close()`, and the one to call when any
+        singleton is an async provider. Drains the root scope in reverse order of
+        construction, collecting failures into an `ExceptionGroup`.
+        """
+        await self._root.drain_async()
 
     @overload
     def inject[**P, R](self, fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]: ...
@@ -267,69 +258,28 @@ class FrozenContainer:
             ```
         """
         sig = inspect.signature(fn)
-        injectable = self._compute_injectable_params(sig)
-
-        if inspect.iscoroutinefunction(fn):
-
-            @functools.wraps(fn)
-            async def wrapper_async(*args: object, **kwargs: object) -> object:
-                bound = sig.bind_partial(*args, **kwargs)
-                for name, (key, tag) in injectable.items():
-                    if name not in bound.arguments:
-                        bound.arguments[name] = await self._aresolve_any(key, tag)
-                return await _as_awaitable(fn(*bound.args, **bound.kwargs))
-
-            return wrapper_async
-
-        @functools.wraps(fn)
-        def wrapper_sync(*args: object, **kwargs: object) -> object:
-            bound = sig.bind_partial(*args, **kwargs)
-            for name, (key, tag) in injectable.items():
-                if name not in bound.arguments:
-                    bound.arguments[name] = self._resolve_any(key, tag)
-            return fn(*bound.args, **bound.kwargs)
-
-        return wrapper_sync
-
-    def _compute_injectable_params(
-        self,
-        sig: inspect.Signature,
-    ) -> dict[str, tuple[ProviderKey, str | None]]:
-        out: dict[str, tuple[ProviderKey, str | None]] = {}
-        for name, param in sig.parameters.items():
-            marker = param.default
-            if not is_inject_marker(marker):
-                continue
-            if (marker.key, marker.tag) not in self._plan.by_key:
-                tag_note = f', tag={marker.tag!r}' if marker.tag is not None else ''
-                raise MissingProviderError(
-                    f"@inject: parameter '{name}' requests "
-                    f'injected({fmt_key(marker.key)}{tag_note}) '
-                    'but no provider is registered for that key. '
-                    'Bind it on the Container before calling .freeze(), or remove the injected() default.'
-                )
-            out[name] = (marker.key, marker.tag)
-        return out
+        injectables = injection.collect(sig, self._is_registered)
+        return injection.wrap(fn, sig, injectables, self._resolve_any, self._aresolve_any)
 
     @contextlib.contextmanager
     def override[T](
         self,
         key: type[T] | Token[T],
+        replacement: T,
         *,
-        with_: T,
         tag: str | None = None,
     ) -> Generator['FrozenContainer']:
         """Temporarily replace a provider's value within a ``with`` block.
 
         Inside the block, every resolution of ``key`` (and ``tag``) returns
-        ``with_`` instead of the registered provider — including resolutions deep
-        in the graph, as a dependency of another provider, not only top-level
-        lookups. If ``with_`` is a callable and not a class it is invoked as a
-        factory per resolution; otherwise it is returned as-is. The override is
-        bound to the current `contextvars.Context` and undone on exit, so
-        concurrent contexts are unaffected; overrides nest, innermost wins.
-        Primarily a testing seam — swap a real dependency for a fake without
-        rebuilding the container.
+        ``replacement`` instead of the registered provider — including
+        resolutions deep in the graph, as a dependency of another provider, not
+        only top-level lookups. If ``replacement`` is a callable and not a class
+        it is invoked as a factory per resolution; otherwise it is returned
+        as-is. The override is bound to the current `contextvars.Context` and
+        undone on exit, so concurrent contexts are unaffected; overrides nest,
+        innermost wins. Primarily a testing seam — swap a real dependency for a
+        fake without rebuilding the container.
 
         Raises:
             MissingProviderError: ``key`` is not a valid provider key type.
@@ -344,29 +294,34 @@ class FrozenContainer:
             ...     def now(self) -> str:
             ...         return 'fake'
             >>> di = Container().bind(Clock).freeze()
-            >>> with di.override(Clock, with_=FakeClock()):
-            ...     di.resolve(Clock).now()
+            >>> with di.override(Clock, FakeClock()):
+            ...     di[Clock].now()
             'fake'
-            >>> di.resolve(Clock).now()
+            >>> di[Clock].now()
             'real'
 
             ```
         """
-        if not _is_provider_key(key):
+        if not is_provider_key(key):
             raise MissingProviderError(f'cannot override {key!r}: not a valid key type')
-        frame: _OverrideFrame = {(key, tag): with_}
-        token = _overrides.set((*_overrides.get(), frame))
-        try:
+        with overrides.pushed(key, tag, replacement):
             yield self
-        finally:
-            _overrides.reset(token)
+
+    def _is_registered(self, key: ProviderKey, tag: str | None) -> bool:
+        return (key, tag) in self._plan.by_key
+
+    def _resolve_any(self, key: ProviderKey, tag: str | None) -> object:
+        return self._resolve_sync(self._lookup(key, tag))
+
+    async def _aresolve_any(self, key: ProviderKey, tag: str | None) -> object:
+        return await self._resolve_async(self._lookup(key, tag))
 
     def _lookup(self, key: object, tag: str | None) -> ProviderSpec:
-        if not _is_provider_key(key):
+        if not is_provider_key(key):
             raise MissingProviderError(f'cannot look up provider for {key!r}: not a valid key type')
         spec = self._lookup_optional(key, tag)
         if spec is None:
-            raise MissingProviderError(f'no provider for {key!r} (tag={tag!r})')
+            raise MissingProviderError(f'no provider for {fmt_key(key)} (tag={tag!r})')
         return spec
 
     def _lookup_optional(self, key: ProviderKey, tag: str | None) -> ProviderSpec | None:
@@ -375,12 +330,10 @@ class FrozenContainer:
         Dependency resolution routes through here rather than reading
         ``self._plan.by_key`` directly, so an ``override`` substitutes a key
         everywhere it appears in the graph — not only at the top-level lookup.
-        Returns the synthetic override spec when one is active, else the planned
-        provider, else ``None``.
         """
-        for frame in reversed(_overrides.get()):
-            if (key, tag) in frame:
-                return _override_spec(key, tag, frame[(key, tag)])
+        override = overrides.active(key, tag)
+        if override is not None:
+            return override
         return self._plan.by_key.get((key, tag))
 
     def _cache_target(self, spec: ProviderSpec) -> ScopeFrame | None:
@@ -393,94 +346,69 @@ class FrozenContainer:
 
     def _resolve_sync(self, spec: ProviderSpec) -> object:
         if spec.needs_async:
-            raise AsyncInSyncContextError(f'{spec.key!r} requires async resolution; call aresolve() instead')
+            raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
         frame = self._cache_target(spec)
+        if frame is None:
+            return self._construct_sync(spec)
         cache_id = (spec.key, spec.tag)
-        if frame is not None and cache_id in frame:
-            return frame.get(cache_id)
-        kwargs = self._resolve_params_sync(spec) if spec.params else {}
-        value = self._build_sync_value(spec, kwargs)
-        if frame is not None:
-            frame.put(cache_id, value)
-        return value
+        cached = frame.lookup(cache_id)
+        if cached is not MISSING:
+            return cached
+        # Single-flight across threads: without the lock two threads can both
+        # miss the cache and construct the value twice, leaving one instance
+        # orphaned along with its teardown. Locks are taken in dependency order
+        # over an acyclic graph, so they cannot deadlock.
+        with frame.sync_lock_for(cache_id):
+            cached = frame.lookup(cache_id)
+            if cached is not MISSING:
+                return cached
+            value = self._construct_sync(spec)
+            frame.provide(cache_id, value)
+            return value
 
     async def _resolve_async(self, spec: ProviderSpec) -> object:
         frame = self._cache_target(spec)
         if frame is None:
             return await self._construct_async(spec)
         cache_id = (spec.key, spec.tag)
-        if cache_id in frame:
-            return frame.get(cache_id)
-        # Single-flight: concurrent resolutions of the same cached spec must
-        # build it once. The await below would otherwise let a second task miss
-        # the cache and construct a duplicate (a second singleton, leaked
-        # teardown). The lock lives on the caching frame, so it is dropped when
-        # the scope ends.
-        async with frame.lock_for(cache_id):
-            if cache_id in frame:
-                return frame.get(cache_id)
+        cached = frame.lookup(cache_id)
+        if cached is not MISSING:
+            return cached
+        # Single-flight across tasks: the await below would otherwise let a
+        # second task miss the cache and construct a duplicate. The lock lives on
+        # the caching frame, so it is dropped when the scope ends.
+        async with frame.async_lock_for(cache_id):
+            cached = frame.lookup(cache_id)
+            if cached is not MISSING:
+                return cached
             value = await self._construct_async(spec)
-            frame.put(cache_id, value)
+            frame.provide(cache_id, value)
             return value
+
+    def _construct_sync(self, spec: ProviderSpec) -> object:
+        kwargs = self._resolve_params_sync(spec) if spec.params else {}
+        return construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
 
     async def _construct_async(self, spec: ProviderSpec) -> object:
         kwargs = await self._resolve_params_async(spec) if spec.params else {}
-        if spec.shape in _ASYNC_SHAPES:
-            return await self._build_async_value(spec, kwargs)
-        return self._build_sync_value(spec, kwargs)
+        return await construct.asynchronous(spec, kwargs, self._teardown_sink(spec), self._read_frame)
 
-    def _build_sync_value(self, spec: ProviderSpec, kwargs: dict[str, object]) -> object:
-        """Construct a value for any non-async shape. Shared by sync and async paths."""
-        shape = spec.shape
-        source = spec.source
-        if shape is ProviderShape.VALUE:
-            return source
-        if shape is ProviderShape.FRAME:
-            return self._read_frame(spec)
-        if shape in _ASYNC_SHAPES:
-            raise AsyncInSyncContextError(f'{spec.key!r} is async; use aresolve inside ascope()')
-        if shape is ProviderShape.CLASS:
-            assert isinstance(source, type)
-            return source(**kwargs)
-        if shape is ProviderShape.FUNCTION:
-            assert callable(source)
-            return source(**kwargs)
-        if shape is ProviderShape.GENERATOR:
-            assert callable(source)
-            gen = _as_sync_iter(source(**kwargs))
-            value = next(gen)
-            self._frame_for(spec).teardowns.append(SyncGenTeardown(gen))
-            return value
-        if shape is ProviderShape.CONTEXT_MANAGER:
-            assert callable(source)
-            cm = _as_sync_cm(source(**kwargs))
-            value = cm.__enter__()
-            self._frame_for(spec).teardowns.append(SyncCMTeardown(cm))
-            return value
-        raise AssertionError(f'unhandled shape: {shape}')
+    def _teardown_sink(self, spec: ProviderSpec) -> Callable[[Teardown], None]:
+        """Register a teardown on the frame that owns this spec, so it drains with it.
 
-    async def _build_async_value(self, spec: ProviderSpec, kwargs: dict[str, object]) -> object:
-        """Construct a value for an async shape. Only reached when shape ∈ _ASYNC_SHAPES."""
-        shape = spec.shape
-        source = spec.source
-        assert callable(source)
-        if shape is ProviderShape.ASYNC_FUNCTION:
-            return await _as_awaitable(source(**kwargs))
-        if shape is ProviderShape.ASYNC_GENERATOR:
-            agen = _as_async_iter(source(**kwargs))
-            value = await agen.__anext__()
-            self._frame_for(spec).teardowns.append(AsyncGenTeardown(agen))
-            return value
-        if shape is ProviderShape.ASYNC_CONTEXT_MANAGER:
-            acm = _as_async_cm(source(**kwargs))
-            value = await acm.__aenter__()
-            self._frame_for(spec).teardowns.append(AsyncCMTeardown(acm))
-            return value
-        raise AssertionError(f'unhandled async shape: {shape}')
+        The frame is looked up only when a teardown actually appears: a transient
+        provider has no frame, and resolving one outside a scope must not fail
+        merely because the sink was prepared.
+        """
+
+        def register(record: Teardown) -> None:
+            self._frame_for(spec).add_teardown(record)
+
+        return register
 
     def _resolve_params_sync(self, spec: ProviderSpec) -> dict[str, object]:
         out: dict[str, object] = {}
-        frame = self._optional_frame()
+        frame = optional_frame()
         for param in spec.params:
             if frame is not None and param.key in frame:
                 out[param.name] = frame.get(param.key)
@@ -489,13 +417,13 @@ class FrozenContainer:
             if dep is None:
                 if param.has_default:
                     continue
-                raise MissingProviderError(f"missing provider for parameter '{param.name}' of {spec.key!r}")
+                raise MissingProviderError(f"missing provider for parameter '{param.name}' of {fmt_key(spec.key)}")
             out[param.name] = self._resolve_sync(dep)
         return out
 
     async def _resolve_params_async(self, spec: ProviderSpec) -> dict[str, object]:
         out: dict[str, object] = {}
-        frame = self._optional_frame()
+        frame = optional_frame()
         for param in spec.params:
             if frame is not None and param.key in frame:
                 out[param.name] = frame.get(param.key)
@@ -504,7 +432,7 @@ class FrozenContainer:
             if dep is None:
                 if param.has_default:
                     continue
-                raise MissingProviderError(f"missing provider for parameter '{param.name}' of {spec.key!r}")
+                raise MissingProviderError(f"missing provider for parameter '{param.name}' of {fmt_key(spec.key)}")
             out[param.name] = await self._resolve_async(dep)
         return out
 
@@ -514,148 +442,11 @@ class FrozenContainer:
         return active_frame()
 
     def _read_frame(self, spec: ProviderSpec) -> object:
-        frame = active_frame()
-        if spec.key in frame:
-            return frame.get(spec.key)
-        raise MissingProviderError(
-            f'no value in active scope for {spec.key!r}; '
-            'was the value placed in the frame by middleware or scope-setup code?'
-        )
-
-    def _optional_frame(self) -> ScopeFrame | None:
-        try:
-            return active_frame()
-        except OutsideScopeError:
-            return None
-
-    def _drain_sync(self, frame: ScopeFrame) -> None:
-        errors: list[Exception] = []
-        for td in reversed(frame.teardowns):
-            try:
-                run_sync_teardown(td)
-            except Exception as exc:
-                errors.append(exc)
-        frame.teardowns.clear()
-        if errors:
-            raise ExceptionGroup('depin teardown errors', errors)
-
-    async def _drain_async(self, frame: ScopeFrame) -> None:
-        errors: list[Exception] = []
-        for td in reversed(frame.teardowns):
-            try:
-                await run_async_teardown(td)
-            except Exception as exc:
-                errors.append(exc)
-        frame.teardowns.clear()
-        if errors:
-            raise ExceptionGroup('depin teardown errors', errors)
-
-
-def run_sync_teardown(td: object) -> None:
-    if isinstance(td, SyncGenTeardown):
-        try:
-            _ = next(td.gen)
-        except StopIteration:
-            return
-        raise RuntimeError('generator provider yielded more than once')
-    if isinstance(td, SyncCMTeardown):
-        _ = td.cm.__exit__(None, None, None)
-        return
-    if isinstance(td, AsyncGenTeardown | AsyncCMTeardown):
-        raise RuntimeError('async teardown registered in sync scope; use ascope() instead')
-    raise AssertionError(f'unknown teardown record: {td!r}')
-
-
-async def run_async_teardown(td: object) -> None:
-    if isinstance(td, SyncGenTeardown):
-        try:
-            _ = next(td.gen)
-        except StopIteration:
-            return
-        raise RuntimeError('generator provider yielded more than once')
-    if isinstance(td, AsyncGenTeardown):
-        try:
-            _ = await td.gen.__anext__()
-        except StopAsyncIteration:
-            return
-        raise RuntimeError('async generator provider yielded more than once')
-    if isinstance(td, SyncCMTeardown):
-        _ = td.cm.__exit__(None, None, None)
-        return
-    if isinstance(td, AsyncCMTeardown):
-        _ = await td.cm.__aexit__(None, None, None)
-        return
-    raise AssertionError(f'unknown teardown record: {td!r}')
-
-
-def _override_spec(key: ProviderKey, tag: str | None, replacement: object) -> ProviderSpec:
-    """Build a synthetic transient ProviderSpec for an active override entry."""
-    if callable(replacement) and not isinstance(replacement, type):
-        return ProviderSpec(
-            key=key,
-            tag=tag,
-            source=replacement,
-            scope=Scope.TRANSIENT,
-            shape=ProviderShape.FUNCTION,
-            needs_async=False,
-            params=(),
-        )
-    return ProviderSpec(
-        key=key,
-        tag=tag,
-        source=replacement,
-        scope=Scope.TRANSIENT,
-        shape=ProviderShape.VALUE,
-        needs_async=False,
-        params=(),
-    )
-
-
-def _is_provider_key(value: object) -> TypeGuard[ProviderKey]:
-    return isinstance(value, type) or is_object_token(value) or isinstance(value, str)
-
-
-def _is_object_awaitable(value: object) -> TypeGuard[Awaitable[object]]:
-    return isinstance(value, Awaitable)
-
-
-def _as_awaitable(value: object) -> Awaitable[object]:
-    """Narrow the resolver's `object` to `Awaitable[object]` for `await` dispatch."""
-    assert _is_object_awaitable(value), f'async provider returned non-awaitable {value!r}'
-    return value
-
-
-def _is_sync_iter(value: object) -> TypeGuard[Iterator[object]]:
-    return isinstance(value, Iterator)
-
-
-def _as_sync_iter(value: object) -> Iterator[object]:
-    assert _is_sync_iter(value), f'generator provider returned non-iterator {value!r}'
-    return value
-
-
-def _is_async_iter(value: object) -> TypeGuard[AsyncIterator[object]]:
-    return isinstance(value, AsyncIterator)
-
-
-def _as_async_iter(value: object) -> AsyncIterator[object]:
-    assert _is_async_iter(value), f'async generator provider returned non-async-iterator {value!r}'
-    return value
-
-
-def _is_sync_cm(value: object) -> TypeGuard[AbstractContextManager[object]]:
-    return isinstance(value, AbstractContextManager)
-
-
-def _as_sync_cm(value: object) -> AbstractContextManager[object]:
-    assert _is_sync_cm(value), f'context manager provider returned non-context-manager {value!r}'
-    return value
-
-
-def _is_async_cm(value: object) -> TypeGuard[AbstractAsyncContextManager[object]]:
-    return isinstance(value, AbstractAsyncContextManager)
-
-
-def _as_async_cm(value: object) -> AbstractAsyncContextManager[object]:
-    assert _is_async_cm(value), f'async context manager provider returned non-async-CM {value!r}'
-    return value
+        value = active_frame().lookup(spec.key)
+        if value is MISSING:
+            raise MissingProviderError(
+                f'no value in the active scope for {fmt_key(spec.key)}; '
+                'a key declared with scope_value() must be supplied by whoever opens the scope, '
+                'with frame.provide(key, value)'
+            )
+        return value

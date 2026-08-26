@@ -1,3 +1,5 @@
+"""The @inject decorator: which parameters it fills and when it validates them."""
+
 import pytest
 
 from depin._core.container import Container
@@ -121,3 +123,63 @@ async def test_inject_async() -> None:
         return n * 2
 
     assert await handler() == 42
+
+
+def test_inject_fills_a_token_keyed_parameter() -> None:
+    answer: Token[int] = Token[int]('answer')
+    frozen = Container().value(answer, 42).freeze()
+
+    @frozen.inject
+    def handler(n: int = injected(answer)) -> int:
+        return n + 1
+
+    assert handler() == 43
+
+
+def test_inject_fills_a_keyword_only_parameter_between_varargs() -> None:
+    class Service: ...
+
+    frozen = Container().bind(Service, scope=Scope.SINGLETON).freeze()
+
+    @frozen.inject
+    def handler(*args: object, svc: Service = injected(Service), **kwargs: object) -> Service:
+        del args, kwargs
+        return svc
+
+    assert isinstance(handler(), Service)
+
+
+def test_inject_on_a_method_leaves_self_to_the_caller() -> None:
+    class Service: ...
+
+    frozen = Container().bind(Service, scope=Scope.SINGLETON).freeze()
+
+    class Handler:
+        @frozen.inject
+        def handle(self, svc: Service = injected(Service)) -> Service:
+            del self
+            return svc
+
+    assert isinstance(Handler().handle(), Service)
+
+
+def test_inject_distinguishes_tagged_providers() -> None:
+    class Cache: ...
+
+    primary = Cache()
+    fallback = Cache()
+    frozen = (
+        Container()
+        .bind(lambda: primary, scope=Scope.SINGLETON, provides=Cache, tag='primary')
+        .bind(lambda: fallback, scope=Scope.SINGLETON, provides=Cache, tag='fallback')
+        .freeze()
+    )
+
+    @frozen.inject
+    def handler(
+        p: Cache = injected(Cache, tag='primary'),
+        f: Cache = injected(Cache, tag='fallback'),
+    ) -> tuple[Cache, Cache]:
+        return p, f
+
+    assert handler() == (primary, fallback)

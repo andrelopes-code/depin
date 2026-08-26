@@ -6,8 +6,11 @@ Security fixes are provided for the following versions of `pydepin`:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.2.x   | :white_check_mark: |
-| < 0.2   | :x:                |
+| 0.3.x   | :white_check_mark: |
+| < 0.3   | :x:                |
+
+While the project is pre-1.0, only the latest minor series receives security
+fixes. Older series are not backported.
 
 ## Reporting a vulnerability
 

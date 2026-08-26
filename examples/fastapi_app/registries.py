@@ -1,26 +1,29 @@
+"""Infrastructure and service bindings, declared as reusable registries."""
+
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 
 from depin import Registry
 
-services = Registry('services')
 infra = Registry('infra')
+services = Registry('services')
 
 
+@dataclass(frozen=True, slots=True)
 class Settings:
     db_url: str = 'postgres://example'
 
 
-@infra.singleton(provides=Settings)
-class SettingsImpl(Settings): ...
+@infra.singleton()
+def load_settings() -> Settings:
+    """In a real app this would read the environment; the shape is what matters."""
+    return Settings()
 
 
 class Database:
     def __init__(self, settings: Settings) -> None:
-        self.settings = settings
-
-
-@infra.singleton(provides=Database)
-class DatabaseImpl(Database): ...
+        self.url = settings.db_url
+        self.open_sessions = 0
 
 
 class Session:
@@ -28,6 +31,16 @@ class Session:
         self.db = db
 
 
-@services.scoped(provides=Session)
-async def make_session(db: Database) -> AsyncGenerator[Session]:
+@infra.singleton()
+async def connect(settings: Settings) -> AsyncGenerator[Database]:
+    """A singleton that owns a connection: torn down by ``aclose()`` on shutdown."""
+    db = Database(settings)
+    yield db
+
+
+@services.scoped()
+async def open_session(db: Database) -> AsyncGenerator[Session]:
+    """One session per request. The middleware opens and closes the scope."""
+    db.open_sessions += 1
     yield Session(db)
+    db.open_sessions -= 1

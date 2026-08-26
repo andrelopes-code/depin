@@ -2,10 +2,14 @@
 
 import asyncio
 import contextlib
+import threading
 from collections.abc import Generator
 from contextvars import ContextVar
 from enum import Enum
+from typing import Final
 
+from depin._core import teardown
+from depin._core.teardown import Teardown
 from depin.errors import OutsideScopeError
 
 
@@ -15,10 +19,10 @@ class Scope(Enum):
     Attributes:
         SINGLETON: Built once, on first resolution, and cached on the
             `FrozenContainer` for its whole lifetime. The default.
-            Its lifecycle teardown runs on `FrozenContainer.aclose()`. A
-            singleton may not depend on a scoped provider (it would capture one
-            scope's instance forever) — `Container.freeze()` rejects
-            that.
+            Its lifecycle teardown runs on `FrozenContainer.close()` /
+            `FrozenContainer.aclose()`. A singleton may not depend on a scoped
+            provider (it would capture one scope's instance forever) —
+            `Container.freeze()` rejects that.
         SCOPED: Built once per active scope
             (`FrozenContainer.scope()` / ``ascope``) and torn down when
             that scope exits. Resolving one with no active scope raises
@@ -33,46 +37,149 @@ class Scope(Enum):
     TRANSIENT = 'transient'
 
 
+class _Missing:
+    """Sentinel type for `MISSING`; distinguishes an absent key from a cached ``None``."""
+
+    __slots__ = ()
+
+
+MISSING: Final = _Missing()
+
+
 class ScopeFrame:
     """The per-scope store yielded by `FrozenContainer.scope()`.
 
-    Holds the scope's cached scoped instances and pending teardowns, and chains to
-    its parent so nested scopes inherit outer instances. Scope-setup code (for
-    example middleware) uses `put()` to seed values that
-    `Container.frame_provides()` then exposes as providers.
+    Holds the scope's cached instances and pending teardowns, and chains to its
+    parent so nested scopes inherit outer instances. Scope-setup code — ASGI
+    middleware, a CLI entry point — uses `provide()` to seed values that
+    `Container.scope_value()` then exposes as providers.
+
+    A frame is safe to use from several threads and several tasks at once. The
+    root frame caches singletons and is shared by every caller of the container,
+    so its bookkeeping is guarded by a mutex and construction of a given key is
+    single-flighted.
     """
 
-    __slots__ = ('_cache', '_locks', 'parent', 'teardowns')
+    __slots__ = ('_async_locks', '_cache', '_mutex', '_sync_locks', '_teardowns', 'parent')
 
     def __init__(self, parent: 'ScopeFrame | None' = None) -> None:
         self._cache: dict[object, object] = {}
-        self._locks: dict[object, asyncio.Lock] = {}
+        self._sync_locks: dict[object, threading.Lock] = {}
+        self._async_locks: dict[object, asyncio.Lock] = {}
+        self._teardowns: list[Teardown] = []
+        self._mutex = threading.Lock()
         self.parent = parent
-        self.teardowns: list[object] = []
 
-    def put(self, key: object, value: object) -> None:
-        """Place ``value`` into this frame under ``key`` for frame-provided bindings."""
-        self._cache[key] = value
+    def provide(self, key: object, value: object) -> None:
+        """Place ``value`` into this frame under ``key``.
+
+        The counterpart of `Container.scope_value()`: whoever opens the scope
+        supplies the value, and providers declared with ``scope_value`` read it
+        back. Overwrites any value already stored under ``key`` in this frame.
+
+        Example:
+            ```pycon
+            >>> from depin import Container
+            >>> class Request: ...
+            >>> di = Container().scope_value(Request).freeze()
+            >>> with di.scope() as frame:
+            ...     frame.provide(Request, Request())
+            ...     isinstance(di[Request], Request)
+            True
+
+            ```
+        """
+        with self._mutex:
+            self._cache[key] = value
 
     def get(self, key: object) -> object:
-        if key in self._cache:
-            return self._cache[key]
-        if self.parent is not None:
-            return self.parent.get(key)
-        raise KeyError(key)
+        """Return the value stored under ``key`` here or in an ancestor frame.
+
+        Raises:
+            KeyError: No frame in the chain holds ``key``.
+        """
+        value = self.lookup(key)
+        if isinstance(value, _Missing):
+            raise KeyError(key)
+        return value
+
+    def lookup(self, key: object) -> object:
+        """Return the value for ``key``, or `MISSING` when no frame holds it.
+
+        Unlike `get()` this reports absence without raising, so a caller can
+        distinguish "not cached" from "cached as ``None``" in one traversal.
+        """
+        frame: ScopeFrame | None = self
+        while frame is not None:
+            with frame._mutex:
+                if key in frame._cache:
+                    return frame._cache[key]
+            frame = frame.parent
+        return MISSING
 
     def __contains__(self, key: object) -> bool:
-        if key in self._cache:
-            return True
-        return self.parent is not None and key in self.parent
+        return not isinstance(self.lookup(key), _Missing)
 
-    def lock_for(self, key: object) -> asyncio.Lock:
+    def add_teardown(self, record: Teardown) -> None:
+        with self._mutex:
+            self._teardowns.append(record)
+
+    def drain_sync(self) -> None:
+        """Run every pending teardown, newest first, without an event loop.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed. Every failure is
+                reported; none is allowed to hide another.
+            TeardownError: An async provider left a teardown here, which needs
+                an event loop to run.
+        """
+        errors: list[Exception] = []
+        for record in self._take_teardowns():
+            try:
+                teardown.run_sync(record)
+            except Exception as exc:
+                errors.append(exc)
+        if errors:
+            raise ExceptionGroup('depin teardown errors', errors)
+
+    async def drain_async(self) -> None:
+        """Run every pending teardown, newest first, inside an event loop.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed.
+        """
+        errors: list[Exception] = []
+        for record in self._take_teardowns():
+            try:
+                await teardown.run_async(record)
+            except Exception as exc:
+                errors.append(exc)
+        if errors:
+            raise ExceptionGroup('depin teardown errors', errors)
+
+    def _take_teardowns(self) -> tuple[Teardown, ...]:
+        with self._mutex:
+            records = tuple(reversed(self._teardowns))
+            self._teardowns.clear()
+        return records
+
+    def sync_lock_for(self, key: object) -> threading.Lock:
+        """Return a per-key mutex, created on first use, for single-flight construction."""
+        with self._mutex:
+            lock = self._sync_locks.get(key)
+            if lock is None:
+                lock = threading.Lock()
+                self._sync_locks[key] = lock
+            return lock
+
+    def async_lock_for(self, key: object) -> asyncio.Lock:
         """Return a per-key async lock, created on first use, for single-flight construction."""
-        lock = self._locks.get(key)
-        if lock is None:
-            lock = asyncio.Lock()
-            self._locks[key] = lock
-        return lock
+        with self._mutex:
+            lock = self._async_locks.get(key)
+            if lock is None:
+                lock = asyncio.Lock()
+                self._async_locks[key] = lock
+            return lock
 
 
 _active: ContextVar[ScopeFrame | None] = ContextVar('depin_active_frame', default=None)
@@ -83,6 +190,10 @@ def active_frame() -> ScopeFrame:
     if frame is None:
         raise OutsideScopeError('no active scope frame; open one with FrozenContainer.scope() or .ascope()')
     return frame
+
+
+def optional_frame() -> ScopeFrame | None:
+    return _active.get()
 
 
 @contextlib.contextmanager

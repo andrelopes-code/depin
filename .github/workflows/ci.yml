@@ -27,15 +27,15 @@ jobs:
           - os: macos-latest
             python-version: '3.12'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Sync dependencies
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Check formatting
         run: uv run ruff format --check
@@ -47,23 +47,74 @@ jobs:
         run: uv run basedpyright
 
       - name: Test
-        run: uv run pytest --cov=depin/_core --cov-report=xml --cov-report=term-missing
+        run: uv run pytest --cov=depin --cov-report=xml --cov-report=term-missing
 
+      # Skipped entirely until CODECOV_TOKEN exists, so the absence of the
+      # secret is visible as a skipped step rather than hidden behind a
+      # tokenless upload that silently fails.
       - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: codecov/codecov-action@v6
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12' && env.CODECOV_TOKEN != ''
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         with:
           files: ./coverage.xml
-          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
+        with:
+          fail-on-severity: moderate
+
+  minimum-versions:
+    name: minimum declared versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          python-version: '3.12'
+
+      # Resolves every direct dependency at its declared lower bound, so the
+      # floors in pyproject.toml stay honest instead of drifting upward
+      # silently as the lockfile is refreshed.
+      - name: Sync at the lowest declared versions
+        run: uv sync --all-extras --resolution lowest-direct
+
+      - name: Test
+        run: uv run --no-sync pytest
+
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          python-version: '3.12'
+
+      - name: Build site
+        run: uv run --group docs mkdocs build --strict
 
   package:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           python-version: '3.12'
 

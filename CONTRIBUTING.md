@@ -3,7 +3,7 @@
 `depin` (published on PyPI as `pydepin`) is a type-first dependency-injection
 library for Python 3.12+ with a zero-dependency core and an optional FastAPI
 integration. See the [README](README.md) for an overview and
-[CLAUDE.md](CLAUDE.md) for the full repository conventions.
+[AGENTS.md](AGENTS.md) for the full repository conventions.
 
 Thank you for taking the time to contribute. This guide covers everything you
 need to get a change merged.
@@ -18,6 +18,16 @@ uv sync --all-extras
 
 This installs the core, the FastAPI extra, and all development tooling
 (`ruff`, `basedpyright`, `pytest`, `pytest-asyncio`, `pytest-cov`).
+
+Optionally, install the git hooks so formatting and linting run before a commit
+is written:
+
+```bash
+uvx pre-commit install
+```
+
+The hooks reproduce the first two gates only. The type check and the test suite
+still have to be run explicitly, because both need the project environment.
 
 ## The four gates
 
@@ -36,7 +46,9 @@ uv run pytest
 - `uv run ruff check` — lints.
 - `uv run basedpyright` — type-checks in strict mode. No `# type: ignore`,
   `# pyright: ignore`, `typing.cast`, or `Any` shortcuts.
-- `uv run pytest` — runs the test suite.
+- `uv run pytest` — runs the test suite, the doctests embedded in the
+  public-API docstrings, the doctests in `docs/guide/`, and the programs under
+  `examples/`.
 
 ## Commits
 
@@ -76,14 +88,31 @@ Other rules:
 - Prefer `pytest.mark.parametrize` over duplicated test bodies.
 - Tests must be deterministic: no sleeps, no network, no clock dependence
   without a fake clock.
-- Coverage floor: **≥ 95% for `depin/_core/`**. No untested branches in public
-  API code paths.
+- Coverage floor: **≥ 95% for `depin/`**, measured over the whole package. No
+  untested branches in public API code paths.
+- A test that guards a concurrency invariant must fail when the guard is
+  removed. Synchronise with `threading.Barrier` or `asyncio.Event`; never with a
+  timed sleep.
 
 You can check coverage locally with:
 
 ```bash
-uv run pytest --cov=depin/_core --cov-report=term-missing
+uv run pytest --cov=depin --cov-report=term-missing
 ```
+
+## Documentation
+
+The site is built with MkDocs and Material, and the API reference is generated
+from the source docstrings by `mkdocstrings`. Build it locally with:
+
+```bash
+uv run --group docs mkdocs serve
+```
+
+`mkdocs build --strict` runs in CI: a broken cross-reference or an orphaned page
+fails the build. `docs/reference/` is generated from the docstrings — edit the
+source, not the page. `docs/guide/` is hand-written, and its `pycon` blocks are
+doctests executed by `uv run pytest`.
 
 ## Pull request flow
 
@@ -125,11 +154,3 @@ publish:
 - In the GitHub repository settings, create a protected
   [Environment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)
   named `pypi`.
-
-### Bootstrapping the first release
-
-`0.2.0` predates this automation, so it is published once by hand: after the
-Trusted Publisher above is configured, trigger the `release` workflow manually
-(Actions → release → *Run workflow*). The `workflow_dispatch` run builds the
-current `main` and publishes it to PyPI. Every release after that is handled
-automatically by the release-please pull request.
