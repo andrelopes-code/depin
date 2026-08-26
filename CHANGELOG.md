@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1](https://github.com/andrelopes-code/depin/compare/v0.4.0...v0.4.1) (2026-08-26)
+
+
+### Bug Fixes
+
+* keep uv.lock in step with the released version ([#23](https://github.com/andrelopes-code/depin/issues/23)) ([7575caf](https://github.com/andrelopes-code/depin/commit/7575caf5a8df150e86ff706a3a047b88ac28c864))
+
 ## [0.4.0](https://github.com/andrelopes-code/depin/compare/v0.3.0...v0.4.0) (2026-08-26)
 
 
