@@ -8,6 +8,7 @@ from contextvars import ContextVar
 from enum import Enum
 from typing import Final
 
+from depin._core import teardown
 from depin._core.teardown import Teardown
 from depin.errors import OutsideScopeError
 
@@ -123,8 +124,40 @@ class ScopeFrame:
         with self._mutex:
             self._teardowns.append(record)
 
-    def take_teardowns(self) -> tuple[Teardown, ...]:
-        """Detach the pending teardowns and return them newest-first."""
+    def drain_sync(self) -> None:
+        """Run every pending teardown, newest first, without an event loop.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed. Every failure is
+                reported; none is allowed to hide another.
+            TeardownError: An async provider left a teardown here, which needs
+                an event loop to run.
+        """
+        errors: list[Exception] = []
+        for record in self._take_teardowns():
+            try:
+                teardown.run_sync(record)
+            except Exception as exc:
+                errors.append(exc)
+        if errors:
+            raise ExceptionGroup('depin teardown errors', errors)
+
+    async def drain_async(self) -> None:
+        """Run every pending teardown, newest first, inside an event loop.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed.
+        """
+        errors: list[Exception] = []
+        for record in self._take_teardowns():
+            try:
+                await teardown.run_async(record)
+            except Exception as exc:
+                errors.append(exc)
+        if errors:
+            raise ExceptionGroup('depin teardown errors', errors)
+
+    def _take_teardowns(self) -> tuple[Teardown, ...]:
         with self._mutex:
             records = tuple(reversed(self._teardowns))
             self._teardowns.clear()

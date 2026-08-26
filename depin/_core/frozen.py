@@ -9,7 +9,7 @@ from depin._core import construct, injection, overrides
 from depin._core.markers import Token
 from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional_frame, push_frame
 from depin._core.spec import ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
-from depin._core.teardown import Teardown, drain_async, drain_sync
+from depin._core.teardown import Teardown
 from depin._core.typeguards import is_provider_key
 from depin.errors import AsyncInSyncContextError, MissingProviderError
 
@@ -164,7 +164,7 @@ class FrozenContainer:
             try:
                 yield frame
             finally:
-                drain_sync(frame)
+                frame.drain_sync()
 
     @contextlib.asynccontextmanager
     async def ascope(self) -> AsyncGenerator[ScopeFrame]:
@@ -180,7 +180,7 @@ class FrozenContainer:
             try:
                 yield frame
             finally:
-                await drain_async(frame)
+                await frame.drain_async()
 
     def close(self) -> None:
         """Tear down singleton providers that own lifecycle resources, synchronously.
@@ -212,7 +212,7 @@ class FrozenContainer:
 
             ```
         """
-        drain_sync(self._root)
+        self._root.drain_sync()
 
     async def aclose(self) -> None:
         """Tear down singleton providers that own lifecycle resources, asynchronously.
@@ -221,7 +221,7 @@ class FrozenContainer:
         singleton is an async provider. Drains the root scope in reverse order of
         construction, collecting failures into an `ExceptionGroup`.
         """
-        await drain_async(self._root)
+        await self._root.drain_async()
 
     @overload
     def inject[**P, R](self, fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]: ...

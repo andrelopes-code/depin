@@ -3,19 +3,16 @@
 A provider that owns a resource — a generator, an ``@contextmanager`` — leaves
 a teardown record on the scope frame that cached it. Draining a frame runs its
 records in reverse order of construction, so a dependency is always torn down
-after the value that used it. Failures never short-circuit the drain: they are
-collected and re-raised together as an ``ExceptionGroup``.
+after the value that used it. Running them is `ScopeFrame.drain_sync` /
+`ScopeFrame.drain_async`; this module only says what a record is and how one
+runs.
 """
 
 from collections.abc import AsyncIterator, Iterator
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from depin.errors import TeardownError
-
-if TYPE_CHECKING:
-    from depin._core.scope import ScopeFrame
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,36 +84,3 @@ def _exhaust_sync(gen: Iterator[object]) -> None:
     except StopIteration:
         return
     raise TeardownError('generator provider yielded more than once; it must yield exactly once')
-
-
-def drain_sync(frame: 'ScopeFrame') -> None:
-    """Run every pending teardown on ``frame``, newest first, without an event loop.
-
-    Raises:
-        ExceptionGroup: One or more teardowns failed. Every failure is reported;
-            none is allowed to hide another.
-    """
-    errors: list[Exception] = []
-    for record in frame.take_teardowns():
-        try:
-            run_sync(record)
-        except Exception as exc:
-            errors.append(exc)
-    if errors:
-        raise ExceptionGroup('depin teardown errors', errors)
-
-
-async def drain_async(frame: 'ScopeFrame') -> None:
-    """Run every pending teardown on ``frame``, newest first, inside an event loop.
-
-    Raises:
-        ExceptionGroup: One or more teardowns failed.
-    """
-    errors: list[Exception] = []
-    for record in frame.take_teardowns():
-        try:
-            await run_async(record)
-        except Exception as exc:
-            errors.append(exc)
-    if errors:
-        raise ExceptionGroup('depin teardown errors', errors)
