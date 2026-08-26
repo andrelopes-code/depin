@@ -1,0 +1,28 @@
+# Reproduces the first two gates before a commit is written. The type check and
+# the test suite stay in CI and in `uv run basedpyright` / `uv run pytest`,
+# because both need the project environment.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.4
+    hooks:
+      - id: ruff-format
+      - id: ruff-check
+        args: [--fix]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: trailing-whitespace
+        exclude: \.md$
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.11.13
+    hooks:
+      - id: uv-lock

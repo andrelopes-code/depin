@@ -13,5 +13,12 @@ updates:
     schedule:
       interval: "weekly"
     groups:
+      # Runtime dependencies of the fastapi extra. Grouped so a bump lands with
+      # its peers instead of alone: raising the starlette floor on its own once
+      # made the declared fastapi floor unsatisfiable.
+      python-runtime:
+        dependency-type: "production"
+        patterns: ["*"]
       python-dev:
         dependency-type: "development"
+        patterns: ["*"]
