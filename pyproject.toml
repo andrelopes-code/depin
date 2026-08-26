@@ -98,12 +98,15 @@ reportImplicitOverride = true
 reportMissingTypeStubs = false
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "depin", "docs"]
+# `examples/` is not part of the distribution; tests/integration imports it from the
+# working tree so the published examples stay executable.
+pythonpath = ["."]
 asyncio_mode = "auto"
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers --doctest-modules --doctest-glob=*.md"
 
 [tool.coverage.run]
-source = ["depin/_core"]
+source = ["depin"]
 branch = true
 
 [tool.coverage.report]
