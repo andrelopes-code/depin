@@ -3,47 +3,60 @@ name: docs
 on:
   push:
     branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Publish the current tree under this version and alias it as latest. Leave empty to publish dev only.'
+        required: false
+        default: ''
 
 permissions: {}
 
+# mike pushes to the gh-pages branch, so two runs must never overlap.
 concurrency:
-  group: pages
+  group: docs
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
+      contents: write
     steps:
+      # mike reads and rewrites the gh-pages branch, which a shallow clone omits.
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           python-version: '3.12'
 
-      - name: Build site
-        run: uv run --group docs mkdocs build --strict
+      - name: Configure git for the deploy commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
-        with:
-          path: site
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      # A push to main refreshes `dev`. A published release adds a version of its
+      # own, moves `latest` onto it, and points the site root there.
+      - name: Publish
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          if [ -n "${MANUAL_VERSION}" ]; then
+            version="${MANUAL_VERSION}"
+          elif [ -n "${RELEASE_TAG}" ]; then
+            tag="${RELEASE_TAG#v}"
+            version="${tag%.*}"
+          else
+            uv run --group docs mike deploy --push --update-aliases dev
+            exit 0
+          fi
+          uv run --group docs mike deploy --push --update-aliases "${version}" latest
+          uv run --group docs mike set-default --push latest
