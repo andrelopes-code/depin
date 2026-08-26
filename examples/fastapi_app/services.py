@@ -1,3 +1,5 @@
+"""Application services, wired from the per-request session."""
+
 from .registries import Session, services
 
 
@@ -7,4 +9,4 @@ class UserService:
         self.session = session
 
     async def get(self, uid: int) -> dict[str, int | str]:
-        return {'id': uid, 'name': 'Ana'}
+        return {'id': uid, 'name': 'Ana', 'db': self.session.db.url}

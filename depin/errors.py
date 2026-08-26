@@ -1,11 +1,19 @@
-"""Exceptions raised by depin, all rooted at `DepinError`."""
+"""Exceptions raised by depin, all rooted at `DepinError`.
+
+Every failure depin raises inherits `DepinError`, so a single ``except
+DepinError`` handles the library uniformly. Errors that a caller might
+reasonably want to catch as a standard Python exception also inherit the
+matching builtin — `InvalidProviderError` is a ``TypeError``,
+`InvalidScopeError` is a ``ValueError``, `TeardownError` is a ``RuntimeError``.
+"""
 
 
 class DepinError(Exception):
     """Base class for every error raised by depin.
 
     Catch this to handle any depin failure uniformly; catch a subclass for a
-    specific cause.
+    specific cause. No depin code path raises an exception outside this
+    hierarchy.
     """
 
 
@@ -60,4 +68,58 @@ class CaptiveDependencyError(DepinError):
     Raised by `Container.freeze()`. A singleton outlives every scope, so
     it would pin one scope's instance forever. Make the consumer scoped, or the
     dependency a singleton.
+    """
+
+
+class InvalidProviderError(DepinError, TypeError):
+    """A binding does not carry the type information depin needs.
+
+    Raised by `Container.freeze()` when a factory has no return annotation and
+    no ``provides=``, when a parameter has no type annotation and no default,
+    when a value cannot serve as a provider key, or when the registered source
+    is neither a class nor a callable. Also raised at resolution time if a
+    provider returns something incompatible with its declared shape — an
+    ``@contextmanager`` factory that returns a plain value, for instance.
+
+    Inherits ``TypeError``, so existing ``except TypeError`` handlers keep
+    working.
+    """
+
+
+class InvalidScopeError(DepinError, ValueError):
+    """A binding requests a lifetime it cannot have.
+
+    Raised by `Container.freeze()` when a generator or context-manager provider
+    is bound as `Scope.TRANSIENT`: such providers own a teardown, and a
+    transient value is never cached, so nothing would ever drain it. Bind it as
+    singleton or scoped.
+
+    Inherits ``ValueError``, so existing ``except ValueError`` handlers keep
+    working.
+    """
+
+
+class TeardownError(DepinError, RuntimeError):
+    """A provider's teardown could not run correctly.
+
+    Raised when a generator provider yields a second time during teardown
+    (a provider must yield exactly once), or when an async teardown is drained
+    from a synchronous scope. Individual teardown failures raised by user code
+    are collected into an ``ExceptionGroup`` instead, so one failure never hides
+    another.
+
+    Inherits ``RuntimeError``, so existing ``except RuntimeError`` handlers keep
+    working.
+    """
+
+
+class ContainerNotBoundError(DepinError, RuntimeError):
+    """A dependency was resolved with no container bound to the request.
+
+    Raised by the FastAPI integration when ``Inject[T]`` is evaluated outside a
+    `RequestScope`. Install the middleware with
+    ``app.add_middleware(RequestScope, container=...)``.
+
+    Inherits ``RuntimeError``, so existing ``except RuntimeError`` handlers keep
+    working.
     """

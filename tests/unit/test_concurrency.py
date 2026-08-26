@@ -1,3 +1,5 @@
+"""Single-flight construction across concurrent tasks and across event loops."""
+
 import asyncio
 
 import pytest
@@ -6,59 +8,116 @@ from depin._core.container import Container
 from depin._core.scope import Scope
 
 
-@pytest.mark.asyncio
-async def test_concurrent_singleton_async_constructs_once() -> None:
-    count = 0
+class _Gate:
+    """Suspends the first provider call until the test releases it.
 
-    class Pool:
-        def __init__(self) -> None:
-            nonlocal count
-            count += 1
+    The provider signals `entered` and then waits on `released`, so a second
+    resolution is guaranteed to run while the first is still mid-construction.
+    That is the interleaving single-flight has to survive, reached without a
+    sleep or any wall-clock assumption.
+    """
+
+    def __init__(self) -> None:
+        self.entered = asyncio.Event()
+        self.released = asyncio.Event()
+
+    async def pause(self) -> None:
+        self.entered.set()
+        await self.released.wait()
+
+    async def release_once_entered(self) -> None:
+        await self.entered.wait()
+        self.released.set()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_resolutions_build_a_singleton_once() -> None:
+    built: list[object] = []
+    gate = _Gate()
+
+    class Pool: ...
 
     async def make_pool() -> Pool:
-        await asyncio.sleep(0.01)
-        return Pool()
+        await gate.pause()
+        pool = Pool()
+        built.append(pool)
+        return pool
 
     frozen = Container().bind(make_pool, scope=Scope.SINGLETON, provides=Pool).freeze()
     async with frozen.ascope():
-        a, b = await asyncio.gather(frozen.aresolve(Pool), frozen.aresolve(Pool))
+        both = asyncio.gather(frozen.aresolve(Pool), frozen.aresolve(Pool))
+        await gate.release_once_entered()
+        first, second = await both
 
-    assert a is b
-    assert count == 1
+    assert first is second
+    assert len(built) == 1
 
 
 @pytest.mark.asyncio
-async def test_concurrent_scoped_async_constructs_once_per_scope() -> None:
-    count = 0
+async def test_concurrent_resolutions_build_a_scoped_provider_once_per_scope() -> None:
+    built: list[object] = []
+    gate = _Gate()
 
-    class Conn:
-        def __init__(self) -> None:
-            nonlocal count
-            count += 1
+    class Conn: ...
 
     async def make_conn() -> Conn:
-        await asyncio.sleep(0.01)
-        return Conn()
+        await gate.pause()
+        conn = Conn()
+        built.append(conn)
+        return conn
 
     frozen = Container().bind(make_conn, scope=Scope.SCOPED, provides=Conn).freeze()
     async with frozen.ascope():
-        a, b = await asyncio.gather(frozen.aresolve(Conn), frozen.aresolve(Conn))
+        both = asyncio.gather(frozen.aresolve(Conn), frozen.aresolve(Conn))
+        await gate.release_once_entered()
+        first, second = await both
 
-    assert a is b
-    assert count == 1
+    assert first is second
+    assert len(built) == 1
 
 
-def test_singleton_cache_survives_event_loop_change() -> None:
-    count = 0
+@pytest.mark.asyncio
+async def test_a_singleton_with_an_async_dependency_builds_both_once() -> None:
+    deps: list[object] = []
+    services: list[object] = []
+    gate = _Gate()
 
-    class Pool:
-        def __init__(self) -> None:
-            nonlocal count
-            count += 1
+    class Dep: ...
+
+    class Service:
+        def __init__(self, dep: Dep) -> None:
+            self.dep = dep
+            services.append(self)
+
+    async def make_dep() -> Dep:
+        await gate.pause()
+        dep = Dep()
+        deps.append(dep)
+        return dep
+
+    frozen = (
+        Container().bind(make_dep, scope=Scope.SINGLETON, provides=Dep).bind(Service, scope=Scope.SINGLETON).freeze()
+    )
+    async with frozen.ascope():
+        both = asyncio.gather(frozen.aresolve(Service), frozen.aresolve(Service))
+        await gate.release_once_entered()
+        first, second = await both
+
+    assert first is second
+    assert first.dep is second.dep
+    assert len(deps) == 1
+    assert len(services) == 1
+
+
+def test_a_singleton_survives_a_change_of_event_loop() -> None:
+    built: list[object] = []
+
+    class Pool: ...
 
     async def make() -> Pool:
-        await asyncio.sleep(0)
-        return Pool()
+        pool = Pool()
+        built.append(pool)
+        return pool
 
     frozen = Container().bind(make, scope=Scope.SINGLETON, provides=Pool).freeze()
 
@@ -66,13 +125,14 @@ def test_singleton_cache_survives_event_loop_change() -> None:
         async with frozen.ascope():
             return await frozen.aresolve(Pool)
 
-    a = asyncio.run(resolve())
-    b = asyncio.run(resolve())
-    assert a is b
-    assert count == 1
+    first = asyncio.run(resolve())
+    second = asyncio.run(resolve())
+
+    assert first is second
+    assert len(built) == 1
 
 
-def test_singleton_lock_reusable_across_loops_after_failed_build() -> None:
+def test_a_failed_build_leaves_the_key_resolvable_on_the_next_loop() -> None:
     attempts = 0
 
     class Flaky:
@@ -82,7 +142,6 @@ def test_singleton_lock_reusable_across_loops_after_failed_build() -> None:
     async def make() -> Flaky:
         nonlocal attempts
         attempts += 1
-        await asyncio.sleep(0)
         if attempts == 1:
             raise RuntimeError('first build fails')
         return Flaky()
@@ -95,38 +154,6 @@ def test_singleton_lock_reusable_across_loops_after_failed_build() -> None:
 
     with pytest.raises(RuntimeError, match='first build fails'):
         asyncio.run(resolve())
-    obj = asyncio.run(resolve())
-    assert obj.ok
+
+    assert asyncio.run(resolve()).ok
     assert attempts == 2
-
-
-@pytest.mark.asyncio
-async def test_concurrent_singleton_with_async_dep_constructs_once() -> None:
-    dep_count = 0
-    svc_count = 0
-
-    class Dep:
-        def __init__(self) -> None:
-            nonlocal dep_count
-            dep_count += 1
-
-    class Service:
-        def __init__(self, dep: Dep) -> None:
-            nonlocal svc_count
-            svc_count += 1
-            self.dep = dep
-
-    async def make_dep() -> Dep:
-        await asyncio.sleep(0.01)
-        return Dep()
-
-    frozen = (
-        Container().bind(make_dep, scope=Scope.SINGLETON, provides=Dep).bind(Service, scope=Scope.SINGLETON).freeze()
-    )
-    async with frozen.ascope():
-        a, b = await asyncio.gather(frozen.aresolve(Service), frozen.aresolve(Service))
-
-    assert a is b
-    assert a.dep is b.dep
-    assert dep_count == 1
-    assert svc_count == 1

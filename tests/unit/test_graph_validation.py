@@ -1,10 +1,17 @@
+"""Graph validation performed by freeze(): duplicates, cycles, captives, async reach."""
+
+from collections.abc import AsyncGenerator
+from typing import Annotated
+
 import pytest
 
-from depin._core.markers import Token
+from depin._core.container import Container
+from depin._core.graph import build_plan
+from depin._core.markers import Named, Token
 from depin._core.registry import Registry
-from depin._core.resolver import build_plan
 from depin._core.scope import Scope
 from depin.errors import (
+    AsyncInSyncContextError,
     CaptiveDependencyError,
     CircularDependencyError,
     DuplicateProviderError,
@@ -270,3 +277,57 @@ def test_sync_chain_with_async_dep_rejected() -> None:
     plan = build_plan(r.records())
     sync_spec = next(s for s in plan.order if s.source is sync_use)
     assert sync_spec.needs_async is True
+
+
+def test_async_dependency_propagates_through_a_sync_chain() -> None:
+    async def make_a() -> int:
+        return 1
+
+    def make_b(a: int) -> str:
+        return str(a)
+
+    def make_c(b: str) -> bytes:
+        return b.encode()
+
+    frozen = (
+        Container()
+        .bind(make_a, scope=Scope.SINGLETON, provides=int)
+        .bind(make_b, scope=Scope.SINGLETON, provides=str)
+        .bind(make_c, scope=Scope.SINGLETON, provides=bytes)
+        .freeze()
+    )
+    with pytest.raises(AsyncInSyncContextError):
+        _ = frozen[bytes]
+
+
+def test_async_generator_dependency_propagates_to_its_consumer() -> None:
+    async def make_a() -> AsyncGenerator[int]:
+        yield 1
+
+    def use(a: int) -> str:
+        return str(a)
+
+    frozen = (
+        Container()
+        .bind(make_a, scope=Scope.SINGLETON, provides=int)
+        .bind(use, scope=Scope.SINGLETON, provides=str)
+        .freeze()
+    )
+    with pytest.raises(AsyncInSyncContextError):
+        _ = frozen[str]
+
+
+def test_a_string_key_referenced_by_named_must_still_be_bound() -> None:
+    def provider() -> int:
+        return 99
+
+    def consumer(x: Annotated[int, Named('legacy_key')]) -> str:
+        return str(x)
+
+    builder = (
+        Container()
+        .bind(provider, scope=Scope.SINGLETON, provides=int)
+        .bind(consumer, scope=Scope.SINGLETON, provides=str)
+    )
+    with pytest.raises(MissingProviderError, match='legacy_key'):
+        _ = builder.freeze()

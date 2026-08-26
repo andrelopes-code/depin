@@ -123,7 +123,7 @@ async def test_route_body_parsing_unaffected_by_metadata_provider() -> None:
         def __init__(self, request: FastAPIRequest) -> None:
             self.probe = request.headers.get('x-probe', 'none')
 
-    frozen = Container().frame_provides(FastAPIRequest).bind(HeaderProbe, scope=Scope.SCOPED).freeze()
+    frozen = Container().scope_value(FastAPIRequest).bind(HeaderProbe, scope=Scope.SCOPED).freeze()
     app = FastAPI()
     app.add_middleware(RequestScope, container=frozen)
 

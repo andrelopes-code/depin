@@ -40,7 +40,7 @@ async def test_request_is_available_as_scoped_dependency() -> None:
         def __init__(self, request: FastAPIRequest) -> None:
             self.path = request.url.path
 
-    frozen = Container().frame_provides(FastAPIRequest).bind(Probe, scope=Scope.SCOPED).freeze()
+    frozen = Container().scope_value(FastAPIRequest).bind(Probe, scope=Scope.SCOPED).freeze()
 
     app = FastAPI()
     app.add_middleware(RequestScope, container=frozen)
