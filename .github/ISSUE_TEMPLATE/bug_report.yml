@@ -12,7 +12,7 @@ body:
     attributes:
       label: pydepin version
       description: Output of `python -c "import depin; print(depin.__version__)"`.
-      placeholder: 0.2.0
+      placeholder: 0.3.0
     validations:
       required: true
   - type: input
