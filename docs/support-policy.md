@@ -43,19 +43,24 @@ rather than assumed, and separately at the current release.
 ## Type checkers
 
 The public API is verified under `basedpyright --strict` and `mypy --strict`, and
-a conformance suite asserts the inferred type of every public call site. Neither
-checker is treated as authoritative over the other: a change must satisfy both.
+a conformance suite asserts the inferred type of the public call sites it covers.
+Neither checker is treated as authoritative over the other: a change must
+satisfy both.
 
 ### Known limitation: `provides` and `type[T]`
 
-`@provides(SomeProtocol)`, and equally `@provides(SomeABC)`, makes mypy report
-`error: Only concrete class can be given where "type[A]" is expected
-[type-abstract]` at the decorator line, in the caller's own file, under mypy's
-default settings. `basedpyright` does not report it.
+`@provides(SomeProtocol)`, and equally `@provides(SomeABC)`, makes mypy report an
+error at the decorator line, in the caller's own file, under mypy's default
+settings. For `@provides(Clock)` in `examples/testing/main.py`, the message is:
+
+`error: Only concrete class can be given where "type[Clock]" is expected  [type-abstract]`
+
+`basedpyright` does not report it.
 
 The cause is mypy's treatment of the parameter type, not a defect in the
 decorator: mypy raises `type-abstract` whenever a formal parameter is exactly
-`type[T]` with `T` a type variable, regardless of what is passed for it. The
+`type[T]` with `T` a type variable, regardless of what is passed for it, and
+substitutes the concrete class actually passed into the message. The
 workaround is a narrow suppression at the call site, `# type: ignore[type-abstract]`.
 The repository uses exactly that suppression in `examples/testing/main.py`.
 
