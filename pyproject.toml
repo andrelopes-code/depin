@@ -61,6 +61,10 @@ threads = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3",
 ]
+bench = [
+    "pytest>=9.0.3",
+    "pytest-benchmark>=5.1",
+]
 docs = [
     # MkDocs 2.0 removes the plugin system and the theming system with no
     # migration path, which breaks mkdocstrings and Material. Cap until the
