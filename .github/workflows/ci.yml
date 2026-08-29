@@ -131,8 +131,10 @@ jobs:
     # diagnostics it reports are deliberately left unfixed while ty is
     # pre-stable, so the check step below always exits 0 and surfaces them
     # in the job summary instead of showing a permanently red check that
-    # trains reviewers to ignore it. continue-on-error here is only a
-    # backstop for a genuine failure of the `uvx` invocation itself.
+    # trains reviewers to ignore it. continue-on-error here backstops the
+    # job's other steps instead — checkout, Install uv, Sync dependencies, or
+    # a failed write to the step summary — because the `uvx` invocation
+    # already exits 0 on its own via `|| true`, "command not found" included.
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -153,10 +155,15 @@ jobs:
       - name: Type check with ty
         run: |
           set -euo pipefail
-          output="$(uvx ty check 2>&1)" || true
+          set +e
+          output="$(uvx ty check 2>&1)"
+          status=$?
+          set -e
           echo "$output"
           {
             echo '### ty (advisory) diagnostics'
+            echo
+            echo "exit status: $status"
             echo
             echo '```'
             echo "$output"
