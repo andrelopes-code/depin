@@ -126,6 +126,7 @@ testpaths = ["tests", "depin", "docs"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers --doctest-modules --doctest-glob=*.md"
+filterwarnings = ["error::pytest.PytestUnhandledThreadExceptionWarning"]
 
 [tool.coverage.run]
 source = ["depin"]
