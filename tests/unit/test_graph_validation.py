@@ -85,6 +85,52 @@ def test_single_missing_provider_keeps_concise_message() -> None:
     assert msg.startswith('no provider for ')
 
 
+def test_defaulted_parameter_is_skipped_while_reporting_another_missing_one() -> None:
+    class A: ...
+
+    class B:
+        def __init__(self, a: A, x: int = 5) -> None: ...
+
+    r = Registry().bind(B, scope=Scope.SINGLETON)
+    with pytest.raises(MissingProviderError) as exc:
+        _ = build_plan(r.records())
+    msg = str(exc.value)
+    assert 'missing providers' not in msg
+    assert 'int' not in msg
+
+
+def test_a_cycle_does_not_stop_the_missing_provider_report() -> None:
+    class Gone: ...
+
+    class A:
+        def __init__(self, b: 'B') -> None: ...
+
+    class B:
+        def __init__(self, a: A, gone: Gone) -> None: ...
+
+    r = Registry().bind(A, scope=Scope.SINGLETON).bind(B, scope=Scope.SINGLETON)
+    with pytest.raises(MissingProviderError, match='Gone'):
+        _ = build_plan(r.records())
+
+
+def test_the_same_missing_key_is_reported_once_for_equally_deep_chains() -> None:
+    class Gone: ...
+
+    class Left:
+        def __init__(self, gone: Gone) -> None: ...
+
+    class Right:
+        def __init__(self, gone: Gone) -> None: ...
+
+    r = Registry().bind(Left, scope=Scope.SINGLETON).bind(Right, scope=Scope.SINGLETON)
+    with pytest.raises(MissingProviderError) as exc:
+        _ = build_plan(r.records())
+    msg = str(exc.value)
+    assert 'missing providers' not in msg
+    assert 'Left' in msg
+    assert 'Right' not in msg
+
+
 def test_missing_provider_message_includes_chain() -> None:
     class A: ...
 

@@ -62,11 +62,12 @@ def _check_duplicates(specs: Iterable[ProviderSpec]) -> None:
 
 
 def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index) -> None:
-    missing: dict[_Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]] = {}
-    for root in specs:
-        _collect_missing(root, by_key, (root,), missing)
-    if not missing:
+    all_specs = tuple(specs)
+    if not _any_unsatisfied(all_specs, by_key):
         return
+    missing: dict[_Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]] = {}
+    for root in all_specs:
+        _collect_missing(root, by_key, (root,), missing)
     # Deepest chain first: the longest resolution path is the most informative
     # one to show when several providers are unsatisfied.
     ordered = sorted(missing.items(), key=lambda kv: len(kv[1][0]), reverse=True)
@@ -75,6 +76,19 @@ def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index) -> None:
         raise MissingProviderError(lines[0])
     body = '\n  - '.join(lines)
     raise MissingProviderError(f'{len(lines)} missing providers:\n  - {body}')
+
+
+def _any_unsatisfied(specs: Iterable[ProviderSpec], by_key: _Index) -> bool:
+    """Whether some spec declares a required parameter that no binding provides.
+
+    Exactly the condition `_collect_missing` ends up detecting, but answered in
+    one pass over the specs instead of a walk from every root: a parameter is
+    unsatisfied where it stands, independently of the chains that reach it. The
+    walk then runs only to reconstruct the deepest chain for the error message.
+    """
+    return any(
+        not param.has_default and (param.key, param.tag) not in by_key for spec in specs for param in spec.params
+    )
 
 
 def _collect_missing(
