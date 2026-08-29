@@ -194,7 +194,15 @@ def _suggest_candidates(target: object) -> list[str]:
             if not isinstance(obj, type) or id(obj) in seen:
                 continue
             seen.add(id(obj))
-            if get_provides(obj) is target:
+            try:
+                found = get_provides(obj)
+            except Exception:
+                # Same rationale as the module attribute read above: `get_provides`
+                # is itself an attribute read (a class whose metaclass defines
+                # `__getattr__` can raise anything from it), and it must be no
+                # less forgiving than the read that produced `obj`.
+                continue
+            if found is target:
                 out.append(f'{obj.__module__}.{obj.__qualname__}')
     out.sort()
     return out[:_SUGGEST_RESULT_LIMIT]

@@ -207,6 +207,37 @@ def test_missing_provider_suggestion_scan_survives_a_hostile_module_attribute() 
         del sys.modules[hostile.__name__]
 
 
+def test_missing_provider_suggestion_scan_survives_a_hostile_metaclass_getattr() -> None:
+    """A class whose metaclass raises on attribute access must not corrupt the raised error.
+
+    `get_provides` reads `__depin_provides__` via `getattr(cls, ..., None)`, whose
+    three-argument form suppresses only `AttributeError`. A metaclass `__getattr__`
+    raising anything else must still be swallowed by the scan's guard, the same as
+    a hostile module attribute is, leaving the real candidate reachable.
+    """
+
+    class _HostileMeta(type):
+        def __getattr__(cls, name: str) -> object:
+            raise RuntimeError('this class attribute always raises')
+
+    class _Hostile(metaclass=_HostileMeta): ...
+
+    hostile_module = ModuleType('depin_test_hostile_metaclass_module')
+    hostile_module.__dict__['Hostile'] = _Hostile
+    sys.modules[hostile_module.__name__] = hostile_module
+    try:
+
+        class Repo:
+            def __init__(self, db: MissingProviderSuggestionTarget) -> None: ...
+
+        r = Registry().bind(Repo, scope=Scope.SINGLETON)
+        with pytest.raises(MissingProviderError) as exc:
+            _ = build_plan(r.records())
+        assert 'MissingProviderSuggestionCandidate' in str(exc.value)
+    finally:
+        del sys.modules[hostile_module.__name__]
+
+
 def test_duplicate_class_binding_raises() -> None:
     class Foo: ...
 
