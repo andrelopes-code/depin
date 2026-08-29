@@ -8,6 +8,7 @@
 - [ ] `uv run ruff format` passes.
 - [ ] `uv run ruff check` passes.
 - [ ] `uv run basedpyright` passes.
+- [ ] `uv run mypy` passes.
 - [ ] `uv run pytest` passes.
 - [ ] Tests added or updated for the change.
 - [ ] Coverage for `depin/_core/` holds at or above 95%.

@@ -17,7 +17,7 @@ The library leans heavily on Python's modern type system — PEP 695 generics, `
 ## Tooling
 
 - **Package manager:** `uv`. Use `uv add <pkg>` / `uv remove <pkg>`. Commit `uv.lock`.
-- **Type checker:** `basedpyright` in strict mode. Configuration lives in `pyproject.toml` under `[tool.basedpyright]` — do not reintroduce `pyrightconfig.json`.
+- **Type checkers:** `basedpyright` in strict mode, plus `mypy --strict` as a second checker. Configuration lives in `pyproject.toml` under `[tool.basedpyright]` and `[tool.mypy]` — do not reintroduce `pyrightconfig.json`. CI runs both against each Python version in the test matrix.
 - **Formatter & linter:** `ruff`. Line length 120, single quotes.
 - **Tests:** `pytest` + `pytest-asyncio`.
 - **Python:** 3.12 or newer (PEP 695 syntax is used throughout).
@@ -30,10 +30,11 @@ Run, in order, from the repo root:
 uv run ruff format
 uv run ruff check
 uv run basedpyright
+uv run mypy
 uv run pytest
 ```
 
-A commit is only ready when all four pass with no warnings or waivers.
+A commit is only ready when all five pass with no warnings or waivers.
 `pytest` is configured with `--doctest-modules` over `tests` and `depin`, so
 every `Example:` in a public docstring is executed as part of the gate.
 
