@@ -1,13 +1,15 @@
 """Graph validation performed by freeze(): duplicates, cycles, captives, async reach."""
 
+import sys
 from collections.abc import AsyncGenerator
-from typing import Annotated
+from types import ModuleType
+from typing import Annotated, override
 
 import pytest
 
 from depin._core.container import Container
 from depin._core.graph import build_plan
-from depin._core.markers import Named, Token
+from depin._core.markers import Named, Token, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope
 from depin.errors import (
@@ -17,6 +19,20 @@ from depin.errors import (
     DuplicateProviderError,
     MissingProviderError,
 )
+
+
+class MissingProviderSuggestionTarget:
+    """Undecorated key looked up by `test_missing_provider_suggests_candidates_with_provides`."""
+
+
+@provides(MissingProviderSuggestionTarget)
+class MissingProviderSuggestionCandidate(MissingProviderSuggestionTarget):
+    """The `@provides` class the suggestion scan is expected to find.
+
+    Module-level by necessity: `_suggest_candidates` finds classes by walking
+    `sys.modules`, so a function-local class is invisible to it, and no real
+    application decorates a function-local class with `@provides` either.
+    """
 
 
 def test_missing_provider_raises() -> None:
@@ -150,23 +166,45 @@ def test_missing_provider_message_includes_chain() -> None:
 
 
 def test_missing_provider_suggests_candidates_with_provides() -> None:
-    from depin._core.markers import provides
-
-    class Database: ...
-
-    @provides(Database)
-    class PgDatabase(Database): ...
-
     class Repo:
-        def __init__(self, db: Database) -> None: ...
+        def __init__(self, db: MissingProviderSuggestionTarget) -> None: ...
 
-    # A local class only exists while something references it; keep this
-    # reference so PgDatabase is not garbage-collected before build_plan runs.
-    assert PgDatabase is not None
     r = Registry().bind(Repo, scope=Scope.SINGLETON)
     with pytest.raises(MissingProviderError) as exc:
         _ = build_plan(r.records())
-    assert 'PgDatabase' in str(exc.value)
+    assert 'MissingProviderSuggestionCandidate' in str(exc.value)
+
+
+def test_missing_provider_suggestion_scan_survives_a_hostile_module_attribute() -> None:
+    """A module whose attribute access raises must not corrupt the raised error.
+
+    Reproduces the module `__getattr__` hook / lazy-import-shim / partially
+    initialised circular import case the scan guards against: reading the
+    module's `boom` attribute raises, and the scan must swallow only that,
+    still finding the real candidate from another module.
+    """
+
+    class _HostileModule(ModuleType):
+        @override
+        def __getattribute__(self, name: str) -> object:
+            if name == 'boom':
+                raise RuntimeError('this module attribute always raises')
+            return super().__getattribute__(name)
+
+    hostile = _HostileModule('depin_test_hostile_module')
+    hostile.__dict__['boom'] = 'trap'
+    sys.modules[hostile.__name__] = hostile
+    try:
+
+        class Repo:
+            def __init__(self, db: MissingProviderSuggestionTarget) -> None: ...
+
+        r = Registry().bind(Repo, scope=Scope.SINGLETON)
+        with pytest.raises(MissingProviderError) as exc:
+            _ = build_plan(r.records())
+        assert 'MissingProviderSuggestionCandidate' in str(exc.value)
+    finally:
+        del sys.modules[hostile.__name__]
 
 
 def test_duplicate_class_binding_raises() -> None:

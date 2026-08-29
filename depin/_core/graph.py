@@ -5,7 +5,9 @@ value is constructed: duplicates, unsatisfied dependencies, cycles, captive
 singletons, and which providers transitively need async resolution.
 """
 
+import sys
 from collections.abc import Iterable
+from types import ModuleType
 
 from depin._core.markers import get_provides
 from depin._core.providers import ASYNC_SHAPES, build_specs
@@ -140,26 +142,60 @@ def _format_missing(
 _SUGGEST_RESULT_LIMIT = 5
 
 
-def _suggest_candidates(target: object) -> list[str]:
-    """Scan live classes for `@provides(target)` hints. Used only at error time.
+def _loaded_modules() -> list[object]:
+    """Snapshot of ``sys.modules``' values, typed as `object`, not `ModuleType`.
 
-    The scan is unbounded and always runs to completion: it only happens on a
-    path that is already raising and aborting `freeze()`, so a pass over a few
-    hundred thousand objects is negligible next to a startup that has already
-    failed. Collecting every match and sorting before truncating to
+    The typeshed stub for ``sys.modules`` promises ``dict[str, ModuleType]``,
+    but the runtime does not keep that promise: a failed import leaves `None`
+    behind, and `typing` itself registers `typing.io`/`typing.re` as classes
+    standing in for modules. Returning `object` keeps the `isinstance` guard
+    in `_suggest_candidates` meaningful instead of flagged as unreachable by
+    a checker that trusts the narrower stub.
+    """
+    return list(sys.modules.values())
+
+
+def _suggest_candidates(target: object) -> list[str]:
+    """Scan loaded modules for `@provides(target)` hints. Used only at error time.
+
+    Candidates are found by walking every module in ``sys.modules`` and every
+    attribute in each module's namespace, rather than by scanning the garbage
+    collector's object graph: on free-threaded builds, ``gc.get_objects()``
+    stops enumerating heap types entirely once any thread has run, so it
+    misses classes it previously found and never recovers them. A module scan
+    has no such gap. The scan is unbounded and always runs to completion: it
+    only happens on a path that is already raising and aborting `freeze()`, so
+    walking every loaded module is negligible next to a startup that has
+    already failed. Collecting every match and sorting before truncating to
     ``_SUGGEST_RESULT_LIMIT`` is what keeps the reported candidates independent
-    of ``gc.get_objects()``'s order, which is otherwise unspecified.
+    of module and attribute iteration order, which is otherwise unspecified.
     """
     if not isinstance(target, type):
         return []
-    import gc
 
     out: list[str] = []
-    for obj in gc.get_objects():
-        if not isinstance(obj, type):
+    seen: set[int] = set()
+    for module in _loaded_modules():
+        if not isinstance(module, ModuleType):
+            # `sys.modules` entries are conventionally modules, but nothing
+            # enforces it: `typing` itself registers `typing.io`/`typing.re`
+            # as classes standing in for modules, and `None` marks a failed
+            # import. Neither is a namespace this scan means to walk.
             continue
-        if get_provides(obj) is target:
-            out.append(f'{obj.__module__}.{obj.__qualname__}')
+        for name in list(vars(module)):
+            try:
+                obj = getattr(module, name)
+            except Exception:
+                # Best-effort scan: a hostile module `__getattr__`, a lazy-import
+                # shim, or a partially initialised module mid circular-import can
+                # raise anything on attribute access; none of that may break the
+                # error path that is already reporting a different, real failure.
+                continue
+            if not isinstance(obj, type) or id(obj) in seen:
+                continue
+            seen.add(id(obj))
+            if get_provides(obj) is target:
+                out.append(f'{obj.__module__}.{obj.__qualname__}')
     out.sort()
     return out[:_SUGGEST_RESULT_LIMIT]
 
