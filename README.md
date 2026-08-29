@@ -183,8 +183,9 @@ full test suite with its embedded doctests, and a 95% coverage floor, on Python
 3.12–3.14 across Linux, macOS, and Windows, plus the free-threaded builds of 3.13
 and 3.14. See the
 [support policy](https://andrelopes-code.github.io/depin/support-policy/).
-Releases are published from CI via PyPI Trusted Publishing. Minor releases may still contain breaking changes until 1.0; those
-are marked in the [changelog](CHANGELOG.md).
+Releases are published from CI via PyPI Trusted Publishing. Minor releases may
+still contain breaking changes until 1.0; those are marked in the
+[changelog](CHANGELOG.md).
 
 ## Development
 
