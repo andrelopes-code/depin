@@ -121,6 +121,33 @@ jobs:
       - name: Test
         run: uv run --no-sync pytest tests/unit
 
+  ty:
+    name: ty (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # ty is still on 0.0.x versioning with no stable API, and its own docs warn
+    # that diagnostics can change between any two releases. Advance signal from
+    # a second, independently-implemented checker, not a merge gate.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+
+      - name: Sync dependencies
+        run: uv sync --locked --all-extras
+
+      # Run through uvx instead of the dev group: a 0.0.x tool with no stable
+      # API has no business in uv.lock or every contributor's environment, and
+      # this advisory job wants whatever ty currently does, not a pinned cut.
+      # Paths come from `[tool.ty.src] include` in pyproject.toml, not a
+      # literal list here, so they cannot drift from what the other checkers see.
+      - name: Type check with ty
+        run: uvx ty check
+
   benchmarks:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

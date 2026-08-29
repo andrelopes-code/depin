@@ -120,6 +120,11 @@ strict = true
 warn_unreachable = true
 enable_error_code = ["redundant-expr", "possibly-undefined", "truthy-bool", "ignore-without-code"]
 
+# Advisory only (see the `ty` job in `.github/workflows/ci.yml`); the file list
+# still mirrors `[tool.basedpyright] include` exactly, for the same reason.
+[tool.ty.src]
+include = ["depin", "tests", "examples"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests", "depin", "docs"]
 # `examples/` is not part of the distribution; tests/integration imports it from the
