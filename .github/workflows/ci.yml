@@ -43,8 +43,10 @@ jobs:
       - name: Lint
         run: uv run ruff check
 
+      # The `pythonVersion` pinned in pyproject.toml is the floor; the matrix
+      # entry is what this job actually runs, and it is what gets checked here.
       - name: Type check
-        run: uv run basedpyright
+        run: uv run basedpyright --pythonversion ${{ matrix.python-version }}
 
       - name: Test
         run: uv run pytest --cov=depin --cov-report=xml --cov-report=term-missing
