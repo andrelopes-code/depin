@@ -123,7 +123,7 @@ doctests executed by `uv run pytest`.
 
 1. Create a topic branch off `main`.
 2. Make your change, keeping commits focused and conventional.
-3. Ensure the four gates pass locally and that coverage holds.
+3. Ensure the five gates pass locally and that coverage holds.
 4. Push the branch and open a pull request against `main`.
 5. Give the PR a Conventional-Commit-style title — it becomes the squashed
    commit subject and feeds the release tooling.
