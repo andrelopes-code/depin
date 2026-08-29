@@ -49,7 +49,7 @@ jobs:
         run: uv run basedpyright --pythonversion ${{ matrix.python-version }}
 
       - name: Type check with mypy
-        run: uv run mypy
+        run: uv run mypy --python-version ${{ matrix.python-version }}
 
       - name: Test
         run: uv run pytest --cov=depin --cov-report=xml --cov-report=term-missing
