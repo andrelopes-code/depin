@@ -257,6 +257,35 @@ def test_singleton_capturing_scoped_through_transient_is_rejected() -> None:
     assert chain.index('Service') < chain.index('Work') < chain.index('Session')
 
 
+def test_captive_chain_names_the_branch_the_walk_took() -> None:
+    class Session: ...
+
+    class Inner:
+        def __init__(self, session: Session) -> None: ...
+
+    class Left:
+        def __init__(self, inner: Inner) -> None: ...
+
+    class Right:
+        def __init__(self, inner: Inner) -> None: ...
+
+    class Service:
+        def __init__(self, left: Left, right: Right) -> None: ...
+
+    r = (
+        Registry()
+        .bind(Session, scope=Scope.SCOPED)
+        .bind(Inner, scope=Scope.TRANSIENT)
+        .bind(Left, scope=Scope.TRANSIENT)
+        .bind(Right, scope=Scope.TRANSIENT)
+        .bind(Service, scope=Scope.SINGLETON)
+    )
+    with pytest.raises(CaptiveDependencyError) as exc:
+        _ = build_plan(r.records())
+    chain = str(exc.value).split('chain: ', 1)[1].split(')', 1)[0]
+    assert [step.rsplit('.', 1)[-1] for step in chain.split(' -> ')] == ['Service', 'Right', 'Inner', 'Session']
+
+
 def test_scoped_depending_on_scoped_is_allowed() -> None:
     class Session: ...
 

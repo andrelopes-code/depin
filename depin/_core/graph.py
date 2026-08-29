@@ -215,22 +215,43 @@ def _check_captive(order: Iterable[ProviderSpec], by_key: _Index) -> None:
     for root in order:
         if root.scope is not Scope.SINGLETON:
             continue
-        seen: set[_Ident] = set()
-        stack: list[tuple[ProviderSpec, tuple[ProviderSpec, ...]]] = [(root, (root,))]
+        reached_from: dict[_Ident, ProviderSpec] = {}
+        stack: list[ProviderSpec] = [root]
         while stack:
-            spec, chain = stack.pop()
+            spec = stack.pop()
             for param in spec.params:
                 dep = by_key.get((param.key, param.tag))
                 if dep is None:
                     continue
                 if dep.scope is Scope.SCOPED:
-                    raise CaptiveDependencyError(_format_captive(root, dep, (*chain, dep)))
+                    chain = (*_captive_chain(root, spec, reached_from), dep)
+                    raise CaptiveDependencyError(_format_captive(root, dep, chain))
                 if dep.scope is Scope.TRANSIENT:
                     ident = (dep.key, dep.tag)
-                    if ident in seen:
+                    if ident in reached_from:
                         continue
-                    seen.add(ident)
-                    stack.append((dep, (*chain, dep)))
+                    reached_from[ident] = spec
+                    stack.append(dep)
+
+
+def _captive_chain(
+    root: ProviderSpec,
+    spec: ProviderSpec,
+    reached_from: dict[_Ident, ProviderSpec],
+) -> tuple[ProviderSpec, ...]:
+    """Rebuild the ``root -> ... -> spec`` path from the walk's parent links.
+
+    `reached_from` records one parent per transient, because the walk pushes each
+    at most once, so following it back from `spec` yields the single path the
+    walk took to reach it.
+    """
+    chain = [spec]
+    node = spec
+    while (node.key, node.tag) != (root.key, root.tag):
+        node = reached_from[(node.key, node.tag)]
+        chain.append(node)
+    chain.reverse()
+    return tuple(chain)
 
 
 def _format_captive(root: ProviderSpec, dep: ProviderSpec, chain: tuple[ProviderSpec, ...]) -> str:
