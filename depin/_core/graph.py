@@ -147,10 +147,11 @@ def _loaded_modules() -> list[object]:
 
     The typeshed stub for ``sys.modules`` promises ``dict[str, ModuleType]``,
     but the runtime does not keep that promise: a failed import leaves `None`
-    behind, and `typing` itself registers `typing.io`/`typing.re` as classes
-    standing in for modules. Returning `object` keeps the `isinstance` guard
-    in `_suggest_candidates` meaningful instead of flagged as unreachable by
-    a checker that trusts the narrower stub.
+    behind, on every version. On 3.12 only, `typing` also registers
+    `typing.io`/`typing.re` as classes standing in for modules; CPython removed
+    both in 3.13. Returning `object` keeps the `isinstance` guard in
+    `_suggest_candidates` meaningful instead of flagged as unreachable by a
+    checker that trusts the narrower stub.
     """
     return list(sys.modules.values())
 
@@ -182,9 +183,10 @@ def _suggest_candidates(target: object) -> list[str]:
     for module in _loaded_modules():
         if not isinstance(module, ModuleType):
             # `sys.modules` entries are conventionally modules, but nothing
-            # enforces it: `typing` itself registers `typing.io`/`typing.re`
-            # as classes standing in for modules, and `None` marks a failed
-            # import. Neither is a namespace this scan means to walk.
+            # enforces it: a failed import leaves `None` behind, on every
+            # version. On 3.12 only, `typing` also registers `typing.io`/
+            # `typing.re` as classes standing in for modules. Neither is a
+            # namespace this scan means to walk.
             continue
         for name in list(vars(module)):
             try:
@@ -194,6 +196,10 @@ def _suggest_candidates(target: object) -> list[str]:
                 # shim, or a partially initialised module mid circular-import can
                 # raise anything on attribute access; none of that may break the
                 # error path that is already reporting a different, real failure.
+                # This also swallows a `DepinError` raised from the read, which
+                # this file's own rule forbids everywhere else — relaxed here on
+                # purpose because depin installs no module-level `__getattr__`,
+                # making the case practically unreachable.
                 continue
             if not isinstance(obj, type) or id(obj) in seen:
                 continue
