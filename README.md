@@ -5,6 +5,7 @@
 [![PyPI](https://img.shields.io/pypi/v/pydepin.svg)](https://pypi.org/project/pydepin/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pydepin.svg)](https://pypi.org/project/pydepin/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/andrelopes-code/depin/blob/main/LICENSE)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/andrelopes-code/depin/badge)](https://scorecard.dev/viewer/?uri=github.com/andrelopes-code/depin)
 
 Type-first dependency injection for Python 3.12+.
 

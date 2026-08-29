@@ -107,6 +107,8 @@ jobs:
       url: https://pypi.org/p/pydepin
     permissions:
       id-token: write
+      attestations: write
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -125,6 +127,25 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        with:
+          attestations: true
+
+      # The SBOM is generated from an environment with the built wheel and its
+      # optional extra installed, so it records what a consumer actually gets
+      # rather than what the lockfile happens to hold.
+      - name: Generate the SBOM
+        run: |
+          set -euo pipefail
+          uv venv /tmp/sbom
+          uv pip install --python /tmp/sbom "$(echo dist/*.whl)[fastapi]"
+          uvx --from cyclonedx-bom cyclonedx-py environment /tmp/sbom \
+            --output-format JSON --output-file sbom.cdx.json
+
+      - name: Attach it to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: gh release upload "${TAG}" sbom.cdx.json --clobber
 
   docs:
     needs: release-please
