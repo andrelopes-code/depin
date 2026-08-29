@@ -12,7 +12,7 @@ two.
 
 `depin` is a type-first dependency-injection library for Python. The core has **zero runtime dependencies**. Framework integrations (FastAPI, etc.) live under `depin/ext/` and are optional installation extras.
 
-The library leans heavily on Python's modern type system — PEP 695 generics, `Protocol`, `Annotated`, `@overload`, `ParamSpec` — to give consumers precise return types without any `# type: ignore` at call sites.
+The library leans heavily on Python's modern type system — PEP 695 generics, `Protocol`, `Annotated`, `@overload`, `ParamSpec` — to give consumers precise return types without a `# type: ignore` at call sites, with one documented exception recorded in `docs/support-policy.md`.
 
 ## Tooling
 

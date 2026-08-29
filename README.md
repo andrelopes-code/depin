@@ -24,7 +24,8 @@ Type-first dependency injection for Python 3.12+.
   runtime dependencies.**
 - No `# type: ignore` at call sites: `resolve()`, `frozen[key]`, `injected()`,
   and `Inject[T]` are all precisely typed under `basedpyright --strict` and
-  `mypy --strict`.
+  `mypy --strict`. One documented exception outside that list: see the
+  [support policy](https://andrelopes-code.github.io/depin/support-policy/#known-limitation-provides-and-typet).
 
 ## Install
 
