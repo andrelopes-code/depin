@@ -93,4 +93,4 @@ def test_the_scope_decorators_register_a_factory_and_return_it_unchanged() -> No
 
 def test_the_scope_decorators_reject_a_non_callable_target() -> None:
     with pytest.raises(InvalidProviderError, match='expected a class or a callable'):
-        Container().singleton()(42)  # pyright: ignore[reportArgumentType, reportCallIssue, reportUnusedCallResult]
+        Container().singleton()(42)  # type: ignore[call-overload]  # pyright: ignore[reportArgumentType, reportCallIssue, reportUnusedCallResult]

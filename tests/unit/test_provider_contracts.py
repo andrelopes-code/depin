@@ -44,7 +44,7 @@ def _disguised_as_context_manager(returns: object) -> Callable[[], object]:
     def impostor() -> object:
         return returns
 
-    impostor.__wrapped__ = real  # pyright: ignore[reportFunctionMemberAccess]
+    impostor.__wrapped__ = real  # type: ignore[attr-defined]  # pyright: ignore[reportFunctionMemberAccess]
     return impostor
 
 

@@ -128,7 +128,7 @@ def test_param_spec_picks_tag() -> None:
 
 
 def test_factory_without_return_annotation_is_rejected() -> None:
-    def make():  # pyright: ignore[reportUnknownParameterType,reportMissingReturnType]
+    def make():  # type: ignore[no-untyped-def]  # pyright: ignore[reportUnknownParameterType,reportMissingReturnType]
         return 1
 
     r = Registry().bind(make, scope=Scope.SINGLETON)  # pyright: ignore[reportUnknownArgumentType]
@@ -137,7 +137,7 @@ def test_factory_without_return_annotation_is_rejected() -> None:
 
 
 def test_non_callable_source_is_rejected() -> None:
-    r = Registry().bind(42, scope=Scope.SINGLETON)  # pyright: ignore[reportArgumentType]
+    r = Registry().bind(42, scope=Scope.SINGLETON)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
     with pytest.raises(InvalidProviderError, match='cannot determine how to call'):
         _ = build_specs(r.records())
 
@@ -145,7 +145,7 @@ def test_non_callable_source_is_rejected() -> None:
 def test_parameter_without_annotation_or_default_is_rejected() -> None:
     class A:
         # `x` intentionally lacks an annotation — exercises the missing-annotation guard.
-        def __init__(self, x) -> None:  # pyright: ignore[reportMissingParameterType,reportUnknownParameterType]
+        def __init__(self, x) -> None:  # type: ignore[no-untyped-def]  # pyright: ignore[reportMissingParameterType,reportUnknownParameterType]
             self.x = x
 
     r = Registry().bind(A, scope=Scope.SINGLETON)
@@ -220,8 +220,8 @@ def test_a_builtin_without_an_inspectable_signature_declares_no_parameters() -> 
 
 
 def test_an_unannotated_parameter_with_a_default_is_left_to_the_callable() -> None:
-    def make(retries=3) -> int:  # pyright: ignore[reportMissingParameterType,reportUnknownParameterType]
-        return retries  # pyright: ignore[reportUnknownVariableType]
+    def make(retries=3) -> int:  # type: ignore[no-untyped-def]  # pyright: ignore[reportMissingParameterType,reportUnknownParameterType]
+        return retries  # type: ignore[no-any-return]  # pyright: ignore[reportUnknownVariableType]
 
     r = Registry().bind(make, scope=Scope.SINGLETON, provides=int)  # pyright: ignore[reportUnknownArgumentType]
     [spec] = list(build_specs(r.records()))
@@ -233,7 +233,7 @@ def test_an_unannotated_parameter_with_a_default_is_left_to_the_callable() -> No
 def test_an_unresolvable_annotation_is_reported_as_such() -> None:
     """The message must not claim the annotation is missing when it is merely unresolvable."""
 
-    def make(dep: 'NeverDefined') -> int:  # noqa: F821  # pyright: ignore[reportUndefinedVariable,reportUnknownParameterType]
+    def make(dep: 'NeverDefined') -> int:  # type: ignore[name-defined]  # noqa: F821  # pyright: ignore[reportUndefinedVariable,reportUnknownParameterType]
         del dep
         return 1
 

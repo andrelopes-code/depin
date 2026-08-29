@@ -18,7 +18,7 @@ def test_resolving_an_unregistered_key_names_the_key() -> None:
 def test_resolving_a_value_that_is_not_a_provider_key_raises() -> None:
     frozen = Container().freeze()
     with pytest.raises(MissingProviderError, match='not a valid key type'):
-        frozen.resolve(42)  # pyright: ignore[reportArgumentType, reportUnusedCallResult]
+        frozen.resolve(42)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType, reportUnusedCallResult]
 
 
 def test_sync_resolution_of_an_async_provider_points_at_aresolve() -> None:

@@ -126,7 +126,7 @@ def injected[T](key: type[T] | Token[T], *, tag: str | None = None) -> T:
     # declare it returns T while producing an unrelated _InjectMarker. This is the
     # narrowest possible boundary; inject() substitutes the resolved value before
     # any caller observes the default.
-    return _InjectMarker(key, tag)  # pyright: ignore[reportReturnType]
+    return _InjectMarker(key, tag)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
 
 _PROVIDES_ATTR = '__depin_provides__'
