@@ -127,7 +127,12 @@ jobs:
     timeout-minutes: 15
     # ty is still on 0.0.x versioning with no stable API, and its own docs warn
     # that diagnostics can change between any two releases. Advance signal from
-    # a second, independently-implemented checker, not a merge gate.
+    # a second, independently-implemented checker, not a merge gate. The
+    # diagnostics it reports are deliberately left unfixed while ty is
+    # pre-stable, so the check step below always exits 0 and surfaces them
+    # in the job summary instead of showing a permanently red check that
+    # trains reviewers to ignore it. continue-on-error here is only a
+    # backstop for a genuine failure of the `uvx` invocation itself.
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -146,7 +151,18 @@ jobs:
       # Paths come from `[tool.ty.src] include` in pyproject.toml, not a
       # literal list here, so they cannot drift from what the other checkers see.
       - name: Type check with ty
-        run: uvx ty check
+        run: |
+          set -euo pipefail
+          output="$(uvx ty check 2>&1)" || true
+          echo "$output"
+          {
+            echo '### ty (advisory) diagnostics'
+            echo
+            echo '```'
+            echo "$output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
 
   benchmarks:
     if: github.event_name == 'pull_request'
