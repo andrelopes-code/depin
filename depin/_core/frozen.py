@@ -48,10 +48,6 @@ class FrozenContainer:
         self._plan = plan
         self._root = ScopeFrame()
 
-    @overload
-    def __getitem__[T](self, key: type[T]) -> T: ...
-    @overload
-    def __getitem__[T](self, key: Token[T]) -> T: ...
     def __getitem__[T](self, key: type[T] | Token[T]) -> T:
         """Resolve ``key`` synchronously; shorthand for `resolve()`.
 
