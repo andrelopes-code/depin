@@ -34,6 +34,8 @@ def _means(report: pathlib.Path) -> dict[str, float]:
 
 
 def main(argv: list[str]) -> int:
+    # Shared CI runners are noisy; 25% catches an order-of-magnitude
+    # regression without failing the build on ordinary run-to-run drift.
     limit = 0.25
     positional: list[str] = []
     for argument in argv:
@@ -50,8 +52,11 @@ def main(argv: list[str]) -> int:
     head = _means(pathlib.Path(positional[1]))
 
     shared = sorted(set(base) & set(head))
+    for name in sorted(set(head) - set(base)):
+        print(f'new benchmark, not gated: {name}')
+
     if not shared:
-        print('no benchmark appears in both reports; nothing to compare')
+        print('no benchmark appears in both reports; nothing to compare', file=sys.stderr)
         return 1
 
     regressions: list[str] = []

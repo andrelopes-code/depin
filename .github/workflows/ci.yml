@@ -152,16 +152,18 @@ jobs:
           fi
           echo 'has-suite=true' >> "$GITHUB_OUTPUT"
           cd /tmp/base
-          uv sync --group bench
+          uv sync --no-default-groups --group bench
           uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/base.json
 
       - name: Measure this branch
         if: steps.base.outputs.has-suite == 'true'
         run: |
           set -euo pipefail
-          uv sync --group bench
+          uv sync --no-default-groups --group bench
           uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/head.json
 
+      # Shared CI runners are noisy; 25% catches an order-of-magnitude
+      # regression without failing the build on ordinary run-to-run drift.
       - name: Compare
         if: steps.base.outputs.has-suite == 'true'
         run: uv run --no-sync python -m benchmarks.compare /tmp/base.json /tmp/head.json --max-regression=0.25
