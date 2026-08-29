@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0](https://github.com/andrelopes-code/depin/compare/v0.4.3...v0.5.0) (2026-08-29)
+
+
+### Bug Fixes
+
+* accept protocol keys in the subscript overload under mypy ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+
+
+### Miscellaneous Chores
+
+* release Step 0 as 0.5.0 ([c47ebd0](https://github.com/andrelopes-code/depin/commit/c47ebd023ad326ec038848dc901989b94ee2753c))
+
 ## [0.4.3](https://github.com/andrelopes-code/depin/compare/v0.4.2...v0.4.3) (2026-08-26)
 
 
