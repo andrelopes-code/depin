@@ -121,6 +121,51 @@ jobs:
       - name: Test
         run: uv run --no-sync pytest tests/unit
 
+  benchmarks:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Both sides are measured on this runner, back to back. A baseline stored
+      # in the repository would have been measured on a different machine, and
+      # the comparison would report hardware rather than code.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+
+      - name: Measure the base branch
+        id: base
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git worktree add /tmp/base "origin/${BASE_REF}"
+          if [ ! -d /tmp/base/benchmarks ]; then
+            echo "base branch carries no benchmark suite; nothing to compare against, skipping the gate"
+            echo 'has-suite=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo 'has-suite=true' >> "$GITHUB_OUTPUT"
+          cd /tmp/base
+          uv sync --group bench
+          uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/base.json
+
+      - name: Measure this branch
+        if: steps.base.outputs.has-suite == 'true'
+        run: |
+          set -euo pipefail
+          uv sync --group bench
+          uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/head.json
+
+      - name: Compare
+        if: steps.base.outputs.has-suite == 'true'
+        run: uv run --no-sync python -m benchmarks.compare /tmp/base.json /tmp/head.json --max-regression=0.25
+
   dependency-review:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
