@@ -85,6 +85,8 @@ def _any_unsatisfied(specs: Iterable[ProviderSpec], by_key: _Index) -> bool:
     one pass over the specs instead of a walk from every root: a parameter is
     unsatisfied where it stands, independently of the chains that reach it. The
     walk then runs only to reconstruct the deepest chain for the error message.
+    `_check_missing` skips that walk whenever this returns `False`, so the two
+    must keep agreeing on what counts as missing, or a real gap goes unreported.
     """
     return any(
         not param.has_default and (param.key, param.tag) not in by_key for spec in specs for param in spec.params
