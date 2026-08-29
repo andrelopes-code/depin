@@ -53,6 +53,13 @@ dev = [
     "httpx>=0.27",
     "fastapi>=0.133",
 ]
+# The extended matrix runs free-threaded and pre-release interpreters, where
+# `fastapi` and its compiled transitive dependencies have no wheels. The core
+# has zero runtime dependencies, so it needs nothing but a test runner.
+threads = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3",
+]
 docs = [
     # MkDocs 2.0 removes the plugin system and the theming system with no
     # migration path, which breaks mkdocstrings and Material. Cap until the

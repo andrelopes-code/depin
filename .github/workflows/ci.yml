@@ -62,6 +62,60 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
+  free-threaded:
+    name: free-threaded ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13t', '3.14t']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # The core has zero runtime dependencies and installs on any interpreter.
+      # `fastapi` and its compiled transitive dependencies do not ship
+      # free-threaded wheels for every version here, so the default dev group is
+      # excluded and only the core unit suite runs.
+      - name: Sync the thread-test group only
+        run: uv sync --no-default-groups --group threads
+
+      # Without this, a build that silently re-enabled the GIL would produce a
+      # green job that proves nothing about the library's own locks.
+      - name: Assert the GIL is disabled
+        run: >
+          uv run --no-sync python -c
+          "import sys; assert sys._is_gil_enabled() is False, 'the GIL is enabled; this job proves nothing'"
+
+      - name: Test
+        run: uv run --no-sync pytest tests/unit
+
+  prerelease:
+    name: python 3.15 pre-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Advance warning of an interpreter change, not a merge gate: a pre-release
+    # regression is upstream's until it ships.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.15'
+
+      - name: Sync the thread-test group only
+        run: uv sync --no-default-groups --group threads
+
+      - name: Test
+        run: uv run --no-sync pytest tests/unit
+
   dependency-review:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
