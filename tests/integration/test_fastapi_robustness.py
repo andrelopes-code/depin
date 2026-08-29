@@ -7,6 +7,8 @@ from fastapi import Request as FastAPIRequest
 from fastapi.responses import StreamingResponse
 from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel
+from starlette.types import Message, Receive, Send
+from starlette.types import Scope as ASGIScope
 
 from depin import Container, Scope
 from depin._core.scope import active_frame
@@ -14,7 +16,7 @@ from depin.errors import OutsideScopeError
 from depin.ext.fastapi import Inject, RequestScope
 
 
-def _http_scope(method: str = 'POST', path: str = '/') -> dict[str, object]:
+def _http_scope(method: str = 'POST', path: str = '/') -> ASGIScope:
     return {
         'type': 'http',
         'method': method,
@@ -28,7 +30,7 @@ def _http_scope(method: str = 'POST', path: str = '/') -> dict[str, object]:
     }
 
 
-async def _json_body_receive() -> dict[str, object]:
+async def _json_body_receive() -> Message:
     return {'type': 'http.request', 'body': b'{"name": "x"}', 'more_body': False}
 
 
@@ -37,7 +39,7 @@ async def test_lifespan_scope_passes_through_without_opening_frame() -> None:
     seen: list[str] = []
     frame_open: list[bool] = []
 
-    async def inner(scope: dict[str, object], receive: object, send: object) -> None:
+    async def inner(scope: ASGIScope, receive: Receive, send: Send) -> None:
         seen.append(str(scope['type']))
         try:
             active_frame()
@@ -45,8 +47,8 @@ async def test_lifespan_scope_passes_through_without_opening_frame() -> None:
         except OutsideScopeError:
             frame_open.append(False)
 
-    mw = RequestScope(inner, Container().freeze())  # pyright: ignore[reportArgumentType]
-    await mw({'type': 'lifespan'}, _json_body_receive, _noop_send)  # pyright: ignore[reportArgumentType]
+    mw = RequestScope(inner, Container().freeze())
+    await mw({'type': 'lifespan'}, _json_body_receive, _noop_send)
     assert seen == ['lifespan']
     assert frame_open == [False]
 
@@ -55,7 +57,7 @@ async def test_lifespan_scope_passes_through_without_opening_frame() -> None:
 async def test_websocket_scope_opens_frame_and_delegates() -> None:
     seen: list[tuple[str, bool]] = []
 
-    async def inner(scope: dict[str, object], receive: object, send: object) -> None:
+    async def inner(scope: ASGIScope, receive: Receive, send: Send) -> None:
         in_scope = True
         try:
             active_frame()
@@ -63,9 +65,9 @@ async def test_websocket_scope_opens_frame_and_delegates() -> None:
             in_scope = False
         seen.append((str(scope['type']), in_scope))
 
-    mw = RequestScope(inner, Container().freeze())  # pyright: ignore[reportArgumentType]
-    ws_scope: dict[str, object] = {'type': 'websocket', 'path': '/ws', 'headers': []}
-    await mw(ws_scope, _json_body_receive, _noop_send)  # pyright: ignore[reportArgumentType]
+    mw = RequestScope(inner, Container().freeze())
+    ws_scope: ASGIScope = {'type': 'websocket', 'path': '/ws', 'headers': []}
+    await mw(ws_scope, _json_body_receive, _noop_send)
     assert seen == [('websocket', True)]
 
 
@@ -73,7 +75,7 @@ async def test_websocket_scope_opens_frame_and_delegates() -> None:
 async def test_http_request_in_frame_is_metadata_only() -> None:
     captured: dict[str, object] = {}
 
-    async def inner(scope: dict[str, object], receive: object, send: object) -> None:
+    async def inner(scope: ASGIScope, receive: Receive, send: Send) -> None:
         req = active_frame().get(FastAPIRequest)
         assert isinstance(req, FastAPIRequest)
         captured['header'] = req.headers.get('x-probe')
@@ -86,8 +88,8 @@ async def test_http_request_in_frame_is_metadata_only() -> None:
             # must raise here rather than consume the route's stream.
             captured['body_error'] = type(exc).__name__
 
-    mw = RequestScope(inner, Container().freeze())  # pyright: ignore[reportArgumentType]
-    await mw(_http_scope(), _json_body_receive, _noop_send)  # pyright: ignore[reportArgumentType]
+    mw = RequestScope(inner, Container().freeze())
+    await mw(_http_scope(), _json_body_receive, _noop_send)
     assert captured['header'] == 'meta'
     assert captured['path'] == '/'
     assert 'body_error' in captured
