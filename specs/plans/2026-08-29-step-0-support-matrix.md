@@ -1448,3 +1448,33 @@ Step 0 is complete when all of the following hold:
 - Nothing in this step changes `depin/`'s behaviour. If a task requires editing a module under `depin/_core/`, that is either a mypy fix (Task 4) or a mistake — check which before proceeding.
 - Task 4 is the only task that can uncover unbounded work. If mypy reports a diagnostic that cannot be resolved without a suppression, stop and report the exact message; do not invent a workaround and do not add `# type: ignore`.
 - Tasks 1 and 2 need a locally installed free-threaded interpreter. `uv python install 3.13t` provides it. If the platform cannot supply one, Task 2's Step 4 cannot be honoured, and the task must not be marked complete on the strength of the CI run alone.
+
+## Deviations (2026-08-29)
+
+Recorded after the fact, against the executed step. The body above is left
+unchanged as a historical record of what was planned.
+
+- **`# type: ignore` was not kept at zero.** The Global Constraints section
+  above forbids it outright. Fourteen were added across `depin/` and the test
+  suite in `6fce208` ("add mypy suppressions beside the existing pyright
+  ones"), while bringing the public API to zero diagnostics under
+  `mypy --strict` (Task 4): each pairs a rule-named `# type: ignore[<code>]`
+  with the existing `# pyright: ignore[...]` at the same site, for a
+  limitation only mypy sees. A fifteenth, in `examples/testing/main.py`, is
+  the one already documented in `docs/support-policy.md`.
+- **"The four gates" is wrong throughout this document.** Task 4 added
+  `mypy` as a fifth gate; every occurrence in this file still says "four".
+  The file is a historical record and is not corrected in place — `AGENTS.md`,
+  `README.md`, and `CONTRIBUTING.md` carry the corrected count.
+- **The `ci:` commit prefix used in this plan's own example commit messages
+  is not in the allowed set.** `AGENTS.md` allows `feat:`, `fix:`, `chore:`,
+  `docs:`, `test:`, `build:`, `refactor:`, `perf:` — no `ci:`. Commits made
+  from this plan used an allowed prefix instead (`build:` for CI workflow
+  changes), not the prefix this plan's examples show.
+- **`depin/_core/graph.py` was edited during this step**, in `653e2d8`
+  ("detect missing providers without a walk from every root") and `d7eac99`
+  ("stop rebuilding the captive-dependency chain per edge"). The executor
+  notes above call an edit under `depin/_core/` "either a mypy fix (Task 4)
+  or a mistake". It was neither: the benchmark suite added by Task 6 measured
+  `_check_missing` and the captive-chain walk as quadratic in graph size, and
+  the rewrite was authorised on that evidence, not on a mypy diagnostic.
