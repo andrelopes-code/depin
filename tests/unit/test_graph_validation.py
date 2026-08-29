@@ -1,13 +1,15 @@
 """Graph validation performed by freeze(): duplicates, cycles, captives, async reach."""
 
+import sys
 from collections.abc import AsyncGenerator
-from typing import Annotated
+from types import ModuleType
+from typing import Annotated, override
 
 import pytest
 
 from depin._core.container import Container
 from depin._core.graph import build_plan
-from depin._core.markers import Named, Token
+from depin._core.markers import Named, Token, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope
 from depin.errors import (
@@ -17,6 +19,20 @@ from depin.errors import (
     DuplicateProviderError,
     MissingProviderError,
 )
+
+
+class MissingProviderSuggestionTarget:
+    """Undecorated key looked up by `test_missing_provider_suggests_candidates_with_provides`."""
+
+
+@provides(MissingProviderSuggestionTarget)
+class MissingProviderSuggestionCandidate(MissingProviderSuggestionTarget):
+    """The `@provides` class the suggestion scan is expected to find.
+
+    Module-level by necessity: `_suggest_candidates` finds classes by walking
+    `sys.modules`, so a function-local class is invisible to it, and no real
+    application decorates a function-local class with `@provides` either.
+    """
 
 
 def test_missing_provider_raises() -> None:
@@ -85,6 +101,52 @@ def test_single_missing_provider_keeps_concise_message() -> None:
     assert msg.startswith('no provider for ')
 
 
+def test_defaulted_parameter_is_skipped_while_reporting_another_missing_one() -> None:
+    class A: ...
+
+    class B:
+        def __init__(self, a: A, x: int = 5) -> None: ...
+
+    r = Registry().bind(B, scope=Scope.SINGLETON)
+    with pytest.raises(MissingProviderError) as exc:
+        _ = build_plan(r.records())
+    msg = str(exc.value)
+    assert 'missing providers' not in msg
+    assert 'int' not in msg
+
+
+def test_a_cycle_does_not_stop_the_missing_provider_report() -> None:
+    class Gone: ...
+
+    class A:
+        def __init__(self, b: 'B') -> None: ...
+
+    class B:
+        def __init__(self, a: A, gone: Gone) -> None: ...
+
+    r = Registry().bind(A, scope=Scope.SINGLETON).bind(B, scope=Scope.SINGLETON)
+    with pytest.raises(MissingProviderError, match='Gone'):
+        _ = build_plan(r.records())
+
+
+def test_the_same_missing_key_is_reported_once_for_equally_deep_chains() -> None:
+    class Gone: ...
+
+    class Left:
+        def __init__(self, gone: Gone) -> None: ...
+
+    class Right:
+        def __init__(self, gone: Gone) -> None: ...
+
+    r = Registry().bind(Left, scope=Scope.SINGLETON).bind(Right, scope=Scope.SINGLETON)
+    with pytest.raises(MissingProviderError) as exc:
+        _ = build_plan(r.records())
+    msg = str(exc.value)
+    assert 'missing providers' not in msg
+    assert 'Left' in msg
+    assert 'Right' not in msg
+
+
 def test_missing_provider_message_includes_chain() -> None:
     class A: ...
 
@@ -104,22 +166,139 @@ def test_missing_provider_message_includes_chain() -> None:
 
 
 def test_missing_provider_suggests_candidates_with_provides() -> None:
-    from depin._core.markers import provides
-
-    class Database: ...
-
-    @provides(Database)
-    class PgDatabase(Database): ...
-
     class Repo:
-        def __init__(self, db: Database) -> None: ...
+        def __init__(self, db: MissingProviderSuggestionTarget) -> None: ...
 
-    # PgDatabase is referenced via @provides — keep it live so the gc-scan sees it.
-    assert PgDatabase is not None
     r = Registry().bind(Repo, scope=Scope.SINGLETON)
     with pytest.raises(MissingProviderError) as exc:
         _ = build_plan(r.records())
-    assert 'PgDatabase' in str(exc.value)
+    assert 'MissingProviderSuggestionCandidate' in str(exc.value)
+
+
+def test_missing_provider_suggestion_scan_survives_a_hostile_module_attribute() -> None:
+    """A module whose attribute access raises must not corrupt the raised error.
+
+    Reproduces the module `__getattr__` hook / lazy-import-shim / partially
+    initialised circular import case the scan guards against: reading the
+    module's `boom` attribute raises, and the scan must swallow only that,
+    still finding the real candidate from another module.
+    """
+
+    class _HostileModule(ModuleType):
+        @override
+        def __getattribute__(self, name: str) -> object:
+            if name == 'boom':
+                raise RuntimeError('this module attribute always raises')
+            return super().__getattribute__(name)
+
+    hostile = _HostileModule('depin_test_hostile_module')
+    hostile.__dict__['boom'] = 'trap'
+    sys.modules[hostile.__name__] = hostile
+    try:
+
+        class Repo:
+            def __init__(self, db: MissingProviderSuggestionTarget) -> None: ...
+
+        r = Registry().bind(Repo, scope=Scope.SINGLETON)
+        with pytest.raises(MissingProviderError) as exc:
+            _ = build_plan(r.records())
+        assert 'MissingProviderSuggestionCandidate' in str(exc.value)
+    finally:
+        del sys.modules[hostile.__name__]
+
+
+def test_missing_provider_suggestion_scan_survives_a_hostile_metaclass_getattr() -> None:
+    """A class whose metaclass raises on attribute access must not corrupt the raised error.
+
+    `get_provides` reads `__depin_provides__` via `getattr(cls, ..., None)`, whose
+    three-argument form suppresses only `AttributeError`. A metaclass `__getattr__`
+    raising anything else must still be swallowed by the scan's guard, the same as
+    a hostile module attribute is, leaving the real candidate reachable.
+    """
+
+    class _HostileMeta(type):
+        def __getattr__(cls, name: str) -> object:
+            raise RuntimeError('this class attribute always raises')
+
+    class _Hostile(metaclass=_HostileMeta): ...
+
+    hostile_module = ModuleType('depin_test_hostile_metaclass_module')
+    hostile_module.__dict__['Hostile'] = _Hostile
+    sys.modules[hostile_module.__name__] = hostile_module
+    try:
+
+        class Repo:
+            def __init__(self, db: MissingProviderSuggestionTarget) -> None: ...
+
+        r = Registry().bind(Repo, scope=Scope.SINGLETON)
+        with pytest.raises(MissingProviderError) as exc:
+            _ = build_plan(r.records())
+        assert 'MissingProviderSuggestionCandidate' in str(exc.value)
+    finally:
+        del sys.modules[hostile_module.__name__]
+
+
+def test_missing_provider_suggestion_scan_survives_a_none_module_entry() -> None:
+    """`sys.modules` can hold `None` for a name whose import failed partway.
+
+    The scan guards ``isinstance(module, ModuleType)`` before walking a module's
+    namespace; a `None` entry must be skipped rather than raising, and the walk
+    must still find the real candidate afterwards. On Python 3.13+, nothing in
+    a default interpreter's `sys.modules` exercises this branch any more —
+    `typing.io`/`typing.re`, the only non-module entries on 3.12, were removed
+    — so this is the only thing that still covers it there.
+    """
+    name = 'depin_test_none_module_entry'
+    assert name not in sys.modules
+    # sys.modules can hold None for a failed import; both stubs promise ModuleType.
+    sys.modules[name] = None  # type: ignore[assignment]  # pyright: ignore[reportArgumentType]
+    try:
+
+        class Repo:
+            def __init__(self, db: MissingProviderSuggestionTarget) -> None: ...
+
+        r = Registry().bind(Repo, scope=Scope.SINGLETON)
+        with pytest.raises(MissingProviderError) as exc:
+            _ = build_plan(r.records())
+        assert 'MissingProviderSuggestionCandidate' in str(exc.value)
+    finally:
+        del sys.modules[name]
+
+
+def test_missing_provider_suggestion_does_not_repeat_a_shared_qualname() -> None:
+    """Two distinct classes sharing a module and qualname must not repeat in the message.
+
+    Dedup keyed on `id(obj)` lets two distinct `@provides` classes that happen to
+    share `__module__` and `__qualname__` — a module reload, or a class factory —
+    both pass the check and both emit the same string, visibly duplicated in the
+    error. Dedup must instead key on the emitted string.
+    """
+
+    class DuplicateQualnameTarget: ...
+
+    def make_candidate() -> type:
+        @provides(DuplicateQualnameTarget)
+        class Same(DuplicateQualnameTarget): ...
+
+        Same.__qualname__ = 'DuplicateQualnameCandidate'
+        return Same
+
+    dup_module = ModuleType('depin_test_duplicate_qualname_module')
+    dup_module.__dict__['First'] = make_candidate()
+    dup_module.__dict__['Second'] = make_candidate()
+    sys.modules[dup_module.__name__] = dup_module
+    try:
+
+        class Repo:
+            def __init__(self, db: DuplicateQualnameTarget) -> None: ...
+
+        r = Registry().bind(Repo, scope=Scope.SINGLETON)
+        with pytest.raises(MissingProviderError) as exc:
+            _ = build_plan(r.records())
+        msg = str(exc.value)
+        assert msg.count('DuplicateQualnameCandidate') == 1
+    finally:
+        del sys.modules[dup_module.__name__]
 
 
 def test_duplicate_class_binding_raises() -> None:
@@ -209,6 +388,35 @@ def test_singleton_capturing_scoped_through_transient_is_rejected() -> None:
         _ = build_plan(r.records())
     chain = str(exc.value).split('chain: ', 1)[1]
     assert chain.index('Service') < chain.index('Work') < chain.index('Session')
+
+
+def test_captive_chain_names_the_branch_the_walk_took() -> None:
+    class Session: ...
+
+    class Inner:
+        def __init__(self, session: Session) -> None: ...
+
+    class Left:
+        def __init__(self, inner: Inner) -> None: ...
+
+    class Right:
+        def __init__(self, inner: Inner) -> None: ...
+
+    class Service:
+        def __init__(self, left: Left, right: Right) -> None: ...
+
+    r = (
+        Registry()
+        .bind(Session, scope=Scope.SCOPED)
+        .bind(Inner, scope=Scope.TRANSIENT)
+        .bind(Left, scope=Scope.TRANSIENT)
+        .bind(Right, scope=Scope.TRANSIENT)
+        .bind(Service, scope=Scope.SINGLETON)
+    )
+    with pytest.raises(CaptiveDependencyError) as exc:
+        _ = build_plan(r.records())
+    chain = str(exc.value).split('chain: ', 1)[1].split(')', 1)[0]
+    assert [step.rsplit('.', 1)[-1] for step in chain.split(' -> ')] == ['Service', 'Right', 'Inner', 'Session']
 
 
 def test_scoped_depending_on_scoped_is_allowed() -> None:

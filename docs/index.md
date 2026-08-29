@@ -82,4 +82,4 @@ list.
 - [Examples](https://github.com/andrelopes-code/depin/tree/main/examples) —
   four runnable programs, each executed by the test suite.
 - [Contributing](https://github.com/andrelopes-code/depin/blob/main/CONTRIBUTING.md)
-  — development setup, the four gates, and the release process.
+  — development setup, the five gates, and the release process.

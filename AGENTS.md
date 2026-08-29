@@ -12,12 +12,12 @@ two.
 
 `depin` is a type-first dependency-injection library for Python. The core has **zero runtime dependencies**. Framework integrations (FastAPI, etc.) live under `depin/ext/` and are optional installation extras.
 
-The library leans heavily on Python's modern type system — PEP 695 generics, `Protocol`, `Annotated`, `@overload`, `ParamSpec` — to give consumers precise return types without any `# type: ignore` at call sites.
+The library leans heavily on Python's modern type system — PEP 695 generics, `Protocol`, `Annotated`, `@overload`, `ParamSpec` — to give consumers precise return types without a `# type: ignore` at call sites, with one documented exception recorded in `docs/support-policy.md`.
 
 ## Tooling
 
 - **Package manager:** `uv`. Use `uv add <pkg>` / `uv remove <pkg>`. Commit `uv.lock`.
-- **Type checker:** `basedpyright` in strict mode. Configuration lives in `pyproject.toml` under `[tool.basedpyright]` — do not reintroduce `pyrightconfig.json`.
+- **Type checkers:** `basedpyright` in strict mode, plus `mypy --strict` as a second checker. Configuration lives in `pyproject.toml` under `[tool.basedpyright]` and `[tool.mypy]` — do not reintroduce `pyrightconfig.json`. CI runs both against each Python version in the test matrix.
 - **Formatter & linter:** `ruff`. Line length 120, single quotes.
 - **Tests:** `pytest` + `pytest-asyncio`.
 - **Python:** 3.12 or newer (PEP 695 syntax is used throughout).
@@ -30,10 +30,11 @@ Run, in order, from the repo root:
 uv run ruff format
 uv run ruff check
 uv run basedpyright
+uv run mypy
 uv run pytest
 ```
 
-A commit is only ready when all four pass with no warnings or waivers.
+A commit is only ready when all five pass with no warnings or waivers.
 `pytest` is configured with `--doctest-modules` over `tests` and `depin`, so
 every `Example:` in a public docstring is executed as part of the gate.
 
@@ -179,6 +180,7 @@ and listed in `examples/README.md`.
 | `introspect.py` | Shape detection and `Annotated` metadata. |
 | `markers.py`, `spec.py` | Public markers; internal data structures. |
 - Public API is re-exported from `depin/__init__.py`. Internal modules live under `depin/_core/` and are never imported directly by users.
+- `benchmarks/` is a top-level package of `pytest-benchmark` suites guarding hot paths — resolution, scope entry, injection — against regressions. It sits outside `testpaths`; see `CONTRIBUTING.md` for how to run it.
 - Immutability is the default for data structures. Use `@dataclass(frozen=True, slots=True)`.
 - No module-level mutable state. No implicit global container.
 - No import-time side effects beyond registering into explicit `Registry` objects.

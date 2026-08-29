@@ -27,6 +27,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Free Threading :: 3 - Stable",
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
@@ -52,6 +53,18 @@ dev = [
     "pytest-cov>=7.1.0",
     "httpx>=0.27",
     "fastapi>=0.133",
+    "mypy>=1.18",
+]
+# The extended matrix runs free-threaded and pre-release interpreters, where
+# `fastapi` and its compiled transitive dependencies have no wheels. The core
+# has zero runtime dependencies, so it needs nothing but a test runner.
+threads = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3",
+]
+bench = [
+    "pytest>=9.0.3",
+    "pytest-benchmark>=5.1",
 ]
 docs = [
     # MkDocs 2.0 removes the plugin system and the theming system with no
@@ -98,6 +111,20 @@ pythonVersion = "3.12"
 reportImplicitOverride = true
 reportMissingTypeStubs = false
 
+# The file list mirrors `[tool.basedpyright] include` exactly. The two checkers
+# must see the same code, or "both are clean" means nothing.
+[tool.mypy]
+python_version = "3.12"
+files = ["depin", "tests", "examples"]
+strict = true
+warn_unreachable = true
+enable_error_code = ["redundant-expr", "possibly-undefined", "truthy-bool", "ignore-without-code"]
+
+# Advisory only (see the `ty` job in `.github/workflows/ci.yml`); the file list
+# still mirrors `[tool.basedpyright] include` exactly, for the same reason.
+[tool.ty.src]
+include = ["depin", "tests", "examples"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests", "depin", "docs"]
 # `examples/` is not part of the distribution; tests/integration imports it from the
@@ -105,6 +132,7 @@ testpaths = ["tests", "depin", "docs"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers --doctest-modules --doctest-glob=*.md"
+filterwarnings = ["error::pytest.PytestUnhandledThreadExceptionWarning"]
 
 [tool.coverage.run]
 source = ["depin"]

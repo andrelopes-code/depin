@@ -34,7 +34,7 @@ async def test_built_deps_torn_down_when_later_resolution_fails() -> None:
 
     async def bad() -> AsyncGenerator[int]:
         raise Boom
-        yield 0
+        yield 0  # type: ignore[unreachable]  # the yield makes `bad` an async generator function; it is dead by design
 
     frozen = (
         Container().bind(good, scope=Scope.SCOPED, provides=str).bind(bad, scope=Scope.SCOPED, provides=int).freeze()

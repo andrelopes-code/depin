@@ -103,7 +103,7 @@ def test_override_of_nested_dependency_respects_tag() -> None:
 
 def test_override_rejects_a_key_that_is_not_a_provider_key() -> None:
     frozen = Container().freeze()
-    with pytest.raises(MissingProviderError, match='not a valid key type'), frozen.override(42, 'x'):  # pyright: ignore[reportArgumentType]
+    with pytest.raises(MissingProviderError, match='not a valid key type'), frozen.override(42, 'x'):  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
         pass
 
 

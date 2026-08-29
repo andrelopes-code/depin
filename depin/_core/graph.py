@@ -5,7 +5,9 @@ value is constructed: duplicates, unsatisfied dependencies, cycles, captive
 singletons, and which providers transitively need async resolution.
 """
 
+import sys
 from collections.abc import Iterable
+from types import ModuleType
 
 from depin._core.markers import get_provides
 from depin._core.providers import ASYNC_SHAPES, build_specs
@@ -62,11 +64,12 @@ def _check_duplicates(specs: Iterable[ProviderSpec]) -> None:
 
 
 def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index) -> None:
-    missing: dict[_Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]] = {}
-    for root in specs:
-        _collect_missing(root, by_key, (root,), missing)
-    if not missing:
+    all_specs = tuple(specs)
+    if not _any_unsatisfied(all_specs, by_key):
         return
+    missing: dict[_Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]] = {}
+    for root in all_specs:
+        _collect_missing(root, by_key, (root,), missing)
     # Deepest chain first: the longest resolution path is the most informative
     # one to show when several providers are unsatisfied.
     ordered = sorted(missing.items(), key=lambda kv: len(kv[1][0]), reverse=True)
@@ -75,6 +78,21 @@ def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index) -> None:
         raise MissingProviderError(lines[0])
     body = '\n  - '.join(lines)
     raise MissingProviderError(f'{len(lines)} missing providers:\n  - {body}')
+
+
+def _any_unsatisfied(specs: Iterable[ProviderSpec], by_key: _Index) -> bool:
+    """Whether some spec declares a required parameter that no binding provides.
+
+    Exactly the condition `_collect_missing` ends up detecting, but answered in
+    one pass over the specs instead of a walk from every root: a parameter is
+    unsatisfied where it stands, independently of the chains that reach it. The
+    walk then runs only to reconstruct the deepest chain for the error message.
+    `_check_missing` skips that walk whenever this returns `False`, so the two
+    must keep agreeing on what counts as missing, or a real gap goes unreported.
+    """
+    return any(
+        not param.has_default and (param.key, param.tag) not in by_key for spec in specs for param in spec.params
+    )
 
 
 def _collect_missing(
@@ -121,32 +139,82 @@ def _format_missing(
     )
 
 
-_SUGGEST_SCAN_LIMIT = 50_000
 _SUGGEST_RESULT_LIMIT = 5
 
 
-def _suggest_candidates(target: object) -> list[str]:
-    """Scan live classes for `@provides(target)` hints. Used only at error time.
+def _loaded_modules() -> list[object]:
+    """Snapshot of ``sys.modules``' values, typed as `object`, not `ModuleType`.
 
-    Bounded by ``_SUGGEST_SCAN_LIMIT`` to keep error-path latency predictable in
-    large processes where ``gc.get_objects()`` returns hundreds of thousands of
-    references.
+    The typeshed stub for ``sys.modules`` promises ``dict[str, ModuleType]``,
+    but the runtime does not keep that promise: a failed import leaves `None`
+    behind, on every version. On 3.12 only, `typing` also registers
+    `typing.io`/`typing.re` as classes standing in for modules; CPython removed
+    both in 3.13. Returning `object` keeps the `isinstance` guard in
+    `_suggest_candidates` meaningful instead of flagged as unreachable by a
+    checker that trusts the narrower stub.
+    """
+    return list(sys.modules.values())
+
+
+def _suggest_candidates(target: object) -> list[str]:
+    """Scan loaded modules for `@provides(target)` hints. Used only at error time.
+
+    Candidates are found by walking every module in ``sys.modules`` and every
+    attribute in each module's namespace, rather than by scanning the garbage
+    collector's object graph: on free-threaded builds, ``gc.get_objects()``
+    stops enumerating heap types entirely once any thread has run, so it
+    misses classes it previously found and never recovers them. A module scan
+    has no such gap. The scan is unbounded and always runs to completion: it
+    only happens on a path that is already raising and aborting `freeze()`, so
+    walking every loaded module is negligible next to a startup that has
+    already failed. Collecting every match and sorting before truncating to
+    ``_SUGGEST_RESULT_LIMIT`` is what keeps the reported candidates independent
+    of module and attribute iteration order, which is otherwise unspecified.
     """
     if not isinstance(target, type):
         return []
-    import gc
 
-    out: list[str] = []
-    for i, obj in enumerate(gc.get_objects()):
-        if i >= _SUGGEST_SCAN_LIMIT:
-            break
-        if not isinstance(obj, type):
+    # Deduped on the emitted string, not `id(obj)`: two distinct classes can
+    # share a `__module__` and `__qualname__` (a module reload, a class
+    # factory), and an identity-keyed set would let both through, repeating
+    # the same name in the reported candidates.
+    out: set[str] = set()
+    seen: set[int] = set()
+    for module in _loaded_modules():
+        if not isinstance(module, ModuleType):
+            # `sys.modules` entries are conventionally modules, but nothing
+            # enforces it: a failed import leaves `None` behind, on every
+            # version. On 3.12 only, `typing` also registers `typing.io`/
+            # `typing.re` as classes standing in for modules. Neither is a
+            # namespace this scan means to walk.
             continue
-        if get_provides(obj) is target:
-            out.append(f'{obj.__module__}.{obj.__qualname__}')
-            if len(out) >= _SUGGEST_RESULT_LIMIT:
-                break
-    return out
+        for name in list(vars(module)):
+            try:
+                obj = getattr(module, name)
+            except Exception:
+                # Best-effort scan: a hostile module `__getattr__`, a lazy-import
+                # shim, or a partially initialised module mid circular-import can
+                # raise anything on attribute access; none of that may break the
+                # error path that is already reporting a different, real failure.
+                # This also swallows a `DepinError` raised from the read, which
+                # this file's own rule forbids everywhere else — relaxed here on
+                # purpose because depin installs no module-level `__getattr__`,
+                # making the case practically unreachable.
+                continue
+            if not isinstance(obj, type) or id(obj) in seen:
+                continue
+            seen.add(id(obj))
+            try:
+                found = get_provides(obj)
+            except Exception:
+                # Same rationale as the module attribute read above: `get_provides`
+                # is itself an attribute read (a class whose metaclass defines
+                # `__getattr__` can raise anything from it), and it must be no
+                # less forgiving than the read that produced `obj`.
+                continue
+            if found is target:
+                out.add(f'{obj.__module__}.{obj.__qualname__}')
+    return sorted(out)[:_SUGGEST_RESULT_LIMIT]
 
 
 def _toposort(specs: Iterable[ProviderSpec], by_key: _Index) -> tuple[ProviderSpec, ...]:
@@ -201,22 +269,43 @@ def _check_captive(order: Iterable[ProviderSpec], by_key: _Index) -> None:
     for root in order:
         if root.scope is not Scope.SINGLETON:
             continue
-        seen: set[_Ident] = set()
-        stack: list[tuple[ProviderSpec, tuple[ProviderSpec, ...]]] = [(root, (root,))]
+        reached_from: dict[_Ident, ProviderSpec] = {}
+        stack: list[ProviderSpec] = [root]
         while stack:
-            spec, chain = stack.pop()
+            spec = stack.pop()
             for param in spec.params:
                 dep = by_key.get((param.key, param.tag))
                 if dep is None:
                     continue
                 if dep.scope is Scope.SCOPED:
-                    raise CaptiveDependencyError(_format_captive(root, dep, (*chain, dep)))
+                    chain = (*_captive_chain(root, spec, reached_from), dep)
+                    raise CaptiveDependencyError(_format_captive(root, dep, chain))
                 if dep.scope is Scope.TRANSIENT:
                     ident = (dep.key, dep.tag)
-                    if ident in seen:
+                    if ident in reached_from:
                         continue
-                    seen.add(ident)
-                    stack.append((dep, (*chain, dep)))
+                    reached_from[ident] = spec
+                    stack.append(dep)
+
+
+def _captive_chain(
+    root: ProviderSpec,
+    spec: ProviderSpec,
+    reached_from: dict[_Ident, ProviderSpec],
+) -> tuple[ProviderSpec, ...]:
+    """Rebuild the ``root -> ... -> spec`` path from the walk's parent links.
+
+    `reached_from` records one parent per transient, because the walk pushes each
+    at most once, so following it back from `spec` yields the single path the
+    walk took to reach it.
+    """
+    chain = [spec]
+    node = spec
+    while (node.key, node.tag) != (root.key, root.tag):
+        node = reached_from[(node.key, node.tag)]
+        chain.append(node)
+    chain.reverse()
+    return tuple(chain)
 
 
 def _format_captive(root: ProviderSpec, dep: ProviderSpec, chain: tuple[ProviderSpec, ...]) -> str:

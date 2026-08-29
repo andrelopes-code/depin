@@ -43,8 +43,13 @@ jobs:
       - name: Lint
         run: uv run ruff check
 
+      # The `pythonVersion` pinned in pyproject.toml is the floor; the matrix
+      # entry is what this job actually runs, and it is what gets checked here.
       - name: Type check
-        run: uv run basedpyright
+        run: uv run basedpyright --pythonversion ${{ matrix.python-version }}
+
+      - name: Type check with mypy
+        run: uv run mypy --python-version ${{ matrix.python-version }}
 
       - name: Test
         run: uv run pytest --cov=depin --cov-report=xml --cov-report=term-missing
@@ -61,6 +66,161 @@ jobs:
           files: ./coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
+
+  free-threaded:
+    name: free-threaded ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13t', '3.14t']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # The core has zero runtime dependencies and installs on any interpreter.
+      # `fastapi` and its compiled transitive dependencies do not ship
+      # free-threaded wheels for every version here, so the default dev group is
+      # excluded and only the core unit suite runs.
+      - name: Sync the thread-test group only
+        run: uv sync --no-default-groups --group threads
+
+      # Without this, a build that silently re-enabled the GIL would produce a
+      # green job that proves nothing about the library's own locks.
+      - name: Assert the GIL is disabled
+        run: >
+          uv run --no-sync python -c
+          "import sys; assert sys._is_gil_enabled() is False, 'the GIL is enabled; this job proves nothing'"
+
+      - name: Test
+        run: uv run --no-sync pytest tests/unit
+
+  prerelease:
+    name: python 3.15 pre-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Advance warning of an interpreter change, not a merge gate: a pre-release
+    # regression is upstream's until it ships.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.15'
+
+      - name: Sync the thread-test group only
+        run: uv sync --no-default-groups --group threads
+
+      - name: Test
+        run: uv run --no-sync pytest tests/unit
+
+  ty:
+    name: ty (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # ty is still on 0.0.x versioning with no stable API, and its own docs warn
+    # that diagnostics can change between any two releases. Advance signal from
+    # a second, independently-implemented checker, not a merge gate. The
+    # diagnostics it reports are deliberately left unfixed while ty is
+    # pre-stable, so the check step below always exits 0 and surfaces them
+    # in the job summary instead of showing a permanently red check that
+    # trains reviewers to ignore it. continue-on-error here backstops the
+    # job's other steps instead — checkout, Install uv, Sync dependencies, or
+    # a failed write to the step summary — because the `uvx` invocation
+    # already exits 0 on its own via `|| true`, "command not found" included.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+
+      - name: Sync dependencies
+        run: uv sync --locked --all-extras
+
+      # Run through uvx instead of the dev group: a 0.0.x tool with no stable
+      # API has no business in uv.lock or every contributor's environment, and
+      # this advisory job wants whatever ty currently does, not a pinned cut.
+      # Paths come from `[tool.ty.src] include` in pyproject.toml, not a
+      # literal list here, so they cannot drift from what the other checkers see.
+      - name: Type check with ty
+        run: |
+          set -euo pipefail
+          set +e
+          output="$(uvx ty check 2>&1)"
+          status=$?
+          set -e
+          echo "$output"
+          {
+            echo '### ty (advisory) diagnostics'
+            echo
+            echo "exit status: $status"
+            echo
+            echo '```'
+            echo "$output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+  benchmarks:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Both sides are measured on this runner, back to back. A baseline stored
+      # in the repository would have been measured on a different machine, and
+      # the comparison would report hardware rather than code.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+          # This job's own `uv sync` runs only when the base branch carries a
+          # benchmark suite; when it doesn't, nothing here ever installs, and
+          # the cache post-step then errors because there is nothing to save.
+          enable-cache: false
+
+      - name: Measure the base branch
+        id: base
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git worktree add /tmp/base "origin/${BASE_REF}"
+          if [ ! -d /tmp/base/benchmarks ]; then
+            echo "base branch carries no benchmark suite; nothing to compare against, skipping the gate"
+            echo 'has-suite=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo 'has-suite=true' >> "$GITHUB_OUTPUT"
+          cd /tmp/base
+          uv sync --no-default-groups --group bench
+          uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/base.json
+
+      - name: Measure this branch
+        if: steps.base.outputs.has-suite == 'true'
+        run: |
+          set -euo pipefail
+          uv sync --no-default-groups --group bench
+          uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/head.json
+
+      # Shared CI runners are noisy; 25% catches an order-of-magnitude
+      # regression without failing the build on ordinary run-to-run drift.
+      - name: Compare
+        if: steps.base.outputs.has-suite == 'true'
+        run: uv run --no-sync python -m benchmarks.compare /tmp/base.json /tmp/head.json --max-regression=0.25
 
   dependency-review:
     if: github.event_name == 'pull_request'

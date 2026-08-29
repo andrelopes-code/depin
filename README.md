@@ -5,6 +5,7 @@
 [![PyPI](https://img.shields.io/pypi/v/pydepin.svg)](https://pypi.org/project/pydepin/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pydepin.svg)](https://pypi.org/project/pydepin/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/andrelopes-code/depin/blob/main/LICENSE)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/andrelopes-code/depin/badge)](https://scorecard.dev/viewer/?uri=github.com/andrelopes-code/depin)
 
 Type-first dependency injection for Python 3.12+.
 
@@ -22,7 +23,9 @@ Type-first dependency injection for Python 3.12+.
 - Optional FastAPI integration in `depin.ext.fastapi`. **The core has zero
   runtime dependencies.**
 - No `# type: ignore` at call sites: `resolve()`, `frozen[key]`, `injected()`,
-  and `Inject[T]` are all precisely typed under `basedpyright --strict`.
+  and `Inject[T]` are all precisely typed under `basedpyright --strict` and
+  `mypy --strict`. One documented exception outside that list: see the
+  [support policy](https://andrelopes-code.github.io/depin/support-policy/#known-limitation-provides-and-typet).
 
 ## Install
 
@@ -175,11 +178,14 @@ Full walkthrough: [FastAPI guide](https://andrelopes-code.github.io/depin/guide/
 
 ## Project status
 
-Beta, pre-1.0. CI enforces `ruff`, `basedpyright --strict`, the full test suite
-with its embedded doctests, and a 95% coverage floor, on Python 3.12–3.14 across
-Linux, macOS, and Windows. Releases are published from CI via PyPI Trusted
-Publishing. Minor releases may still contain breaking changes until 1.0; those
-are marked in the [changelog](CHANGELOG.md).
+Beta, pre-1.0. CI enforces `ruff`, `basedpyright --strict`, `mypy --strict`, the
+full test suite with its embedded doctests, and a 95% coverage floor, on Python
+3.12–3.14 across Linux, macOS, and Windows, plus the free-threaded builds of 3.13
+and 3.14. See the
+[support policy](https://andrelopes-code.github.io/depin/support-policy/).
+Releases are published from CI via PyPI Trusted Publishing. Minor releases may
+still contain breaking changes until 1.0; those are marked in the
+[changelog](CHANGELOG.md).
 
 ## Development
 
@@ -188,10 +194,11 @@ uv sync --all-extras
 uv run ruff format
 uv run ruff check
 uv run basedpyright
+uv run mypy
 uv run pytest
 ```
 
-The four commands above are the gates every change must pass. See
+The five commands above are the gates every change must pass. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow and
 [AGENTS.md](AGENTS.md) for the repository conventions that contributors — human
 or agent — are expected to follow.
@@ -199,7 +206,7 @@ or agent — are expected to follow.
 ## Contributing
 
 Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the
-development setup, the four gates, and commit conventions; all participants are
+development setup, the five gates, and commit conventions; all participants are
 expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md). To report a
 vulnerability, follow the [security policy](SECURITY.md).
 

@@ -48,10 +48,6 @@ class FrozenContainer:
         self._plan = plan
         self._root = ScopeFrame()
 
-    @overload
-    def __getitem__[T](self, key: type[T]) -> T: ...
-    @overload
-    def __getitem__[T](self, key: Token[T]) -> T: ...
     def __getitem__[T](self, key: type[T] | Token[T]) -> T:
         """Resolve ``key`` synchronously; shorthand for `resolve()`.
 
@@ -101,7 +97,7 @@ class FrozenContainer:
         # spec.source is type-erased `object` in the plan; the runtime contract
         # (enforced by build_plan) is that providers return values matching the
         # static type of their declared key, so we restate the static type here.
-        return self._resolve_sync(spec)  # pyright: ignore[reportReturnType]
+        return self._resolve_sync(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
     async def aresolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
         """Resolve a value by key, asynchronously.
@@ -123,7 +119,7 @@ class FrozenContainer:
         spec = self._lookup(key, tag)
         # See the matching note in `resolve`: plan-level erasure of provider
         # return types forces a single documented widening at this boundary.
-        return await self._resolve_async(spec)  # pyright: ignore[reportReturnType]
+        return await self._resolve_async(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
     @contextlib.contextmanager
     def scope(self) -> Generator[ScopeFrame]:

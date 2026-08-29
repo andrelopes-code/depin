@@ -1,8 +1,11 @@
 """Synchronous resolution: lookups, defaults, and the errors a bad key produces."""
 
+from typing import Protocol
+
 import pytest
 
 from depin._core.container import Container
+from depin._core.markers import provides
 from depin._core.scope import Scope
 from depin.errors import AsyncInSyncContextError, MissingProviderError
 
@@ -18,7 +21,23 @@ def test_resolving_an_unregistered_key_names_the_key() -> None:
 def test_resolving_a_value_that_is_not_a_provider_key_raises() -> None:
     frozen = Container().freeze()
     with pytest.raises(MissingProviderError, match='not a valid key type'):
-        frozen.resolve(42)  # pyright: ignore[reportArgumentType, reportUnusedCallResult]
+        frozen.resolve(42)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType, reportUnusedCallResult]
+
+
+def test_a_protocol_key_resolves_through_subscript() -> None:
+    class Store(Protocol):
+        def get(self) -> str: ...
+
+    # `Store` is a Protocol; mypy treats any type[Protocol] argument as
+    # non-instantiable, a separate known limitation from the one this test
+    # guards against — provides() only stores the key, it never instantiates it.
+    @provides(Store)  # type: ignore[type-abstract]
+    class MemStore:
+        def get(self) -> str:
+            return 'v'
+
+    frozen = Container().bind(MemStore).freeze()
+    assert frozen[Store].get() == 'v'
 
 
 def test_sync_resolution_of_an_async_provider_points_at_aresolve() -> None:

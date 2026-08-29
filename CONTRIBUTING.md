@@ -17,7 +17,7 @@ uv sync --all-extras
 ```
 
 This installs the core, the FastAPI extra, and all development tooling
-(`ruff`, `basedpyright`, `pytest`, `pytest-asyncio`, `pytest-cov`).
+(`ruff`, `basedpyright`, `mypy`, `pytest`, `pytest-asyncio`, `pytest-cov`).
 
 Optionally, install the git hooks so formatting and linting run before a commit
 is written:
@@ -26,19 +26,21 @@ is written:
 uvx pre-commit install
 ```
 
-The hooks reproduce the first two gates only. The type check and the test suite
-still have to be run explicitly, because both need the project environment.
+The hooks reproduce the first two gates only. The type checks and the test
+suite still have to be run explicitly, because all three need the project
+environment.
 
-## The four gates
+## The five gates
 
-Run these four commands, **in this exact order**, from the repository root
-before every commit. A change is only ready when all four pass with no
+Run these five commands, **in this exact order**, from the repository root
+before every commit. A change is only ready when all five pass with no
 warnings or waivers.
 
 ```bash
 uv run ruff format
 uv run ruff check
 uv run basedpyright
+uv run mypy
 uv run pytest
 ```
 
@@ -46,6 +48,9 @@ uv run pytest
 - `uv run ruff check` — lints.
 - `uv run basedpyright` — type-checks in strict mode. No `# type: ignore`,
   `# pyright: ignore`, `typing.cast`, or `Any` shortcuts.
+- `uv run mypy` — type-checks in strict mode with the second checker. See the
+  [support policy](https://andrelopes-code.github.io/depin/support-policy/)
+  for the one documented gap between the two checkers.
 - `uv run pytest` — runs the test suite, the doctests embedded in the
   public-API docstrings, the doctests in `docs/guide/`, and the programs under
   `examples/`.
@@ -100,6 +105,20 @@ You can check coverage locally with:
 uv run pytest --cov=depin --cov-report=term-missing
 ```
 
+## Benchmarks
+
+`benchmarks/` holds `pytest-benchmark` suites that guard hot paths — container
+resolution, scope entry, injection — against regressions. They sit outside
+`testpaths`, so a plain `uv run pytest` does not collect them; run them
+explicitly:
+
+```bash
+uv run --group bench pytest benchmarks --benchmark-only
+```
+
+CI runs the same suite against the base branch and the head branch and fails
+the build on a regression past the tolerance in `benchmarks/compare.py`.
+
 ## Documentation
 
 The site is built with MkDocs and Material, and the API reference is generated
@@ -118,7 +137,7 @@ doctests executed by `uv run pytest`.
 
 1. Create a topic branch off `main`.
 2. Make your change, keeping commits focused and conventional.
-3. Ensure the four gates pass locally and that coverage holds.
+3. Ensure the five gates pass locally and that coverage holds.
 4. Push the branch and open a pull request against `main`.
 5. Give the PR a Conventional-Commit-style title — it becomes the squashed
    commit subject and feeds the release tooling.
