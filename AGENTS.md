@@ -180,6 +180,7 @@ and listed in `examples/README.md`.
 | `introspect.py` | Shape detection and `Annotated` metadata. |
 | `markers.py`, `spec.py` | Public markers; internal data structures. |
 - Public API is re-exported from `depin/__init__.py`. Internal modules live under `depin/_core/` and are never imported directly by users.
+- `benchmarks/` is a top-level package of `pytest-benchmark` suites guarding hot paths — resolution, scope entry, injection — against regressions. It sits outside `testpaths`; see `CONTRIBUTING.md` for how to run it.
 - Immutability is the default for data structures. Use `@dataclass(frozen=True, slots=True)`.
 - No module-level mutable state. No implicit global container.
 - No import-time side effects beyond registering into explicit `Registry` objects.

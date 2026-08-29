@@ -105,6 +105,20 @@ You can check coverage locally with:
 uv run pytest --cov=depin --cov-report=term-missing
 ```
 
+## Benchmarks
+
+`benchmarks/` holds `pytest-benchmark` suites that guard hot paths — container
+resolution, scope entry, injection — against regressions. They sit outside
+`testpaths`, so a plain `uv run pytest` does not collect them; run them
+explicitly:
+
+```bash
+uv run --group bench pytest benchmarks --benchmark-only
+```
+
+CI runs the same suite against the base branch and the head branch and fails
+the build on a regression past the tolerance in `benchmarks/compare.py`.
+
 ## Documentation
 
 The site is built with MkDocs and Material, and the API reference is generated
