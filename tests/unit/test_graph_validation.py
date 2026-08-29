@@ -160,7 +160,8 @@ def test_missing_provider_suggests_candidates_with_provides() -> None:
     class Repo:
         def __init__(self, db: Database) -> None: ...
 
-    # PgDatabase is referenced via @provides — keep it live so the gc-scan sees it.
+    # A local class only exists while something references it; keep this
+    # reference so PgDatabase is not garbage-collected before build_plan runs.
     assert PgDatabase is not None
     r = Registry().bind(Repo, scope=Scope.SINGLETON)
     with pytest.raises(MissingProviderError) as exc:

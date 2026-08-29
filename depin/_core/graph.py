@@ -137,32 +137,31 @@ def _format_missing(
     )
 
 
-_SUGGEST_SCAN_LIMIT = 50_000
 _SUGGEST_RESULT_LIMIT = 5
 
 
 def _suggest_candidates(target: object) -> list[str]:
     """Scan live classes for `@provides(target)` hints. Used only at error time.
 
-    Bounded by ``_SUGGEST_SCAN_LIMIT`` to keep error-path latency predictable in
-    large processes where ``gc.get_objects()`` returns hundreds of thousands of
-    references.
+    The scan is unbounded and always runs to completion: it only happens on a
+    path that is already raising and aborting `freeze()`, so a pass over a few
+    hundred thousand objects is negligible next to a startup that has already
+    failed. Collecting every match and sorting before truncating to
+    ``_SUGGEST_RESULT_LIMIT`` is what keeps the reported candidates independent
+    of ``gc.get_objects()``'s order, which is otherwise unspecified.
     """
     if not isinstance(target, type):
         return []
     import gc
 
     out: list[str] = []
-    for i, obj in enumerate(gc.get_objects()):
-        if i >= _SUGGEST_SCAN_LIMIT:
-            break
+    for obj in gc.get_objects():
         if not isinstance(obj, type):
             continue
         if get_provides(obj) is target:
             out.append(f'{obj.__module__}.{obj.__qualname__}')
-            if len(out) >= _SUGGEST_RESULT_LIMIT:
-                break
-    return out
+    out.sort()
+    return out[:_SUGGEST_RESULT_LIMIT]
 
 
 def _toposort(specs: Iterable[ProviderSpec], by_key: _Index) -> tuple[ProviderSpec, ...]:
