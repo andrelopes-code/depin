@@ -47,6 +47,11 @@ a conformance suite asserts the inferred type of the public call sites it covers
 Neither checker is treated as authoritative over the other: a change must
 satisfy both.
 
+Astral's `ty` runs in CI over the same code, advisorily: its job is allowed to
+fail without blocking a merge. `ty` is pre-1.0 on `0.0.x` versioning, and its
+own documentation warns that diagnostics can change between any two releases,
+so it is not yet part of the support commitment above.
+
 ### Known limitation: `provides` and `type[T]`
 
 `@provides(SomeProtocol)`, and equally `@provides(SomeABC)`, makes mypy report an
