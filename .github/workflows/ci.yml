@@ -164,6 +164,10 @@ jobs:
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           python-version: '3.12'
+          # This job's own `uv sync` runs only when the base branch carries a
+          # benchmark suite; when it doesn't, nothing here ever installs, and
+          # the cache post-step then errors because there is nothing to save.
+          enable-cache: false
 
       - name: Measure the base branch
         id: base
