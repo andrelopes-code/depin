@@ -79,6 +79,9 @@ def test_scopes_stay_isolated_and_every_teardown_runs_with_no_gil() -> None:
 
     frozen = Container().bind(open_session, scope=Scope.SCOPED).freeze()
 
+    # Each thread runs in its own Context, so `scope()` hands each one a separate
+    # frame: this asserts isolation and teardown completeness, not lock behaviour.
+    # The contended paths are covered by the other two tests in this module.
     def worker() -> None:
         _ = gate.wait()
         with frozen.scope():
