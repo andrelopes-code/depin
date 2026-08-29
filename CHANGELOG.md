@@ -8,9 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0](https://github.com/andrelopes-code/depin/compare/v0.4.3...v0.5.0) (2026-08-29)
 
 
+### Features
+
+* support the free-threaded builds of Python 3.13 and 3.14. The guarantee that a cached provider is constructed exactly once under contention rests on depin's own locks rather than the GIL, and CI asserts the GIL is disabled before running so the coverage cannot pass vacuously. The FastAPI integration is not covered there, because its dependencies publish no wheels for those interpreters ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+
+
 ### Bug Fixes
 
-* accept protocol keys in the subscript overload under mypy ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+* accept protocol keys in the subscript overload under mypy. `di[SomeProtocol]` failed under mypy at default settings while `resolve()` was clean; the bare `type[T]` overload arm was the cause ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+* find provider candidates without the garbage collector. The missing-provider suggestion was silently non-functional on free-threaded builds once any thread had run, because `gc.get_objects()` stops returning those classes ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+* make the missing-provider suggestion deterministic. Its scan budget counted objects rather than types, so the suggestion could vanish from the error message depending on how many objects the process held ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+
+
+### Performance Improvements
+
+* detect missing providers without a walk from every root. `Container.freeze()` was cubic in provider count; a 1000-provider graph went from 20.5 s to 38.6 ms, and error messages are unchanged ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+* stop rebuilding the captive-dependency chain per edge ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+
+
+### Documentation
+
+* publish a version support policy covering which Python versions are supported and when they are dropped, what free-threading coverage includes, and the one documented type-checker exception ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+
+
+### Build System
+
+* check types with mypy in strict mode alongside basedpyright, each against its own interpreter in the test matrix, with a conformance suite asserting the inferred type of the public call sites under both ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+* run ty as an advisory, non-blocking checker while it remains pre-stable ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+* fail a pull request that regresses a benchmark, measuring base and head on the same runner ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
+* attest releases with signed provenance, publish a CycloneDX SBOM, and run OpenSSF Scorecard ([#29](https://github.com/andrelopes-code/depin/issues/29)) ([f4263d3](https://github.com/andrelopes-code/depin/commit/f4263d306ac2b857cc46e6a9991dc565a178afa3))
 
 
 ### Miscellaneous Chores
