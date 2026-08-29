@@ -17,7 +17,7 @@ uv sync --all-extras
 ```
 
 This installs the core, the FastAPI extra, and all development tooling
-(`ruff`, `basedpyright`, `pytest`, `pytest-asyncio`, `pytest-cov`).
+(`ruff`, `basedpyright`, `mypy`, `pytest`, `pytest-asyncio`, `pytest-cov`).
 
 Optionally, install the git hooks so formatting and linting run before a commit
 is written:
@@ -26,19 +26,21 @@ is written:
 uvx pre-commit install
 ```
 
-The hooks reproduce the first two gates only. The type check and the test suite
-still have to be run explicitly, because both need the project environment.
+The hooks reproduce the first two gates only. The type checks and the test
+suite still have to be run explicitly, because all three need the project
+environment.
 
-## The four gates
+## The five gates
 
-Run these four commands, **in this exact order**, from the repository root
-before every commit. A change is only ready when all four pass with no
+Run these five commands, **in this exact order**, from the repository root
+before every commit. A change is only ready when all five pass with no
 warnings or waivers.
 
 ```bash
 uv run ruff format
 uv run ruff check
 uv run basedpyright
+uv run mypy
 uv run pytest
 ```
 
@@ -46,6 +48,9 @@ uv run pytest
 - `uv run ruff check` — lints.
 - `uv run basedpyright` — type-checks in strict mode. No `# type: ignore`,
   `# pyright: ignore`, `typing.cast`, or `Any` shortcuts.
+- `uv run mypy` — type-checks in strict mode with the second checker. See the
+  [support policy](https://andrelopes-code.github.io/depin/support-policy/)
+  for the one documented gap between the two checkers.
 - `uv run pytest` — runs the test suite, the doctests embedded in the
   public-API docstrings, the doctests in `docs/guide/`, and the programs under
   `examples/`.

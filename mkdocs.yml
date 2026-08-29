@@ -58,6 +58,7 @@ nav:
       - Composing bindings: guide/composition.md
       - Testing: guide/testing.md
       - FastAPI: guide/fastapi.md
+  - Support policy: support-policy.md
   - Reference:
       - Overview: reference/index.md
       - Container & Registry: reference/container.md
