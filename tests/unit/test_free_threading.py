@@ -37,30 +37,49 @@ def _run_in_threads(work: Callable[[], None]) -> None:
 def test_a_singleton_is_built_once_with_no_gil() -> None:
     class Pool: ...
 
-    built: list[Pool] = []
-    resolved: list[Pool] = []
+    # 64 independent keys, matching the per-key lock test below: `Pool()` is
+    # near-instant and the pre-lock `frame.lookup` fast path absorbs most of a
+    # race on a single key, so one key alone catches a removed single-flight
+    # lock only intermittently. Racing 64 keys at once makes detection certain.
+    TAGS = tuple(str(tag) for tag in range(64))
+
+    built: dict[str, list[Pool]] = {tag: [] for tag in TAGS}
+    resolved: dict[str, list[Pool]] = {tag: [] for tag in TAGS}
     record = threading.Lock()
-    gate = threading.Barrier(THREADS)
+    start = threading.Barrier(THREADS)
+    # Re-synchronised before every key, not just once at the start: threads
+    # drift apart after the first key, which would let later keys race with
+    # only partial overlap. A fresh rendezvous per key keeps all THREADS
+    # threads landing on each key's check-then-act window together.
+    per_key = threading.Barrier(THREADS)
 
-    def make() -> Pool:
-        pool = Pool()
-        with record:
-            built.append(pool)
-        return pool
+    def make_factory(tag: str) -> Callable[[], Pool]:
+        def make() -> Pool:
+            pool = Pool()
+            with record:
+                built[tag].append(pool)
+            return pool
 
-    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=Pool).freeze()
+        return make
+
+    container = Container()
+    for tag in TAGS:
+        container = container.bind(make_factory(tag), scope=Scope.SINGLETON, provides=Pool, tag=tag)
+    frozen = container.freeze()
 
     def worker() -> None:
-        _ = gate.wait()
-        value = frozen[Pool]
-        with record:
-            resolved.append(value)
+        _ = start.wait()
+        for tag in TAGS:
+            _ = per_key.wait()
+            value = frozen.resolve(Pool, tag=tag)
+            with record:
+                resolved[tag].append(value)
 
     _run_in_threads(worker)
 
-    assert len(built) == 1
-    assert len(resolved) == THREADS
-    assert all(value is built[0] for value in resolved)
+    assert all(len(pools) == 1 for pools in built.values())
+    assert all(len(values) == THREADS for values in resolved.values())
+    assert all(all(value is built[tag][0] for value in resolved[tag]) for tag in TAGS)
 
 
 def test_scopes_stay_isolated_and_every_teardown_runs_with_no_gil() -> None:
