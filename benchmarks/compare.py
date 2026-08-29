@@ -54,6 +54,11 @@ def main(argv: list[str]) -> int:
     shared = sorted(set(base) & set(head))
     for name in sorted(set(head) - set(base)):
         print(f'new benchmark, not gated: {name}')
+    # Reported, not failed: a benchmark can be legitimately deleted along with the
+    # code it measured. Silence would be worse — it is the only way a removal
+    # would otherwise go unnoticed past this gate.
+    for name in sorted(set(base) - set(head)):
+        print(f'removed benchmark, no longer gated: {name}')
 
     if not shared:
         print('no benchmark appears in both reports; nothing to compare', file=sys.stderr)
