@@ -173,7 +173,11 @@ def _suggest_candidates(target: object) -> list[str]:
     if not isinstance(target, type):
         return []
 
-    out: list[str] = []
+    # Deduped on the emitted string, not `id(obj)`: two distinct classes can
+    # share a `__module__` and `__qualname__` (a module reload, a class
+    # factory), and an identity-keyed set would let both through, repeating
+    # the same name in the reported candidates.
+    out: set[str] = set()
     seen: set[int] = set()
     for module in _loaded_modules():
         if not isinstance(module, ModuleType):
@@ -203,9 +207,8 @@ def _suggest_candidates(target: object) -> list[str]:
                 # less forgiving than the read that produced `obj`.
                 continue
             if found is target:
-                out.append(f'{obj.__module__}.{obj.__qualname__}')
-    out.sort()
-    return out[:_SUGGEST_RESULT_LIMIT]
+                out.add(f'{obj.__module__}.{obj.__qualname__}')
+    return sorted(out)[:_SUGGEST_RESULT_LIMIT]
 
 
 def _toposort(specs: Iterable[ProviderSpec], by_key: _Index) -> tuple[ProviderSpec, ...]:

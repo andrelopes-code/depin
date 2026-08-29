@@ -265,6 +265,42 @@ def test_missing_provider_suggestion_scan_survives_a_none_module_entry() -> None
         del sys.modules[name]
 
 
+def test_missing_provider_suggestion_does_not_repeat_a_shared_qualname() -> None:
+    """Two distinct classes sharing a module and qualname must not repeat in the message.
+
+    Dedup keyed on `id(obj)` lets two distinct `@provides` classes that happen to
+    share `__module__` and `__qualname__` — a module reload, or a class factory —
+    both pass the check and both emit the same string, visibly duplicated in the
+    error. Dedup must instead key on the emitted string.
+    """
+
+    class DuplicateQualnameTarget: ...
+
+    def make_candidate() -> type:
+        @provides(DuplicateQualnameTarget)
+        class Same(DuplicateQualnameTarget): ...
+
+        Same.__qualname__ = 'DuplicateQualnameCandidate'
+        return Same
+
+    dup_module = ModuleType('depin_test_duplicate_qualname_module')
+    dup_module.__dict__['First'] = make_candidate()
+    dup_module.__dict__['Second'] = make_candidate()
+    sys.modules[dup_module.__name__] = dup_module
+    try:
+
+        class Repo:
+            def __init__(self, db: DuplicateQualnameTarget) -> None: ...
+
+        r = Registry().bind(Repo, scope=Scope.SINGLETON)
+        with pytest.raises(MissingProviderError) as exc:
+            _ = build_plan(r.records())
+        msg = str(exc.value)
+        assert msg.count('DuplicateQualnameCandidate') == 1
+    finally:
+        del sys.modules[dup_module.__name__]
+
+
 def test_duplicate_class_binding_raises() -> None:
     class Foo: ...
 
