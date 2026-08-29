@@ -238,6 +238,33 @@ def test_missing_provider_suggestion_scan_survives_a_hostile_metaclass_getattr()
         del sys.modules[hostile_module.__name__]
 
 
+def test_missing_provider_suggestion_scan_survives_a_none_module_entry() -> None:
+    """`sys.modules` can hold `None` for a name whose import failed partway.
+
+    The scan guards ``isinstance(module, ModuleType)`` before walking a module's
+    namespace; a `None` entry must be skipped rather than raising, and the walk
+    must still find the real candidate afterwards. On Python 3.13+, nothing in
+    a default interpreter's `sys.modules` exercises this branch any more —
+    `typing.io`/`typing.re`, the only non-module entries on 3.12, were removed
+    — so this is the only thing that still covers it there.
+    """
+    name = 'depin_test_none_module_entry'
+    assert name not in sys.modules
+    # sys.modules can hold None for a failed import; both stubs promise ModuleType.
+    sys.modules[name] = None  # type: ignore[assignment]  # pyright: ignore[reportArgumentType]
+    try:
+
+        class Repo:
+            def __init__(self, db: MissingProviderSuggestionTarget) -> None: ...
+
+        r = Registry().bind(Repo, scope=Scope.SINGLETON)
+        with pytest.raises(MissingProviderError) as exc:
+            _ = build_plan(r.records())
+        assert 'MissingProviderSuggestionCandidate' in str(exc.value)
+    finally:
+        del sys.modules[name]
+
+
 def test_duplicate_class_binding_raises() -> None:
     class Foo: ...
 
