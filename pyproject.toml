@@ -52,6 +52,7 @@ dev = [
     "pytest-cov>=7.1.0",
     "httpx>=0.27",
     "fastapi>=0.133",
+    "mypy>=1.18",
 ]
 # The extended matrix runs free-threaded and pre-release interpreters, where
 # `fastapi` and its compiled transitive dependencies have no wheels. The core
@@ -104,6 +105,15 @@ typeCheckingMode = "strict"
 pythonVersion = "3.12"
 reportImplicitOverride = true
 reportMissingTypeStubs = false
+
+# The file list mirrors `[tool.basedpyright] include` exactly. The two checkers
+# must see the same code, or "both are clean" means nothing.
+[tool.mypy]
+python_version = "3.12"
+files = ["depin", "tests", "examples"]
+strict = true
+warn_unreachable = true
+enable_error_code = ["redundant-expr", "possibly-undefined", "truthy-bool", "ignore-without-code"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "depin", "docs"]
