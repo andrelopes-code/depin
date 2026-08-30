@@ -90,15 +90,14 @@ class _Flight:
             waiters = tuple(self._waiters)
             self._waiters.clear()
         self._event.set()
-        errors: list[RuntimeError] = []
         for waiter in waiters:
+            if waiter.loop.is_closed():
+                continue
             try:
                 waiter.loop.call_soon_threadsafe(self._complete_waiter, waiter.future)
-            except RuntimeError as exc:
-                if not waiter.loop.is_closed():
-                    errors.append(exc)
-        if errors:
-            raise ExceptionGroup('depin flight completion errors', errors)
+            except RuntimeError:
+                # A compliant event loop raises only when it closed after the precheck.
+                continue
 
     @staticmethod
     def _complete_waiter(future: asyncio.Future[None]) -> None:

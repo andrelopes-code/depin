@@ -260,13 +260,25 @@ def test_async_singleton_is_single_flight_across_event_loops() -> None:
     context = multiprocessing.get_context('spawn')
     parent, child = context.Pipe(duplex=False)
     process = context.Process(target=_run_cross_loop_singleton, args=(child,))
-    process.start()
-    child.close()
-    result = parent.recv_bytes().decode()
-    process.join()
-
-    assert process.exitcode == 0
-    assert result == 'success:constructed=1 resolved=32 identities=1 failures=0'
+    try:
+        process.start()
+        child.close()
+        if not parent.poll(30):
+            pytest.fail('cross-loop singleton worker sent no result within 30 seconds')
+        result = parent.recv_bytes().decode()
+        process.join(30)
+        if process.is_alive():
+            pytest.fail('cross-loop singleton worker did not exit within 30 seconds')
+        assert process.exitcode == 0
+        assert result == 'success:constructed=1 resolved=32 identities=1 failures=0'
+    finally:
+        parent.close()
+        if process.is_alive():
+            process.terminate()
+            process.join(5)
+        if process.is_alive():
+            process.kill()
+            process.join(5)
 
 
 def test_scope_context_is_explicit_in_child_threads_and_inherited_by_sibling_tasks() -> None:

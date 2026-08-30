@@ -371,32 +371,117 @@ async def test_sync_and_async_resolution_share_one_flight() -> None:
 
 @pytest.mark.asyncio
 async def test_async_and_sync_resolution_share_one_flight() -> None:
-    started = asyncio.Event()
-    release = asyncio.Event()
+    provider_started = threading.Event()
+    follower_waiting = threading.Event()
+    release = threading.Event()
     constructed: list[object] = []
+    failures: list[BaseException] = []
+    record = threading.Lock()
 
-    def make() -> object:
+    class Value: ...
+
+    class RecordingEvent:
+        def __init__(self, event: threading.Event) -> None:
+            self._event = event
+
+        def wait(self) -> bool:
+            follower_waiting.set()
+            return self._event.wait()
+
+        def set(self) -> None:
+            self._event.set()
+
+    def make() -> Value:
+        provider_started.set()
+        release.wait()
         value = object()
-        constructed.append(value)
+        with record:
+            constructed.append(value)
+        return Value()
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=Value).freeze()
+
+    def async_leader() -> None:
+        try:
+            _ = asyncio.run(frozen.aresolve(Value))
+        except BaseException as exc:
+            with record:
+                failures.append(exc)
+
+    leader = threading.Thread(target=async_leader)
+    leader.start()
+    resolved: list[Value] = []
+    follower: threading.Thread | None = None
+
+    def sync_follower() -> None:
+        try:
+            value = frozen.resolve(Value)
+            with record:
+                resolved.append(value)
+        except BaseException as exc:
+            with record:
+                failures.append(exc)
+
+    try:
+        provider_started.wait()
+        root: ScopeFrame = object.__getattribute__(frozen, '_root')
+        flight, constructs = root.start_flight((Value, None))
+        assert not constructs
+        event: threading.Event = object.__getattribute__(flight, '_event')
+        object.__setattr__(flight, '_event', RecordingEvent(event))
+        follower = threading.Thread(target=sync_follower)
+        follower.start()
+        follower_waiting.wait()
+    finally:
+        release.set()
+        leader.join()
+        if follower is not None:
+            follower.join()
+    assert not failures
+    assert len(constructed) == 1
+    assert len(resolved) == 1
+    assert frozen.resolve(Value) is resolved[0]
+
+
+@pytest.mark.asyncio
+async def test_closed_loop_waiter_does_not_mask_a_live_waiter() -> None:
+    frame = ScopeFrame()
+    flight, leader = frame.start_flight(object())
+    assert leader
+    closed_waiter_registered = threading.Event()
+
+    def register_closed_waiter() -> None:
+        loop = asyncio.new_event_loop()
+        task = loop.create_task(flight.wait_async())
+        loop.call_soon(loop.stop)
+        loop.run_forever()
+        assert not task.done()
+        object.__setattr__(task, '_log_destroy_pending', False)
+        loop.close()
+        closed_waiter_registered.set()
+
+    thread = threading.Thread(target=register_closed_waiter)
+    thread.start()
+    closed_waiter_registered.wait()
+    thread.join()
+    value = object()
+
+    async def wait_for_value() -> object:
+        await flight.wait_async()
         return value
 
-    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=object).freeze()
-
-    async def async_leader() -> object:
-        started.set()
-        await release.wait()
-        return await frozen.aresolve(object)
-
-    leader = asyncio.create_task(async_leader())
-    await started.wait()
-    follower = asyncio.create_task(asyncio.to_thread(frozen.resolve, object))
-    marker = asyncio.get_running_loop().create_future()
-    asyncio.get_running_loop().call_soon(marker.set_result, None)
-    await marker
-    release.set()
-    first, second = await asyncio.gather(leader, follower)
-    assert first is second
-    assert len(constructed) == 1
+    live_waiter = asyncio.create_task(wait_for_value())
+    await _checkpoint()
+    try:
+        frame.finish_flight(object(), flight)
+        await _checkpoint()
+        assert live_waiter.done()
+        assert await live_waiter is value
+    finally:
+        if not live_waiter.done():
+            live_waiter.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await live_waiter
 
 
 def test_sync_self_resolution_raises_instead_of_waiting_for_its_own_flight() -> None:
