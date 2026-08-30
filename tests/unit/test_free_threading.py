@@ -8,6 +8,7 @@ where the GIL is enabled.
 
 import sys
 import threading
+from _thread import LockType
 from collections.abc import Callable, Generator
 
 import pytest
@@ -32,6 +33,22 @@ def _run_in_threads(work: Callable[[], None]) -> None:
         thread.start()
     for thread in threads:
         thread.join()
+
+
+class _RendezvousLockTable:
+    def __init__(self, guard: LockType, rendezvous: threading.Barrier) -> None:
+        self._guard = guard
+        self._rendezvous = rendezvous
+        self._values: dict[object, LockType] = {}
+
+    def get(self, key: object) -> LockType | None:
+        value = self._values.get(key)
+        if value is None and not self._guard.locked():
+            _ = self._rendezvous.wait()
+        return value
+
+    def __setitem__(self, key: object, value: LockType) -> None:
+        self._values[key] = value
 
 
 def test_a_singleton_is_built_once_with_no_gil() -> None:
@@ -118,22 +135,22 @@ def test_scopes_stay_isolated_and_every_teardown_runs_with_no_gil() -> None:
 
 def test_the_per_key_lock_table_survives_concurrent_creation() -> None:
     frame = ScopeFrame()
-    keys = tuple(range(64))
-    handed_out: list[tuple[int, int]] = []
+    mutex = object.__getattribute__(frame, '_mutex')
+    assert isinstance(mutex, type(threading.Lock()))
+    object.__setattr__(frame, '_sync_locks', _RendezvousLockTable(mutex, threading.Barrier(THREADS)))
+
+    key = object()
+    handed_out: list[LockType] = []
     record = threading.Lock()
-    gate = threading.Barrier(THREADS)
+    start = threading.Barrier(THREADS)
 
     def worker() -> None:
-        _ = gate.wait()
-        pairs = [(key, id(frame.sync_lock_for(key))) for key in keys]
+        _ = start.wait()
+        lock = frame.sync_lock_for(key)
         with record:
-            handed_out.extend(pairs)
+            handed_out.append(lock)
 
     _run_in_threads(worker)
 
-    by_key: dict[int, set[int]] = {}
-    for key, lock_id in handed_out:
-        by_key.setdefault(key, set()).add(lock_id)
-
-    assert len(by_key) == len(keys)
-    assert all(len(ids) == 1 for ids in by_key.values())
+    assert len(handed_out) == THREADS
+    assert all(lock is handed_out[0] for lock in handed_out)
