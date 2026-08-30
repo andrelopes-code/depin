@@ -65,8 +65,10 @@ def _deepest_requirement(
     Walks `graph.nodes`, the topological order; `depin._core.graph._collect_missing`
     walks specs in declaration order instead. The two orders can differ, but the
     two walks still agree on which chain wins: the longest chain wins outright, and
-    a tie is only reachable between two roots where neither depends on the other —
-    an ordering the toposort preserves from declaration order. It inherits that
+    a tie — whether between two roots or between two siblings sharing one root —
+    is broken the same way by both, because each pushes a node's children in
+    forward order onto a LIFO stack and compares with a strict ``>``, so the
+    first chain found at a given length is the one that stands. It inherits that
     walk's cost on a dense graph; the roadmap routes that to Step 6.
     """
     best: tuple[tuple[ProviderKey, ...], ProviderKey, str] | None = None

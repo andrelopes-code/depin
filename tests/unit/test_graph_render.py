@@ -476,6 +476,60 @@ def test_a_tie_between_equal_length_chains_matches_the_freeze_error() -> None:
     assert render_tree(graph, missing, None) == str(raised.value)
 
 
+def _two_equal_sibling_chains_to_one_unbound_leaf() -> tuple[Container, Container, type[object]]:
+    """One root with two branches, each two levels deep, both requiring one shared missing type.
+
+    Unlike `_two_equal_chains_to_one_unbound_leaf`, the tie is not between two
+    roots but between two siblings under one root: root -> branch_a -> missing
+    and root -> branch_b -> missing are both length-two chains.
+    """
+    missing = type('Missing', (), {})
+    branch_a = type('BranchA', (), {})
+    branch_b = type('BranchB', (), {})
+    root_type = type('Root', (), {})
+
+    def make_branch_a_required(dep: object) -> object:
+        del dep
+        return branch_a()
+
+    def make_branch_a_defaulted(dep: object = None) -> object:
+        del dep
+        return branch_a()
+
+    def make_branch_b_required(dep: object) -> object:
+        del dep
+        return branch_b()
+
+    def make_branch_b_defaulted(dep: object = None) -> object:
+        del dep
+        return branch_b()
+
+    def make_root(a: object, b: object) -> object:
+        del a, b
+        return root_type()
+
+    for factory in (make_branch_a_required, make_branch_a_defaulted):
+        _set_dynamic_attribute(factory, '__annotations__', {'dep': missing, 'return': branch_a})
+    for factory in (make_branch_b_required, make_branch_b_defaulted):
+        _set_dynamic_attribute(factory, '__annotations__', {'dep': missing, 'return': branch_b})
+    _set_dynamic_attribute(make_root, '__annotations__', {'a': branch_a, 'b': branch_b, 'return': root_type})
+
+    required = Container().bind(make_branch_a_required).bind(make_branch_b_required).bind(make_root)
+    defaulted = Container().bind(make_branch_a_defaulted).bind(make_branch_b_defaulted).bind(make_root)
+    return required, defaulted, missing
+
+
+def test_a_tie_between_sibling_chains_matches_the_freeze_error() -> None:
+    required, defaulted, missing = _two_equal_sibling_chains_to_one_unbound_leaf()
+
+    with pytest.raises(MissingProviderError) as raised:
+        _ = required.freeze()
+
+    graph = build_graph(build_plan(defaulted.records()))
+
+    assert render_tree(graph, missing, None) == str(raised.value)
+
+
 def test_dot_declares_every_node_and_edge_in_plan_order() -> None:
     assert build().dot() == (
         'digraph depin {\n'
