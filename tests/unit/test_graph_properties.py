@@ -247,7 +247,7 @@ def test_every_edge_either_indexes_a_node_or_is_unsatisfied(case: GraphCase) -> 
         return
     for node in graph.nodes:
         for edge in node.dependencies:
-            assert edge.satisfied is (graph.find(edge.key, edge.tag) is not None)
+            assert edge.satisfied is (graph.find(edge.key, tag=edge.tag) is not None)
 
 
 @given(case=_graphs())
@@ -288,7 +288,7 @@ def test_explain_names_every_key_reachable_from_its_root(case: GraphCase) -> Non
                 continue
             reachable.add((node.key, node.tag))
             for edge in node.dependencies:
-                child = graph.find(edge.key, edge.tag)
+                child = graph.find(edge.key, tag=edge.tag)
                 if child is not None:
                     pending.append(child)
         for key, _tag in reachable:

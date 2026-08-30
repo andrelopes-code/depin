@@ -105,19 +105,19 @@ class DependencyGraph:
         depended = {(edge.key, edge.tag) for node in self._nodes for edge in node.dependencies if edge.satisfied}
         return tuple(node for node in self._nodes if (node.key, node.tag) not in depended)
 
-    def node(self, key: ProviderKey, tag: str | None = None) -> GraphNode:
+    def node(self, key: ProviderKey, *, tag: str | None = None) -> GraphNode:
         """Return the node bound under ``key`` and ``tag``.
 
         Raises:
             MissingProviderError: Nothing is bound under that key and tag. Use
                 `find` to ask without raising.
         """
-        found = self.find(key, tag)
+        found = self.find(key, tag=tag)
         if found is None:
             raise MissingProviderError(f'no provider for {fmt_key(key)} (tag={tag!r})')
         return found
 
-    def find(self, key: ProviderKey, tag: str | None = None) -> GraphNode | None:
+    def find(self, key: ProviderKey, *, tag: str | None = None) -> GraphNode | None:
         """Return the node bound under ``key`` and ``tag``, or None when nothing is."""
         return self._index.get((key, tag))
 

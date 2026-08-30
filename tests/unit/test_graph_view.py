@@ -70,7 +70,7 @@ def test_an_edge_records_the_tag_its_parameter_requires() -> None:
     graph = build_graph(build_plan(Container().bind(Config).bind(Store, tag='primary').bind(TaggedConsumer).records()))
     edge = graph.node(TaggedConsumer).dependencies[0]
     assert edge.tag == 'primary'
-    assert graph.find(edge.key, edge.tag) == graph.node(Store, 'primary')
+    assert graph.find(edge.key, tag=edge.tag) == graph.node(Store, tag='primary')
 
 
 def test_a_defaulted_parameter_with_no_binding_is_an_unsatisfied_edge() -> None:
@@ -91,17 +91,17 @@ def test_roots_are_the_nodes_nothing_depends_on() -> None:
 
 
 def test_find_returns_none_for_an_unbound_key() -> None:
-    assert build().find(Store, 'other') is None
+    assert build().find(Store, tag='other') is None
 
 
 def test_node_raises_for_an_unbound_key() -> None:
     with pytest.raises(MissingProviderError, match="no provider for Store \\(tag='other'\\)"):
-        _ = build().node(Store, 'other')
+        _ = build().node(Store, tag='other')
 
 
 def test_a_tagged_binding_keeps_its_tag_on_the_node() -> None:
     graph = build_graph(build_plan(Container().bind(Config, tag='primary').records()))
-    assert graph.node(Config, 'primary').tag == 'primary'
+    assert graph.node(Config, tag='primary').tag == 'primary'
     assert graph.find(Config) is None
 
 

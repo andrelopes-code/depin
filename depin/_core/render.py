@@ -17,7 +17,7 @@ def annotation_parts(node: GraphNode) -> list[str]:
 
 def render_tree(graph: DependencyGraph, key: ProviderKey, tag: str | None) -> str:
     """The resolution tree below ``(key, tag)``, or the missing-provider line for it."""
-    root = graph.find(key, tag)
+    root = graph.find(key, tag=tag)
     if root is None:
         return _render_absent(graph, key, tag)
 
@@ -40,7 +40,7 @@ def render_tree(graph: DependencyGraph, key: ProviderKey, tag: str | None) -> st
         expanded.add(ident)
         lines.append(f'{indent}{label}{fmt_key(target.key)}  {annotations}')
         for edge in reversed(target.dependencies):
-            child = graph.find(edge.key, edge.tag)
+            child = graph.find(edge.key, tag=edge.tag)
             stack.append((depth + 1, f'{edge.parameter}: ', edge.key if child is None else child))
     return '\n'.join(lines)
 
@@ -75,7 +75,7 @@ def _deepest_requirement(
         while stack:
             node, chain = stack.pop()
             for edge in node.dependencies:
-                child = graph.find(edge.key, edge.tag)
+                child = graph.find(edge.key, tag=edge.tag)
                 if child is None:
                     if (edge.key, edge.tag) == (key, tag) and (best is None or len(chain) > len(best[0])):
                         best = (tuple(ident[0] for ident in chain), node.key, edge.parameter)
