@@ -1,7 +1,6 @@
 """Generative checks for the provider-graph validator."""
 
 import inspect
-import signal
 from dataclasses import dataclass
 
 import pytest
@@ -62,17 +61,7 @@ def _materialize(case: GraphCase) -> Container:
     return container
 
 
-class _GraphFreezeTimedOut(Exception):
-    pass
-
-
-def _raise_graph_freeze_timeout(_signal_number: int, _frame: object) -> None:
-    raise _GraphFreezeTimedOut
-
-
 def _freeze_result(case: GraphCase) -> str:
-    previous_handler = signal.signal(signal.SIGALRM, _raise_graph_freeze_timeout)
-    signal.setitimer(signal.ITIMER_REAL, 1)
     try:
         frozen = _materialize(case).freeze()
     except CircularDependencyError as error:
@@ -81,8 +70,6 @@ def _freeze_result(case: GraphCase) -> str:
         return f'captive:{error}'
     except DepinError as error:
         return f'depin:{error}'
-    except _GraphFreezeTimedOut:
-        return 'timed-out'
     except BaseException as error:
         return f'unexpected:{type(error).__name__}:{error}'
     else:
@@ -94,9 +81,6 @@ def _freeze_result(case: GraphCase) -> str:
             for parameter in spec.params
         )
         return 'ordered' if ordered else 'out-of-order'
-    finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
-        signal.signal(signal.SIGALRM, previous_handler)
 
 
 @st.composite

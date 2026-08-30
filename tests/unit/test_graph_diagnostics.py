@@ -155,20 +155,20 @@ def test_suggestion_scan_continues_after_a_hostile_class_in_its_own_module() -> 
         del sys.modules[module.__name__]
 
 
-def test_missing_provider_suggestion_scan_survives_a_none_module_entry() -> None:
-    name = 'depin_test_none_module_entry'
-    assert name not in sys.modules
-    sys.modules[name] = None  # type: ignore[assignment]  # pyright: ignore[reportArgumentType]
-    try:
+def test_missing_provider_suggestion_scan_survives_a_none_module_entry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        'depin._core.graph._loaded_modules',
+        lambda: [None, sys.modules[__name__]],
+    )
 
-        class Repo:
-            def __init__(self, db: MissingProviderSuggestionTarget) -> None: ...
+    class Repo:
+        def __init__(self, db: MissingProviderSuggestionTarget) -> None: ...
 
-        with pytest.raises(MissingProviderError) as exc:
-            _ = build_plan(Registry().bind(Repo, scope=Scope.SINGLETON).records())
-        assert 'MissingProviderSuggestionCandidate' in str(exc.value)
-    finally:
-        del sys.modules[name]
+    with pytest.raises(MissingProviderError) as exc:
+        _ = Container().bind(Repo).freeze()
+    assert 'MissingProviderSuggestionCandidate' in str(exc.value)
 
 
 def test_missing_provider_suggestion_does_not_repeat_a_shared_qualname() -> None:

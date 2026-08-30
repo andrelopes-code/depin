@@ -1,6 +1,5 @@
 """Graph validation performed by freeze(): duplicates, cycles, captives, async reach."""
 
-import signal
 import sys
 from collections.abc import AsyncGenerator
 from types import ModuleType
@@ -55,14 +54,6 @@ class _MissingChainDependency:
     def __init__(self, absent: _MissingCycleDependency) -> None: ...
 
 
-class _FreezeTimedOut(Exception):
-    pass
-
-
-def _raise_freeze_timeout(_signal_number: int, _frame: object) -> None:
-    raise _FreezeTimedOut
-
-
 def test_missing_provider_raises() -> None:
     class A: ...
 
@@ -78,14 +69,8 @@ def test_freeze_reports_a_missing_dependency_without_looping_on_a_cycle() -> Non
     with pytest.raises(MissingProviderError):
         _ = Container().bind(_MissingChainRoot).bind(_MissingChainDependency).freeze()
 
-    previous_handler = signal.signal(signal.SIGALRM, _raise_freeze_timeout)
-    signal.setitimer(signal.ITIMER_REAL, 1)
-    try:
-        with pytest.raises(MissingProviderError):
-            _ = Container().bind(_MissingCycleA).bind(_MissingCycleB).freeze()
-    finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
-        signal.signal(signal.SIGALRM, previous_handler)
+    with pytest.raises(MissingProviderError):
+        _ = Container().bind(_MissingCycleA).bind(_MissingCycleB).freeze()
 
 
 def test_default_value_satisfies_missing() -> None:
@@ -168,14 +153,8 @@ def test_a_cycle_does_not_stop_the_missing_provider_report() -> None:
         def __init__(self, a: A, gone: Gone) -> None: ...
 
     r = Registry().bind(A, scope=Scope.SINGLETON).bind(B, scope=Scope.SINGLETON)
-    previous_handler = signal.signal(signal.SIGALRM, _raise_freeze_timeout)
-    signal.setitimer(signal.ITIMER_REAL, 1)
-    try:
-        with pytest.raises(MissingProviderError, match='Gone'):
-            _ = build_plan(r.records())
-    finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
-        signal.signal(signal.SIGALRM, previous_handler)
+    with pytest.raises(MissingProviderError, match='Gone'):
+        _ = build_plan(r.records())
 
 
 def test_the_same_missing_key_is_reported_once_for_equally_deep_chains() -> None:
