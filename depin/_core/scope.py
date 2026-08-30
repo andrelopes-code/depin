@@ -243,21 +243,51 @@ class ScopeFrame:
 
     def claim_cached(self, key: object) -> tuple[object, _Flight | _Leader | None]:
         """Atomically return a cached value or claim/join its construction flight."""
-        with self._mutex:
-            value = self._cache.get(key, MISSING)
-            if value is not MISSING:
-                return value, None
-            flight = self._flights.get(key)
-            if flight is None:
-                leader = _Leader()
-                self._flights[key] = leader
-                return MISSING, leader
-            if isinstance(flight, _Flight):
-                return MISSING, flight
-            joined = _Flight(flight)
-            flight.flight = joined
-            self._flights[key] = joined
-            return MISSING, joined
+        if self.parent is None:
+            with self._mutex:
+                value = self._cache.get(key, MISSING)
+                if value is not MISSING:
+                    return value, None
+                flight = self._flights.get(key)
+                if flight is None:
+                    leader = _Leader()
+                    self._flights[key] = leader
+                    return MISSING, leader
+                if isinstance(flight, _Flight):
+                    return MISSING, flight
+                joined = _Flight(flight)
+                flight.flight = joined
+                self._flights[key] = joined
+                return MISSING, joined
+        frames = self._visible_frames()
+        with contextlib.ExitStack() as locks:
+            for frame in frames:
+                locks.enter_context(frame._mutex)
+            for frame in frames:
+                value = frame._cache.get(key, MISSING)
+                if value is not MISSING:
+                    return value, None
+            for frame in frames:
+                flight = frame._flights.get(key)
+                if flight is None:
+                    continue
+                if isinstance(flight, _Flight):
+                    return MISSING, flight
+                joined = _Flight(flight)
+                flight.flight = joined
+                frame._flights[key] = joined
+                return MISSING, joined
+            leader = _Leader()
+            self._flights[key] = leader
+            return MISSING, leader
+
+    def _visible_frames(self) -> tuple['ScopeFrame', ...]:
+        frames: list[ScopeFrame] = []
+        frame: ScopeFrame | None = self
+        while frame is not None:
+            frames.append(frame)
+            frame = frame.parent
+        return tuple(reversed(frames))
 
     def is_leader(self, claim: _Flight | _Leader | None) -> bool:
         return isinstance(claim, _Leader)

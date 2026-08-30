@@ -252,8 +252,13 @@ def test_the_unified_flight_table_survives_concurrent_creation() -> None:
     _run_in_threads(worker)
 
     assert len(handed_out) == THREADS
-    assert all(flight is handed_out[0][0] for flight, _ in handed_out)
     assert sum(constructs for _, constructs in handed_out) == 1
+    leaders = [flight for flight, constructs in handed_out if constructs]
+    followers = [flight for flight, constructs in handed_out if not constructs]
+    assert len(leaders) == 1
+    assert len(followers) == THREADS - 1
+    assert all(flight is followers[0] for flight in followers)
+    assert leaders[0] is not followers[0]
 
 
 def test_async_singleton_is_single_flight_across_event_loops() -> None:

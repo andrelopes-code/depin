@@ -667,6 +667,23 @@ async def test_async_dynamic_cycle_during_parameter_resolution_raises() -> None:
 
 
 @pytest.mark.asyncio
+async def test_async_nested_scope_self_resolution_raises() -> None:
+    frozen: FrozenContainer
+
+    class Value: ...
+
+    async def make() -> Value:
+        async with frozen.ascope():
+            return await frozen.aresolve(Value)
+
+    frozen = Container().bind(make, scope=Scope.SCOPED, provides=Value).freeze()
+    async with asyncio.timeout(1):
+        with pytest.raises(CircularDependencyError, match='already constructing'):
+            async with frozen.ascope():
+                await frozen.aresolve(Value)
+
+
+@pytest.mark.asyncio
 async def test_stale_and_duplicate_flight_completion_do_not_signal_replacement() -> None:
     frame = ScopeFrame()
     old, leader = frame.start_flight(object())

@@ -131,6 +131,43 @@ else:
     )
 
 
+def test_sync_nested_scope_self_resolution_raises() -> None:
+    script = """
+from depin import Container, Scope
+from depin.errors import CircularDependencyError
+
+frozen: object
+
+class Value: ...
+
+def make() -> Value:
+    with frozen.scope():
+        return frozen.resolve(Value)
+
+frozen = Container().bind(make, scope=Scope.SCOPED, provides=Value).freeze()
+try:
+    with frozen.scope():
+        frozen.resolve(Value)
+except CircularDependencyError as exc:
+    print(exc)
+else:
+    raise AssertionError('nested-scope self resolution did not raise CircularDependencyError')
+"""
+    completed = subprocess.run(
+        [sys.executable, '-c', script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=2,
+        cwd=Path(frozen_module.__file__).parents[2],
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout == (
+        'Value is already constructing in this context; '
+        'resolve a different dependency or break the recursive provider call\n'
+    )
+
+
 def test_sync_single_flight_keeps_unrelated_singletons_independent() -> None:
     script = """
 import threading

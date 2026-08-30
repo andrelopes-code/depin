@@ -93,6 +93,20 @@ def test_start_flight_designates_one_leader_and_joins_followers() -> None:
     assert not second_constructs
 
 
+def test_child_frame_joins_an_ancestor_construction_flight() -> None:
+    parent = ScopeFrame()
+    child = ScopeFrame(parent)
+    key = object()
+
+    cached, leader = parent.claim_cached(key)
+    child_cached, follower = child.claim_cached(key)
+
+    assert cached is MISSING
+    assert parent.is_leader(leader)
+    assert child_cached is MISSING
+    assert not child.is_leader(follower)
+
+
 def test_a_scope_value_must_be_supplied_before_it_resolves() -> None:
     class Marker: ...
 

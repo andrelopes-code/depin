@@ -366,19 +366,21 @@ class FrozenContainer:
 
     def _resolve_cached_sync(self, spec: ProviderSpec, frame: ScopeFrame) -> object:
         cache_id = (spec.key, spec.tag)
-        cached = frame.lookup(cache_id)
-        if cached is not MISSING:
-            return cached
         while True:
             cached, claim = frame.claim_cached(cache_id)
             if cached is not MISSING:
                 return cached
-            if not frame.is_leader(claim):
+            if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
+                if frame.is_leader(claim) and claim is not None:
+                    follower = frame.abort(cache_id, claim)
+                    if follower is not None:
+                        follower.finish()
                 if self._is_constructing(frame, cache_id):
                     raise CircularDependencyError(
                         f'{fmt_key(spec.key)} is already constructing in this context; '
                         'resolve a different dependency or break the recursive provider call'
                     )
+            if not frame.is_leader(claim):
                 if claim is not None:
                     frame.wait_sync(claim)
                 continue
@@ -404,19 +406,21 @@ class FrozenContainer:
         if frame is None:
             return await self._construct_async(spec)
         cache_id = (spec.key, spec.tag)
-        cached = frame.lookup(cache_id)
-        if cached is not MISSING:
-            return cached
         while True:
             cached, claim = frame.claim_cached(cache_id)
             if cached is not MISSING:
                 return cached
-            if not frame.is_leader(claim):
+            if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
+                if frame.is_leader(claim) and claim is not None:
+                    follower = frame.abort(cache_id, claim)
+                    if follower is not None:
+                        follower.finish()
                 if self._is_constructing(frame, cache_id):
                     raise CircularDependencyError(
                         f'{fmt_key(spec.key)} is already constructing in this context; '
                         'resolve a different dependency or break the recursive provider call'
                     )
+            if not frame.is_leader(claim):
                 if claim is not None:
                     await frame.wait_async(claim)
                 continue
@@ -440,8 +444,12 @@ class FrozenContainer:
     def _is_constructing(self, frame: ScopeFrame, cache_id: object) -> bool:
         current = _constructing.get()
         while current is not None:
-            if current.frame is frame and current.cache_id == cache_id:
-                return True
+            if current.cache_id == cache_id:
+                candidate: ScopeFrame | None = frame
+                while candidate is not None:
+                    if current.frame is candidate:
+                        return True
+                    candidate = candidate.parent
             current = current.parent
         return False
 
