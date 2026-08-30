@@ -86,7 +86,11 @@ def _read_stats(path: Path) -> MutationStats | str:
             mutation_stats.segfault,
         ),
     )
-    if mutation_stats.total != counted:
+    if mutation_stats.total > counted:
+        unclassified = mutation_stats.total - counted
+        noun = 'result is' if unclassified == 1 else 'results are'
+        return f'{unclassified} mutation {noun} unclassified by mutmut CI statistics'
+    if mutation_stats.total < counted:
         return f'mutation stats have inconsistent totals: total={mutation_stats.total}, counted={counted}'
     return mutation_stats
 

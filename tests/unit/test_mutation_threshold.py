@@ -57,7 +57,7 @@ def test_evaluate_rejects_inconclusive_results(result: str) -> None:
         ('{"killed": true}', 'must be an integer'),
         ('{"killed": -1}', 'must not be negative'),
         (
-            '{"killed": 1, "survived": 1, "total": 3, "no_tests": 0, "skipped": 0, '
+            '{"killed": 1, "survived": 1, "total": 1, "no_tests": 0, "skipped": 0, '
             '"suspicious": 0, "timeout": 0, "check_was_interrupted_by_user": 0, "segfault": 0}',
             'inconsistent totals',
         ),
@@ -90,6 +90,46 @@ def test_main_rejects_non_integer_fields(tmp_path: Path, capsys: pytest.CaptureF
 
     assert main([str(path)]) == 1
     assert 'survived must be an integer' in capsys.readouterr().out
+
+
+def test_main_rejects_mutants_missing_from_exported_classifications(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = tmp_path / 'stats.json'
+    values: dict[str, object] = {
+        'killed': 95,
+        'survived': 5,
+        'total': 101,
+        'no_tests': 0,
+        'skipped': 0,
+        'suspicious': 0,
+        'timeout': 0,
+        'check_was_interrupted_by_user': 0,
+        'segfault': 0,
+    }
+    write_stats(path, values)
+
+    assert main([str(path)]) == 1
+    assert '1 mutation result is unclassified' in capsys.readouterr().out
+
+
+def test_main_accepts_valid_stats_and_prints_the_summary(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    path = tmp_path / 'stats.json'
+    values: dict[str, object] = {
+        'killed': 95,
+        'survived': 5,
+        'total': 100,
+        'no_tests': 0,
+        'skipped': 0,
+        'suspicious': 0,
+        'timeout': 0,
+        'check_was_interrupted_by_user': 0,
+        'segfault': 0,
+    }
+    write_stats(path, values)
+
+    assert main([str(path)]) == 0
+    assert capsys.readouterr().out == 'mutation score: 95.0% (95 killed, 5 survived, 100 total)\n'
 
 
 def test_evaluate_rejects_zero_decided_mutants() -> None:
