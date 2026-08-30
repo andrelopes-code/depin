@@ -5,10 +5,8 @@ from dataclasses import dataclass
 from typing import override
 
 from depin._core.scope import Scope
-from depin._core.spec import ProviderKey, ProviderShape, ProviderSpec, ResolutionPlan, fmt_key
+from depin._core.spec import Ident, ProviderKey, ProviderShape, ProviderSpec, ResolutionPlan, fmt_key
 from depin.errors import MissingProviderError
-
-type _Ident = tuple[ProviderKey, str | None]
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,7 +92,7 @@ class DependencyGraph:
 
     def __init__(self, nodes: tuple[GraphNode, ...]) -> None:
         self._nodes = nodes
-        self._index: Mapping[_Ident, GraphNode] = {(node.key, node.tag): node for node in nodes}
+        self._index: Mapping[Ident, GraphNode] = {(node.key, node.tag): node for node in nodes}
 
     @property
     def nodes(self) -> tuple[GraphNode, ...]:

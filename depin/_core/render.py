@@ -2,9 +2,7 @@
 
 from depin._core.diagnostics import DependencyGraph, GraphNode
 from depin._core.graph import format_missing, suggest_candidates
-from depin._core.spec import ProviderKey, ProviderShape, fmt_key
-
-type _Ident = tuple[ProviderKey, str | None]
+from depin._core.spec import Ident, ProviderKey, ProviderShape, fmt_key
 
 _SHAPE_NAMES: dict[ProviderShape, str] = {
     ProviderShape.CLASS: 'class',
@@ -36,7 +34,7 @@ def render_tree(graph: DependencyGraph, key: ProviderKey, tag: str | None) -> st
         return _render_absent(graph, key, tag)
 
     lines: list[str] = []
-    expanded: set[_Ident] = set()
+    expanded: set[Ident] = set()
     # Explicit stack rather than recursion: a chain of a thousand providers is a
     # supported graph, and CPython's recursion limit is well below that.
     stack: list[tuple[int, str, GraphNode | ProviderKey]] = [(0, '', root)]
@@ -85,7 +83,7 @@ def _deepest_requirement(
     """
     best: tuple[tuple[ProviderKey, ...], ProviderKey, str] | None = None
     for root in graph.nodes:
-        stack: list[tuple[GraphNode, tuple[_Ident, ...]]] = [(root, ((root.key, root.tag),))]
+        stack: list[tuple[GraphNode, tuple[Ident, ...]]] = [(root, ((root.key, root.tag),))]
         while stack:
             node, chain = stack.pop()
             for edge in node.dependencies:
@@ -141,7 +139,7 @@ def render_mermaid(graph: DependencyGraph) -> str:
     return '\n'.join(lines)
 
 
-def _identifiers(graph: DependencyGraph) -> tuple[dict[_Ident, str], dict[_Ident, str]]:
+def _identifiers(graph: DependencyGraph) -> tuple[dict[Ident, str], dict[Ident, str]]:
     """Stable identifiers: ``n<plan index>`` for a bound node, ``u<n>`` for an unbound target.
 
     An index keeps a key containing a quote or a bracket out of the identifier
@@ -149,7 +147,7 @@ def _identifiers(graph: DependencyGraph) -> tuple[dict[_Ident, str], dict[_Ident
     iterating them is deterministic.
     """
     bound = {(node.key, node.tag): f'n{index}' for index, node in enumerate(graph.nodes)}
-    unbound: dict[_Ident, str] = {}
+    unbound: dict[Ident, str] = {}
     for node in graph.nodes:
         for edge in node.dependencies:
             ident = (edge.key, edge.tag)

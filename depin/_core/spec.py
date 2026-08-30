@@ -56,6 +56,9 @@ class ProviderShape(Enum):
 type ProviderKey = type[object] | Token[object] | str
 """What a provider can be bound and resolved under: a class, a `Token`, or a name."""
 
+type Ident = tuple[ProviderKey, str | None]
+"""A provider's identity: its key paired with its tag. Private to `_core`."""
+
 
 @dataclass(frozen=True, slots=True)
 class ValueBinding[T]:

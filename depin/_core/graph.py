@@ -12,7 +12,7 @@ from types import ModuleType
 from depin._core.markers import get_provides
 from depin._core.providers import ASYNC_SHAPES, build_specs
 from depin._core.scope import Scope
-from depin._core.spec import BindRecord, ProviderKey, ProviderSpec, ResolutionPlan, fmt_chain, fmt_key
+from depin._core.spec import BindRecord, Ident, ProviderKey, ProviderSpec, ResolutionPlan, fmt_chain, fmt_key
 from depin.errors import (
     CaptiveDependencyError,
     CircularDependencyError,
@@ -20,8 +20,7 @@ from depin.errors import (
     MissingProviderError,
 )
 
-type _Index = dict[tuple[ProviderKey, str | None], ProviderSpec]
-type _Ident = tuple[ProviderKey, str | None]
+type _Index = dict[Ident, ProviderSpec]
 
 
 def build_plan(records: Iterable[BindRecord]) -> ResolutionPlan:
@@ -50,7 +49,7 @@ def _index(specs: Iterable[ProviderSpec]) -> _Index:
 
 
 def _check_duplicates(specs: Iterable[ProviderSpec]) -> None:
-    seen: set[_Ident] = set()
+    seen: set[Ident] = set()
     for spec in specs:
         ident = (spec.key, spec.tag)
         if ident in seen:
@@ -67,7 +66,7 @@ def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index) -> None:
     all_specs = tuple(specs)
     if not _any_unsatisfied(all_specs, by_key):
         return
-    missing: dict[_Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]] = {}
+    missing: dict[Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]] = {}
     for root in all_specs:
         _collect_missing(root, by_key, (root,), missing)
     # Deepest chain first: the longest resolution path is the most informative
@@ -102,7 +101,7 @@ def _collect_missing(
     root: ProviderSpec,
     by_key: _Index,
     chain: tuple[ProviderSpec, ...],
-    missing: dict[_Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]],
+    missing: dict[Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]],
 ) -> None:
     # Iterative DFS over the dependency graph. Each entry is the current spec
     # paired with the chain that led to it; cycles are broken by the
@@ -226,8 +225,8 @@ def suggest_candidates(target: object) -> list[str]:
 def _toposort(specs: Iterable[ProviderSpec], by_key: _Index) -> tuple[ProviderSpec, ...]:
     """Iterative post-order DFS. Frames are ``(spec, next_param_index)``."""
     ordered: list[ProviderSpec] = []
-    visited: set[_Ident] = set()
-    visiting: set[_Ident] = set()
+    visited: set[Ident] = set()
+    visiting: set[Ident] = set()
 
     for root in specs:
         if (root.key, root.tag) in visited:
@@ -275,7 +274,7 @@ def _check_captive(order: Iterable[ProviderSpec], by_key: _Index) -> None:
     for root in order:
         if root.scope is not Scope.SINGLETON:
             continue
-        reached_from: dict[_Ident, ProviderSpec] = {}
+        reached_from: dict[Ident, ProviderSpec] = {}
         stack: list[ProviderSpec] = [root]
         while stack:
             spec = stack.pop()
@@ -297,7 +296,7 @@ def _check_captive(order: Iterable[ProviderSpec], by_key: _Index) -> None:
 def _captive_chain(
     root: ProviderSpec,
     spec: ProviderSpec,
-    reached_from: dict[_Ident, ProviderSpec],
+    reached_from: dict[Ident, ProviderSpec],
 ) -> tuple[ProviderSpec, ...]:
     """Rebuild the ``root -> ... -> spec`` path from the walk's parent links.
 
@@ -326,7 +325,7 @@ def _format_captive(root: ProviderSpec, dep: ProviderSpec, chain: tuple[Provider
 
 def _with_async_flags(order: Iterable[ProviderSpec], by_key: _Index) -> Iterable[ProviderSpec]:
     """Mark every spec that is async itself or depends on one, in dependency order."""
-    needs: dict[_Ident, bool] = {}
+    needs: dict[Ident, bool] = {}
     for spec in order:
         own = spec.shape in ASYNC_SHAPES
         for param in spec.params:
