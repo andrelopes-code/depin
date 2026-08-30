@@ -1,12 +1,20 @@
 """The scope frame: value chaining, scope_value bindings, and frame lifetime."""
 
 import asyncio
+import threading
 
 import pytest
 
 from depin._core.container import Container
 from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, push_frame
 from depin.errors import MissingProviderError, OutsideScopeError
+
+
+async def _checkpoint() -> None:
+    loop = asyncio.get_running_loop()
+    checkpoint = loop.create_future()
+    loop.call_soon(checkpoint.set_result, None)
+    await checkpoint
 
 
 def test_active_frame_raises_without_push() -> None:
@@ -30,6 +38,144 @@ async def test_finishing_flight_completes_registered_async_waiter() -> None:
 
     frame.finish_flight(key, leader)
     await asyncio.wait_for(waiter, timeout=1)
+
+
+@pytest.mark.asyncio
+async def test_publish_makes_value_visible_before_followers_are_signalled() -> None:
+    frame = ScopeFrame()
+    key = object()
+    leader, constructs = frame.start_flight(key)
+    assert constructs
+    flight, joins = frame.start_flight(key)
+    assert not joins
+
+    waiter = asyncio.create_task(frame.wait_async(flight))
+    await _checkpoint()
+    follower = frame.publish(key, leader, 'value')
+
+    assert frame.lookup(key) == 'value'
+    assert follower is flight
+    assert not waiter.done()
+
+    assert follower is not None
+    follower.finish()
+    await asyncio.wait_for(waiter, timeout=1)
+
+
+@pytest.mark.asyncio
+async def test_abort_wakes_all_followers_and_allows_one_replacement_leader() -> None:
+    frame = ScopeFrame()
+    key = object()
+    leader, constructs = frame.start_flight(key)
+    assert constructs
+    flight_one, joins = frame.start_flight(key)
+    assert not joins
+    flight_two, joins = frame.start_flight(key)
+    assert not joins
+    waiter_one = asyncio.create_task(frame.wait_async(flight_one))
+    waiter_two = asyncio.create_task(frame.wait_async(flight_two))
+    await _checkpoint()
+
+    followers = frame.abort(key, leader)
+    assert followers is flight_one
+    assert followers is not None
+    followers.finish()
+    await asyncio.wait_for(asyncio.gather(waiter_one, waiter_two), timeout=1)
+
+    replacement, replacement_leader = frame.start_flight(key)
+    assert replacement_leader
+    follower, follower_leader = frame.start_flight(key)
+    assert not follower_leader
+    signalled = frame.publish(key, replacement, 'replacement')
+    assert signalled is follower
+    assert signalled is not None
+    signalled.finish()
+    assert frame.lookup(key) == 'replacement'
+
+
+@pytest.mark.asyncio
+async def test_cancelling_one_async_follower_leaves_another_waiter_live() -> None:
+    frame = ScopeFrame()
+    key = object()
+    leader, constructs = frame.start_flight(key)
+    assert constructs
+    flight, joins = frame.start_flight(key)
+    assert not joins
+    cancelled = asyncio.create_task(frame.wait_async(flight))
+    live = asyncio.create_task(frame.wait_async(flight))
+    await _checkpoint()
+
+    cancelled.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await cancelled
+    assert not live.done()
+
+    frame.finish_flight(key, leader)
+    await asyncio.wait_for(live, timeout=1)
+
+
+@pytest.mark.asyncio
+async def test_stale_publish_cannot_cache_or_signal_a_replacement_flight() -> None:
+    frame = ScopeFrame()
+    key = object()
+    old, constructs = frame.start_flight(key)
+    assert constructs
+    old_follower, joins = frame.start_flight(key)
+    assert not joins
+    abandoned = frame.abort(key, old)
+    assert abandoned is old_follower
+    assert abandoned is not None
+    abandoned.finish()
+
+    replacement, replacement_leader = frame.start_flight(key)
+    assert replacement_leader
+    replacement_follower, joins = frame.start_flight(key)
+    assert not joins
+    assert frame.publish(key, old, 'stale') is None
+    assert frame.lookup(key) is MISSING
+    assert not replacement.finished
+
+    signalled = frame.publish(key, replacement, 'valid')
+    assert signalled is replacement_follower
+    assert frame.lookup(key) == 'valid'
+    assert not replacement.finished
+    assert signalled is not None
+    signalled.finish()
+    await frame.wait_async(replacement_follower)
+
+
+@pytest.mark.asyncio
+async def test_flight_completion_resumes_waiter_on_its_owning_loop_and_thread() -> None:
+    frame = ScopeFrame()
+    key = object()
+    leader, constructs = frame.start_flight(key)
+    assert constructs
+    flight, joins = frame.start_flight(key)
+    assert not joins
+    owner_loop = asyncio.get_running_loop()
+    owner_thread = threading.get_ident()
+    resumed: list[tuple[asyncio.AbstractEventLoop, int]] = []
+
+    async def wait_for_flight() -> None:
+        await frame.wait_async(flight)
+        resumed.append((asyncio.get_running_loop(), threading.get_ident()))
+
+    waiter = asyncio.create_task(wait_for_flight())
+    await _checkpoint()
+
+    finished = threading.Event()
+
+    def finish_from_other_thread() -> None:
+        frame.finish_flight(key, leader)
+        finished.set()
+
+    finisher = threading.Thread(target=finish_from_other_thread)
+    finisher.start()
+    assert finished.wait(1)
+    finisher.join()
+    await asyncio.wait_for(waiter, timeout=1)
+
+    assert resumed == [(owner_loop, owner_thread)]
 
 
 def test_push_frame_sets_active() -> None:
