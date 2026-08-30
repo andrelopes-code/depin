@@ -81,8 +81,14 @@ def test_inject_unregistered_key_raises_at_decoration() -> None:
 
     def handler(x: NotBound = injected(NotBound)) -> None: ...
 
-    with pytest.raises(MissingProviderError, match='NotBound'):
+    with pytest.raises(MissingProviderError) as exc:
         frozen.inject(handler)
+
+    assert str(exc.value) == (
+        f"@inject: parameter 'x' requests injected({NotBound.__qualname__}) "
+        'but no provider is registered for that key. '
+        'Bind it on the Container before calling .freeze(), or remove the injected() default.'
+    )
 
 
 def test_inject_unregistered_tagged_key_names_tag() -> None:

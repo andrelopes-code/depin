@@ -60,8 +60,9 @@ def test_detect_shape_async_context_manager_factory() -> None:
 def test_detect_shape_non_callable_raises() -> None:
     import pytest
 
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError) as exc:
         detect_shape(42)
+    assert str(exc.value).endswith('bind a class, a function, a generator function, or a context-manager factory')
 
 
 def test_extract_meta_returns_empty_for_bare_annotation() -> None:

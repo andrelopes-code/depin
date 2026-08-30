@@ -10,7 +10,7 @@ from depin._core.markers import Tag, Token, provides
 from depin._core.providers import as_provider_key, build_specs, param_key_from_meta, unwrap_container_type
 from depin._core.registry import Registry
 from depin._core.scope import Scope
-from depin._core.spec import ProviderShape, fmt_key
+from depin._core.spec import BindRecord, FrameBinding, ProviderShape, ValueBinding, fmt_key
 from depin.errors import InvalidProviderError, InvalidScopeError
 
 
@@ -26,6 +26,7 @@ def test_build_specs_for_simple_class() -> None:
     assert spec.scope is Scope.SINGLETON
     assert spec.shape is ProviderShape.CLASS
     assert spec.tag is None
+    assert spec.needs_async is False
 
 
 def test_build_specs_resolves_provides_attribute() -> None:
@@ -55,6 +56,31 @@ def test_build_specs_value_record_emits_value_shape() -> None:
     [spec] = list(build_specs(r.records()))
     assert spec.key == tok
     assert spec.shape is ProviderShape.VALUE
+    assert spec.source == 42
+    assert spec.scope is Scope.SINGLETON
+    assert spec.needs_async is False
+    assert spec.params == ()
+
+
+def test_build_specs_value_record_preserves_its_tag() -> None:
+    token = Token[int]('x')
+    record = BindRecord(source=ValueBinding(token, 42), scope=Scope.SINGLETON, provides=None, tag='chosen')
+
+    [spec] = list(build_specs((record,)))
+
+    assert spec.tag == 'chosen'
+
+
+def test_build_specs_scope_value_preserves_its_registration_details() -> None:
+    token = Token[int]('request.id')
+    [spec] = list(build_specs(Registry().scope_value(token, tag='request').records()))
+    assert spec.key == token
+    assert spec.tag == 'request'
+    assert isinstance(spec.source, FrameBinding)
+    assert spec.scope is Scope.SCOPED
+    assert spec.shape is ProviderShape.FRAME
+    assert spec.needs_async is False
+    assert spec.params == ()
 
 
 def test_generator_in_transient_rejected() -> None:
@@ -62,8 +88,20 @@ def test_generator_in_transient_rejected() -> None:
         yield 0
 
     r = Registry().bind(gen, scope=Scope.TRANSIENT)
-    with pytest.raises(InvalidScopeError, match='transient'):
+    with pytest.raises(InvalidScopeError, match='owns a teardown') as exc:
         _ = build_specs(r.records())
+    assert 'Use Scope.SINGLETON or Scope.SCOPED' in str(exc.value)
+
+
+def test_generator_in_transient_explains_its_teardown_contract() -> None:
+    def gen() -> Iterator[int]:
+        yield 0
+
+    with pytest.raises(InvalidScopeError) as exc:
+        _ = build_specs(Registry().bind(gen, scope=Scope.TRANSIENT).records())
+    assert 'provider owns a teardown, and a transient value is never cached, so nothing would drain it.' in str(
+        exc.value
+    )
 
 
 def test_param_specs_extracted_from_init() -> None:
@@ -88,6 +126,31 @@ def test_param_specs_skip_self_and_var() -> None:
     r = Registry().bind(A, scope=Scope.SINGLETON)
     [spec] = list(build_specs(r.records()))
     assert spec.params == ()
+
+
+def test_param_specs_skip_cls_and_continue_after_variadic_parameters() -> None:
+    class Dependency: ...
+
+    def factory(cls: object, *values: object, dependency: Dependency) -> int:
+        del cls, values, dependency
+        return 1
+
+    [factory_spec] = [
+        candidate
+        for candidate in build_specs(Registry().bind(Dependency).bind(factory).records())
+        if candidate.key is int
+    ]
+    assert [(param.name, param.key) for param in factory_spec.params] == [('dependency', Dependency)]
+
+
+def test_param_specs_continue_after_an_unannotated_default() -> None:
+    def factory(optional: int = 1, *, required: int) -> int:
+        return required
+
+    del factory.__annotations__['optional']
+    [spec] = list(build_specs(Registry().bind(factory, provides=int).records()))
+
+    assert [(param.name, param.has_default) for param in spec.params] == [('optional', True), ('required', False)]
 
 
 def test_param_spec_uses_default_when_no_provider_marker() -> None:
@@ -149,8 +212,9 @@ def test_parameter_without_annotation_or_default_is_rejected() -> None:
             self.x = x
 
     r = Registry().bind(A, scope=Scope.SINGLETON)
-    with pytest.raises(InvalidProviderError, match='no type annotation and no default'):
+    with pytest.raises(InvalidProviderError, match='no type annotation and no default') as exc:
         _ = build_specs(r.records())
+    assert 'so depin cannot tell what to inject' in str(exc.value)
 
 
 def test_async_factory_key_unwraps_the_coroutine_return() -> None:
@@ -179,6 +243,27 @@ def test_async_generator_factory_key_unwraps_the_yield_type() -> None:
     [spec] = list(build_specs(r.records()))
     assert spec.key is int
     assert spec.shape is ProviderShape.ASYNC_GENERATOR
+
+
+def test_forward_references_between_bound_classes_resolve_for_key_and_parameters() -> None:
+    class Consumer:
+        def __init__(self, dependency: 'Dependency') -> None: ...
+
+    class Dependency: ...
+
+    specs = build_specs(Registry().bind(Consumer).bind(Dependency).records())
+    consumer = next(spec for spec in specs if spec.key is Consumer)
+    assert consumer.params[0].key is Dependency
+
+
+def test_forward_reference_return_annotation_resolves_against_bound_classes() -> None:
+    class Produced: ...
+
+    def make() -> 'Produced':
+        return Produced()
+
+    spec = next(spec for spec in build_specs(Registry().bind(Produced).bind(make).records()) if spec.source is make)
+    assert spec.key is Produced
 
 
 @pytest.mark.parametrize('key', [int, 'legacy', Token[int]('k')])
@@ -228,6 +313,8 @@ def test_an_unannotated_parameter_with_a_default_is_left_to_the_callable() -> No
     [param] = spec.params
     assert param.has_default
     assert param.default == 3
+    assert param.name == 'retries'
+    assert param.key is object
 
 
 def test_an_unresolvable_annotation_is_reported_as_such() -> None:
@@ -238,5 +325,6 @@ def test_an_unresolvable_annotation_is_reported_as_such() -> None:
         return 1
 
     r = Registry().bind(make, scope=Scope.SINGLETON, provides=int)  # pyright: ignore[reportUnknownArgumentType]
-    with pytest.raises(InvalidProviderError, match='could not be resolved'):
+    with pytest.raises(InvalidProviderError, match='could not be resolved') as exc:
         _ = build_specs(r.records())
+    assert 'so depin can resolve the forward reference.' in str(exc.value)

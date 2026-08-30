@@ -2,7 +2,7 @@ import pytest
 
 from depin._core.container import Container
 from depin._core.scope import Scope
-from depin.errors import OutsideScopeError
+from depin.errors import MissingProviderError, OutsideScopeError
 
 
 def test_scoped_class_same_within_scope() -> None:
@@ -32,5 +32,26 @@ def test_scoped_resolve_without_scope_raises() -> None:
     class A: ...
 
     frozen = Container().bind(A, scope=Scope.SCOPED).freeze()
-    with pytest.raises(OutsideScopeError):
+    with pytest.raises(
+        OutsideScopeError,
+        match=r'^no active scope frame; open one with FrozenContainer\.scope\(\) or \.ascope\(\)$',
+    ):
         _ = frozen[A]
+
+
+def test_missing_scope_value_names_the_key_and_how_to_provide_it() -> None:
+    class Request: ...
+
+    frozen = Container().scope_value(Request).freeze()
+    with (
+        frozen.scope(),
+        pytest.raises(
+            MissingProviderError,
+            match=(
+                r'^no value in the active scope for .*Request; '
+                r'a key declared with scope_value\(\) must be supplied by whoever opens the scope, '
+                r'with frame\.provide\(key, value\)$'
+            ),
+        ),
+    ):
+        _ = frozen[Request]

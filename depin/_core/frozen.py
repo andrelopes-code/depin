@@ -3,6 +3,7 @@
 import contextlib
 import inspect
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
+from contextvars import ContextVar
 from typing import overload
 
 from depin._core import construct, injection, overrides
@@ -11,7 +12,19 @@ from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional
 from depin._core.spec import ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
 from depin._core.teardown import Teardown
 from depin._core.typeguards import is_provider_key
-from depin.errors import AsyncInSyncContextError, MissingProviderError
+from depin.errors import AsyncInSyncContextError, CircularDependencyError, MissingProviderError
+
+
+class _Constructing:
+    __slots__ = ('cache_id', 'frame', 'parent')
+
+    def __init__(self, frame: ScopeFrame, cache_id: object, parent: '_Constructing | None') -> None:
+        self.frame = frame
+        self.cache_id = cache_id
+        self.parent = parent
+
+
+_constructing: ContextVar[_Constructing | None] = ContextVar('depin_constructing', default=None)
 
 
 class FrozenContainer:
@@ -26,8 +39,8 @@ class FrozenContainer:
     and the root scope. It is safe to share across threads and tasks: scopes are
     tracked per `contextvars.Context`, so concurrent requests never see each
     other's scoped instances, and construction of a cached provider is
-    single-flighted under both a thread lock and an asyncio lock — a singleton is
-    built exactly once no matter how many threads or tasks race for it.
+    single-flighted across threads and event loops — a singleton is built
+    exactly once no matter how many threads or tasks race for it.
 
     Example:
         ```pycon
@@ -79,6 +92,7 @@ class FrozenContainer:
             MissingProviderError: No provider is registered for ``key`` / ``tag``.
             AsyncInSyncContextError: The provider, or a dependency, is async.
             OutsideScopeError: ``key`` is scoped and no scope is active.
+            CircularDependencyError: This context re-enters construction of the same cached provider.
 
         Example:
             ```pycon
@@ -115,6 +129,7 @@ class FrozenContainer:
         Raises:
             MissingProviderError: No provider is registered for ``key`` / ``tag``.
             OutsideScopeError: ``key`` is scoped and no scope is active.
+            CircularDependencyError: This task re-enters construction of the same cached provider.
         """
         spec = self._lookup(key, tag)
         # See the matching note in `resolve`: plan-level erasure of provider
@@ -343,23 +358,47 @@ class FrozenContainer:
     def _resolve_sync(self, spec: ProviderSpec) -> object:
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
-        frame = self._cache_target(spec)
-        if frame is None:
+        if spec.scope is Scope.TRANSIENT:
             return self._construct_sync(spec)
+        if spec.scope is Scope.SINGLETON:
+            return self._resolve_cached_sync(spec, self._root)
+        return self._resolve_cached_sync(spec, active_frame())
+
+    def _resolve_cached_sync(self, spec: ProviderSpec, frame: ScopeFrame) -> object:
         cache_id = (spec.key, spec.tag)
-        cached = frame.lookup(cache_id)
-        if cached is not MISSING:
-            return cached
-        # Single-flight across threads: without the lock two threads can both
-        # miss the cache and construct the value twice, leaving one instance
-        # orphaned along with its teardown. Locks are taken in dependency order
-        # over an acyclic graph, so they cannot deadlock.
-        with frame.sync_lock_for(cache_id):
-            cached = frame.lookup(cache_id)
+        while True:
+            cached, claim = frame.claim_cached(cache_id)
             if cached is not MISSING:
                 return cached
-            value = self._construct_sync(spec)
-            frame.provide(cache_id, value)
+            if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
+                if frame.is_leader(claim) and claim is not None:
+                    follower = frame.abort(cache_id, claim)
+                    if follower is not None:
+                        follower.finish()
+                if self._is_constructing(frame, cache_id):
+                    raise CircularDependencyError(
+                        f'{fmt_key(spec.key)} is already constructing in this context; '
+                        'resolve a different dependency or break the recursive provider call'
+                    )
+            if not frame.is_leader(claim):
+                if claim is not None:
+                    frame.wait_sync(claim)
+                continue
+            leader = claim
+            token = _constructing.set(_Constructing(frame, cache_id, _constructing.get()))
+            try:
+                kwargs = self._resolve_params_sync(spec) if spec.params else {}
+                value = construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+            except BaseException:
+                follower = frame.abort(cache_id, leader)
+                if follower is not None:
+                    follower.finish()
+                raise
+            finally:
+                _constructing.reset(token)
+            follower = frame.publish(cache_id, leader, value)
+            if follower is not None:
+                follower.finish()
             return value
 
     async def _resolve_async(self, spec: ProviderSpec) -> object:
@@ -367,19 +406,52 @@ class FrozenContainer:
         if frame is None:
             return await self._construct_async(spec)
         cache_id = (spec.key, spec.tag)
-        cached = frame.lookup(cache_id)
-        if cached is not MISSING:
-            return cached
-        # Single-flight across tasks: the await below would otherwise let a
-        # second task miss the cache and construct a duplicate. The lock lives on
-        # the caching frame, so it is dropped when the scope ends.
-        async with frame.async_lock_for(cache_id):
-            cached = frame.lookup(cache_id)
+        while True:
+            cached, claim = frame.claim_cached(cache_id)
             if cached is not MISSING:
                 return cached
-            value = await self._construct_async(spec)
-            frame.provide(cache_id, value)
+            if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
+                if frame.is_leader(claim) and claim is not None:
+                    follower = frame.abort(cache_id, claim)
+                    if follower is not None:
+                        follower.finish()
+                if self._is_constructing(frame, cache_id):
+                    raise CircularDependencyError(
+                        f'{fmt_key(spec.key)} is already constructing in this context; '
+                        'resolve a different dependency or break the recursive provider call'
+                    )
+            if not frame.is_leader(claim):
+                if claim is not None:
+                    await frame.wait_async(claim)
+                continue
+            leader = claim
+            token = _constructing.set(_Constructing(frame, cache_id, _constructing.get()))
+            try:
+                kwargs = await self._resolve_params_async(spec) if spec.params else {}
+                value = await construct.asynchronous(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+            except BaseException:
+                follower = frame.abort(cache_id, leader)
+                if follower is not None:
+                    follower.finish()
+                raise
+            finally:
+                _constructing.reset(token)
+            follower = frame.publish(cache_id, leader, value)
+            if follower is not None:
+                follower.finish()
             return value
+
+    def _is_constructing(self, frame: ScopeFrame, cache_id: object) -> bool:
+        current = _constructing.get()
+        while current is not None:
+            if current.cache_id == cache_id:
+                candidate: ScopeFrame | None = frame
+                while candidate is not None:
+                    if current.frame is candidate:
+                        return True
+                    candidate = candidate.parent
+            current = current.parent
+        return False
 
     def _construct_sync(self, spec: ProviderSpec) -> object:
         kwargs = self._resolve_params_sync(spec) if spec.params else {}

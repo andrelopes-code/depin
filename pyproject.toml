@@ -45,6 +45,7 @@ Issues = "https://github.com/andrelopes-code/depin/issues"
 Changelog = "https://github.com/andrelopes-code/depin/blob/main/CHANGELOG.md"
 
 [dependency-groups]
+# Hypothesis 6.156+ uses a Rust extension without a 3.13t wheel, and PyO3 supports free-threading only from 3.14.
 dev = [
     "basedpyright>=1.39.10",
     "ruff>=0.16.4",
@@ -54,16 +55,22 @@ dev = [
     "httpx>=0.27",
     "fastapi>=0.133",
     "mypy>=1.18",
+    "hypothesis>=6.138,<6.156",
+    "mutmut>=3.7,<4",
+    "pytest-timeout>=2.4,<3",
 ]
 # The extended matrix runs free-threaded and pre-release interpreters, where
 # `fastapi` and its compiled transitive dependencies have no wheels. The core
 # has zero runtime dependencies, so it needs nothing but a test runner.
 threads = [
+    "hypothesis>=6.138,<6.156",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3",
+    "pytest-cov>=7.1,<8",
 ]
 bench = [
     "pytest>=9.0.3",
+    "pytest-asyncio>=1.3",
     "pytest-benchmark>=5.1",
 ]
 docs = [
@@ -141,3 +148,10 @@ branch = true
 [tool.coverage.report]
 fail_under = 95
 show_missing = true
+
+[tool.mutmut]
+source_paths = ["depin"]
+also_copy = ["scripts"]
+only_mutate = ["depin/_core/*.py"]
+pytest_add_cli_args = ["--timeout=2"]
+pytest_add_cli_args_test_selection = ["tests/unit"]

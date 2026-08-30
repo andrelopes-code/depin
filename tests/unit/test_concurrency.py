@@ -123,7 +123,18 @@ def test_a_singleton_survives_a_change_of_event_loop() -> None:
 
     async def resolve() -> Pool:
         async with frozen.ascope():
-            return await frozen.aresolve(Pool)
+            resolution = asyncio.create_task(frozen.aresolve(Pool))
+            try:
+                marker = asyncio.get_running_loop().create_future()
+                asyncio.get_running_loop().call_soon(marker.set_result, None)
+                await marker
+                assert resolution.done()
+                return await resolution
+            finally:
+                if not resolution.done():
+                    resolution.cancel()
+                    with pytest.raises(asyncio.CancelledError):
+                        await resolution
 
     first = asyncio.run(resolve())
     second = asyncio.run(resolve())
@@ -155,5 +166,9 @@ def test_a_failed_build_leaves_the_key_resolvable_on_the_next_loop() -> None:
     with pytest.raises(RuntimeError, match='first build fails'):
         asyncio.run(resolve())
 
+    root = object.__getattribute__(frozen, '_root')
+    flight, constructs = root.start_flight((Flaky, None))
+    assert constructs
+    root.finish_flight((Flaky, None), flight)
     assert asyncio.run(resolve()).ok
     assert attempts == 2

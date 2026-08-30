@@ -35,6 +35,25 @@ class MissingProviderSuggestionCandidate(MissingProviderSuggestionTarget):
     """
 
 
+class _MissingCycleA:
+    def __init__(self, b: '_MissingCycleB') -> None: ...
+
+
+class _MissingCycleB:
+    def __init__(self, a: _MissingCycleA, absent: '_MissingCycleDependency') -> None: ...
+
+
+class _MissingCycleDependency: ...
+
+
+class _MissingChainRoot:
+    def __init__(self, dep: '_MissingChainDependency') -> None: ...
+
+
+class _MissingChainDependency:
+    def __init__(self, absent: _MissingCycleDependency) -> None: ...
+
+
 def test_missing_provider_raises() -> None:
     class A: ...
 
@@ -44,6 +63,14 @@ def test_missing_provider_raises() -> None:
     r = Registry().bind(B, scope=Scope.SINGLETON)
     with pytest.raises(MissingProviderError, match='A'):
         _ = build_plan(r.records())
+
+
+def test_freeze_reports_a_missing_dependency_without_looping_on_a_cycle() -> None:
+    with pytest.raises(MissingProviderError):
+        _ = Container().bind(_MissingChainRoot).bind(_MissingChainDependency).freeze()
+
+    with pytest.raises(MissingProviderError):
+        _ = Container().bind(_MissingCycleA).bind(_MissingCycleB).freeze()
 
 
 def test_default_value_satisfies_missing() -> None:
@@ -85,6 +112,7 @@ def test_reports_all_missing_providers_at_once() -> None:
     assert 'A' in msg
     assert 'B' in msg
     assert '2 missing providers' in msg
+    assert '\n  - no provider for ' in msg
 
 
 def test_single_missing_provider_keeps_concise_message() -> None:
@@ -163,6 +191,7 @@ def test_missing_provider_message_includes_chain() -> None:
     assert 'A' in msg
     assert 'B' in msg
     assert 'C' in msg
+    assert ' -> ' in msg
 
 
 def test_missing_provider_suggests_candidates_with_provides() -> None:
@@ -353,6 +382,42 @@ def test_duplicate_message_names_key_and_tag() -> None:
     msg = str(exc.value)
     assert 'Iface' in msg
     assert 'primary' in msg
+    assert 'two bindings resolve to the same key' in msg
+    assert 'Remove one, or give them distinct tags' in msg
+    assert 'distinct tags to register multiple implementations' in msg
+
+
+def test_multiple_missing_providers_are_deepest_first_and_keep_parameter_names() -> None:
+    class DeepMissing: ...
+
+    class ShallowMissing: ...
+
+    class Leaf:
+        def __init__(self, dependency: DeepMissing) -> None: ...
+
+    class Root:
+        def __init__(self, leaf: Leaf, shallow: ShallowMissing) -> None: ...
+
+    registry = Registry().bind(Leaf).bind(Root)
+    with pytest.raises(MissingProviderError) as exc:
+        _ = build_plan(registry.records())
+    message = str(exc.value)
+    assert message.startswith('2 missing providers:\n  - ')
+    assert message.index('DeepMissing') < message.index('ShallowMissing')
+    assert '.Leaf.dependency' in message
+    assert '.Root -> ' in message
+    assert '.Leaf -> ' in message
+
+
+def test_missing_scan_continues_after_a_defaulted_parameter() -> None:
+    class Missing: ...
+
+    class Service:
+        def __init__(self, defaulted: int = 1, *, required: Missing) -> None: ...
+
+    registry = Registry().bind(Service)
+    with pytest.raises(MissingProviderError, match='Missing'):
+        _ = build_plan(registry.records())
 
 
 def test_singleton_depending_on_scoped_is_rejected() -> None:
@@ -367,6 +432,10 @@ def test_singleton_depending_on_scoped_is_rejected() -> None:
     msg = str(exc.value)
     assert 'Service' in msg
     assert 'Session' in msg
+    assert (
+        'singleton test_singleton_depending_on_scoped_is_rejected.<locals>.Service '
+        'depends on scoped test_singleton_depending_on_scoped_is_rejected.<locals>.Session' in msg
+    )
 
 
 def test_singleton_capturing_scoped_through_transient_is_rejected() -> None:
@@ -462,6 +531,17 @@ def test_singleton_transient_diamond_is_allowed() -> None:
     )
     plan = build_plan(r.records())
     assert len(plan.order) == 4
+
+
+def test_captive_check_reaches_a_scoped_dependency_after_an_optional_parameter() -> None:
+    class Session: ...
+
+    class Service:
+        def __init__(self, unused: int = 1, *, session: Session) -> None: ...
+
+    registry = Registry().bind(Session, scope=Scope.SCOPED).bind(Service, scope=Scope.SINGLETON)
+    with pytest.raises(CaptiveDependencyError):
+        _ = build_plan(registry.records())
 
 
 def test_sync_chain_with_async_dep_rejected() -> None:

@@ -97,8 +97,8 @@ jobs:
           uv run --no-sync python -c
           "import sys; assert sys._is_gil_enabled() is False, 'the GIL is enabled; this job proves nothing'"
 
-      - name: Test
-        run: uv run --no-sync pytest tests/unit
+      - name: Test with coverage
+        run: uv run --no-sync pytest tests/unit --cov=depin --cov-report=term
 
   prerelease:
     name: python 3.15 pre-release

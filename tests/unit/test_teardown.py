@@ -12,7 +12,6 @@ from depin._core.teardown import (
     SyncCMTeardown,
     SyncGenTeardown,
     run_async,
-    run_sync,
 )
 from depin.errors import TeardownError
 
@@ -75,26 +74,39 @@ def test_sync_close_is_idempotent() -> None:
     assert events == ['teardown']
 
 
-def test_sync_close_aggregates_failures() -> None:
-    def boom() -> Generator[int]:
-        yield 1
-        raise RuntimeError('a')
+def test_sync_close_preserves_independent_failures_in_lifo_order() -> None:
+    events: list[str] = []
 
-    def bang() -> Generator[str]:
+    def make_int() -> Generator[int]:
+        yield 1
+        events.append('int')
+        raise RuntimeError('int failed')
+
+    def make_str() -> Generator[str]:
         yield 'x'
-        raise RuntimeError('b')
+        events.append('str')
+        raise RuntimeError('str failed')
+
+    def make_bytes() -> Generator[bytes]:
+        yield b'x'
+        events.append('bytes')
+        raise RuntimeError('bytes failed')
 
     frozen = (
         Container()
-        .bind(boom, scope=Scope.SINGLETON, provides=int)
-        .bind(bang, scope=Scope.SINGLETON, provides=str)
+        .bind(make_int, scope=Scope.SINGLETON, provides=int)
+        .bind(make_str, scope=Scope.SINGLETON, provides=str)
+        .bind(make_bytes, scope=Scope.SINGLETON, provides=bytes)
         .freeze()
     )
+    _ = frozen[bytes]
     _ = frozen[int]
     _ = frozen[str]
     with pytest.raises(ExceptionGroup) as exc:
         frozen.close()
-    assert len(exc.value.exceptions) == 2
+    assert events == ['str', 'int', 'bytes']
+    assert [str(error) for error in exc.value.exceptions] == ['str failed', 'int failed', 'bytes failed']
+    assert [type(error) for error in exc.value.exceptions] == [RuntimeError, RuntimeError, RuntimeError]
 
 
 @pytest.mark.asyncio
@@ -106,18 +118,46 @@ async def test_sync_close_refuses_an_async_singleton_teardown() -> None:
     assert await frozen.aresolve(str) == 'v'
     with pytest.raises(ExceptionGroup) as exc:
         frozen.close()
-    assert any(isinstance(e, TeardownError) for e in exc.value.exceptions)
+    assert [str(error) for error in exc.value.exceptions] == [
+        'an async provider registered a teardown in a synchronous scope; '
+        'open the scope with ascope() and drain it with aclose()/ascope() instead'
+    ]
+    assert [type(error) for error in exc.value.exceptions] == [TeardownError]
 
 
-def test_sync_generator_yielding_twice_is_reported_on_drain() -> None:
-    def make() -> Generator[int]:
+def test_sync_scoped_teardown_preserves_failures_in_lifo_order() -> None:
+    events: list[str] = []
+
+    def failing() -> Generator[int]:
         yield 1
-        yield 2
+        events.append('int')
+        raise RuntimeError('provider failed')
 
-    frozen = Container().bind(make, scope=Scope.SCOPED, provides=int).freeze()
-    with pytest.raises(ExceptionGroup) as exc, frozen.scope():
-        assert frozen[int] == 1
-    assert any(isinstance(e, TeardownError) for e in exc.value.exceptions)
+    def yielding_twice() -> Generator[str]:
+        yield 'x'
+        events.append('str')
+        yield 'y'
+
+    frozen = (
+        Container()
+        .bind(failing, scope=Scope.SCOPED, provides=int)
+        .bind(yielding_twice, scope=Scope.SCOPED, provides=str)
+        .freeze()
+    )
+
+    def resolve_in_scope() -> None:
+        with frozen.scope():
+            assert frozen[str] == 'x'
+            assert frozen[int] == 1
+
+    with pytest.raises(ExceptionGroup) as exc:
+        resolve_in_scope()
+    assert events == ['int', 'str']
+    assert [str(error) for error in exc.value.exceptions] == [
+        'provider failed',
+        'generator provider yielded more than once; it must yield exactly once',
+    ]
+    assert [type(error) for error in exc.value.exceptions] == [RuntimeError, TeardownError]
 
 
 @pytest.mark.asyncio
@@ -133,23 +173,48 @@ async def test_async_generator_yielding_twice_is_reported_on_drain() -> None:
     assert any(isinstance(e, TeardownError) for e in exc.value.exceptions)
 
 
-@pytest.mark.parametrize(
-    'record',
-    [
-        AsyncGenTeardown(_FakeAsyncGen()),
-        AsyncCMTeardown(_FakeAsyncCM()),
-    ],
-    ids=['async-generator', 'async-context-manager'],
-)
-def test_run_sync_refuses_async_records(record: AsyncGenTeardown | AsyncCMTeardown) -> None:
-    with pytest.raises(TeardownError, match='synchronous scope'):
-        run_sync(record)
+@pytest.mark.asyncio
+async def test_async_scope_preserves_sync_async_and_generator_failures_in_lifo_order() -> None:
+    events: list[str] = []
 
+    def sync_failing() -> Generator[int]:
+        yield 1
+        events.append('sync')
+        raise RuntimeError('sync failed')
 
-def test_run_sync_exits_a_sync_context_manager() -> None:
-    cm = _FakeSyncCM()
-    run_sync(SyncCMTeardown(cm))
-    assert cm.exited
+    async def async_failing() -> AsyncGenerator[str]:
+        yield 'x'
+        events.append('async')
+        raise RuntimeError('async failed')
+
+    async def async_yielding_twice() -> AsyncGenerator[bytes]:
+        yield b'x'
+        events.append('twice')
+        yield b'y'
+
+    frozen = (
+        Container()
+        .bind(sync_failing, scope=Scope.SCOPED, provides=int, tag='sync')
+        .bind(async_failing, scope=Scope.SCOPED, provides=str, tag='async')
+        .bind(async_yielding_twice, scope=Scope.SCOPED, provides=bytes, tag='twice')
+        .freeze()
+    )
+
+    async def resolve_in_scope() -> None:
+        async with frozen.ascope():
+            assert await frozen.aresolve(bytes, tag='twice') == b'x'
+            assert await frozen.aresolve(int, tag='sync') == 1
+            assert await frozen.aresolve(str, tag='async') == 'x'
+
+    with pytest.raises(ExceptionGroup) as exc:
+        await resolve_in_scope()
+    assert events == ['async', 'sync', 'twice']
+    assert [str(error) for error in exc.value.exceptions] == [
+        'async failed',
+        'sync failed',
+        'async generator provider yielded more than once; it must yield exactly once',
+    ]
+    assert [type(error) for error in exc.value.exceptions] == [RuntimeError, RuntimeError, TeardownError]
 
 
 @pytest.mark.asyncio
