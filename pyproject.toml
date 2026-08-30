@@ -45,6 +45,7 @@ Issues = "https://github.com/andrelopes-code/depin/issues"
 Changelog = "https://github.com/andrelopes-code/depin/blob/main/CHANGELOG.md"
 
 [dependency-groups]
+# Hypothesis 6.156+ uses a Rust extension without a 3.13t wheel, and PyO3 supports free-threading only from 3.14.
 dev = [
     "basedpyright>=1.39.10",
     "ruff>=0.16.4",
