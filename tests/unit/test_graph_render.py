@@ -158,3 +158,66 @@ def test_explain_names_the_chain_the_freeze_error_names() -> None:
     graph = build_graph(build_plan(defaulted.records()))
 
     assert render_tree(graph, missing, None) == str(raised.value)
+
+
+def _two_equal_chains_to_one_unbound_leaf() -> tuple[Container, Container, type[object]]:
+    """Two independent, equal-length chains reaching one shared unbound leaf.
+
+    Mirrors `_chain_with_unbound_leaf`'s technique, doubled: two owner/dependent
+    pairs, each two levels deep, both requiring the same missing type. Both
+    chains have the same length, so `_collect_missing` and `_deepest_requirement`
+    must break the tie the same way for the two renderings to agree.
+    """
+    missing = type('Missing', (), {})
+    inner_a = type('InnerA', (), {})
+    outer_a = type('OuterA', (), {})
+    inner_b = type('InnerB', (), {})
+    outer_b = type('OuterB', (), {})
+
+    def make_inner_a_required(dep: object) -> object:
+        del dep
+        return inner_a()
+
+    def make_inner_a_defaulted(dep: object = None) -> object:
+        del dep
+        return inner_a()
+
+    def make_outer_a(dep: object) -> object:
+        del dep
+        return outer_a()
+
+    def make_inner_b_required(dep: object) -> object:
+        del dep
+        return inner_b()
+
+    def make_inner_b_defaulted(dep: object = None) -> object:
+        del dep
+        return inner_b()
+
+    def make_outer_b(dep: object) -> object:
+        del dep
+        return outer_b()
+
+    for factory in (make_inner_a_required, make_inner_a_defaulted):
+        _set_dynamic_attribute(factory, '__annotations__', {'dep': missing, 'return': inner_a})
+    for factory in (make_inner_b_required, make_inner_b_defaulted):
+        _set_dynamic_attribute(factory, '__annotations__', {'dep': missing, 'return': inner_b})
+    _set_dynamic_attribute(make_outer_a, '__annotations__', {'dep': inner_a, 'return': outer_a})
+    _set_dynamic_attribute(make_outer_b, '__annotations__', {'dep': inner_b, 'return': outer_b})
+
+    required = Container().bind(make_inner_a_required).bind(make_outer_a).bind(make_inner_b_required).bind(make_outer_b)
+    defaulted = (
+        Container().bind(make_inner_a_defaulted).bind(make_outer_a).bind(make_inner_b_defaulted).bind(make_outer_b)
+    )
+    return required, defaulted, missing
+
+
+def test_a_tie_between_equal_length_chains_matches_the_freeze_error() -> None:
+    required, defaulted, missing = _two_equal_chains_to_one_unbound_leaf()
+
+    with pytest.raises(MissingProviderError) as raised:
+        _ = required.freeze()
+
+    graph = build_graph(build_plan(defaulted.records()))
+
+    assert render_tree(graph, missing, None) == str(raised.value)

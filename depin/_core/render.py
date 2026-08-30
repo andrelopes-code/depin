@@ -76,9 +76,11 @@ def _deepest_requirement(
 ) -> tuple[tuple[ProviderKey, ...], ProviderKey, str] | None:
     """The longest chain reaching an unsatisfied parameter bound for ``(key, tag)``.
 
-    Picks the chain the way `depin._core.graph._collect_missing` picks it, so the
-    line `explain` returns for a required-but-unbound key is the line `freeze()`
-    would have raised had that parameter carried no default. It inherits that
+    Walks `graph.nodes`, the topological order; `depin._core.graph._collect_missing`
+    walks specs in declaration order instead. The two orders can differ, but the
+    two walks still agree on which chain wins: the longest chain wins outright, and
+    a tie is only reachable between two roots where neither depends on the other —
+    an ordering the toposort preserves from declaration order. It inherits that
     walk's cost on a dense graph; the roadmap routes that to Step 6.
     """
     best: tuple[tuple[ProviderKey, ...], ProviderKey, str] | None = None
