@@ -1,5 +1,7 @@
 """The scope frame: value chaining, scope_value bindings, and frame lifetime."""
 
+import asyncio
+
 import pytest
 
 from depin._core.container import Container
@@ -10,6 +12,22 @@ from depin.errors import MissingProviderError, OutsideScopeError
 def test_active_frame_raises_without_push() -> None:
     with pytest.raises(OutsideScopeError):
         _ = active_frame()
+
+
+@pytest.mark.asyncio
+async def test_finishing_flight_completes_registered_async_waiter() -> None:
+    frame = ScopeFrame()
+    key = object()
+    flight, constructs = frame.start_flight(key)
+    assert constructs
+
+    waiter = asyncio.create_task(flight.wait_async())
+    checkpoint = asyncio.get_running_loop().create_future()
+    asyncio.get_running_loop().call_soon(checkpoint.set_result, None)
+    await checkpoint
+
+    frame.finish_flight(key, flight)
+    await asyncio.wait_for(waiter, timeout=1)
 
 
 def test_push_frame_sets_active() -> None:

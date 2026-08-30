@@ -24,6 +24,11 @@ async def _checkpoint() -> None:
 
 
 @pytest.mark.asyncio
+async def test_async_singleton_flights_are_keyed_by_provider_and_removed_after_failure() -> None:
+    await _exercise_async_singleton_flight_keys_and_cleanup()
+
+
+@pytest.mark.asyncio
 async def test_aresolve_unhashable_value_binding() -> None:
     origins = Token[list[str]]('origins')
     frozen = Container().value(origins, ['x']).freeze()
@@ -36,7 +41,16 @@ async def test_aresolve_async_function() -> None:
         return 5
 
     frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
-    assert await frozen.aresolve(int) == 5
+    resolution = asyncio.create_task(frozen.aresolve(int))
+    try:
+        await _checkpoint()
+        assert resolution.done()
+        assert await resolution == 5
+    finally:
+        if not resolution.done():
+            resolution.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await resolution
 
 
 @pytest.mark.asyncio
@@ -516,6 +530,74 @@ async def test_closed_loop_waiter_does_not_mask_a_live_waiter() -> None:
             live_waiter.cancel()
             with pytest.raises(asyncio.CancelledError):
                 await live_waiter
+
+
+@pytest.mark.asyncio
+async def _exercise_async_singleton_flight_keys_and_cleanup() -> None:
+    first_started = asyncio.Event()
+    second_started = asyncio.Event()
+    release = asyncio.Event()
+    attempts = 0
+
+    class First: ...
+
+    class Second: ...
+
+    async def make_first() -> First:
+        first_started.set()
+        await release.wait()
+        return First()
+
+    async def make_second() -> Second:
+        second_started.set()
+        await release.wait()
+        return Second()
+
+    async def fail_once() -> int:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError('first attempt fails')
+        return attempts
+
+    frozen = (
+        Container()
+        .bind(make_first, scope=Scope.SINGLETON, provides=First)
+        .bind(make_second, scope=Scope.SINGLETON, provides=Second)
+        .bind(fail_once, scope=Scope.SINGLETON, provides=int)
+        .freeze()
+    )
+    first = asyncio.create_task(frozen.aresolve(First))
+    second: asyncio.Task[Second] | None = None
+    try:
+        await _checkpoint()
+        assert first_started.is_set()
+        second = asyncio.create_task(frozen.aresolve(Second))
+        await _checkpoint()
+        assert second_started.is_set()
+        release.set()
+        first_value, second_value = await asyncio.gather(first, second)
+        assert isinstance(first_value, First)
+        assert isinstance(second_value, Second)
+    finally:
+        release.set()
+        for task in (first, second):
+            if task is not None and not task.done():
+                task.cancel()
+        for task in (first, second):
+            if task is not None and task.cancelled():
+                continue
+            if task is not None and not task.done():
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+
+    with pytest.raises(RuntimeError, match='first attempt fails'):
+        await frozen.aresolve(int)
+    root: ScopeFrame = object.__getattribute__(frozen, '_root')
+    flight, constructs = root.start_flight((int, None))
+    assert constructs
+    root.finish_flight((int, None), flight)
+    assert await frozen.aresolve(int) == 2
 
 
 def test_sync_self_resolution_raises_instead_of_waiting_for_its_own_flight() -> None:
