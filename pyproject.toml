@@ -1,6 +1,6 @@
 [project]
 name = "pydepin"
-version = "0.5.0"
+version = "0.5.1"
 description = "Type-first dependency-injection library for Python"
 readme = "README.md"
 requires-python = ">=3.12"
