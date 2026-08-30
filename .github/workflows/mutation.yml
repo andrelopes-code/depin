@@ -5,7 +5,7 @@ on:
     paths:
       - 'depin/_core/**'
       - 'tests/**'
-      - 'scripts/**'
+      - 'scripts/check_mutation_threshold.py'
       - 'pyproject.toml'
       - 'uv.lock'
       - '.github/workflows/mutation.yml'
