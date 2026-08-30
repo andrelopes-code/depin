@@ -7,10 +7,12 @@ where the GIL is enabled.
 """
 
 import asyncio
+import multiprocessing
 import sys
 import threading
 from _thread import LockType
 from collections.abc import Callable, Generator
+from multiprocessing.connection import Connection
 
 import pytest
 
@@ -34,6 +36,100 @@ def _run_in_threads(work: Callable[[], None]) -> None:
         thread.start()
     for thread in threads:
         thread.join()
+
+
+def _run_cross_loop_singleton(connection: Connection) -> None:
+    class Pool: ...
+
+    provider_started = threading.Event()
+    binder_suspended = threading.Event()
+    release_constructor = threading.Event()
+    challengers_ready = 0
+    completed: list[None] = []
+    constructed: list[Pool] = []
+    resolved: list[Pool] = []
+    failures: list[BaseException] = []
+    record = threading.Lock()
+    state = threading.Condition()
+    challengers = threading.Condition()
+    start = threading.Barrier(THREADS)
+
+    async def make_pool() -> Pool:
+        provider_started.set()
+        await asyncio.to_thread(release_constructor.wait)
+        pool = Pool()
+        with record:
+            constructed.append(pool)
+        return pool
+
+    frozen = Container().bind(make_pool, scope=Scope.SINGLETON, provides=Pool).freeze()
+
+    def worker(index: int) -> None:
+        nonlocal challengers_ready
+
+        async def checkpoint() -> None:
+            loop = asyncio.get_running_loop()
+            marker = loop.create_future()
+            loop.call_soon(marker.set_result, None)
+            await marker
+
+        async def resolve() -> None:
+            nonlocal challengers_ready
+            loop = asyncio.get_running_loop()
+            loop.slow_callback_duration = 1.0
+            if index == 0:
+                value = await frozen.aresolve(Pool)
+            else:
+                if index == 1:
+                    await asyncio.to_thread(provider_started.wait)
+                else:
+                    await asyncio.to_thread(binder_suspended.wait)
+                resolution = asyncio.create_task(frozen.aresolve(Pool))
+                await checkpoint()
+                if index == 1:
+                    binder_suspended.set()
+                else:
+                    with challengers:
+                        challengers_ready += 1
+                        challengers.notify_all()
+                value = await resolution
+            with record:
+                resolved.append(value)
+
+        try:
+            _ = start.wait()
+            asyncio.run(resolve())
+            with state:
+                completed.append(None)
+                state.notify_all()
+        except BaseException as exc:
+            with state:
+                failures.append(exc)
+                state.notify_all()
+
+    threads = [threading.Thread(target=worker, args=(index,), daemon=True) for index in range(THREADS)]
+    for thread in threads:
+        thread.start()
+    provider_started.wait()
+    binder_suspended.wait()
+    with challengers:
+        while challengers_ready != THREADS - 2:
+            challengers.wait()
+    release_constructor.set()
+    with state:
+        while not failures and len(completed) != THREADS:
+            state.wait()
+    if failures:
+        connection.send_bytes(f'failure:{failures[0]!r}'.encode())
+        connection.close()
+        return
+    for thread in threads:
+        thread.join()
+    identities = len({id(value) for value in resolved})
+    connection.send_bytes(
+        f'success:constructed={len(constructed)} resolved={len(resolved)} identities={identities} failures=0'.encode()
+    )
+    connection.close()
 
 
 class _RendezvousLockTable:
@@ -200,82 +296,16 @@ def test_the_async_flight_table_survives_concurrent_creation() -> None:
 
 
 def test_async_singleton_is_single_flight_across_event_loops() -> None:
-    class Pool: ...
+    context = multiprocessing.get_context('spawn')
+    parent, child = context.Pipe(duplex=False)
+    process = context.Process(target=_run_cross_loop_singleton, args=(child,))
+    process.start()
+    child.close()
+    result = parent.recv_bytes().decode()
+    process.join()
 
-    entered = 0
-    entered_condition = threading.Condition()
-    release_constructor = threading.Event()
-    constructed: list[Pool] = []
-    resolved: list[Pool] = []
-    failures: list[BaseException] = []
-    record = threading.Lock()
-    start = threading.Barrier(THREADS)
-    state = threading.Condition()
-    active_loops: set[asyncio.AbstractEventLoop] = set()
-    completed: list[None] = []
-
-    async def make_pool() -> Pool:
-        await asyncio.to_thread(release_constructor.wait)
-        pool = Pool()
-        with record:
-            constructed.append(pool)
-        return pool
-
-    frozen = Container().bind(make_pool, scope=Scope.SINGLETON, provides=Pool).freeze()
-
-    def worker() -> None:
-        nonlocal entered
-        loop = asyncio.new_event_loop()
-        loop.slow_callback_duration = 1.0
-
-        async def resolve() -> None:
-            nonlocal entered
-            with entered_condition:
-                entered += 1
-                if entered == THREADS:
-                    release_constructor.set()
-            value = await frozen.aresolve(Pool)
-            with record:
-                resolved.append(value)
-
-        try:
-            with state:
-                active_loops.add(loop)
-            _ = start.wait()
-            loop.run_until_complete(resolve())
-            with state:
-                completed.append(None)
-                state.notify_all()
-        except BaseException as exc:
-            with state:
-                failures.append(exc)
-                state.notify_all()
-        finally:
-            with state:
-                active_loops.remove(loop)
-            pending = asyncio.all_tasks(loop)
-            for task in pending:
-                task.cancel()
-            if pending:
-                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-            loop.close()
-
-    threads = [threading.Thread(target=worker) for _ in range(THREADS)]
-    for thread in threads:
-        thread.start()
-    with state:
-        while not failures and len(completed) != THREADS:
-            state.wait()
-        loops_to_stop = tuple(active_loops) if failures else ()
-        for loop in loops_to_stop:
-            loop.call_soon_threadsafe(loop.stop)
-    for thread in threads:
-        thread.join()
-
-    assert not failures
-    assert len(constructed) == 1
-    assert len(resolved) == THREADS
-    assert all(value is constructed[0] for value in resolved)
+    assert process.exitcode == 0
+    assert result == 'success:constructed=1 resolved=32 identities=1 failures=0'
 
 
 def test_scope_context_is_explicit_in_child_threads_and_inherited_by_sibling_tasks() -> None:
