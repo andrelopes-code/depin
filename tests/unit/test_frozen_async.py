@@ -122,6 +122,21 @@ async def test_aresolve_caches_a_scoped_provider_within_one_scope() -> None:
 
 
 @pytest.mark.asyncio
+async def test_async_transient_provider_reads_scope_value_inside_a_scope() -> None:
+    class RequestId: ...
+
+    class Report:
+        def __init__(self, request_id: RequestId) -> None:
+            self.request_id = request_id
+
+    request_id = RequestId()
+    frozen = Container().scope_value(RequestId).bind(Report, scope=Scope.TRANSIENT).freeze()
+    async with frozen.ascope() as frame:
+        frame.provide(RequestId, request_id)
+        assert (await frozen.aresolve(Report)).request_id is request_id
+
+
+@pytest.mark.asyncio
 async def test_aresolve_wires_an_async_dependency_into_a_class_constructor() -> None:
     class Repo:
         def __init__(self, size: int) -> None:
@@ -627,7 +642,10 @@ def test_sync_self_resolution_raises_instead_of_waiting_for_its_own_flight() -> 
     thread.start()
     assert finished.wait(1)
     assert len(errors) == 1
-    assert isinstance(errors[0], CircularDependencyError)
+    assert str(errors[0]) == (
+        'int is already constructing in this context; '
+        'resolve a different dependency or break the recursive provider call'
+    )
 
 
 @pytest.mark.asyncio
@@ -678,9 +696,72 @@ async def test_async_nested_scope_self_resolution_raises() -> None:
 
     frozen = Container().bind(make, scope=Scope.SCOPED, provides=Value).freeze()
     async with asyncio.timeout(1):
-        with pytest.raises(CircularDependencyError, match='already constructing'):
+        with pytest.raises(CircularDependencyError) as exc:
             async with frozen.ascope():
                 await frozen.aresolve(Value)
+    assert str(exc.value) == (
+        f'{Value.__qualname__} is already constructing in this context; '
+        'resolve a different dependency or break the recursive provider call'
+    )
+
+
+@pytest.mark.asyncio
+async def test_nested_async_scope_constructs_a_scoped_provider_once() -> None:
+    constructed: list[object] = []
+
+    class Value: ...
+
+    async def make() -> Value:
+        constructed.append(object())
+        return Value()
+
+    frozen = Container().bind(make, scope=Scope.SCOPED, provides=Value).freeze()
+    async with frozen.ascope(), frozen.ascope():
+        first = await frozen.aresolve(Value)
+        assert await frozen.aresolve(Value) is first
+    assert len(constructed) == 1
+
+
+@pytest.mark.asyncio
+async def test_stale_inherited_async_scope_context_cannot_resolve_after_abort() -> None:
+    frozen: FrozenContainer
+    child_started = asyncio.Event()
+    release_child = asyncio.Event()
+    attempts = 0
+
+    class Value: ...
+
+    child: asyncio.Task[Value] | None = None
+
+    async def resolve_in_child() -> Value:
+        child_started.set()
+        await release_child.wait()
+        return await frozen.aresolve(Value)
+
+    async def make() -> Value:
+        nonlocal attempts, child
+        attempts += 1
+        if attempts == 1:
+            child = asyncio.create_task(resolve_in_child())
+            await child_started.wait()
+            raise RuntimeError('first construction fails')
+        return Value()
+
+    frozen = Container().bind(make, scope=Scope.SCOPED, provides=Value).freeze()
+    async with frozen.ascope(), frozen.ascope():
+        with pytest.raises(RuntimeError, match='first construction fails'):
+            await frozen.aresolve(Value)
+        release_child.set()
+        assert child is not None
+        with pytest.raises(CircularDependencyError) as exc:
+            await child
+        assert str(exc.value) == (
+            f'{Value.__qualname__} is already constructing in this context; '
+            'resolve a different dependency or break the recursive provider call'
+        )
+        first = await frozen.aresolve(Value)
+        assert await frozen.aresolve(Value) is first
+    assert attempts == 2
 
 
 @pytest.mark.asyncio

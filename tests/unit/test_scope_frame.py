@@ -253,6 +253,59 @@ def test_child_frame_joins_an_ancestor_construction_flight() -> None:
     assert not child.is_leader(follower)
 
 
+def test_child_claim_skips_empty_ancestors_before_joining_a_flight() -> None:
+    grandparent = ScopeFrame()
+    parent = ScopeFrame(grandparent)
+    child = ScopeFrame(parent)
+    key = object()
+    leader, constructs = parent.start_flight(key)
+    assert constructs
+
+    value, flight = child.claim_cached(key)
+
+    assert value is MISSING
+    assert flight is not None
+    assert not child.is_leader(flight)
+    assert flight is not leader
+    parent.finish_flight(key, leader)
+
+
+def test_child_joined_flight_keeps_ancestor_leader_and_finishes() -> None:
+    parent = ScopeFrame()
+    child = ScopeFrame(parent)
+    key = object()
+    leader, constructs = parent.start_flight(key)
+    assert constructs
+
+    value, flight = child.claim_cached(key)
+    assert value is MISSING
+    assert flight is not None
+    assert not leader.finished
+
+    parent.finish_flight(key, leader)
+
+    assert flight.finished
+    assert leader.finished
+
+
+def test_child_claim_stores_a_leader_for_later_child_claims() -> None:
+    parent = ScopeFrame()
+    first_child = ScopeFrame(parent)
+    second_child = ScopeFrame(first_child)
+    key = object()
+
+    first_value, first_flight = first_child.claim_cached(key)
+    second_value, second_flight = second_child.claim_cached(key)
+
+    assert first_value is MISSING
+    assert second_value is MISSING
+    assert first_flight is not None
+    assert second_flight is not None
+    assert first_child.is_leader(first_flight)
+    assert not second_child.is_leader(second_flight)
+    first_child.finish_flight(key, first_flight)
+
+
 def test_child_claim_returns_cached_value_from_ancestor() -> None:
     parent = ScopeFrame()
     child = ScopeFrame(parent)
@@ -300,8 +353,9 @@ def test_start_flight_raises_for_cached_key() -> None:
     key = object()
     frame.provide(key, 'cached')
 
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError) as exc_info:
         frame.start_flight(key)
+    assert exc_info.value.args == (key,)
 
 
 def test_finishing_a_flight_twice_is_idempotent() -> None:
@@ -311,6 +365,7 @@ def test_finishing_a_flight_twice_is_idempotent() -> None:
     assert constructs
     follower, joins = frame.start_flight(key)
     assert not joins
+    assert not follower.finished
     signalled = frame.publish(key, leader, 'value')
     assert signalled is follower
     assert signalled is not None
@@ -339,6 +394,36 @@ async def test_non_flight_waits_and_non_leader_finish_are_noops() -> None:
     assert signalled is follower
     assert signalled is not None
     signalled.finish()
+
+
+@pytest.mark.asyncio
+async def test_closed_waiter_does_not_stop_signal_to_later_live_waiter() -> None:
+    frame = ScopeFrame()
+    key = object()
+    leader, constructs = frame.start_flight(key)
+    assert constructs
+    flight, joins = frame.start_flight(key)
+    assert not joins
+    registered = threading.Event()
+
+    def register_and_close() -> None:
+        loop = asyncio.new_event_loop()
+        task = loop.create_task(frame.wait_async(flight))
+        loop.call_soon(registered.set)
+        loop.call_soon(loop.stop)
+        loop.run_forever()
+        assert not task.done()
+        loop.close()
+
+    thread = threading.Thread(target=register_and_close)
+    thread.start()
+    assert registered.wait(1)
+    thread.join()
+
+    live = asyncio.create_task(frame.wait_async(flight))
+    await _checkpoint()
+    frame.finish_flight(key, leader)
+    await asyncio.wait_for(live, timeout=1)
 
 
 def test_a_scope_value_must_be_supplied_before_it_resolves() -> None:

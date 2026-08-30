@@ -2,6 +2,8 @@
 
 import subprocess
 import sys
+import threading
+from contextvars import copy_context
 from pathlib import Path
 from typing import Annotated, Protocol
 
@@ -59,6 +61,20 @@ def test_sync_resolution_of_an_async_provider_points_at_aresolve() -> None:
         _ = frozen[Service]
 
 
+def test_transient_provider_reads_scope_value_inside_a_scope() -> None:
+    class RequestId: ...
+
+    class Report:
+        def __init__(self, request_id: RequestId) -> None:
+            self.request_id = request_id
+
+    request_id = RequestId()
+    frozen = Container().scope_value(RequestId).bind(Report, scope=Scope.TRANSIENT).freeze()
+    with frozen.scope() as frame:
+        frame.provide(RequestId, request_id)
+        assert frozen.resolve(Report).request_id is request_id
+
+
 def test_sync_recursive_resolution_names_the_cyclic_provider() -> None:
     script = """
 from depin import Container, Scope
@@ -93,42 +109,102 @@ else:
 
 
 def test_sync_dynamic_cycle_during_parameter_resolution_raises() -> None:
-    script = """
-from depin import Container
-from depin.errors import CircularDependencyError
+    frozen: FrozenContainer
 
-frozen: object
+    class A: ...
 
-class A: ...
-class B: ...
+    class B: ...
 
-def make_a(value: B) -> A:
-    return A()
+    def make_a(value: B) -> A:
+        return A()
 
-def make_b() -> B:
-    return frozen.resolve(A)
+    def make_b() -> B:
+        _ = frozen.resolve(A)
+        return B()
 
-frozen = Container().bind(make_a, provides=A).bind(make_b, provides=B).freeze()
-try:
-    frozen.resolve(A)
-except CircularDependencyError as exc:
-    print(exc)
-else:
-    raise AssertionError('dynamic resolution cycle did not raise CircularDependencyError')
-"""
-    completed = subprocess.run(
-        [sys.executable, '-c', script],
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=2,
-        cwd=Path(frozen_module.__file__).parents[2],
+    frozen = Container().bind(make_a, provides=A).bind(make_b, provides=B).freeze()
+    finished = threading.Event()
+    errors: list[BaseException] = []
+
+    def resolve() -> None:
+        try:
+            _ = frozen.resolve(A)
+        except BaseException as exc:
+            errors.append(exc)
+        finally:
+            finished.set()
+
+    thread = threading.Thread(target=resolve, daemon=True)
+    thread.start()
+    assert finished.wait(1)
+    assert len(errors) == 1
+    assert str(errors[0]) == (
+        f'{A.__qualname__} is already constructing in this context; '
+        'resolve a different dependency or break the recursive provider call'
     )
-    assert completed.returncode == 0, completed.stderr
-    assert completed.stdout == (
-        'A is already constructing in this context; '
-        'resolve a different dependency or break the recursive provider call\n'
-    )
+
+
+def test_nested_scope_constructs_a_scoped_provider_once() -> None:
+    constructed: list[object] = []
+
+    class Value: ...
+
+    def make() -> Value:
+        constructed.append(object())
+        return Value()
+
+    frozen = Container().bind(make, scope=Scope.SCOPED, provides=Value).freeze()
+    with frozen.scope(), frozen.scope():
+        first = frozen.resolve(Value)
+        assert frozen.resolve(Value) is first
+    assert len(constructed) == 1
+
+
+def test_stale_inherited_scope_context_cannot_resolve_after_abort() -> None:
+    frozen: FrozenContainer
+    child_started = threading.Event()
+    release_child = threading.Event()
+    child_finished = threading.Event()
+    child_errors: list[BaseException] = []
+    attempts = 0
+
+    class Value: ...
+
+    def resolve_in_child() -> None:
+        child_started.set()
+        release_child.wait()
+        try:
+            _ = frozen.resolve(Value)
+        except BaseException as exc:
+            child_errors.append(exc)
+        finally:
+            child_finished.set()
+
+    def make() -> Value:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            context = copy_context()
+            thread = threading.Thread(target=context.run, args=(resolve_in_child,), daemon=True)
+            thread.start()
+            assert child_started.wait(1)
+            raise RuntimeError('first construction fails')
+        return Value()
+
+    frozen = Container().bind(make, scope=Scope.SCOPED, provides=Value).freeze()
+    with frozen.scope(), frozen.scope():
+        with pytest.raises(RuntimeError, match='first construction fails'):
+            _ = frozen.resolve(Value)
+        release_child.set()
+        assert child_finished.wait(1)
+        assert len(child_errors) == 1
+        assert str(child_errors[0]) == (
+            f'{Value.__qualname__} is already constructing in this context; '
+            'resolve a different dependency or break the recursive provider call'
+        )
+        first = frozen.resolve(Value)
+        assert frozen.resolve(Value) is first
+    assert attempts == 2
 
 
 def test_sync_nested_scope_self_resolution_raises() -> None:

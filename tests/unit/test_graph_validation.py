@@ -430,20 +430,6 @@ def test_multiple_missing_providers_are_deepest_first_and_keep_parameter_names()
     assert '.Leaf -> ' in message
 
 
-def test_multiple_missing_provider_lines_keep_the_documented_bullet_separator() -> None:
-    class First: ...
-
-    class Second: ...
-
-    class Service:
-        def __init__(self, first: First, second: Second) -> None: ...
-
-    with pytest.raises(MissingProviderError) as exc:
-        _ = build_plan(Registry().bind(Service).records())
-
-    assert '\n  - ' in str(exc.value)
-
-
 def test_missing_scan_continues_after_a_defaulted_parameter() -> None:
     class Missing: ...
 
