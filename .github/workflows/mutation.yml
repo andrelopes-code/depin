@@ -5,7 +5,7 @@ on:
     paths:
       - 'depin/_core/**'
       - 'tests/**'
-      - 'scripts/check_mutation_threshold.py'
+      - 'scripts/**'
       - 'pyproject.toml'
       - 'uv.lock'
       - '.github/workflows/mutation.yml'
@@ -36,15 +36,18 @@ jobs:
         run: uv sync --locked
 
       - name: Run mutation tests
+        id: mutation-run
         run: uv run mutmut run
 
       - name: Export mutation statistics
+        id: export-statistics
         run: uv run mutmut export-cicd-stats
 
       - name: Enforce mutation threshold
         run: uv run python -m scripts.check_mutation_threshold mutants/mutmut-cicd-stats.json
 
       - name: Report mutation results
+        if: ${{ !cancelled() && steps.mutation-run.outcome == 'success' && steps.export-statistics.outcome == 'success' }}
         run: uv run mutmut results
 
       - name: Upload mutation statistics
