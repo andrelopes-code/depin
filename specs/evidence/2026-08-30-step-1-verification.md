@@ -2,7 +2,7 @@
 
 Date: 2026-08-30
 
-Measured implementation commit: `b62f5c43234ddce97283166bb9f2fa06cb1235f4`
+Measured implementation commit: `9d249c1181b61cb7b65b78d81da467338909ab0b`
 Comparison source for the previous cross-loop implementation: `4a241d29b51b1582608f4ac356c756d797940ec1`
 
 Green matrix, mutation, root-cause, benchmark, and graph-sabotage commands ran
@@ -19,8 +19,8 @@ cyclic/missing regression:
 
 ```console
 $ uv run pytest tests/unit/test_graph_properties.py -q
-.....                                                                    [100%]
-5 passed in 3.91s
+......                                                                   [100%]
+6 passed in 3.26s
 EXIT=0
 ```
 
@@ -40,10 +40,10 @@ Command and minimized failure:
 $ uv run pytest tests/unit/test_graph_properties.py::test_freeze_returns_a_topological_plan_or_a_depin_error -x -vv
 E   AssertionError: out-of-order
 E   Falsifying example: test_freeze_returns_a_topological_plan_or_a_depin_error(
-E       case=GraphCase(size=1,
-E        edges=frozenset({(0, 0)}),
-E        scopes=(Scope.SINGLETON,),
-E        registered=(True,),
+E       case=GraphCase(size=4,
+E        edges=frozenset({(3, 3)}),
+E        scopes=(Scope.SINGLETON, Scope.SINGLETON, Scope.SINGLETON, Scope.SINGLETON),
+E        registered=(False, False, False, True),
 E        duplicates=frozenset()),
 E   )
 ============================== 1 failed ===============================
@@ -277,7 +277,7 @@ Fresh complete run and real gate:
 $ uv run mutmut run
 Running mutation testing
 done
-7.66 mutations/second
+7.46 mutations/second
 EXIT=0
 $ uv run mutmut export-cicd-stats
 Saved CI/CD stats to mutants/mutmut-cicd-stats.json
@@ -301,24 +301,24 @@ and the head was the measured implementation commit.
 
 ```console
 $ uv sync --no-default-groups --group bench
-$ uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/depin-step1-base-last2.json
+$ uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/depin-pr-base.json
 8 passed
 EXIT=0
 
 $ uv sync --no-default-groups --group bench
-$ uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/depin-step1-head-last2.json
+$ uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/depin-pr-head.json
 8 passed
 EXIT=0
 
-$ uv run --no-sync python -m benchmarks.compare /tmp/depin-step1-base-last2.json /tmp/depin-step1-head-last2.json --max-regression=0.25
-ok            +6.3%  benchmarks/test_resolution.py::test_call_through_an_inject_wrapper
-ok            +2.8%  benchmarks/test_resolution.py::test_freeze_a_chain[1000]
-ok            +2.7%  benchmarks/test_resolution.py::test_freeze_a_chain[100]
-ok            +6.5%  benchmarks/test_resolution.py::test_freeze_a_chain[10]
-ok           +21.3%  benchmarks/test_resolution.py::test_open_and_close_a_scope
-ok            +9.8%  benchmarks/test_resolution.py::test_resolve_a_cached_singleton
-ok           -62.7%  benchmarks/test_resolution.py::test_resolve_a_transient_chain
-ok            +4.7%  benchmarks/test_resolution.py::test_resolve_an_async_singleton
+$ uv run --no-sync python -m benchmarks.compare /tmp/depin-pr-base.json /tmp/depin-pr-head.json --max-regression=0.25
+ok            +0.6%  benchmarks/test_resolution.py::test_call_through_an_inject_wrapper
+ok            -2.9%  benchmarks/test_resolution.py::test_freeze_a_chain[1000]
+ok            -3.1%  benchmarks/test_resolution.py::test_freeze_a_chain[100]
+ok            +0.3%  benchmarks/test_resolution.py::test_freeze_a_chain[10]
+ok           +22.7%  benchmarks/test_resolution.py::test_open_and_close_a_scope
+ok            +0.1%  benchmarks/test_resolution.py::test_resolve_a_cached_singleton
+ok           -65.1%  benchmarks/test_resolution.py::test_resolve_a_transient_chain
+ok            +1.1%  benchmarks/test_resolution.py::test_resolve_an_async_singleton
 8 benchmark(s) within 25% of the base branch
 EXIT=0
 ```
@@ -335,11 +335,11 @@ was measured independently rather than combined.
 
 | Interpreter | GIL | Command | Tests | `TOTAL` | Coverage | Exit |
 | --- | --- | --- | --- | --- | ---: | ---: |
-| CPython 3.12.13 | API unavailable | `uv run --python 3.12 pytest --cov=depin --cov-report=term` | 422 passed, 6 skipped | `1214 9 390 18` | 98.32% | 0 |
-| CPython 3.13.13 | enabled | `uv run --python 3.13 pytest --cov=depin --cov-report=term` | 422 passed, 6 skipped | `1214 9 390 18` | 98.32% | 0 |
-| CPython 3.14.5 | enabled | `uv run --python 3.14 pytest --cov=depin --cov-report=term` | 422 passed, 6 skipped | `1180 9 390 18` | 98.28% | 0 |
-| CPython 3.13.13 experimental free-threading | disabled | `UV_PROJECT_ENVIRONMENT=/tmp/depin-step1-313t uv run --no-sync --python /tmp/depin-step1-313t/bin/python pytest tests/unit --cov=depin --cov-report=term` | 376 passed, 0 skipped | `1214 41 390 17` | 96.01% | 0 |
-| CPython 3.14.5 free-threading | disabled | `UV_PROJECT_ENVIRONMENT=/tmp/depin-step1-314t uv run --no-sync --python /tmp/depin-step1-314t/bin/python pytest tests/unit --cov=depin --cov-report=term` | 376 passed, 0 skipped | `1180 42 390 18` | 95.80% | 0 |
+| CPython 3.12.13 | API unavailable | `uv run --python 3.12 pytest --cov=depin --cov-report=term` | 423 passed, 6 skipped | `1214 9 390 18` | 98.32% | 0 |
+| CPython 3.13.13 | enabled | `uv run --python 3.13 pytest --cov=depin --cov-report=term` | 423 passed, 6 skipped | `1214 9 390 18` | 98.32% | 0 |
+| CPython 3.14.5 | enabled | `uv run --python 3.14 pytest --cov=depin --cov-report=term` | 423 passed, 6 skipped | `1180 9 390 18` | 98.28% | 0 |
+| CPython 3.13.13 experimental free-threading | disabled | `UV_PROJECT_ENVIRONMENT=/tmp/depin-step1-313t uv run --no-sync --python /tmp/depin-step1-313t/bin/python pytest tests/unit --cov=depin --cov-report=term` | 377 passed, 0 skipped | `1214 41 390 17` | 96.01% | 0 |
+| CPython 3.14.5 free-threading | disabled | `UV_PROJECT_ENVIRONMENT=/tmp/depin-step1-314t uv run --no-sync --python /tmp/depin-step1-314t/bin/python pytest tests/unit --cov=depin --cov-report=term` | 377 passed, 0 skipped | `1180 41 390 17` | 95.92% | 0 |
 
 The blocking-interpreter checks were explicit:
 
@@ -362,60 +362,3 @@ GIL_ENABLED False
 ```
 
 All five independent totals satisfy the repository's 95% coverage gate.
-
-## Final repository audit
-
-The commands in this section ran after evidence commit
-`b9ed1c0dcb7099e142498c14d7f9922b364a98c3` existed, with its tracked worktree
-clean. The later record-only commit appends this section; it does not claim the
-section was already present in the audited commit.
-
-```console
-$ uv run ruff format
-101 files left unchanged
-EXIT=0
-$ uv run ruff check
-All checks passed!
-EXIT=0
-$ uv run basedpyright
-0 errors, 0 warnings, 0 notes
-EXIT=0
-$ uv run mypy
-Success: no issues found in 67 source files
-EXIT=0
-$ uv run pytest
-422 passed, 6 skipped
-EXIT=0
-```
-
-The additional Step 1 checks also passed:
-
-```console
-$ uv run --group docs mkdocs build --strict
-INFO - Documentation built
-EXIT=0
-$ uv run --group bench pytest benchmarks --benchmark-only
-8 passed
-EXIT=0
-$ uv run mutmut run
-Running mutation testing
-done
-7.71 mutations/second
-EXIT=0
-$ uv run mutmut export-cicd-stats
-Saved CI/CD stats to mutants/mutmut-cicd-stats.json
-EXIT=0
-$ uv run python -m scripts.check_mutation_threshold mutants/mutmut-cicd-stats.json
-mutation score: 97.2% (1218 killed, 35 survived, 1253 total)
-EXIT=0
-$ git diff --check
-EXIT=0
-$ git status --short
-EXIT=0
-```
-
-The exported mutation counters were 1,253 total, 1,218 killed, 35 survived,
-and zero inconclusive. The docs command printed Material for MkDocs' upstream
-MkDocs 2.0 advisory banner, but no MkDocs diagnostic; strict mode exited 0. The
-five repository gates, benchmark suite, and mutation run emitted no warnings
-or waivers.
