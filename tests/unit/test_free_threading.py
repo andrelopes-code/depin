@@ -210,6 +210,9 @@ def test_async_singleton_is_single_flight_across_event_loops() -> None:
     failures: list[BaseException] = []
     record = threading.Lock()
     start = threading.Barrier(THREADS)
+    state = threading.Condition()
+    active_loops: set[asyncio.AbstractEventLoop] = set()
+    completed: list[None] = []
 
     async def make_pool() -> Pool:
         await asyncio.to_thread(release_constructor.wait)
@@ -222,11 +225,11 @@ def test_async_singleton_is_single_flight_across_event_loops() -> None:
 
     def worker() -> None:
         nonlocal entered
+        loop = asyncio.new_event_loop()
+        loop.slow_callback_duration = 1.0
 
         async def resolve() -> None:
             nonlocal entered
-            # Keep debug checks enabled while avoiding scheduler-contention noise from 32 OS threads.
-            asyncio.get_running_loop().slow_callback_duration = 1.0
             with entered_condition:
                 entered += 1
                 if entered == THREADS:
@@ -236,13 +239,38 @@ def test_async_singleton_is_single_flight_across_event_loops() -> None:
                 resolved.append(value)
 
         try:
+            with state:
+                active_loops.add(loop)
             _ = start.wait()
-            asyncio.run(resolve())
+            loop.run_until_complete(resolve())
+            with state:
+                completed.append(None)
+                state.notify_all()
         except BaseException as exc:
-            with record:
+            with state:
                 failures.append(exc)
+                state.notify_all()
+        finally:
+            with state:
+                active_loops.remove(loop)
+            pending = asyncio.all_tasks(loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            loop.close()
 
-    _run_in_threads(worker)
+    threads = [threading.Thread(target=worker) for _ in range(THREADS)]
+    for thread in threads:
+        thread.start()
+    with state:
+        while not failures and len(completed) != THREADS:
+            state.wait()
+        loops_to_stop = tuple(active_loops) if failures else ()
+        for loop in loops_to_stop:
+            loop.call_soon_threadsafe(loop.stop)
+    for thread in threads:
+        thread.join()
 
     assert not failures
     assert len(constructed) == 1
