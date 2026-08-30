@@ -15,7 +15,7 @@ from collections.abc import Callable, Generator
 import pytest
 
 from depin._core.container import Container
-from depin._core.scope import Scope, ScopeFrame
+from depin._core.scope import Scope, ScopeFrame, optional_frame
 
 THREADS = 32
 
@@ -176,6 +176,29 @@ def test_the_per_key_lock_table_survives_concurrent_creation() -> None:
     assert all(lock is handed_out[0] for lock in handed_out)
 
 
+def test_the_async_flight_table_survives_concurrent_creation() -> None:
+    frame = ScopeFrame()
+    mutex = object.__getattribute__(frame, '_mutex')
+    object.__setattr__(frame, '_async_flights', _RendezvousFlightTable(mutex, threading.Barrier(THREADS)))
+
+    key = object()
+    handed_out: list[tuple[threading.Event, bool]] = []
+    record = threading.Lock()
+    start = threading.Barrier(THREADS)
+
+    def worker() -> None:
+        _ = start.wait()
+        flight = frame.start_async_flight(key)
+        with record:
+            handed_out.append(flight)
+
+    _run_in_threads(worker)
+
+    assert len(handed_out) == THREADS
+    assert all(event is handed_out[0][0] for event, _ in handed_out)
+    assert sum(constructs for _, constructs in handed_out) == 1
+
+
 def test_async_singleton_is_single_flight_across_event_loops() -> None:
     class Pool: ...
 
@@ -196,9 +219,6 @@ def test_async_singleton_is_single_flight_across_event_loops() -> None:
         return pool
 
     frozen = Container().bind(make_pool, scope=Scope.SINGLETON, provides=Pool).freeze()
-    frame = object.__getattribute__(frozen, '_root')
-    mutex = object.__getattribute__(frame, '_mutex')
-    object.__setattr__(frame, '_async_flights', _RendezvousFlightTable(mutex, threading.Barrier(THREADS)))
 
     def worker() -> None:
         nonlocal entered
@@ -209,8 +229,7 @@ def test_async_singleton_is_single_flight_across_event_loops() -> None:
                 entered += 1
                 if entered == THREADS:
                     release_constructor.set()
-            value, same_value = await asyncio.gather(frozen.aresolve(Pool), frozen.aresolve(Pool))
-            assert value is same_value
+            value = await frozen.aresolve(Pool)
             with record:
                 resolved.append(value)
 
@@ -227,3 +246,61 @@ def test_async_singleton_is_single_flight_across_event_loops() -> None:
     assert len(constructed) == 1
     assert len(resolved) == THREADS
     assert all(value is constructed[0] for value in resolved)
+
+
+def test_scope_context_is_explicit_in_child_threads_and_inherited_by_sibling_tasks() -> None:
+    class Session: ...
+
+    frozen = Container().bind(Session, scope=Scope.SCOPED).freeze()
+    observed_frames: list[ScopeFrame | None] = []
+    record = threading.Lock()
+
+    def child() -> None:
+        with record:
+            observed_frames.append(optional_frame())
+
+    async def resolve_siblings() -> tuple[Session, Session]:
+        return await asyncio.gather(frozen.aresolve(Session), frozen.aresolve(Session))
+
+    with frozen.scope() as frame:
+        first, second = asyncio.run(resolve_siblings())
+        child_threads = [threading.Thread(target=child) for _ in range(2)]
+        for thread in child_threads:
+            thread.start()
+        for thread in child_threads:
+            thread.join()
+
+    assert first is second
+    inherited = all(observed is frame for observed in observed_frames)
+    isolated = all(observed is None for observed in observed_frames)
+    assert inherited or isolated
+
+
+def test_override_context_isolated_or_inherited_by_child_threads() -> None:
+    class Service: ...
+
+    frozen = Container().bind(Service, scope=Scope.SINGLETON).freeze()
+    replacement = Service()
+    observed: list[Service] = []
+    record = threading.Lock()
+
+    def child() -> None:
+        value = frozen.resolve(Service)
+        with record:
+            observed.append(value)
+
+    async def resolve_siblings() -> tuple[Service, Service]:
+        return await asyncio.gather(frozen.aresolve(Service), frozen.aresolve(Service))
+
+    with frozen.override(Service, replacement):
+        sibling = asyncio.run(resolve_siblings())
+        child_threads = [threading.Thread(target=child) for _ in range(2)]
+        for thread in child_threads:
+            thread.start()
+        for thread in child_threads:
+            thread.join()
+
+    assert all(value is replacement for value in sibling)
+    inherited = all(value is replacement for value in observed)
+    isolated = all(value is not replacement for value in observed)
+    assert inherited or isolated
