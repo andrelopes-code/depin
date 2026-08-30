@@ -1,3 +1,5 @@
+import pytest
+
 from depin._core.markers import Token
 from depin._core.registry import Registry
 from depin._core.scope import Scope
@@ -54,6 +56,10 @@ def test_named_registry_carries_name() -> None:
     assert r.name == 'services'
 
 
+def test_registry_default_name_is_empty() -> None:
+    assert Registry().name == ''
+
+
 def test_merge_concats_records_in_order() -> None:
     class A: ...
 
@@ -78,3 +84,11 @@ def test_merge_does_not_mutate_originals() -> None:
 
     assert [rec.source for rec in r1.records()] == [A]
     assert [rec.source for rec in r2.records()] == [B]
+
+
+@pytest.mark.parametrize(
+    ('left_name', 'right_name', 'expected_name'),
+    [('left', 'right', 'left'), ('', 'right', 'right'), ('left', '', 'left')],
+)
+def test_merge_keeps_the_first_non_empty_name(left_name: str, right_name: str, expected_name: str) -> None:
+    assert (Registry(left_name) | Registry(right_name)).name == expected_name

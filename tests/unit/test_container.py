@@ -91,6 +91,34 @@ def test_the_scope_decorators_register_a_factory_and_return_it_unchanged() -> No
     assert make_transient() == 'x'
 
 
+def test_scope_decorators_preserve_provides_and_tag() -> None:
+    class Contract: ...
+
+    container = Container()
+
+    @container.singleton(provides=Contract, tag='singleton')
+    class SingletonImplementation(Contract): ...
+
+    @container.scoped(provides=Contract, tag='scoped')
+    class ScopedImplementation(Contract): ...
+
+    @container.transient(provides=Contract, tag='transient')
+    class TransientImplementation(Contract): ...
+
+    assert [(record.source, record.scope, record.provides, record.tag) for record in container.records()] == [
+        (SingletonImplementation, Scope.SINGLETON, Contract, 'singleton'),
+        (ScopedImplementation, Scope.SCOPED, Contract, 'scoped'),
+        (TransientImplementation, Scope.TRANSIENT, Contract, 'transient'),
+    ]
+
+
+def test_scope_value_preserves_its_tag_and_scope() -> None:
+    token = Token[int]('request.id')
+    [record] = Container().scope_value(token, tag='request').records()
+    assert record.scope is Scope.SCOPED
+    assert record.tag == 'request'
+
+
 def test_the_scope_decorators_reject_a_non_callable_target() -> None:
     with pytest.raises(InvalidProviderError, match='expected a class or a callable'):
         Container().singleton()(42)  # type: ignore[call-overload]  # pyright: ignore[reportArgumentType, reportCallIssue, reportUnusedCallResult]

@@ -353,6 +353,41 @@ def test_duplicate_message_names_key_and_tag() -> None:
     msg = str(exc.value)
     assert 'Iface' in msg
     assert 'primary' in msg
+    assert 'two bindings resolve to the same key' in msg
+    assert 'distinct tags to register multiple implementations' in msg
+
+
+def test_multiple_missing_providers_are_deepest_first_and_keep_parameter_names() -> None:
+    class DeepMissing: ...
+
+    class ShallowMissing: ...
+
+    class Leaf:
+        def __init__(self, dependency: DeepMissing) -> None: ...
+
+    class Root:
+        def __init__(self, leaf: Leaf, shallow: ShallowMissing) -> None: ...
+
+    registry = Registry().bind(Leaf).bind(Root)
+    with pytest.raises(MissingProviderError) as exc:
+        _ = build_plan(registry.records())
+    message = str(exc.value)
+    assert message.startswith('2 missing providers:\n  - ')
+    assert message.index('DeepMissing') < message.index('ShallowMissing')
+    assert '.Leaf.dependency' in message
+    assert '.Root -> ' in message
+    assert '.Leaf -> ' in message
+
+
+def test_missing_scan_continues_after_a_defaulted_parameter() -> None:
+    class Missing: ...
+
+    class Service:
+        def __init__(self, defaulted: int = 1, *, required: Missing) -> None: ...
+
+    registry = Registry().bind(Service)
+    with pytest.raises(MissingProviderError, match='Missing'):
+        _ = build_plan(registry.records())
 
 
 def test_singleton_depending_on_scoped_is_rejected() -> None:
