@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0](https://github.com/andrelopes-code/depin/compare/v0.6.0...v0.7.0) (2026-08-30)
+
+
+### Features
+
+* make the validated graph inspectable ([#36](https://github.com/andrelopes-code/depin/issues/36)) ([2603fb0](https://github.com/andrelopes-code/depin/commit/2603fb09d5d6eea8c1979252c7f0099ee451fee4))
+
 ## [0.6.0](https://github.com/andrelopes-code/depin/compare/v0.5.1...v0.6.0) (2026-08-30)
 
 
