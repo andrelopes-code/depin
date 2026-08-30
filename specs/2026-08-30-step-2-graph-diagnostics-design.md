@@ -67,17 +67,27 @@ class GraphNode:
     dependencies: tuple[GraphEdge, ...]
 
 
-@dataclass(frozen=True, slots=True)
 class DependencyGraph:
-    nodes: tuple[GraphNode, ...]
+    __slots__ = ('_index', '_nodes')
 
-    def node(self, key: ProviderKey, tag: str | None = None) -> GraphNode: ...
-    def find(self, key: ProviderKey, tag: str | None = None) -> GraphNode | None: ...
+    def __init__(self, nodes: tuple[GraphNode, ...]) -> None: ...
+    @property
+    def nodes(self) -> tuple[GraphNode, ...]: ...
     @property
     def roots(self) -> tuple[GraphNode, ...]: ...
+    def node(self, key: ProviderKey, tag: str | None = None) -> GraphNode: ...
+    def find(self, key: ProviderKey, tag: str | None = None) -> GraphNode | None: ...
     def dot(self) -> str: ...
     def mermaid(self) -> str: ...
 ```
+
+`GraphNode` and `GraphEdge` are frozen dataclasses; `DependencyGraph` is not.
+It holds an identity index built once in `__init__`, and a frozen dataclass can
+only populate a derived field through `object.__setattr__`, which the codebase
+does not use. A slotted class with read-only properties and a structural
+`__eq__` over `nodes` gives the same immutability without that. Rebuilding the
+index on every lookup instead would make `explain()` quadratic in the node
+count.
 
 `nodes` holds every provider in `ResolutionPlan.order`, which is topological:
 a node never precedes one it depends on. `roots` is the subset no other node
@@ -147,8 +157,19 @@ A node whose subtree was already printed renders as
 `Config  [singleton, class]  (shown above)` with no children. Without the
 elision, a diamond-shaped graph prints the shared subtree once per path.
 
-An unregistered key returns a single line, in the wording
-`MissingProviderError` uses, including the candidate scan:
+An unregistered key returns a single line, in one of the two wordings
+`MissingProviderError` uses. When some node declares an unsatisfied parameter
+for that identity, the line is the freeze-time wording, produced by the same
+`format_missing` that `build_plan` raises with — the same `required by`, the
+same resolution chain, and the same candidate scan:
+
+```
+no provider for float (required by Service.timeout; resolution chain: Service -> float)
+```
+
+The chain reported is the deepest one that reaches the parameter, chosen the way
+`_collect_missing` chooses it. When nothing requires the key, the line is the
+resolution-time wording, plus the candidate scan:
 
 ```
 no provider for Store (tag=None); candidates: app.store.PostgresStore
@@ -161,9 +182,9 @@ digraph depin {
   rankdir=LR;
   n0 [label="Service\nsingleton, class", shape=box];
   n1 [label="Config\nsingleton, class", shape=box];
-  n2 [label="float\nunbound", shape=box, style=dashed];
+  u0 [label="float\nunbound", shape=box, style=dashed];
   n0 -> n1 [label="config"];
-  n0 -> n2 [label="timeout", style=dashed];
+  n0 -> u0 [label="timeout", style=dashed];
 }
 ```
 
@@ -173,15 +194,18 @@ digraph depin {
 graph LR
   n0["Service<br/>singleton, class"]
   n1["Config<br/>singleton, class"]
-  n2["float<br/>unbound"]
+  u0["float<br/>unbound"]
   n0 -->|config| n1
-  n0 -.->|timeout| n2
+  n0 -.->|timeout| u0
 ```
 
-Both formats identify a node as `n<index in plan order>`. An index is stable
-across runs, is a valid Mermaid identifier without escaping, and keeps a key
-containing a quote or a bracket out of the identifier position. Quotation marks
-and backslashes in a label are escaped.
+Both formats identify a bound node as `n<index in plan order>` and an unbound
+target as `u<index in first-encounter order>`. An index is stable across runs,
+is a valid Mermaid identifier without escaping, and keeps a key containing a
+quote or a bracket out of the identifier position. In a `dot` label a quotation
+mark and a backslash are escaped with a backslash; in a Mermaid label a
+quotation mark becomes `#quot;`. An edge label is a Python parameter name, so it
+can contain neither format's delimiter.
 
 An unsatisfied edge produces a dashed edge to a dashed node labelled with the
 unbound key, so a graph that resolves a default is visible as such rather than
@@ -206,9 +230,14 @@ site, not a question about the graph, so it raises as `_lookup` does.
 ## Chain consistency
 
 The acceptance criterion requires `explain()` and `MissingProviderError` to name
-the same chain. `graph._format_missing` and the tree renderer therefore share one
-formatter, `fmt_chain(specs) -> str`, added to `_core/spec.py` next to
-`fmt_key`.
+the same chain. They share the formatter rather than reimplementing it:
+`graph._format_missing` and `graph._suggest_candidates` lose their leading
+underscore and become `format_missing` and `suggest_candidates`, which
+`_core/render.py` imports. `format_missing` takes keys instead of
+`ProviderSpec` values, so a caller holding a `GraphNode` can reach it, and joins
+its chain through a new `fmt_chain(keys) -> str` in `_core/spec.py`, next to
+`fmt_key`. The dependency runs one way: `render` imports `graph`, and `graph`
+imports nothing from `render`.
 
 The test drives both paths from one set of bindings in two variants. With the
 parameter declared without a default, `freeze()` raises and the error names a
