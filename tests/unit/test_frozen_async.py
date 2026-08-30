@@ -142,6 +142,10 @@ async def test_aresolve_handles_sync_providers_too() -> None:
 
     frozen = Container().value(token, 5).bind(make, scope=Scope.SINGLETON, provides=str).freeze()
     assert await frozen.aresolve(token) == 5
+    root: ScopeFrame = object.__getattribute__(frozen, '_root')
+    flight, constructs = root.start_flight(None)
+    assert constructs
+    root.finish_flight(None, flight)
     assert await frozen.aresolve(str) == 'sync'
 
 
@@ -287,14 +291,24 @@ async def test_cancelled_async_singleton_constructor_wakes_a_follower_to_retry()
     await started.wait()
 
     follower = asyncio.create_task(frozen.aresolve(int))
-    await _checkpoint()
-    assert not second_construction_started.is_set()
-    leader.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await leader
-    await cancelled.wait()
-    async with asyncio.timeout(1):
-        assert await follower == 7
+    try:
+        await _checkpoint()
+        assert not second_construction_started.is_set()
+        leader.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await leader
+        root: ScopeFrame = object.__getattribute__(frozen, '_root')
+        flight, constructs = root.start_flight((int, None))
+        assert constructs
+        root.finish_flight((int, None), flight)
+        await cancelled.wait()
+        async with asyncio.timeout(1):
+            assert await follower == 7
+    finally:
+        if not follower.done():
+            follower.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await follower
     assert attempts == 2
 
 
