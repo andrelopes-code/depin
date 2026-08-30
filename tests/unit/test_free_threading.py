@@ -43,6 +43,7 @@ class _RendezvousLockTable:
 
     def get(self, key: object) -> LockType | None:
         value = self._values.get(key)
+        # Capturing before the rendezvous lets unguarded workers see absence before a write; the guard avoids deadlock.
         if value is None and not self._guard.locked():
             _ = self._rendezvous.wait()
         return value
@@ -54,10 +55,9 @@ class _RendezvousLockTable:
 def test_a_singleton_is_built_once_with_no_gil() -> None:
     class Pool: ...
 
-    # 64 independent keys, matching the per-key lock test below: `Pool()` is
-    # near-instant and the pre-lock `frame.lookup` fast path absorbs most of a
-    # race on a single key, so one key alone catches a removed single-flight
-    # lock only intermittently. Racing 64 keys at once makes detection certain.
+    # `Pool()` is near-instant and the pre-lock `frame.lookup` fast path absorbs
+    # most of a single-key race; racing 64 keys makes a removed single-flight
+    # lock observable reliably in this end-to-end test.
     TAGS = tuple(str(tag) for tag in range(64))
 
     built: dict[str, list[Pool]] = {tag: [] for tag in TAGS}
