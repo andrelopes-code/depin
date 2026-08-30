@@ -84,7 +84,7 @@ def _freeze_result(case: GraphCase) -> str:
 
 
 @st.composite
-def _arbitrary_graphs(draw: st.DrawFn) -> GraphCase:
+def _graphs(draw: st.DrawFn) -> GraphCase:
     size = draw(st.integers(min_value=1, max_value=8))
     edges = draw(st.sets(st.tuples(st.integers(0, size - 1), st.integers(0, size - 1))))
     scopes = tuple(draw(st.lists(st.sampled_from(tuple(Scope)), min_size=size, max_size=size)))
@@ -92,6 +92,27 @@ def _arbitrary_graphs(draw: st.DrawFn) -> GraphCase:
     registered_nodes = tuple(index for index, is_registered in enumerate(registered) if is_registered)
     duplicates = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
     return GraphCase(size, frozenset(edges), scopes, registered, frozenset(duplicates))
+
+
+def _has_singleton_to_scoped_path(case: GraphCase) -> bool:
+    dependencies = tuple(
+        tuple(dependency for owner, dependency in case.edges if owner == node) for node in range(case.size)
+    )
+    for root, scope in enumerate(case.scopes):
+        if scope is not Scope.SINGLETON:
+            continue
+        visited = {root}
+        pending = [root]
+        while pending:
+            owner = pending.pop()
+            for dependency in dependencies[owner]:
+                if dependency in visited:
+                    continue
+                if case.scopes[dependency] is Scope.SCOPED:
+                    return True
+                visited.add(dependency)
+                pending.append(dependency)
+    return False
 
 
 @st.composite
@@ -105,19 +126,7 @@ def _acyclic_graphs(draw: st.DrawFn) -> GraphCase:
 
 @st.composite
 def _non_captive_graphs(draw: st.DrawFn) -> GraphCase:
-    size = draw(st.integers(min_value=1, max_value=8))
-    scopes = tuple(draw(st.lists(st.sampled_from(tuple(Scope)), min_size=size, max_size=size)))
-    candidates = tuple(
-        (owner, dependency)
-        for owner in range(size)
-        for dependency in range(size)
-        if not (scopes[owner] in (Scope.SINGLETON, Scope.TRANSIENT) and scopes[dependency] is Scope.SCOPED)
-    )
-    edges = draw(st.sets(st.sampled_from(candidates)))
-    registered = tuple(draw(st.lists(st.booleans(), min_size=size, max_size=size)))
-    registered_nodes = tuple(index for index, is_registered in enumerate(registered) if is_registered)
-    duplicates = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
-    return GraphCase(size, frozenset(edges), scopes, registered, frozenset(duplicates))
+    return draw(_graphs().filter(lambda case: not _has_singleton_to_scoped_path(case)))
 
 
 def test_a_cyclic_missing_graph_is_bounded_during_validation() -> None:
@@ -141,15 +150,35 @@ def test_a_cyclic_missing_graph_is_bounded_during_validation() -> None:
     assert _freeze_result(cyclic_missing).startswith('depin:')
 
 
+def test_singleton_to_scoped_reachability_follows_transient_edges_and_handles_cycles() -> None:
+    captive = GraphCase(
+        size=4,
+        edges=frozenset({(0, 1), (1, 2), (2, 1)}),
+        scopes=(Scope.SINGLETON, Scope.TRANSIENT, Scope.SCOPED, Scope.TRANSIENT),
+        registered=(True,) * 4,
+        duplicates=frozenset(),
+    )
+    non_captive = GraphCase(
+        size=3,
+        edges=frozenset({(1, 2)}),
+        scopes=(Scope.SINGLETON, Scope.TRANSIENT, Scope.SCOPED),
+        registered=(True,) * 3,
+        duplicates=frozenset(),
+    )
+
+    assert _has_singleton_to_scoped_path(captive)
+    assert not _has_singleton_to_scoped_path(non_captive)
+
+
 @settings(max_examples=200, deadline=None)
-@given(_arbitrary_graphs())
+@given(_graphs())
 def test_freeze_returns_a_topological_plan_or_a_depin_error(case: GraphCase) -> None:
     result = _freeze_result(case)
     assert result == 'ordered' or result.startswith(('depin:', 'circular:', 'captive:')), result
 
 
 @settings(max_examples=200, deadline=None)
-@given(_arbitrary_graphs())
+@given(_graphs())
 def test_graph_validation_never_leaks_a_non_depin_exception(case: GraphCase) -> None:
     result = _freeze_result(case)
     assert not result.startswith('unexpected:'), result
@@ -164,10 +193,10 @@ def test_an_acyclic_graph_never_reports_a_cycle(case: GraphCase) -> None:
 
 @example(
     GraphCase(
-        size=2,
-        edges=frozenset({(1, 0)}),
-        scopes=(Scope.SINGLETON, Scope.SINGLETON),
-        registered=(True, True),
+        size=3,
+        edges=frozenset({(1, 2)}),
+        scopes=(Scope.SINGLETON, Scope.TRANSIENT, Scope.SCOPED),
+        registered=(True, True, True),
         duplicates=frozenset(),
     )
 )
