@@ -225,6 +225,8 @@ def test_async_singleton_is_single_flight_across_event_loops() -> None:
 
         async def resolve() -> None:
             nonlocal entered
+            # Keep debug checks enabled while avoiding scheduler-contention noise from 32 OS threads.
+            asyncio.get_running_loop().slow_callback_duration = 1.0
             with entered_condition:
                 entered += 1
                 if entered == THREADS:

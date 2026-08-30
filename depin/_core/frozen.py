@@ -27,8 +27,8 @@ class FrozenContainer:
     and the root scope. It is safe to share across threads and tasks: scopes are
     tracked per `contextvars.Context`, so concurrent requests never see each
     other's scoped instances, and construction of a cached provider is
-    single-flighted under both a thread lock and an asyncio lock — a singleton is
-    built exactly once no matter how many threads or tasks race for it.
+    single-flighted across threads and event loops — a singleton is built
+    exactly once no matter how many threads or tasks race for it.
 
     Example:
         ```pycon
