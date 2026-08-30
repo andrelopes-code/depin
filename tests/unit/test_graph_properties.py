@@ -8,7 +8,8 @@ from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
 from depin import Container, Scope
-from depin._core.graph import build_plan
+from depin._core.frozen import FrozenContainer
+from depin._core.spec import ResolutionPlan
 from depin.errors import CaptiveDependencyError, CircularDependencyError, DepinError
 
 
@@ -23,6 +24,13 @@ class GraphCase:
 
 def _set_dynamic_attribute(target: object, name: str, value: object) -> None:
     setattr(target, name, value)
+
+
+def _frozen_plan(container: FrozenContainer) -> ResolutionPlan:
+    plan = object.__getattribute__(container, '_plan')
+    if isinstance(plan, ResolutionPlan):
+        return plan
+    raise AssertionError('FrozenContainer did not retain a ResolutionPlan')
 
 
 def _materialize(case: GraphCase) -> Container:
@@ -95,11 +103,11 @@ def _non_captive_graphs(draw: st.DrawFn) -> GraphCase:
 def test_freeze_returns_a_topological_plan_or_a_depin_error(case: GraphCase) -> None:
     container = _materialize(case)
     try:
-        _ = container.freeze()
+        frozen = container.freeze()
     except DepinError:
         return
 
-    plan = build_plan(container.records())
+    plan = _frozen_plan(frozen)
     positions = {(spec.key, spec.tag): index for index, spec in enumerate(plan.order)}
     for spec in plan.order:
         for parameter in spec.params:
