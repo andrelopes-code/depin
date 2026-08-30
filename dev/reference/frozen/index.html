@@ -457,6 +457,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inspecting the graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/fastapi/" class="md-nav__link">
         
   
@@ -799,6 +827,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.explain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        explain
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -884,6 +934,34 @@
     
   
     Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Graph diagnostics
   
 
     
@@ -1063,6 +1141,28 @@
     <span class="md-ellipsis">
       
         override
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.explain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        explain
       
     </span>
   </a>
@@ -1778,6 +1878,110 @@ fake without rebuilding the container.</p>
 <span class="go">'fake'</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">Clock</span><span class="p">]</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
 <span class="go">'real'</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.FrozenContainer.graph" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">graph</span>
+
+
+<a href="#depin.FrozenContainer.graph" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">graph</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">DependencyGraph</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the validated dependency graph as data.</p>
+<p>The view describes the plan <code>Container.freeze()</code> validated. An active
+<code>override()</code> does not change it, so the graph and both of its exports
+are the same on every call and in every context.</p>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Service</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">di</span><span class="o">.</span><span class="n">graph</span><span class="p">()</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+<span class="go">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">graph</span><span class="p">()</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">dependencies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">parameter</span>
+<span class="go">'config'</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.FrozenContainer.explain" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">explain</span>
+
+
+<a href="#depin.FrozenContainer.explain" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">explain</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the resolution tree below a key, as text.</p>
+<p>Each line names the parameter that requires the node, the node's key,
+its scope and provider shape, <code>async</code> when the node needs asynchronous
+resolution, and its tag when it has one. A subtree already shown is
+marked rather than repeated. A parameter with a default that nothing
+provides is marked <code>(unbound, default)</code>.</p>
+<p>A key no binding provides returns the line <code>MissingProviderError</code>
+carries for it, including the resolution chain when some provider
+requires that key. Like <code>graph()</code>, the output describes the validated
+plan, not an active <code>override()</code>.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="MissingProviderError (depin.errors.MissingProviderError)" href="../errors/#depin.errors.MissingProviderError">MissingProviderError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The value cannot be a provider key at all.
+An unregistered key of a valid type is described in the
+returned text instead.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Service</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">di</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">Service</span><span class="p">))</span>
+<span class="go">Service  [singleton, class]</span>
+<span class="go">  config: Config  [singleton, class]</span>
 </code></pre></div>
 </details>
 

@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/scope/">
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/diagnostics/">
       
       
-        <link rel="prev" href="../frozen/">
+        <link rel="prev" href="../errors/">
       
       
-        <link rel="next" href="../markers/">
+        <link rel="next" href="../fastapi/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Scope - depin</title>
+        <title>Graph diagnostics - depin</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#scope" class="md-skip">
+        <a href="#graph-diagnostics" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Scope
+              Graph diagnostics
             
           </span>
         </div>
@@ -682,37 +682,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Scope
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../scope/" class="md-nav__link">
         
   
   
@@ -728,164 +701,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#depin.Scope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.ScopeFrame" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ScopeFrame
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="ScopeFrame">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.provide" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        provide
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.get" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        get
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.lookup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        lookup
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.drain_sync" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        drain_sync
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.drain_async" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        drain_async
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.claim_cached" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        claim_cached
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.publish" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        publish
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.abort" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        abort
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.start_flight" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        start_flight
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.finish_flight" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        finish_flight
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -951,10 +766,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../diagnostics/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Graph diagnostics
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -970,6 +812,153 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ProviderKey" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProviderKey
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.DependencyGraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DependencyGraph
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="DependencyGraph">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#depin.DependencyGraph.nodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        nodes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.DependencyGraph.roots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        roots
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.DependencyGraph.node" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        node
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.DependencyGraph.find" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        find
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.DependencyGraph.dot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dot
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.DependencyGraph.mermaid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mermaid
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.GraphNode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GraphNode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.GraphEdge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GraphEdge
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ProviderShape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProviderShape
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1037,10 +1026,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#depin.Scope" class="md-nav__link">
+  <a href="#depin.ProviderKey" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Scope
+        ProviderKey
       
     </span>
   </a>
@@ -1048,22 +1037,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#depin.ScopeFrame" class="md-nav__link">
+  <a href="#depin.DependencyGraph" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ScopeFrame
+        DependencyGraph
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ScopeFrame">
+    <nav class="md-nav" aria-label="DependencyGraph">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.provide" class="md-nav__link">
+  <a href="#depin.DependencyGraph.nodes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        provide
+        nodes
       
     </span>
   </a>
@@ -1071,10 +1060,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.get" class="md-nav__link">
+  <a href="#depin.DependencyGraph.roots" class="md-nav__link">
     <span class="md-ellipsis">
       
-        get
+        roots
       
     </span>
   </a>
@@ -1082,10 +1071,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.lookup" class="md-nav__link">
+  <a href="#depin.DependencyGraph.node" class="md-nav__link">
     <span class="md-ellipsis">
       
-        lookup
+        node
       
     </span>
   </a>
@@ -1093,10 +1082,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.drain_sync" class="md-nav__link">
+  <a href="#depin.DependencyGraph.find" class="md-nav__link">
     <span class="md-ellipsis">
       
-        drain_sync
+        find
       
     </span>
   </a>
@@ -1104,10 +1093,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.drain_async" class="md-nav__link">
+  <a href="#depin.DependencyGraph.dot" class="md-nav__link">
     <span class="md-ellipsis">
       
-        drain_async
+        dot
       
     </span>
   </a>
@@ -1115,54 +1104,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.claim_cached" class="md-nav__link">
+  <a href="#depin.DependencyGraph.mermaid" class="md-nav__link">
     <span class="md-ellipsis">
       
-        claim_cached
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.publish" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        publish
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.abort" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        abort
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.start_flight" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        start_flight
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.finish_flight" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        finish_flight
+        mermaid
       
     </span>
   </a>
@@ -1171,6 +1116,39 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.GraphNode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GraphNode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.GraphEdge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GraphEdge
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ProviderShape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProviderShape
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1194,82 +1172,284 @@
   
 
 
-<h1 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h1>
+<h1 id="graph-diagnostics">Graph diagnostics<a class="headerlink" href="#graph-diagnostics" title="Permanent link">&para;</a></h1>
+<p>The data behind <code>FrozenContainer.graph()</code> and <code>FrozenContainer.explain()</code>.</p>
 
+
+<div class="doc doc-object doc-type_alias">
+
+
+
+<h2 id="depin.ProviderKey" class="doc doc-heading">
+            <span class="doc doc-object-name doc-type_alias-name">ProviderKey</span>
+
+
+<a href="#depin.ProviderKey" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nc">ProviderKey</span> <span class="o">=</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>What a provider can be bound and resolved under: a class, a <code>Token</code>, or a name.</p>
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-class">
 
 
 
-<h2 id="depin.Scope" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">Scope</span>
+<h2 id="depin.DependencyGraph" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">DependencyGraph</span>
 
 
-<a href="#depin.Scope" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#depin.DependencyGraph" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><span title="enum.Enum">Enum</span></code></p>
 
 
 
-        <p>How long a provider's value lives and when it is rebuilt.</p>
+        <p>The validated dependency graph, as data.</p>
+<p>Returned by <code>FrozenContainer.graph()</code>. Nodes come in resolution order: a
+node never precedes one it depends on. The view describes the plan
+<code>Container.freeze()</code> validated, so an active <code>FrozenContainer.override</code>
+does not change it.</p>
 
 
-<p><span class="doc-section-title">Attributes:</span></p>
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Service</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">di</span><span class="o">.</span><span class="n">graph</span><span class="p">()</span><span class="o">.</span><span class="n">mermaid</span><span class="p">())</span>
+<span class="go">graph LR</span>
+<span class="go">  n0["Config&lt;br/&gt;singleton, class"]</span>
+<span class="go">  n1["Service&lt;br/&gt;singleton, class"]</span>
+<span class="go">  n1 --&gt;|config| n0</span>
+</code></pre></div>
+</details>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="depin.DependencyGraph.nodes" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">nodes</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#depin.DependencyGraph.nodes" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">nodes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">GraphNode</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Every provider in the graph, in resolution order.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="depin.DependencyGraph.roots" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">roots</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#depin.DependencyGraph.roots" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">roots</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">GraphNode</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The nodes no other node depends on, in resolution order.</p>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.DependencyGraph.node" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">node</span>
+
+
+<a href="#depin.DependencyGraph.node" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">node</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GraphNode</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the node bound under <code>key</code> and <code>tag</code>.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
     <table>
       <thead>
         <tr>
-          <th>Name</th>
           <th>Type</th>
           <th>Description</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="depin.Scope.SINGLETON">SINGLETON</span></code></td>
             <td>
+                  <code><a class="autorefs autorefs-internal" title="MissingProviderError (depin.errors.MissingProviderError)" href="../errors/#depin.errors.MissingProviderError">MissingProviderError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Built once, on first resolution, and cached on the
-<code>FrozenContainer</code> for its whole lifetime. The default.
-Its lifecycle teardown runs on <code>FrozenContainer.close()</code> /
-<code>FrozenContainer.aclose()</code>. A singleton may not depend on a scoped
-provider (it would capture one scope's instance forever) —
-<code>Container.freeze()</code> rejects that.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.Scope.SCOPED">SCOPED</span></code></td>
-            <td>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Built once per active scope
-(<code>FrozenContainer.scope()</code> / <code>ascope</code>) and torn down when
-that scope exits. Resolving one with no active scope raises
-<code>OutsideScopeError</code>. Typically one scope per
-request.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.Scope.TRANSIENT">TRANSIENT</span></code></td>
-            <td>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Built fresh on every resolution and never cached. Generator and
-context-manager providers cannot be transient.</p>
+                <p>Nothing is bound under that key and tag. Use
+<code>find</code> to ask without raising.</p>
               </div>
             </td>
           </tr>
       </tbody>
     </table>
 
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.DependencyGraph.find" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">find</span>
+
+
+<a href="#depin.DependencyGraph.find" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">find</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GraphNode</span> <span class="o">|</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the node bound under <code>key</code> and <code>tag</code>, or None when nothing is.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.DependencyGraph.dot" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">dot</span>
+
+
+<a href="#depin.DependencyGraph.dot" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">dot</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Render the graph as a Graphviz <code>digraph</code> document.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.DependencyGraph.mermaid" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">mermaid</span>
+
+
+<a href="#depin.DependencyGraph.mermaid" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">mermaid</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Render the graph as a Mermaid <code>graph LR</code> document.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="depin.GraphNode" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">GraphNode</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#depin.GraphNode" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>One provider in the validated graph.</p>
+<p><code>dependencies</code> is in the provider's own parameter order, which is what
+makes every rendering of the graph reproducible.</p>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">ProviderShape</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">node</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">graph</span><span class="p">()</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">node</span><span class="o">.</span><span class="n">scope</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">shape</span> <span class="ow">is</span> <span class="n">ProviderShape</span><span class="o">.</span><span class="n">CLASS</span>
+<span class="go">('singleton', True)</span>
+</code></pre></div>
+</details>
 
 
 
@@ -1303,27 +1483,39 @@ context-manager providers cannot be transient.</p>
 
 
 
-<h2 id="depin.ScopeFrame" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">ScopeFrame</span>
+<h2 id="depin.GraphEdge" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">GraphEdge</span>
 
 
-<a href="#depin.ScopeFrame" class="headerlink" title="Permanent link">&para;</a></h2>
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#depin.GraphEdge" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
 
 
 
-        <p>The per-scope store yielded by <code>FrozenContainer.scope()</code>.</p>
-<p>Holds the scope's cached instances and pending teardowns, and chains to its
-parent so nested scopes inherit outer instances. Scope-setup code — ASGI
-middleware, a CLI entry point — uses <code>provide()</code> to seed values that
-<code>Container.scope_value()</code> then exposes as providers.</p>
-<p>A frame is safe to use from several threads and several tasks at once. The
-root frame caches singletons and is shared by every caller of the container,
-so its bookkeeping is guarded by a mutex and construction of a given key is
-single-flighted.</p>
+        <p>One provider parameter and the binding identity it resolves to.</p>
+<p><code>satisfied</code> is false only for a parameter that carries a default and that
+no binding provides. <code>Container.freeze()</code> rejects every other unsatisfied
+parameter, so a frozen graph holds no other kind.</p>
 
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Service</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">edge</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">graph</span><span class="p">()</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">dependencies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">edge</span><span class="o">.</span><span class="n">parameter</span><span class="p">,</span> <span class="n">edge</span><span class="o">.</span><span class="n">satisfied</span>
+<span class="go">('config', True)</span>
+</code></pre></div>
+</details>
 
 
 
@@ -1345,313 +1537,174 @@ single-flighted.</p>
 
 
 
-<div class="doc doc-object doc-function">
 
 
-<h3 id="depin.ScopeFrame.provide" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">provide</span>
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
 
 
-<a href="#depin.ScopeFrame.provide" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">provide</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
-</code></pre></div>
 
-    <div class="doc doc-contents ">
+<h2 id="depin.ProviderShape" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">ProviderShape</span>
 
-        <p>Place <code>value</code> into this frame under <code>key</code>.</p>
-<p>The counterpart of <code>Container.scope_value()</code>: whoever opens the scope
-supplies the value, and providers declared with <code>scope_value</code> read it
-back. Overwrites any value already stored under <code>key</code> in this frame.</p>
+
+<a href="#depin.ProviderShape" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="enum.Enum">Enum</span></code></p>
+
+
+
+        <p>How a provider produces its value, and whether it owns a teardown.</p>
+<p>Reported by <code>GraphNode.shape</code>. <code>Container.freeze()</code> infers it from the
+binding: a class, a factory's kind, or a value.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ProviderShape.CLASS">CLASS</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A class, instantiated with its resolved constructor arguments.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ProviderShape.FUNCTION">FUNCTION</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A synchronous factory, called with its resolved arguments.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ProviderShape.ASYNC_FUNCTION">ASYNC_FUNCTION</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A coroutine factory, awaited. Requires <code>aresolve</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ProviderShape.GENERATOR">GENERATOR</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A generator factory that yields once and resumes at
+teardown. Cannot be transient.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ProviderShape.ASYNC_GENERATOR">ASYNC_GENERATOR</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An async generator factory that yields once and
+resumes at teardown. Requires <code>aresolve</code> and cannot be transient.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ProviderShape.CONTEXT_MANAGER">CONTEXT_MANAGER</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A factory returning a context manager, entered on
+construction and exited at teardown. Cannot be transient.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ProviderShape.ASYNC_CONTEXT_MANAGER">ASYNC_CONTEXT_MANAGER</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A factory returning an async context manager.
+Requires <code>aresolve</code> and cannot be transient.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ProviderShape.VALUE">VALUE</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A value bound directly with <code>Container.value</code>; nothing is called.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ProviderShape.FRAME">FRAME</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A value the active scope frame supplies, bound with
+<code>Container.scope_value</code>; nothing is called.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 <details class="example" open>
   <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Request</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">scope_value</span><span class="p">(</span><span class="n">Request</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">di</span><span class="o">.</span><span class="n">scope</span><span class="p">()</span> <span class="k">as</span> <span class="n">frame</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="n">frame</span><span class="o">.</span><span class="n">provide</span><span class="p">(</span><span class="n">Request</span><span class="p">,</span> <span class="n">Request</span><span class="p">())</span>
-<span class="gp">... </span>    <span class="nb">isinstance</span><span class="p">(</span><span class="n">di</span><span class="p">[</span><span class="n">Request</span><span class="p">],</span> <span class="n">Request</span><span class="p">)</span>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">ProviderShape</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">graph</span><span class="p">()</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span> <span class="ow">is</span> <span class="n">ProviderShape</span><span class="o">.</span><span class="n">CLASS</span>
 <span class="go">True</span>
 </code></pre></div>
 </details>
 
-    </div>
 
-</div>
 
-<div class="doc doc-object doc-function">
 
 
-<h3 id="depin.ScopeFrame.get" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">get</span>
 
 
-<a href="#depin.ScopeFrame.get" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span>
-</code></pre></div>
 
-    <div class="doc doc-contents ">
 
-        <p>Return the value stored under <code>key</code> here or in an ancestor frame.</p>
 
+<div class="doc doc-children">
 
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="KeyError">KeyError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>No frame in the chain holds <code>key</code>.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
 
 
-    </div>
 
-</div>
 
-<div class="doc doc-object doc-function">
 
 
-<h3 id="depin.ScopeFrame.lookup" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">lookup</span>
 
 
-<a href="#depin.ScopeFrame.lookup" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">lookup</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Return the value for <code>key</code>, or <code>MISSING</code> when no frame holds it.</p>
-<p>Unlike <code>get()</code> this reports absence without raising, so a caller can
-distinguish "not cached" from "cached as <code>None</code>" in one traversal.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="depin.ScopeFrame.drain_sync" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">drain_sync</span>
-
-
-<a href="#depin.ScopeFrame.drain_sync" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">drain_sync</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Run every pending teardown, newest first, without an event loop.</p>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>One or more teardowns failed. Every failure is
-reported; none is allowed to hide another.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="TeardownError">TeardownError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>An async provider left a teardown here, which needs
-an event loop to run.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="depin.ScopeFrame.drain_async" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">drain_async</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-async"><code>async</code></small>
-  </span>
-
-<a href="#depin.ScopeFrame.drain_async" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">drain_async</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Run every pending teardown, newest first, inside an event loop.</p>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>One or more teardowns failed.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="depin.ScopeFrame.claim_cached" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">claim_cached</span>
-
-
-<a href="#depin.ScopeFrame.claim_cached" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">claim_cached</span><span class="p">(</span>
-    <span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="n">_Leader</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Atomically return a cached value or claim/join its construction flight.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="depin.ScopeFrame.publish" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">publish</span>
-
-
-<a href="#depin.ScopeFrame.publish" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">publish</span><span class="p">(</span>
-    <span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">leader</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">object</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="kc">None</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Cache a leader's value and return any followers to signal after unlocking.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="depin.ScopeFrame.abort" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">abort</span>
-
-
-<a href="#depin.ScopeFrame.abort" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">abort</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">leader</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="kc">None</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Remove a failed leader's flight and return any followers to signal after unlocking.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="depin.ScopeFrame.start_flight" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">start_flight</span>
-
-
-<a href="#depin.ScopeFrame.start_flight" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">start_flight</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">_Flight</span> <span class="o">|</span> <span class="n">_Leader</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Join a per-key construction flight, or start one when none is active.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="depin.ScopeFrame.finish_flight" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">finish_flight</span>
-
-
-<a href="#depin.ScopeFrame.finish_flight" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">finish_flight</span><span class="p">(</span>
-    <span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">flight</span><span class="p">:</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="n">_Leader</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Finish <code>flight</code> and remove it only when it remains active for <code>key</code>.</p>
-
-
-    </div>
-
-</div>
 
 
 
