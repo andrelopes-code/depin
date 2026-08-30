@@ -1,8 +1,11 @@
 """The @inject decorator: which parameters it fills and when it validates them."""
 
+import inspect
+
 import pytest
 
 from depin._core.container import Container
+from depin._core.injection import collect
 from depin._core.markers import Token, injected
 from depin._core.scope import Scope
 from depin.errors import MissingProviderError
@@ -81,8 +84,29 @@ def test_inject_unregistered_key_raises_at_decoration() -> None:
 
     def handler(x: NotBound = injected(NotBound)) -> None: ...
 
-    with pytest.raises(MissingProviderError, match='NotBound'):
+    with pytest.raises(MissingProviderError) as exc:
         frozen.inject(handler)
+
+    assert str(exc.value) == (
+        f"@inject: parameter 'x' requests injected({NotBound.__qualname__}) "
+        'but no provider is registered for that key. '
+        'Bind it on the Container before calling .freeze(), or remove the injected() default.'
+    )
+
+
+def test_collect_explains_how_to_register_an_untagged_injection() -> None:
+    class NotBound: ...
+
+    def handler(x: NotBound = injected(NotBound)) -> None: ...
+
+    with pytest.raises(MissingProviderError) as exc:
+        _ = collect(inspect.signature(handler), lambda key, tag: False)
+
+    assert str(exc.value) == (
+        f"@inject: parameter 'x' requests injected({NotBound.__qualname__}) "
+        'but no provider is registered for that key. '
+        'Bind it on the Container before calling .freeze(), or remove the injected() default.'
+    )
 
 
 def test_inject_unregistered_tagged_key_names_tag() -> None:

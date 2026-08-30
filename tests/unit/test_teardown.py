@@ -223,8 +223,13 @@ async def test_async_scope_preserves_sync_async_and_generator_failures_in_lifo_o
     ids=['async-generator', 'async-context-manager'],
 )
 def test_run_sync_refuses_async_records(record: AsyncGenTeardown | AsyncCMTeardown) -> None:
-    with pytest.raises(TeardownError, match='synchronous scope'):
+    with pytest.raises(TeardownError) as exc:
         run_sync(record)
+
+    assert str(exc.value) == (
+        'an async provider registered a teardown in a synchronous scope; '
+        'open the scope with ascope() and drain it with aclose()/ascope() instead'
+    )
 
 
 def test_run_sync_exits_a_sync_context_manager() -> None:
