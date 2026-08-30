@@ -253,6 +253,94 @@ def test_child_frame_joins_an_ancestor_construction_flight() -> None:
     assert not child.is_leader(follower)
 
 
+def test_child_claim_returns_cached_value_from_ancestor() -> None:
+    parent = ScopeFrame()
+    child = ScopeFrame(parent)
+    key = object()
+    parent.provide(key, 'ancestor-value')
+
+    value, flight = child.claim_cached(key)
+
+    assert value == 'ancestor-value'
+    assert flight is None
+
+
+def test_child_claim_creates_leader_when_no_visible_cache_or_flight_exists() -> None:
+    parent = ScopeFrame()
+    child = ScopeFrame(parent)
+    key = object()
+
+    value, flight = child.claim_cached(key)
+
+    assert value is MISSING
+    assert flight is not None
+    assert child.is_leader(flight)
+
+
+def test_second_child_joins_shared_flight_materialized_in_ancestor() -> None:
+    parent = ScopeFrame()
+    first_child = ScopeFrame(parent)
+    second_child = ScopeFrame(parent)
+    key = object()
+    leader, constructs = parent.start_flight(key)
+    assert constructs
+
+    first_value, first_flight = first_child.claim_cached(key)
+    second_value, second_flight = second_child.claim_cached(key)
+
+    assert first_value is MISSING
+    assert second_value is MISSING
+    assert first_flight is second_flight
+    assert not first_child.is_leader(first_flight)
+    parent.finish_flight(key, leader)
+
+
+def test_start_flight_raises_for_cached_key() -> None:
+    frame = ScopeFrame()
+    key = object()
+    frame.provide(key, 'cached')
+
+    with pytest.raises(KeyError):
+        frame.start_flight(key)
+
+
+def test_finishing_a_flight_twice_is_idempotent() -> None:
+    frame = ScopeFrame()
+    key = object()
+    leader, constructs = frame.start_flight(key)
+    assert constructs
+    follower, joins = frame.start_flight(key)
+    assert not joins
+    signalled = frame.publish(key, leader, 'value')
+    assert signalled is follower
+    assert signalled is not None
+
+    signalled.finish()
+    signalled.finish()
+
+    assert signalled.finished
+
+
+@pytest.mark.asyncio
+async def test_non_flight_waits_and_non_leader_finish_are_noops() -> None:
+    frame = ScopeFrame()
+    key = object()
+    leader, constructs = frame.start_flight(key)
+    assert constructs
+    follower, joins = frame.start_flight(key)
+    assert not joins
+
+    frame.wait_sync(leader)
+    await frame.wait_async(leader)
+    frame.finish_flight(key, follower)
+
+    assert not follower.finished
+    signalled = frame.publish(key, leader, 'value')
+    assert signalled is follower
+    assert signalled is not None
+    signalled.finish()
+
+
 def test_a_scope_value_must_be_supplied_before_it_resolves() -> None:
     class Marker: ...
 
