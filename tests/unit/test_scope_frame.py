@@ -48,8 +48,9 @@ def test_frame_contains_walks_parents() -> None:
 
 
 def test_frame_get_raises_keyerror() -> None:
-    with push_frame() as f, pytest.raises(KeyError):
+    with push_frame() as f, pytest.raises(KeyError) as exc:
         _ = f.get('missing')
+    assert exc.value.args == ('missing',)
 
 
 def test_lookup_reports_absence_without_raising() -> None:
@@ -87,6 +88,26 @@ def test_a_scope_value_is_injected_into_a_sync_provider() -> None:
     with frozen.scope() as frame:
         frame.provide(int, 13)
         assert frozen[Report].dep == 13
+
+
+def test_scope_values_do_not_skip_later_bound_dependencies() -> None:
+    class ScopeValue: ...
+
+    class BoundValue: ...
+
+    class Report:
+        def __init__(self, scope_value: ScopeValue, bound_value: BoundValue) -> None:
+            self.scope_value = scope_value
+            self.bound_value = bound_value
+
+    frozen = Container().scope_value(ScopeValue).bind(BoundValue).bind(Report, scope=Scope.SCOPED).freeze()
+    supplied = ScopeValue()
+    with frozen.scope() as frame:
+        frame.provide(ScopeValue, supplied)
+        report = frozen[Report]
+
+    assert report.scope_value is supplied
+    assert isinstance(report.bound_value, BoundValue)
 
 
 def test_a_scope_value_outside_any_scope_raises() -> None:

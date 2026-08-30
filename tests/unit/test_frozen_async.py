@@ -5,12 +5,13 @@ import contextlib
 import threading
 from collections.abc import AsyncGenerator, Generator
 from concurrent.futures import ThreadPoolExecutor
+from typing import Annotated
 
 import pytest
 
 from depin._core.container import Container
 from depin._core.frozen import FrozenContainer
-from depin._core.markers import Token
+from depin._core.markers import Tag, Token
 from depin._core.scope import Scope, ScopeFrame
 from depin.errors import AsyncInSyncContextError, CircularDependencyError
 
@@ -173,6 +174,36 @@ async def test_aresolve_reads_a_scope_value_and_injects_it() -> None:
         frame.provide(Principal, principal)
         assert await frozen.aresolve(Principal) is principal
         assert (await frozen.aresolve(Audit)).who is principal
+
+
+@pytest.mark.asyncio
+async def test_async_scope_values_do_not_skip_later_tagged_dependencies() -> None:
+    class ScopeValue: ...
+
+    class BoundValue:
+        def __init__(self, label: str) -> None:
+            self.label = label
+
+    class Report:
+        def __init__(self, scope_value: ScopeValue, bound_value: Annotated[BoundValue, Tag('chosen')]) -> None:
+            self.scope_value = scope_value
+            self.bound_value = bound_value
+
+    frozen = (
+        Container()
+        .scope_value(ScopeValue)
+        .bind(lambda: BoundValue('chosen'), provides=BoundValue, tag='chosen')
+        .bind(lambda: BoundValue('other'), provides=BoundValue, tag='other')
+        .bind(Report, scope=Scope.SCOPED)
+        .freeze()
+    )
+    supplied = ScopeValue()
+    async with frozen.ascope() as frame:
+        frame.provide(ScopeValue, supplied)
+        report = await frozen.aresolve(Report)
+
+    assert report.scope_value is supplied
+    assert report.bound_value.label == 'chosen'
 
 
 @pytest.mark.asyncio

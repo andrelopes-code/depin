@@ -5,9 +5,10 @@ from typing import Protocol
 import pytest
 
 from depin._core.container import Container
+from depin._core.frozen import FrozenContainer
 from depin._core.markers import provides
 from depin._core.scope import Scope
-from depin.errors import AsyncInSyncContextError, MissingProviderError
+from depin.errors import AsyncInSyncContextError, CircularDependencyError, MissingProviderError
 
 
 def test_resolving_an_unregistered_key_names_the_key() -> None:
@@ -47,8 +48,19 @@ def test_sync_resolution_of_an_async_provider_points_at_aresolve() -> None:
         return Service()
 
     frozen = Container().bind(make, scope=Scope.SINGLETON, provides=Service).freeze()
-    with pytest.raises(AsyncInSyncContextError, match='aresolve'):
+    with pytest.raises(AsyncInSyncContextError, match='Service requires async resolution; call aresolve'):
         _ = frozen[Service]
+
+
+def test_sync_recursive_resolution_names_the_cyclic_provider() -> None:
+    frozen: FrozenContainer
+
+    def make() -> int:
+        return frozen.resolve(int)
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
+    with pytest.raises(CircularDependencyError, match='int is already constructing'):
+        frozen.resolve(int)
 
 
 def test_an_unbound_parameter_with_a_default_keeps_its_default() -> None:
