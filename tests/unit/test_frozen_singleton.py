@@ -1,5 +1,7 @@
 from typing import Annotated, Protocol
 
+import pytest
+
 from depin._core.container import Container
 from depin._core.markers import Tag, Token
 from depin._core.scope import Scope
@@ -77,3 +79,14 @@ def test_tag_disambiguates_two_impls() -> None:
         .freeze()
     )
     assert frozen[tuple] == ('redis', 'inmem')
+
+
+@pytest.mark.asyncio
+async def test_async_singleton_is_cached_after_its_first_resolution() -> None:
+    class Service: ...
+
+    async def make() -> Service:
+        return Service()
+
+    frozen = Container().bind(make, provides=Service).freeze()
+    assert await frozen.aresolve(Service) is await frozen.aresolve(Service)
