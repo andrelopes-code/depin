@@ -1,7 +1,5 @@
 """Single-flight construction across concurrent tasks and across event loops."""
 
-# pyright: reportPrivateUsage=false
-
 import asyncio
 
 import pytest
@@ -169,7 +167,7 @@ def test_a_failed_build_leaves_the_key_resolvable_on_the_next_loop() -> None:
         asyncio.run(resolve())
 
     root = object.__getattribute__(frozen, '_root')
-    flight, constructs = root._start_flight((Flaky, None))
+    flight, constructs = root.start_flight((Flaky, None))
     assert constructs
     root.finish_flight((Flaky, None), flight)
     assert asyncio.run(resolve()).ok

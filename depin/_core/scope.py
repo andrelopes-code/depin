@@ -317,7 +317,7 @@ class ScopeFrame:
                 return active
             return None
 
-    def _start_flight(self, key: object) -> tuple[_Flight | _Leader, bool]:
+    def start_flight(self, key: object) -> tuple[_Flight | _Leader, bool]:
         """Join a per-key construction flight, or start one when none is active."""
         value, flight = self.claim_cached(key)
         if value is not MISSING or flight is None:

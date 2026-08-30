@@ -6,8 +6,6 @@ rely on threads genuinely running at the same time, and are skipped on a build
 where the GIL is enabled.
 """
 
-# pyright: reportPrivateUsage=false
-
 import asyncio
 import multiprocessing
 import sys
@@ -247,7 +245,7 @@ def test_the_unified_flight_table_survives_concurrent_creation() -> None:
 
     def worker() -> None:
         _ = start.wait()
-        flight = frame._start_flight(key)
+        flight = frame.start_flight(key)
         with record:
             handed_out.append(flight)
 
