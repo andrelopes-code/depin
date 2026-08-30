@@ -15,6 +15,13 @@ from depin._core.scope import Scope, ScopeFrame
 from depin.errors import AsyncInSyncContextError, CircularDependencyError
 
 
+async def _checkpoint() -> None:
+    loop = asyncio.get_running_loop()
+    marker = loop.create_future()
+    loop.call_soon(marker.set_result, None)
+    await marker
+
+
 @pytest.mark.asyncio
 async def test_aresolve_unhashable_value_binding() -> None:
     origins = Token[list[str]]('origins')
@@ -183,7 +190,7 @@ async def test_async_singleton_failure_wakes_a_follower_to_retry() -> None:
     attempts = 0
     started = asyncio.Event()
     release_failure = asyncio.Event()
-    follower_started = asyncio.Event()
+    second_construction_started = asyncio.Event()
 
     async def make() -> int:
         nonlocal attempts
@@ -192,18 +199,16 @@ async def test_async_singleton_failure_wakes_a_follower_to_retry() -> None:
             started.set()
             await release_failure.wait()
             raise RuntimeError('first construction fails')
+        second_construction_started.set()
         return 7
 
     frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
     leader = asyncio.create_task(frozen.aresolve(int))
     await started.wait()
 
-    async def follow() -> int:
-        follower_started.set()
-        return await frozen.aresolve(int)
-
-    follower = asyncio.create_task(follow())
-    await follower_started.wait()
+    follower = asyncio.create_task(frozen.aresolve(int))
+    await _checkpoint()
+    assert not second_construction_started.is_set()
     release_failure.set()
     with pytest.raises(RuntimeError, match='first construction fails'):
         await leader
@@ -216,7 +221,7 @@ async def test_cancelled_async_singleton_constructor_wakes_a_follower_to_retry()
     attempts = 0
     started = asyncio.Event()
     cancelled = asyncio.Event()
-    follower_started = asyncio.Event()
+    second_construction_started = asyncio.Event()
 
     async def make() -> int:
         nonlocal attempts
@@ -228,18 +233,16 @@ async def test_cancelled_async_singleton_constructor_wakes_a_follower_to_retry()
             except asyncio.CancelledError:
                 cancelled.set()
                 raise
+        second_construction_started.set()
         return 7
 
     frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
     leader = asyncio.create_task(frozen.aresolve(int))
     await started.wait()
 
-    async def follow() -> int:
-        follower_started.set()
-        return await frozen.aresolve(int)
-
-    follower = asyncio.create_task(follow())
-    await follower_started.wait()
+    follower = asyncio.create_task(frozen.aresolve(int))
+    await _checkpoint()
+    assert not second_construction_started.is_set()
     leader.cancel()
     with pytest.raises(asyncio.CancelledError):
         await leader
