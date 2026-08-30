@@ -1,5 +1,6 @@
 """The immutable runtime: resolve values, open scopes, inject, and override."""
 
+import asyncio
 import contextlib
 import inspect
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
@@ -367,19 +368,23 @@ class FrozenContainer:
         if frame is None:
             return await self._construct_async(spec)
         cache_id = (spec.key, spec.tag)
-        cached = frame.lookup(cache_id)
-        if cached is not MISSING:
-            return cached
-        # Single-flight across tasks: the await below would otherwise let a
-        # second task miss the cache and construct a duplicate. The lock lives on
-        # the caching frame, so it is dropped when the scope ends.
-        async with frame.async_lock_for(cache_id):
+        while True:
             cached = frame.lookup(cache_id)
             if cached is not MISSING:
                 return cached
-            value = await self._construct_async(spec)
-            frame.provide(cache_id, value)
-            return value
+            event, constructs = frame.start_async_flight(cache_id)
+            if not constructs:
+                await asyncio.to_thread(event.wait)
+                continue
+            try:
+                cached = frame.lookup(cache_id)
+                if cached is not MISSING:
+                    return cached
+                value = await self._construct_async(spec)
+                frame.provide(cache_id, value)
+                return value
+            finally:
+                frame.finish_async_flight(cache_id, event)
 
     def _construct_sync(self, spec: ProviderSpec) -> object:
         kwargs = self._resolve_params_sync(spec) if spec.params else {}

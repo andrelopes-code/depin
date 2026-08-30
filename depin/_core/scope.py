@@ -1,6 +1,5 @@
 """Provider lifetimes and the scope machinery that backs scoped resolution."""
 
-import asyncio
 import contextlib
 import threading
 from collections.abc import Generator
@@ -60,12 +59,12 @@ class ScopeFrame:
     single-flighted.
     """
 
-    __slots__ = ('_async_locks', '_cache', '_mutex', '_sync_locks', '_teardowns', 'parent')
+    __slots__ = ('_async_flights', '_cache', '_mutex', '_sync_locks', '_teardowns', 'parent')
 
     def __init__(self, parent: 'ScopeFrame | None' = None) -> None:
         self._cache: dict[object, object] = {}
         self._sync_locks: dict[object, threading.Lock] = {}
-        self._async_locks: dict[object, asyncio.Lock] = {}
+        self._async_flights: dict[object, threading.Event] = {}
         self._teardowns: list[Teardown] = []
         self._mutex = threading.Lock()
         self.parent = parent
@@ -172,14 +171,22 @@ class ScopeFrame:
                 self._sync_locks[key] = lock
             return lock
 
-    def async_lock_for(self, key: object) -> asyncio.Lock:
-        """Return a per-key async lock, created on first use, for single-flight construction."""
+    def start_async_flight(self, key: object) -> tuple[threading.Event, bool]:
+        """Join a per-key construction flight, or start one when none is active."""
         with self._mutex:
-            lock = self._async_locks.get(key)
-            if lock is None:
-                lock = asyncio.Lock()
-                self._async_locks[key] = lock
-            return lock
+            event = self._async_flights.get(key)
+            if event is not None:
+                return event, False
+            event = threading.Event()
+            self._async_flights[key] = event
+            return event, True
+
+    def finish_async_flight(self, key: object, event: threading.Event) -> None:
+        """Finish ``event`` only when it remains the active flight for ``key``."""
+        with self._mutex:
+            if self._async_flights.get(key) is event:
+                del self._async_flights[key]
+        event.set()
 
 
 _active: ContextVar[ScopeFrame | None] = ContextVar('depin_active_frame', default=None)

@@ -1,5 +1,6 @@
 """Asynchronous resolution: every provider shape reached through aresolve()."""
 
+import asyncio
 import contextlib
 from collections.abc import AsyncGenerator, Generator
 
@@ -172,3 +173,103 @@ async def test_aresolve_of_an_async_generator_yields_the_first_value() -> None:
     frozen = Container().bind(make, scope=Scope.SCOPED, provides=int).freeze()
     async with frozen.ascope():
         assert await frozen.aresolve(int) == 3
+
+
+@pytest.mark.asyncio
+async def test_async_singleton_failure_wakes_a_follower_to_retry() -> None:
+    attempts = 0
+    started = asyncio.Event()
+    release_failure = asyncio.Event()
+    follower_started = asyncio.Event()
+
+    async def make() -> int:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            started.set()
+            await release_failure.wait()
+            raise RuntimeError('first construction fails')
+        return 7
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
+    leader = asyncio.create_task(frozen.aresolve(int))
+    await started.wait()
+
+    async def follow() -> int:
+        follower_started.set()
+        return await frozen.aresolve(int)
+
+    follower = asyncio.create_task(follow())
+    await follower_started.wait()
+    release_failure.set()
+    with pytest.raises(RuntimeError, match='first construction fails'):
+        await leader
+    assert await follower == 7
+    assert attempts == 2
+
+
+@pytest.mark.asyncio
+async def test_cancelled_async_singleton_constructor_wakes_a_follower_to_retry() -> None:
+    attempts = 0
+    started = asyncio.Event()
+    cancelled = asyncio.Event()
+    follower_started = asyncio.Event()
+
+    async def make() -> int:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+        return 7
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
+    leader = asyncio.create_task(frozen.aresolve(int))
+    await started.wait()
+
+    async def follow() -> int:
+        follower_started.set()
+        return await frozen.aresolve(int)
+
+    follower = asyncio.create_task(follow())
+    await follower_started.wait()
+    leader.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await leader
+    await cancelled.wait()
+    assert await follower == 7
+    assert attempts == 2
+
+
+@pytest.mark.asyncio
+async def test_many_async_tasks_construct_a_singleton_once() -> None:
+    attempts = 0
+    ready = 0
+    all_ready = asyncio.Event()
+    release = asyncio.Event()
+
+    async def make() -> object:
+        nonlocal attempts
+        attempts += 1
+        await release.wait()
+        return object()
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=object).freeze()
+
+    async def resolve() -> object:
+        nonlocal ready
+        ready += 1
+        if ready == 32:
+            all_ready.set()
+        return await frozen.aresolve(object)
+
+    tasks = [asyncio.create_task(resolve()) for _ in range(32)]
+    await all_ready.wait()
+    release.set()
+    values = await asyncio.gather(*tasks)
+    assert attempts == 1
+    assert all(value is values[0] for value in values)

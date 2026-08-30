@@ -6,6 +6,7 @@ rely on threads genuinely running at the same time, and are skipped on a build
 where the GIL is enabled.
 """
 
+import asyncio
 import sys
 import threading
 from _thread import LockType
@@ -50,6 +51,25 @@ class _RendezvousLockTable:
 
     def __setitem__(self, key: object, value: LockType) -> None:
         self._values[key] = value
+
+
+class _RendezvousFlightTable:
+    def __init__(self, guard: LockType, rendezvous: threading.Barrier) -> None:
+        self._guard = guard
+        self._rendezvous = rendezvous
+        self._values: dict[object, threading.Event] = {}
+
+    def get(self, key: object) -> threading.Event | None:
+        value = self._values.get(key)
+        if value is None and not self._guard.locked():
+            _ = self._rendezvous.wait()
+        return value
+
+    def __setitem__(self, key: object, value: threading.Event) -> None:
+        self._values[key] = value
+
+    def __delitem__(self, key: object) -> None:
+        del self._values[key]
 
 
 def test_a_singleton_is_built_once_with_no_gil() -> None:
@@ -154,3 +174,56 @@ def test_the_per_key_lock_table_survives_concurrent_creation() -> None:
 
     assert len(handed_out) == THREADS
     assert all(lock is handed_out[0] for lock in handed_out)
+
+
+def test_async_singleton_is_single_flight_across_event_loops() -> None:
+    class Pool: ...
+
+    entered = 0
+    entered_condition = threading.Condition()
+    release_constructor = threading.Event()
+    constructed: list[Pool] = []
+    resolved: list[Pool] = []
+    failures: list[BaseException] = []
+    record = threading.Lock()
+    start = threading.Barrier(THREADS)
+
+    async def make_pool() -> Pool:
+        await asyncio.to_thread(release_constructor.wait)
+        pool = Pool()
+        with record:
+            constructed.append(pool)
+        return pool
+
+    frozen = Container().bind(make_pool, scope=Scope.SINGLETON, provides=Pool).freeze()
+    frame = object.__getattribute__(frozen, '_root')
+    mutex = object.__getattribute__(frame, '_mutex')
+    object.__setattr__(frame, '_async_flights', _RendezvousFlightTable(mutex, threading.Barrier(THREADS)))
+
+    def worker() -> None:
+        nonlocal entered
+
+        async def resolve() -> None:
+            nonlocal entered
+            with entered_condition:
+                entered += 1
+                if entered == THREADS:
+                    release_constructor.set()
+            value, same_value = await asyncio.gather(frozen.aresolve(Pool), frozen.aresolve(Pool))
+            assert value is same_value
+            with record:
+                resolved.append(value)
+
+        try:
+            _ = start.wait()
+            asyncio.run(resolve())
+        except BaseException as exc:
+            with record:
+                failures.append(exc)
+
+    _run_in_threads(worker)
+
+    assert not failures
+    assert len(constructed) == 1
+    assert len(resolved) == THREADS
+    assert all(value is constructed[0] for value in resolved)
