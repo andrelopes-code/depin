@@ -150,4 +150,14 @@ def _dot_escape(text: str) -> str:
 
 
 def _mermaid_escape(text: str) -> str:
-    return text.replace('"', '#quot;')
+    """Escape for Mermaid's HTML-parsed label text, in an order safe from re-escaping.
+
+    Mermaid parses node label text as HTML, which is why ``<br/>`` works as a
+    separator; a raw ``<`` or ``>`` in a key would otherwise swallow the rest
+    of the label. ``#`` goes first so the entities this function itself emits
+    are never re-escaped.
+    """
+    text = text.replace('#', '#35;')
+    text = text.replace('"', '#quot;')
+    text = text.replace('<', '#lt;')
+    return text.replace('>', '#gt;')

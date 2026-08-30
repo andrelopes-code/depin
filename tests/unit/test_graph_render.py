@@ -521,6 +521,14 @@ def test_a_quote_in_a_key_is_escaped_per_format() -> None:
     assert '#quot;quoted#quot;' in graph.mermaid()
 
 
+def test_angle_brackets_and_a_hash_in_a_key_are_escaped_in_mermaid_only() -> None:
+    """Mermaid parses label text as HTML, so an unescaped `<` would swallow the rest of the label."""
+    weird = Token[int]('a <tag> #1')
+    graph = build_graph(build_plan(Container().value(weird, 1).records()))
+    assert "Token('a <tag> #1')" in graph.dot()
+    assert "Token('a #lt;tag#gt; #35;1')" in graph.mermaid()
+
+
 def test_both_exports_are_identical_on_two_calls() -> None:
     graph = build()
     assert graph.dot() == graph.dot()
