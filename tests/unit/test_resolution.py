@@ -92,6 +92,117 @@ else:
     )
 
 
+def test_sync_single_flight_keeps_unrelated_singletons_independent() -> None:
+    script = """
+import threading
+
+from depin import Container
+
+first_started = threading.Event()
+finish_first = threading.Event()
+second_finished = threading.Event()
+results: list[str] = []
+
+def first() -> str:
+    first_started.set()
+    if not finish_first.wait(1):
+        raise RuntimeError('first provider was not released')
+    return 'first'
+
+def second() -> int:
+    second_finished.set()
+    return 2
+
+frozen = Container().bind(first, provides=str).bind(second, provides=int).freeze()
+first_thread = threading.Thread(target=lambda: results.append(frozen.resolve(str)))
+second_thread = threading.Thread(target=lambda: results.append(str(frozen.resolve(int))))
+first_thread.start()
+if not first_started.wait(1):
+    raise RuntimeError('first provider did not start')
+second_thread.start()
+if not second_finished.wait(1):
+    raise RuntimeError('unrelated singleton provider did not start')
+finish_first.set()
+first_thread.join(1)
+second_thread.join(1)
+if first_thread.is_alive() or second_thread.is_alive():
+    raise RuntimeError('unrelated singleton resolution did not finish')
+if not second_finished.is_set() or sorted(results) != ['2', 'first']:
+    raise RuntimeError(f'unexpected results: {results!r}')
+"""
+    completed = subprocess.run(
+        [sys.executable, '-c', script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=2,
+        cwd=Path(frozen_module.__file__).parents[2],
+    )
+    assert completed.returncode == 0, completed.stderr
+    frozen = Container().bind(lambda: 1, provides=int).freeze()
+    assert frozen[int] == 1
+    frozen = Container().bind(lambda: 1, provides=int).freeze()
+    assert frozen[int] == 1
+
+
+def test_sync_single_flight_is_removed_after_construction_fails() -> None:
+    script = """
+from depin import Container
+
+attempts = 0
+
+def make() -> int:
+    global attempts
+    attempts += 1
+    if attempts == 1:
+        raise RuntimeError('first attempt fails')
+    return attempts
+
+frozen = Container().bind(make, provides=int).freeze()
+try:
+    frozen.resolve(int)
+except RuntimeError as exc:
+    if str(exc) != 'first attempt fails':
+        raise
+else:
+    raise RuntimeError('first resolution unexpectedly succeeded')
+if frozen.resolve(int) != 2:
+    raise RuntimeError('second resolution did not reconstruct the singleton')
+"""
+    completed = subprocess.run(
+        [sys.executable, '-c', script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=2,
+        cwd=Path(frozen_module.__file__).parents[2],
+    )
+    assert completed.returncode == 0, completed.stderr
+    frozen = Container().bind(lambda: 1, provides=int).freeze()
+    assert frozen[int] == 1
+
+
+def test_sync_single_flight_leader_constructs_without_waiting() -> None:
+    script = """
+from depin import Container
+
+frozen = Container().bind(lambda: 42, provides=int).freeze()
+if frozen.resolve(int) != 42:
+    raise RuntimeError('singleton did not resolve')
+"""
+    completed = subprocess.run(
+        [sys.executable, '-c', script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=2,
+        cwd=Path(frozen_module.__file__).parents[2],
+    )
+    assert completed.returncode == 0, completed.stderr
+    frozen = Container().bind(lambda: 1, provides=int).freeze()
+    assert frozen[int] == 1
+
+
 def test_an_unbound_parameter_with_a_default_keeps_its_default() -> None:
     class Settings:
         def __init__(self, retries: int = 11) -> None:
