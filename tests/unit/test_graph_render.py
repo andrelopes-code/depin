@@ -4,15 +4,17 @@ import os
 import subprocess
 import sys
 from collections.abc import Generator
+from typing import Annotated
 
 import pytest
 
 from depin._core.container import Container
-from depin._core.diagnostics import DependencyGraph, build_graph
-from depin._core.graph import build_plan
-from depin._core.markers import Token
+from depin._core.diagnostics import DependencyGraph, GraphEdge, GraphNode, build_graph
+from depin._core.graph import build_plan, format_missing
+from depin._core.markers import Tag, Token, provides
 from depin._core.render import render_tree
 from depin._core.scope import Scope
+from depin._core.spec import ProviderShape, fmt_key
 from depin.errors import MissingProviderError
 
 
@@ -29,6 +31,20 @@ class Service:
     def __init__(self, store: Store, config: Config) -> None:
         self.store = store
         self.config = config
+
+
+class MultiCandidateTarget:
+    """Undecorated key looked up by `test_the_absent_message_joins_multiple_candidates_with_comma_space`."""
+
+
+@provides(MultiCandidateTarget)
+class MultiCandidateA(MultiCandidateTarget):
+    """Module-level by necessity: `suggest_candidates` walks `sys.modules`, so a function-local class is invisible."""
+
+
+@provides(MultiCandidateTarget)
+class MultiCandidateB(MultiCandidateTarget):
+    """The second `@provides` match, so the render joins two candidates rather than one."""
 
 
 def build() -> DependencyGraph:
@@ -109,6 +125,240 @@ def test_an_unregistered_key_that_nothing_requires_reports_the_lookup_wording() 
         'no provider for test_an_unregistered_key_that_nothing_requires_reports_the_lookup_wording'
         '.<locals>.Absent (tag=None)'
     )
+
+
+def test_a_cycle_in_a_manually_built_graph_does_not_loop_the_missing_search() -> None:
+    """`Container.freeze()` rejects cycles before a graph is ever built.
+
+    `_deepest_requirement`'s explicit-stack search still guards against one,
+    since `GraphNode`/`GraphEdge`/`DependencyGraph` are public and constructible
+    without going through `freeze()`. This builds a two-node cycle directly and
+    checks the search terminates rather than looping forever.
+    """
+
+    class A:
+        pass
+
+    class B:
+        pass
+
+    class Missing:
+        pass
+
+    node_a = GraphNode(
+        key=A,
+        tag=None,
+        scope=Scope.SINGLETON,
+        shape=ProviderShape.CLASS,
+        needs_async=False,
+        dependencies=(GraphEdge(parameter='b', key=B, tag=None, satisfied=True),),
+    )
+    node_b = GraphNode(
+        key=B,
+        tag=None,
+        scope=Scope.SINGLETON,
+        shape=ProviderShape.CLASS,
+        needs_async=False,
+        dependencies=(GraphEdge(parameter='a', key=A, tag=None, satisfied=True),),
+    )
+    graph = DependencyGraph((node_a, node_b))
+    assert render_tree(graph, Missing, None) == f'no provider for {fmt_key(Missing)} (tag=None)'
+
+
+def test_a_cycle_does_not_stop_the_search_for_a_sibling_missing_edge() -> None:
+    """The chain-membership guard in `_deepest_requirement` must not cut a node's later edges.
+
+    `A` and `B` form a cycle; `B` also has a second edge to `Missing`. Walking from
+    `A`, the guard fires on `B`'s edge back to `A` — that must skip only that one
+    edge, not abandon the rest of `B`'s dependencies, or the longer chain through
+    `A` is lost in favour of the shorter one found by starting at `B` directly.
+    """
+
+    class A:
+        pass
+
+    class B:
+        pass
+
+    class Missing:
+        pass
+
+    node_a = GraphNode(
+        key=A,
+        tag=None,
+        scope=Scope.SINGLETON,
+        shape=ProviderShape.CLASS,
+        needs_async=False,
+        dependencies=(GraphEdge(parameter='b', key=B, tag=None, satisfied=True),),
+    )
+    node_b = GraphNode(
+        key=B,
+        tag=None,
+        scope=Scope.SINGLETON,
+        shape=ProviderShape.CLASS,
+        needs_async=False,
+        dependencies=(
+            GraphEdge(parameter='a', key=A, tag=None, satisfied=True),
+            GraphEdge(parameter='missing', key=Missing, tag=None, satisfied=True),
+        ),
+    )
+    graph = DependencyGraph((node_a, node_b))
+    assert render_tree(graph, Missing, None) == format_missing(Missing, (A, B), B, 'missing')
+
+
+def test_an_unrelated_missing_edge_does_not_stop_the_search_for_the_real_one() -> None:
+    other = type('Other', (), {})
+    missing = type('Missing', (), {})
+    outer = type('Outer', (), {})
+
+    def make_outer(other_dep: object = None, missing_dep: object = None) -> object:
+        del other_dep, missing_dep
+        return outer()
+
+    _set_dynamic_attribute(make_outer, '__annotations__', {'other_dep': other, 'missing_dep': missing, 'return': outer})
+
+    graph = build_graph(build_plan(Container().bind(make_outer).records()))
+    assert render_tree(graph, missing, None) == format_missing(missing, (outer,), outer, 'missing_dep')
+
+
+def test_the_absent_message_uses_the_requested_tag() -> None:
+    """Both the `render_tree` -> `_render_absent` and `_render_absent` -> `_deepest_requirement`
+
+    handoffs must carry the caller's tag through unchanged, or a tagged requirement
+    a few levels deep is missed entirely.
+    """
+
+    class Missing:
+        pass
+
+    class Inner:
+        pass
+
+    missing_default = Missing()
+
+    def make_inner_required(dep: Annotated[Missing, Tag('special')]) -> Inner:
+        del dep
+        return Inner()
+
+    def make_inner_defaulted(dep: Annotated[Missing, Tag('special')] = missing_default) -> Inner:
+        del dep
+        return Inner()
+
+    with pytest.raises(MissingProviderError) as raised:
+        _ = Container().bind(make_inner_required).freeze()
+
+    graph = build_graph(build_plan(Container().bind(make_inner_defaulted).records()))
+    assert render_tree(graph, Missing, 'special') == str(raised.value)
+
+
+def test_the_search_follows_a_tagged_intermediate_to_a_deeper_missing_leaf() -> None:
+    class Missing:
+        pass
+
+    class Middle:
+        pass
+
+    class Outer:
+        pass
+
+    missing_default = Missing()
+
+    def make_middle_required(dep: Missing) -> Middle:
+        del dep
+        return Middle()
+
+    def make_middle_defaulted(dep: Missing = missing_default) -> Middle:
+        del dep
+        return Middle()
+
+    def make_outer(dep: Annotated[Middle, Tag('mid')]) -> Outer:
+        del dep
+        return Outer()
+
+    with pytest.raises(MissingProviderError) as raised:
+        _ = Container().bind(make_middle_required, tag='mid').bind(make_outer).freeze()
+
+    graph = build_graph(build_plan(Container().bind(make_middle_defaulted, tag='mid').bind(make_outer).records()))
+    assert render_tree(graph, Missing, None) == str(raised.value)
+
+
+def test_an_unbound_leaf_does_not_truncate_the_remaining_siblings() -> None:
+    missing = type('Missing', (), {})
+    multi = type('Multi', (), {})
+
+    def make_multi(missing_dep: object = None, config: object = None) -> object:
+        del missing_dep, config
+        return multi()
+
+    _set_dynamic_attribute(make_multi, '__annotations__', {'missing_dep': missing, 'config': Config, 'return': multi})
+
+    graph = build_graph(build_plan(Container().bind(Config).bind(make_multi).records()))
+    assert render_tree(graph, multi, None) == (
+        f'{fmt_key(multi)}  [singleton, function]\n'
+        f'  missing_dep: {fmt_key(missing)}  (unbound, default)\n'
+        '  config: Config  [singleton, class]'
+    )
+
+
+def test_a_repeated_node_does_not_truncate_the_remaining_siblings() -> None:
+    class Multi:
+        def __init__(self, a: Store, b: Store, c: Config) -> None:
+            self.a = a
+            self.b = b
+            self.c = c
+
+    graph = build_graph(build_plan(Container().bind(Config).bind(Store).bind(Multi).records()))
+    assert render_tree(graph, Multi, None) == (
+        f'{fmt_key(Multi)}  [singleton, class]\n'
+        '  a: Store  [singleton, class]\n'
+        '    config: Config  [singleton, class]\n'
+        '  b: Store  [singleton, class]  (shown above)\n'
+        '  c: Config  [singleton, class]  (shown above)'
+    )
+
+
+def test_a_tagged_dependency_is_found_by_its_required_tag() -> None:
+    class Consumer:
+        def __init__(self, store: Annotated[Store, Tag('primary')]) -> None:
+            self.store = store
+
+    graph = build_graph(build_plan(Container().bind(Config).bind(Store, tag='primary').bind(Consumer).records()))
+    assert render_tree(graph, Consumer, None) == (
+        f'{fmt_key(Consumer)}  [singleton, class]\n'
+        "  store: Store  [singleton, class, tag='primary']\n"
+        '    config: Config  [singleton, class]'
+    )
+
+
+def test_the_absent_message_joins_multiple_candidates_with_comma_space() -> None:
+    names = sorted(f'{cls.__module__}.{cls.__qualname__}' for cls in (MultiCandidateA, MultiCandidateB))
+    assert render_tree(build(), MultiCandidateTarget, None) == (
+        f'no provider for {fmt_key(MultiCandidateTarget)} (tag=None); candidates: {", ".join(names)}'
+    )
+
+
+def test_a_repeated_unbound_target_does_not_hide_a_later_one() -> None:
+    x_type = type('X', (), {})
+    y_type = type('Y', (), {})
+    root_type = type('Root', (), {})
+
+    def make_root(a: object = None, b: object = None, c: object = None) -> object:
+        del a, b, c
+        return root_type()
+
+    _set_dynamic_attribute(make_root, '__annotations__', {'a': x_type, 'b': x_type, 'c': y_type, 'return': root_type})
+
+    graph = build_graph(build_plan(Container().bind(make_root).records()))
+    dot = graph.dot()
+    assert dot.count(', shape=box, style=dashed];') == 2
+    assert f'{fmt_key(y_type)}\\nunbound' in dot
+
+
+def test_a_backslash_in_a_key_is_escaped_in_dot() -> None:
+    """Each single backslash survives ``repr()`` doubled, then `_dot_escape` doubles it again."""
+    weird = Token[int]('a \\backslash\\ name')
+    graph = build_graph(build_plan(Container().value(weird, 1).records()))
+    assert ('\\' * 4 + 'backslash' + '\\' * 4) in graph.dot()
 
 
 def test_the_tree_is_identical_on_two_calls() -> None:

@@ -1,10 +1,13 @@
 """The immutable view a frozen container exposes over its validated plan."""
 
+from typing import Annotated
+
 import pytest
 
 from depin._core.container import Container
 from depin._core.diagnostics import DependencyGraph, GraphNode, build_graph
 from depin._core.graph import build_plan
+from depin._core.markers import Tag
 from depin._core.scope import Scope
 from depin._core.spec import ProviderShape
 from depin.errors import MissingProviderError
@@ -57,6 +60,17 @@ def test_edges_follow_the_parameter_order_of_the_provider() -> None:
     assert [edge.parameter for edge in node.dependencies] == ['store', 'config']
     assert [edge.key for edge in node.dependencies] == [Store, Config]
     assert all(edge.satisfied for edge in node.dependencies)
+
+
+def test_an_edge_records_the_tag_its_parameter_requires() -> None:
+    class TaggedConsumer:
+        def __init__(self, store: Annotated[Store, Tag('primary')]) -> None:
+            self.store = store
+
+    graph = build_graph(build_plan(Container().bind(Config).bind(Store, tag='primary').bind(TaggedConsumer).records()))
+    edge = graph.node(TaggedConsumer).dependencies[0]
+    assert edge.tag == 'primary'
+    assert graph.find(edge.key, edge.tag) == graph.node(Store, 'primary')
 
 
 def test_a_defaulted_parameter_with_no_binding_is_an_unsatisfied_edge() -> None:
