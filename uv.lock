@@ -1186,6 +1186,7 @@ fastapi = [
 [package.dev-dependencies]
 bench = [
     { name = "pytest" },
+    { name = "pytest-asyncio" },
     { name = "pytest-benchmark" },
 ]
 dev = [
@@ -1226,6 +1227,7 @@ provides-extras = ["fastapi"]
 [package.metadata.requires-dev]
 bench = [
     { name = "pytest", specifier = ">=9.0.3" },
+    { name = "pytest-asyncio", specifier = ">=1.3" },
     { name = "pytest-benchmark", specifier = ">=5.1" },
 ]
 dev = [
