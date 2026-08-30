@@ -276,16 +276,14 @@ def test_edges_follow_the_parameter_order_of_the_provider() -> None:
 
 
 def test_a_defaulted_parameter_with_no_binding_is_an_unsatisfied_edge() -> None:
-    class Timeout:
-        pass
-
     class Client:
-        def __init__(self, timeout: Timeout | None = None) -> None:
+        def __init__(self, timeout: float = 5.0) -> None:
             self.timeout = timeout
 
     graph = build_graph(build_plan(Container().bind(Client).records()))
     edge = graph.node(Client).dependencies[0]
     assert edge.parameter == 'timeout'
+    assert edge.key is float
     assert edge.satisfied is False
 
 
@@ -326,6 +324,7 @@ def test_a_node_is_hashable_and_structural() -> None:
     first = build().node(Config)
     second = build().node(Config)
     assert first == second
+    assert hash(first) == hash(second)
     assert isinstance(first, GraphNode)
 ```
 
@@ -587,16 +586,13 @@ def test_a_tag_is_reported_in_the_annotations() -> None:
 
 
 def test_an_unbound_default_renders_as_a_leaf() -> None:
-    class Timeout:
-        pass
-
     class Client:
-        def __init__(self, timeout: Timeout | None = None) -> None:
+        def __init__(self, timeout: float = 5.0) -> None:
             self.timeout = timeout
 
     graph = build_graph(build_plan(Container().bind(Client).records()))
     assert render_tree(graph, Client, None) == (
-        'Client  [singleton, class]\n  timeout: Timeout | None  (unbound, default)'
+        'Client  [singleton, class]\n  timeout: float  (unbound, default)'
     )
 
 
@@ -620,7 +616,7 @@ def test_the_tree_is_identical_on_two_calls() -> None:
 
 Write the `Generator` return annotation directly, without quotes: the import is already at the top of the file.
 
-Confirm the exact spelling `Timeout | None` matches what `fmt_key` produces for that parameter's key before locking the assertion: run `uv run python -c "from depin._core.spec import fmt_key; print(fmt_key(int | None))"`. If the union renders differently, bind a non-optional defaulted parameter instead — `def __init__(self, timeout: Timeout = Timeout()) -> None` — and assert `timeout: Timeout  (unbound, default)`.
+An unbound dependency is written as a builtin with a literal default rather than as `X | None`: `freeze()` rejects a union as a provider key, and a call in default position trips `ruff`'s B008. Every value asserted above was measured against 0.6.0 before this plan was written.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -864,17 +860,14 @@ def test_mermaid_declares_every_node_and_edge_in_plan_order() -> None:
 
 
 def test_an_unbound_default_becomes_a_dashed_node_in_both_formats() -> None:
-    class Timeout:
-        pass
-
     class Client:
-        def __init__(self, timeout: Timeout = Timeout()) -> None:
+        def __init__(self, timeout: float = 5.0) -> None:
             self.timeout = timeout
 
     graph = build_graph(build_plan(Container().bind(Client).records()))
-    assert '  u0 [label="Timeout\\nunbound", shape=box, style=dashed];' in graph.dot()
+    assert '  u0 [label="float\\nunbound", shape=box, style=dashed];' in graph.dot()
     assert '  n0 -> u0 [label="timeout", style=dashed];' in graph.dot()
-    assert '  u0["Timeout<br/>unbound"]' in graph.mermaid()
+    assert '  u0["float<br/>unbound"]' in graph.mermaid()
     assert '  n0 -.->|timeout| u0' in graph.mermaid()
 
 
@@ -897,7 +890,7 @@ def test_both_exports_declare_one_node_per_provider() -> None:
     assert graph.mermaid().count('["') == len(graph.nodes)
 ```
 
-The escaping test's expected substrings assume `fmt_key` renders a `Token` as `Token('a "quoted" name')`. Verify with `uv run python -c "from depin._core.markers import Token; from depin._core.spec import fmt_key; print(fmt_key(Token[int]('a \"q\" name')))"` before locking the assertion.
+`fmt_key` renders that token as `Token('a "quoted" name')`; the substrings above were measured against 0.6.0.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
