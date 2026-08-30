@@ -405,25 +405,65 @@ async def test_closed_waiter_does_not_stop_signal_to_later_live_waiter() -> None
     flight, joins = frame.start_flight(key)
     assert not joins
     registered = threading.Event()
+    cancelled = threading.Event()
+    closed = threading.Event()
+    owner: dict[str, object] = {}
+    original_is_closed: object | None = None
+    live: asyncio.Task[None] | None = None
 
-    def register_and_close() -> None:
+    async def owner_waiter() -> None:
+        try:
+            await frame.wait_async(flight)
+        finally:
+            cancelled.set()
+
+    def run_owner_loop() -> None:
         loop = asyncio.new_event_loop()
-        task = loop.create_task(frame.wait_async(flight))
+        task = loop.create_task(owner_waiter())
+        owner['loop'] = loop
+        owner['task'] = task
         loop.call_soon(registered.set)
-        loop.call_soon(loop.stop)
-        loop.run_forever()
-        assert not task.done()
-        loop.close()
+        try:
+            loop.run_forever()
+        finally:
+            if not task.done():
+                task.cancel()
+                loop.run_until_complete(task)
+            loop.close()
+            closed.set()
 
-    thread = threading.Thread(target=register_and_close)
+    thread = threading.Thread(target=run_owner_loop)
     thread.start()
-    assert registered.wait(1)
-    thread.join()
+    try:
+        assert registered.wait(1)
+        owner_loop = owner['loop']
+        owner_task = owner['task']
+        assert isinstance(owner_loop, asyncio.AbstractEventLoop)
+        assert isinstance(owner_task, asyncio.Task)
+        original_is_closed = owner_loop.is_closed
+        object.__setattr__(owner_loop, 'is_closed', lambda: True)
 
-    live = asyncio.create_task(frame.wait_async(flight))
-    await _checkpoint()
-    frame.finish_flight(key, leader)
-    await asyncio.wait_for(live, timeout=1)
+        live = asyncio.create_task(frame.wait_async(flight))
+        await _checkpoint()
+        frame.finish_flight(key, leader)
+        await asyncio.wait_for(live, timeout=1)
+    finally:
+        if live is not None and not live.done():
+            live.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await live
+        if 'loop' in owner and 'task' in owner:
+            owner_loop = owner['loop']
+            owner_task = owner['task']
+            assert isinstance(owner_loop, asyncio.AbstractEventLoop)
+            assert isinstance(owner_task, asyncio.Task)
+            assert callable(original_is_closed)
+            object.__setattr__(owner_loop, 'is_closed', original_is_closed)
+            owner_loop.call_soon_threadsafe(owner_task.cancel)
+            assert cancelled.wait(1)
+            owner_loop.call_soon_threadsafe(owner_loop.stop)
+        assert closed.wait(1)
+        thread.join()
 
 
 def test_a_scope_value_must_be_supplied_before_it_resolves() -> None:
