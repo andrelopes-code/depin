@@ -73,6 +73,10 @@ which itself rejects cycles) and checks the search terminates instead of
 looping forever. The five gates were re-run after adding it, all green, before
 this figure was taken.
 
+This coverage figure is from a single local interpreter, not the
+per-interpreter matrix Step 1's template reports; that matrix follows from CI,
+which has not run for this branch.
+
 ## Mutation
 
 The first five attempts at `uv run mutmut run` failed during baseline stats
