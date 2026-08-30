@@ -2,15 +2,15 @@
 
 Date: 2026-08-30
 
-Measured implementation commit: `3910d7db890bd07f3588ae8201348c22cdef2731`
+Measured implementation commit: `b62f5c43234ddce97283166bb9f2fa06cb1235f4`
 Comparison source for the previous cross-loop implementation: `4a241d29b51b1582608f4ac356c756d797940ec1`
 
-Green matrix, mutation, root-cause, and benchmark commands ran at the measured
-implementation commit. Failure commands used temporary, uncommitted sabotages
-at `6e107470390111752d75665b82132ca9bdbbd0e4`; the rebase from that commit to the
-measured commit changed only release and benchmark dependency metadata. Every
-sabotaged source and test file is byte-identical at the measured commit. All
-sabotage worktrees were clean again before the green runs.
+Green matrix, mutation, root-cause, benchmark, and graph-sabotage commands ran
+at the measured implementation commit. The teardown and mutex failures used
+temporary, uncommitted sabotages at
+`6e107470390111752d75665b82132ca9bdbbd0e4`; their source and test files are
+byte-identical at the measured commit. All sabotage worktrees were clean again
+before the green runs.
 
 ## Property-based graph validation
 
@@ -164,6 +164,11 @@ The sabotage removed the root-frame `with self._mutex` from
 place. The injected rendezvous table forces every thread between the lookup and
 write when the mutex is absent.
 
+The implementation plan named the pre-audit `sync_lock_for` seam. The
+cross-event-loop fix replaced the separate sync/async lock tables with one
+cross-loop flight table, so the pinning test moved to `claim_cached`; it now
+guards the same check-create-publish invariant for both sync and async callers.
+
 ```console
 $ UV_PROJECT_ENVIRONMENT=/tmp/depin-step1-313t uv run --no-sync \
     --python /tmp/depin-step1-313t/bin/python pytest \
@@ -188,7 +193,9 @@ After restoring the mutex, the same commands each reported `1 passed` with
 The scenario starts 32 OS threads. Every thread owns an `asyncio.run()` event
 loop and resolves the same async singleton. Events and a condition make one
 leader suspend inside the provider while all followers join the active flight;
-there are no timed sleeps.
+there are no timed sleeps. Each thread crosses the shared barrier immediately
+before its one resolution attempt; the later events and condition order leader
+and follower phases without relying on the clock.
 
 Against `origin/main` at `4a241d29b51b1582608f4ac356c756d797940ec1`,
 the test module from the measured commit was placed on `PYTHONPATH` after the
@@ -268,8 +275,9 @@ Fresh complete run and real gate:
 
 ```console
 $ uv run mutmut run
-1253/1253  1218 killed  0 timeout  0 suspicious  35 survived  0 skipped  0 no_tests
-7.06 mutations/second
+Running mutation testing
+done
+7.66 mutations/second
 EXIT=0
 $ uv run mutmut export-cicd-stats
 Saved CI/CD stats to mutants/mutmut-cicd-stats.json
@@ -279,10 +287,11 @@ mutation score: 97.2% (1218 killed, 35 survived, 1253 total)
 EXIT=0
 ```
 
-The 35 survivors are 2.8% of decided mutants. Every exported inconclusive
-field—timeout, suspicious, skipped, no-tests, segfault, and interrupted—is zero.
-The mutation-only two-second pytest watchdog turns a deadlock into a killed
-test rather than allowing mutmut to classify it as a timeout.
+The exported counters were 1,253 total, 1,218 killed, and 35 survived. The 35
+survivors are 2.8% of decided mutants. Every exported inconclusive field—timeout,
+suspicious, skipped, no-tests, segfault, and interrupted—is zero. The
+mutation-only two-second pytest watchdog turns a deadlock into a killed test
+rather than allowing mutmut to classify it as a timeout.
 
 ## Benchmark regression
 
@@ -292,24 +301,24 @@ and the head was the measured implementation commit.
 
 ```console
 $ uv sync --no-default-groups --group bench
-$ uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/depin-step1-base-definitive.json
+$ uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/depin-step1-base-last2.json
 8 passed
 EXIT=0
 
 $ uv sync --no-default-groups --group bench
-$ uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/depin-step1-head-definitive.json
+$ uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/depin-step1-head-last2.json
 8 passed
 EXIT=0
 
-$ uv run --no-sync python -m benchmarks.compare /tmp/depin-step1-base-definitive.json /tmp/depin-step1-head-definitive.json --max-regression=0.25
-ok            +4.1%  benchmarks/test_resolution.py::test_call_through_an_inject_wrapper
-ok            +2.7%  benchmarks/test_resolution.py::test_freeze_a_chain[1000]
-ok            +2.0%  benchmarks/test_resolution.py::test_freeze_a_chain[100]
-ok            +4.1%  benchmarks/test_resolution.py::test_freeze_a_chain[10]
-ok           +19.9%  benchmarks/test_resolution.py::test_open_and_close_a_scope
-ok            +2.5%  benchmarks/test_resolution.py::test_resolve_a_cached_singleton
-ok           -64.0%  benchmarks/test_resolution.py::test_resolve_a_transient_chain
-ok            -0.6%  benchmarks/test_resolution.py::test_resolve_an_async_singleton
+$ uv run --no-sync python -m benchmarks.compare /tmp/depin-step1-base-last2.json /tmp/depin-step1-head-last2.json --max-regression=0.25
+ok            +6.3%  benchmarks/test_resolution.py::test_call_through_an_inject_wrapper
+ok            +2.8%  benchmarks/test_resolution.py::test_freeze_a_chain[1000]
+ok            +2.7%  benchmarks/test_resolution.py::test_freeze_a_chain[100]
+ok            +6.5%  benchmarks/test_resolution.py::test_freeze_a_chain[10]
+ok           +21.3%  benchmarks/test_resolution.py::test_open_and_close_a_scope
+ok            +9.8%  benchmarks/test_resolution.py::test_resolve_a_cached_singleton
+ok           -62.7%  benchmarks/test_resolution.py::test_resolve_a_transient_chain
+ok            +4.7%  benchmarks/test_resolution.py::test_resolve_an_async_singleton
 8 benchmark(s) within 25% of the base branch
 EXIT=0
 ```
@@ -330,7 +339,7 @@ was measured independently rather than combined.
 | CPython 3.13.13 | enabled | `uv run --python 3.13 pytest --cov=depin --cov-report=term` | 422 passed, 6 skipped | `1214 9 390 18` | 98.32% | 0 |
 | CPython 3.14.5 | enabled | `uv run --python 3.14 pytest --cov=depin --cov-report=term` | 422 passed, 6 skipped | `1180 9 390 18` | 98.28% | 0 |
 | CPython 3.13.13 experimental free-threading | disabled | `UV_PROJECT_ENVIRONMENT=/tmp/depin-step1-313t uv run --no-sync --python /tmp/depin-step1-313t/bin/python pytest tests/unit --cov=depin --cov-report=term` | 376 passed, 0 skipped | `1214 41 390 17` | 96.01% | 0 |
-| CPython 3.14.5 free-threading | disabled | `UV_PROJECT_ENVIRONMENT=/tmp/depin-step1-314t uv run --no-sync --python /tmp/depin-step1-314t/bin/python pytest tests/unit --cov=depin --cov-report=term` | 376 passed, 0 skipped | `1180 41 390 17` | 95.92% | 0 |
+| CPython 3.14.5 free-threading | disabled | `UV_PROJECT_ENVIRONMENT=/tmp/depin-step1-314t uv run --no-sync --python /tmp/depin-step1-314t/bin/python pytest tests/unit --cov=depin --cov-report=term` | 376 passed, 0 skipped | `1180 42 390 18` | 95.80% | 0 |
 
 The blocking-interpreter checks were explicit:
 
@@ -353,56 +362,3 @@ GIL_ENABLED False
 ```
 
 All five independent totals satisfy the repository's 95% coverage gate.
-
-## Final repository audit
-
-The complete gate sequence below ran on evidence commit
-`f142a52ab2c56f1365e789e6aeacd0f7d05fc865`. That commit changes only this
-evidence file relative to the measured implementation commit.
-
-```console
-$ uv run ruff format
-101 files left unchanged
-EXIT=0
-$ uv run ruff check
-All checks passed!
-EXIT=0
-$ uv run basedpyright
-0 errors, 0 warnings, 0 notes
-EXIT=0
-$ uv run mypy
-Success: no issues found in 67 source files
-EXIT=0
-$ uv run pytest
-422 passed, 6 skipped
-EXIT=0
-```
-
-The additional Step 1 checks also passed:
-
-```console
-$ uv run --group docs mkdocs build --strict
-INFO - Documentation built
-EXIT=0
-$ uv run --group bench pytest benchmarks --benchmark-only
-8 passed
-EXIT=0
-$ uv run mutmut run
-1253/1253  1218 killed  0 timeout  0 suspicious  35 survived  0 skipped  0 no_tests
-7.72 mutations/second
-EXIT=0
-$ uv run mutmut export-cicd-stats
-Saved CI/CD stats to mutants/mutmut-cicd-stats.json
-EXIT=0
-$ uv run python -m scripts.check_mutation_threshold mutants/mutmut-cicd-stats.json
-mutation score: 97.2% (1218 killed, 35 survived, 1253 total)
-EXIT=0
-$ git diff --check
-EXIT=0
-$ git status --short
-EXIT=0
-```
-
-The docs command printed Material for MkDocs' upstream MkDocs 2.0 advisory
-banner, but no MkDocs diagnostic; strict mode exited 0. The five repository
-gates, benchmark suite, and mutation run emitted no warnings or waivers.
