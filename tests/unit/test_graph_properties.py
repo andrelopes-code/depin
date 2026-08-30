@@ -229,6 +229,15 @@ def test_every_planned_provider_appears_as_exactly_one_node(case: GraphCase) -> 
     assert len(idents) == len(_frozen_plan(frozen).order)
 
 
+@example(
+    case=GraphCase(
+        size=2,
+        edges=frozenset({(1, 0)}),
+        scopes=(Scope.SINGLETON, Scope.SINGLETON),
+        registered=(True, True),
+        duplicates=frozenset(),
+    )
+)
 @given(case=_graphs())
 def test_every_edge_either_indexes_a_node_or_is_unsatisfied(case: GraphCase) -> None:
     container = _materialize(case)
