@@ -54,13 +54,13 @@ dev = [
     "httpx>=0.27",
     "fastapi>=0.133",
     "mypy>=1.18",
-    "hypothesis>=6.138,<7",
+    "hypothesis>=6.138,<6.156",
 ]
 # The extended matrix runs free-threaded and pre-release interpreters, where
 # `fastapi` and its compiled transitive dependencies have no wheels. The core
 # has zero runtime dependencies, so it needs nothing but a test runner.
 threads = [
-    "hypothesis>=6.138,<7",
+    "hypothesis>=6.138,<6.156",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3",
     "pytest-cov>=7.1,<8",
