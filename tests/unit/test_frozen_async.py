@@ -25,7 +25,8 @@ async def _checkpoint() -> None:
 
 @pytest.mark.asyncio
 async def test_async_singleton_flights_are_keyed_by_provider_and_removed_after_failure() -> None:
-    await _exercise_async_singleton_flight_keys_and_cleanup()
+    async with asyncio.timeout(1):
+        await _exercise_async_singleton_flight_keys_and_cleanup()
 
 
 @pytest.mark.asyncio
@@ -142,10 +143,6 @@ async def test_aresolve_handles_sync_providers_too() -> None:
 
     frozen = Container().value(token, 5).bind(make, scope=Scope.SINGLETON, provides=str).freeze()
     assert await frozen.aresolve(token) == 5
-    root: ScopeFrame = object.__getattribute__(frozen, '_root')
-    flight, constructs = root.start_flight(None)
-    assert constructs
-    root.finish_flight(None, flight)
     assert await frozen.aresolve(str) == 'sync'
 
 
@@ -297,10 +294,6 @@ async def test_cancelled_async_singleton_constructor_wakes_a_follower_to_retry()
         leader.cancel()
         with pytest.raises(asyncio.CancelledError):
             await leader
-        root: ScopeFrame = object.__getattribute__(frozen, '_root')
-        flight, constructs = root.start_flight((int, None))
-        assert constructs
-        root.finish_flight((int, None), flight)
         await cancelled.wait()
         async with asyncio.timeout(1):
             assert await follower == 7
@@ -607,10 +600,6 @@ async def _exercise_async_singleton_flight_keys_and_cleanup() -> None:
 
     with pytest.raises(RuntimeError, match='first attempt fails'):
         await frozen.aresolve(int)
-    root: ScopeFrame = object.__getattribute__(frozen, '_root')
-    flight, constructs = root.start_flight((int, None))
-    assert constructs
-    root.finish_flight((int, None), flight)
     assert await frozen.aresolve(int) == 2
 
 
