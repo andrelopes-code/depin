@@ -12,7 +12,6 @@ from depin._core.teardown import (
     SyncCMTeardown,
     SyncGenTeardown,
     run_async,
-    run_sync,
 )
 from depin.errors import TeardownError
 
@@ -119,7 +118,11 @@ async def test_sync_close_refuses_an_async_singleton_teardown() -> None:
     assert await frozen.aresolve(str) == 'v'
     with pytest.raises(ExceptionGroup) as exc:
         frozen.close()
-    assert any(isinstance(e, TeardownError) for e in exc.value.exceptions)
+    assert [str(error) for error in exc.value.exceptions] == [
+        'an async provider registered a teardown in a synchronous scope; '
+        'open the scope with ascope() and drain it with aclose()/ascope() instead'
+    ]
+    assert [type(error) for error in exc.value.exceptions] == [TeardownError]
 
 
 def test_sync_scoped_teardown_preserves_failures_in_lifo_order() -> None:
@@ -212,30 +215,6 @@ async def test_async_scope_preserves_sync_async_and_generator_failures_in_lifo_o
         'async generator provider yielded more than once; it must yield exactly once',
     ]
     assert [type(error) for error in exc.value.exceptions] == [RuntimeError, RuntimeError, TeardownError]
-
-
-@pytest.mark.parametrize(
-    'record',
-    [
-        AsyncGenTeardown(_FakeAsyncGen()),
-        AsyncCMTeardown(_FakeAsyncCM()),
-    ],
-    ids=['async-generator', 'async-context-manager'],
-)
-def test_run_sync_refuses_async_records(record: AsyncGenTeardown | AsyncCMTeardown) -> None:
-    with pytest.raises(TeardownError) as exc:
-        run_sync(record)
-
-    assert str(exc.value) == (
-        'an async provider registered a teardown in a synchronous scope; '
-        'open the scope with ascope() and drain it with aclose()/ascope() instead'
-    )
-
-
-def test_run_sync_exits_a_sync_context_manager() -> None:
-    cm = _FakeSyncCM()
-    run_sync(SyncCMTeardown(cm))
-    assert cm.exited
 
 
 @pytest.mark.asyncio
