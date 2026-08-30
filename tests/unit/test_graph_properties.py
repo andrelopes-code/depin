@@ -1,7 +1,9 @@
 """Generative checks for the provider-graph validator."""
 
 import inspect
+import multiprocessing
 from dataclasses import dataclass
+from multiprocessing.connection import Connection
 
 import pytest
 from hypothesis import example, given, settings
@@ -61,6 +63,56 @@ def _materialize(case: GraphCase) -> Container:
     return container
 
 
+def _freeze_graph_case(case: GraphCase, connection: Connection) -> None:
+    try:
+        frozen = _materialize(case).freeze()
+    except CircularDependencyError as error:
+        connection.send_bytes(f'circular:{error}'.encode())
+    except CaptiveDependencyError as error:
+        connection.send_bytes(f'captive:{error}'.encode())
+    except DepinError as error:
+        connection.send_bytes(f'depin:{error}'.encode())
+    except BaseException as error:
+        connection.send_bytes(f'unexpected:{type(error).__name__}:{error}'.encode())
+    else:
+        plan = _frozen_plan(frozen)
+        positions = {(spec.key, spec.tag): index for index, spec in enumerate(plan.order)}
+        ordered = all(
+            positions[(parameter.key, parameter.tag)] < positions[(spec.key, spec.tag)]
+            for spec in plan.order
+            for parameter in spec.params
+        )
+        connection.send_bytes(b'ordered' if ordered else b'out-of-order')
+    finally:
+        connection.close()
+
+
+def _freeze_result(case: GraphCase) -> str:
+    context = multiprocessing.get_context('fork')
+    parent, child = context.Pipe(duplex=False)
+    process = context.Process(target=_freeze_graph_case, args=(case, child))
+    try:
+        process.start()
+        child.close()
+        if not parent.poll(3):
+            pytest.fail(f'graph freeze worker sent no result within 3 seconds for {case!r}')
+        result = parent.recv_bytes().decode()
+        process.join(5)
+        if process.is_alive():
+            pytest.fail(f'graph freeze worker did not exit within 5 seconds for {case!r}')
+        if process.exitcode != 0:
+            pytest.fail(f'graph freeze worker exited with {process.exitcode} for {case!r}')
+        return result
+    finally:
+        parent.close()
+        if process.is_alive():
+            process.terminate()
+            process.join(5)
+        if process.is_alive():
+            process.kill()
+            process.join(5)
+
+
 @st.composite
 def _arbitrary_graphs(draw: st.DrawFn) -> GraphCase:
     size = draw(st.integers(min_value=1, max_value=8))
@@ -98,42 +150,46 @@ def _non_captive_graphs(draw: st.DrawFn) -> GraphCase:
     return GraphCase(size, frozenset(edges), scopes, registered, frozenset(duplicates))
 
 
+def test_a_cyclic_missing_graph_is_bounded_during_validation() -> None:
+    safe_missing = GraphCase(
+        size=3,
+        edges=frozenset({(2, 1), (1, 0)}),
+        scopes=(Scope.SINGLETON,) * 3,
+        registered=(False, True, True),
+        duplicates=frozenset(),
+    )
+    with pytest.raises(DepinError):
+        _ = _materialize(safe_missing).freeze()
+
+    cyclic_missing = GraphCase(
+        size=3,
+        edges=frozenset({(0, 1), (1, 0), (1, 2)}),
+        scopes=(Scope.SINGLETON,) * 3,
+        registered=(True, True, False),
+        duplicates=frozenset(),
+    )
+    assert _freeze_result(cyclic_missing).startswith('depin:')
+
+
 @settings(max_examples=200, deadline=None)
 @given(_arbitrary_graphs())
 def test_freeze_returns_a_topological_plan_or_a_depin_error(case: GraphCase) -> None:
-    container = _materialize(case)
-    try:
-        frozen = container.freeze()
-    except DepinError:
-        return
-
-    plan = _frozen_plan(frozen)
-    positions = {(spec.key, spec.tag): index for index, spec in enumerate(plan.order)}
-    for spec in plan.order:
-        for parameter in spec.params:
-            assert positions[(parameter.key, parameter.tag)] < positions[(spec.key, spec.tag)]
+    result = _freeze_result(case)
+    assert result == 'ordered' or result.startswith(('depin:', 'circular:', 'captive:')), result
 
 
 @settings(max_examples=200, deadline=None)
 @given(_arbitrary_graphs())
 def test_graph_validation_never_leaks_a_non_depin_exception(case: GraphCase) -> None:
-    try:
-        _ = _materialize(case).freeze()
-    except DepinError:
-        return
-    except Exception as error:
-        pytest.fail(f'graph validation leaked {type(error).__name__}: {error}')
+    result = _freeze_result(case)
+    assert not result.startswith('unexpected:'), result
 
 
 @settings(max_examples=200, deadline=None)
 @given(_acyclic_graphs())
 def test_an_acyclic_graph_never_reports_a_cycle(case: GraphCase) -> None:
-    try:
-        _ = _materialize(case).freeze()
-    except CircularDependencyError as error:
-        pytest.fail(f'acyclic graph reported a cycle: {error}')
-    except DepinError:
-        return
+    result = _freeze_result(case)
+    assert not result.startswith('circular:'), result
 
 
 @example(
@@ -148,9 +204,5 @@ def test_an_acyclic_graph_never_reports_a_cycle(case: GraphCase) -> None:
 @settings(max_examples=200, deadline=None)
 @given(_non_captive_graphs())
 def test_a_graph_without_a_singleton_to_scoped_path_is_not_captive(case: GraphCase) -> None:
-    try:
-        _ = _materialize(case).freeze()
-    except CaptiveDependencyError as error:
-        pytest.fail(f'non-captive graph reported a captive dependency: {error}')
-    except DepinError:
-        return
+    result = _freeze_result(case)
+    assert not result.startswith('captive:'), result
