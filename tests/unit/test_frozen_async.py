@@ -723,6 +723,45 @@ async def test_nested_async_scope_constructs_a_scoped_provider_once() -> None:
 
 
 @pytest.mark.asyncio
+async def test_inner_scope_keeps_its_flight_and_cache_ahead_of_outer_scope() -> None:
+    frozen: FrozenContainer
+    first_started = asyncio.Event()
+    release_outer = asyncio.Event()
+    release_inner = asyncio.Event()
+    calls = 0
+
+    class Value: ...
+
+    async def make() -> Value:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            first_started.set()
+            await release_inner.wait()
+        return Value()
+
+    async def resolve_outer() -> Value:
+        await release_outer.wait()
+        return await frozen.aresolve(Value)
+
+    frozen = Container().bind(make, scope=Scope.SCOPED, provides=Value).freeze()
+    async with frozen.ascope():
+        outer = asyncio.create_task(resolve_outer())
+        async with frozen.ascope():
+            inner = asyncio.create_task(frozen.aresolve(Value))
+            await first_started.wait()
+            release_outer.set()
+            outer_value = await outer
+            follower = asyncio.create_task(frozen.aresolve(Value))
+            release_inner.set()
+            inner_value = await inner
+            assert await follower is inner_value
+            assert await frozen.aresolve(Value) is inner_value
+            assert inner_value is not outer_value
+    assert calls == 2
+
+
+@pytest.mark.asyncio
 async def test_stale_inherited_async_scope_context_cannot_resolve_after_abort() -> None:
     frozen: FrozenContainer
     child_started = asyncio.Event()

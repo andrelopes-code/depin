@@ -263,11 +263,10 @@ class ScopeFrame:
         with contextlib.ExitStack() as locks:
             for frame in frames:
                 locks.enter_context(frame._mutex)
-            for frame in frames:
+            for frame in reversed(frames):
                 value = frame._cache.get(key, MISSING)
                 if value is not MISSING:
                     return value, None
-            for frame in frames:
                 flight = frame._flights.get(key)
                 if flight is None:
                     continue
