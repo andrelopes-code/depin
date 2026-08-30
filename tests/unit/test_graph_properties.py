@@ -1,9 +1,8 @@
 """Generative checks for the provider-graph validator."""
 
 import inspect
-import multiprocessing
+import signal
 from dataclasses import dataclass
-from multiprocessing.connection import Connection
 
 import pytest
 from hypothesis import example, given, settings
@@ -63,17 +62,29 @@ def _materialize(case: GraphCase) -> Container:
     return container
 
 
-def _freeze_graph_case(case: GraphCase, connection: Connection) -> None:
+class _GraphFreezeTimedOut(Exception):
+    pass
+
+
+def _raise_graph_freeze_timeout(_signal_number: int, _frame: object) -> None:
+    raise _GraphFreezeTimedOut
+
+
+def _freeze_result(case: GraphCase) -> str:
+    previous_handler = signal.signal(signal.SIGALRM, _raise_graph_freeze_timeout)
+    signal.setitimer(signal.ITIMER_REAL, 1)
     try:
         frozen = _materialize(case).freeze()
     except CircularDependencyError as error:
-        connection.send_bytes(f'circular:{error}'.encode())
+        return f'circular:{error}'
     except CaptiveDependencyError as error:
-        connection.send_bytes(f'captive:{error}'.encode())
+        return f'captive:{error}'
     except DepinError as error:
-        connection.send_bytes(f'depin:{error}'.encode())
+        return f'depin:{error}'
+    except _GraphFreezeTimedOut:
+        return 'timed-out'
     except BaseException as error:
-        connection.send_bytes(f'unexpected:{type(error).__name__}:{error}'.encode())
+        return f'unexpected:{type(error).__name__}:{error}'
     else:
         plan = _frozen_plan(frozen)
         positions = {(spec.key, spec.tag): index for index, spec in enumerate(plan.order)}
@@ -82,35 +93,10 @@ def _freeze_graph_case(case: GraphCase, connection: Connection) -> None:
             for spec in plan.order
             for parameter in spec.params
         )
-        connection.send_bytes(b'ordered' if ordered else b'out-of-order')
+        return 'ordered' if ordered else 'out-of-order'
     finally:
-        connection.close()
-
-
-def _freeze_result(case: GraphCase) -> str:
-    context = multiprocessing.get_context('fork')
-    parent, child = context.Pipe(duplex=False)
-    process = context.Process(target=_freeze_graph_case, args=(case, child))
-    try:
-        process.start()
-        child.close()
-        if not parent.poll(3):
-            pytest.fail(f'graph freeze worker sent no result within 3 seconds for {case!r}')
-        result = parent.recv_bytes().decode()
-        process.join(5)
-        if process.is_alive():
-            pytest.fail(f'graph freeze worker did not exit within 5 seconds for {case!r}')
-        if process.exitcode != 0:
-            pytest.fail(f'graph freeze worker exited with {process.exitcode} for {case!r}')
-        return result
-    finally:
-        parent.close()
-        if process.is_alive():
-            process.terminate()
-            process.join(5)
-        if process.is_alive():
-            process.kill()
-            process.join(5)
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
 
 
 @st.composite

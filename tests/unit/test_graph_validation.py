@@ -1,9 +1,8 @@
 """Graph validation performed by freeze(): duplicates, cycles, captives, async reach."""
 
-import multiprocessing
+import signal
 import sys
 from collections.abc import AsyncGenerator
-from multiprocessing.connection import Connection
 from types import ModuleType
 from typing import Annotated, override
 
@@ -56,17 +55,12 @@ class _MissingChainDependency:
     def __init__(self, absent: _MissingCycleDependency) -> None: ...
 
 
-def _freeze_cycle_with_missing_dependency(connection: Connection) -> None:
-    try:
-        _ = Container().bind(_MissingCycleA).bind(_MissingCycleB).freeze()
-    except MissingProviderError:
-        connection.send_bytes(b'missing-provider')
-    except BaseException as error:
-        connection.send_bytes(f'unexpected:{error!r}'.encode())
-    else:
-        connection.send_bytes(b'frozen')
-    finally:
-        connection.close()
+class _FreezeTimedOut(Exception):
+    pass
+
+
+def _raise_freeze_timeout(_signal_number: int, _frame: object) -> None:
+    raise _FreezeTimedOut
 
 
 def test_missing_provider_raises() -> None:
@@ -84,28 +78,14 @@ def test_freeze_reports_a_missing_dependency_without_looping_on_a_cycle() -> Non
     with pytest.raises(MissingProviderError):
         _ = Container().bind(_MissingChainRoot).bind(_MissingChainDependency).freeze()
 
-    context = multiprocessing.get_context('fork')
-    parent, child = context.Pipe(duplex=False)
-    process = context.Process(target=_freeze_cycle_with_missing_dependency, args=(child,))
+    previous_handler = signal.signal(signal.SIGALRM, _raise_freeze_timeout)
+    signal.setitimer(signal.ITIMER_REAL, 1)
     try:
-        process.start()
-        child.close()
-        if not parent.poll(3):
-            pytest.fail('freeze worker sent no result within 3 seconds')
-        result = parent.recv_bytes()
-        process.join(5)
-        if process.is_alive():
-            pytest.fail('freeze worker did not exit within 5 seconds')
-        assert process.exitcode == 0
-        assert result == b'missing-provider'
+        with pytest.raises(MissingProviderError):
+            _ = Container().bind(_MissingCycleA).bind(_MissingCycleB).freeze()
     finally:
-        parent.close()
-        if process.is_alive():
-            process.terminate()
-            process.join(5)
-        if process.is_alive():
-            process.kill()
-            process.join(5)
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
 
 
 def test_default_value_satisfies_missing() -> None:
@@ -147,6 +127,7 @@ def test_reports_all_missing_providers_at_once() -> None:
     assert 'A' in msg
     assert 'B' in msg
     assert '2 missing providers' in msg
+    assert '\n  - no provider for ' in msg
 
 
 def test_single_missing_provider_keeps_concise_message() -> None:
@@ -187,8 +168,14 @@ def test_a_cycle_does_not_stop_the_missing_provider_report() -> None:
         def __init__(self, a: A, gone: Gone) -> None: ...
 
     r = Registry().bind(A, scope=Scope.SINGLETON).bind(B, scope=Scope.SINGLETON)
-    with pytest.raises(MissingProviderError, match='Gone'):
-        _ = build_plan(r.records())
+    previous_handler = signal.signal(signal.SIGALRM, _raise_freeze_timeout)
+    signal.setitimer(signal.ITIMER_REAL, 1)
+    try:
+        with pytest.raises(MissingProviderError, match='Gone'):
+            _ = build_plan(r.records())
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
 
 
 def test_the_same_missing_key_is_reported_once_for_equally_deep_chains() -> None:
@@ -225,6 +212,7 @@ def test_missing_provider_message_includes_chain() -> None:
     assert 'A' in msg
     assert 'B' in msg
     assert 'C' in msg
+    assert ' -> ' in msg
 
 
 def test_missing_provider_suggests_candidates_with_provides() -> None:

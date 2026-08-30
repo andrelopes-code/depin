@@ -88,8 +88,9 @@ def test_is_provider_key_rejects_anything_else(value: object) -> None:
 
 def test_as_class_accepts_a_class_and_rejects_an_instance() -> None:
     assert as_class(_Widget, _Widget) is _Widget
-    with pytest.raises(InvalidProviderError, match=r'provider for .*_Widget.*is not a class'):
+    with pytest.raises(InvalidProviderError, match=r'provider for .*_Widget.*is not a class') as exc:
         _ = as_class(_Widget(), _Widget)
+    assert '_Widget' in str(exc.value).split(' is bound')[0]
 
 
 def test_as_factory_accepts_a_callable_and_rejects_a_value() -> None:

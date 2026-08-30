@@ -83,6 +83,16 @@ def test_generator_in_transient_rejected() -> None:
     assert 'Use Scope.SINGLETON or Scope.SCOPED' in str(exc.value)
 
 
+def test_generator_in_transient_explains_its_teardown_contract() -> None:
+    def gen() -> Iterator[int]:
+        yield 0
+
+    with pytest.raises(InvalidScopeError) as exc:
+        _ = build_specs(Registry().bind(gen, scope=Scope.TRANSIENT).records())
+    assert str(exc.value).endswith('Use Scope.SINGLETON or Scope.SCOPED.')
+    assert 'owns a teardown' in str(exc.value)
+
+
 def test_param_specs_extracted_from_init() -> None:
     class A: ...
 
@@ -224,6 +234,16 @@ def test_forward_references_between_bound_classes_resolve_for_key_and_parameters
     assert consumer.params[0].key is Dependency
 
 
+def test_forward_reference_return_annotation_resolves_against_bound_classes() -> None:
+    class Produced: ...
+
+    def make() -> 'Produced':
+        return Produced()
+
+    spec = next(spec for spec in build_specs(Registry().bind(Produced).bind(make).records()) if spec.source is make)
+    assert spec.key is Produced
+
+
 @pytest.mark.parametrize('key', [int, 'legacy', Token[int]('k')])
 def test_as_provider_key_accepts_classes_strings_and_tokens(key: object) -> None:
     assert as_provider_key(key) == key
@@ -271,6 +291,8 @@ def test_an_unannotated_parameter_with_a_default_is_left_to_the_callable() -> No
     [param] = spec.params
     assert param.has_default
     assert param.default == 3
+    assert param.name == 'retries'
+    assert param.key is object
 
 
 def test_an_unresolvable_annotation_is_reported_as_such() -> None:
