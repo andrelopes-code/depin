@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import Enum
 from typing import Protocol, TypeGuard, runtime_checkable
 
 from depin._core.markers import Token
@@ -42,15 +42,15 @@ class ProviderShape(Enum):
         ```
     """
 
-    CLASS = auto()
-    FUNCTION = auto()
-    ASYNC_FUNCTION = auto()
-    GENERATOR = auto()
-    ASYNC_GENERATOR = auto()
-    CONTEXT_MANAGER = auto()
-    ASYNC_CONTEXT_MANAGER = auto()
-    VALUE = auto()
-    FRAME = auto()
+    CLASS = 'class'
+    FUNCTION = 'function'
+    ASYNC_FUNCTION = 'async function'
+    GENERATOR = 'generator'
+    ASYNC_GENERATOR = 'async generator'
+    CONTEXT_MANAGER = 'context manager'
+    ASYNC_CONTEXT_MANAGER = 'async context manager'
+    VALUE = 'value'
+    FRAME = 'frame'
 
 
 type ProviderKey = type[object] | Token[object] | str

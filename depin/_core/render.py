@@ -2,24 +2,12 @@
 
 from depin._core.diagnostics import DependencyGraph, GraphNode
 from depin._core.graph import format_missing, suggest_candidates
-from depin._core.spec import Ident, ProviderKey, ProviderShape, fmt_key
-
-_SHAPE_NAMES: dict[ProviderShape, str] = {
-    ProviderShape.CLASS: 'class',
-    ProviderShape.FUNCTION: 'function',
-    ProviderShape.ASYNC_FUNCTION: 'async function',
-    ProviderShape.GENERATOR: 'generator',
-    ProviderShape.ASYNC_GENERATOR: 'async generator',
-    ProviderShape.CONTEXT_MANAGER: 'context manager',
-    ProviderShape.ASYNC_CONTEXT_MANAGER: 'async context manager',
-    ProviderShape.VALUE: 'value',
-    ProviderShape.FRAME: 'frame',
-}
+from depin._core.spec import Ident, ProviderKey, fmt_key
 
 
 def annotation_parts(node: GraphNode) -> list[str]:
     """The scope, shape, async flag and tag fragments, in the order every renderer uses."""
-    parts = [node.scope.value, _SHAPE_NAMES[node.shape]]
+    parts = [node.scope.value, node.shape.value]
     if node.needs_async:
         parts.append('async')
     if node.tag is not None:
