@@ -84,6 +84,18 @@ class DependencyGraph:
         """Return the node bound under ``key`` and ``tag``, or None when nothing is."""
         return self._index.get((key, tag))
 
+    def dot(self) -> str:
+        """Render the graph as a Graphviz ``digraph`` document."""
+        from depin._core import render
+
+        return render.render_dot(self)
+
+    def mermaid(self) -> str:
+        """Render the graph as a Mermaid ``graph LR`` document."""
+        from depin._core import render
+
+        return render.render_mermaid(self)
+
     @override
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, DependencyGraph):

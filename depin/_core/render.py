@@ -98,3 +98,70 @@ def _deepest_requirement(
                     continue
                 stack.append((child, (*chain, (child.key, child.tag))))
     return best
+
+
+def render_dot(graph: DependencyGraph) -> str:
+    """The graph as a Graphviz ``digraph`` document."""
+    bound, unbound = _identifiers(graph)
+    lines = ['digraph depin {', '  rankdir=LR;']
+    for node in graph.nodes:
+        label = f'{_dot_escape(fmt_key(node.key))}\\n{_dot_escape(", ".join(annotation_parts(node)))}'
+        lines.append(f'  {bound[(node.key, node.tag)]} [label="{label}", shape=box];')
+    for ident, name in unbound.items():
+        lines.append(f'  {name} [label="{_dot_escape(fmt_key(ident[0]))}\\nunbound", shape=box, style=dashed];')
+    for node in graph.nodes:
+        source = bound[(node.key, node.tag)]
+        for edge in node.dependencies:
+            ident = (edge.key, edge.tag)
+            if ident in bound:
+                lines.append(f'  {source} -> {bound[ident]} [label="{edge.parameter}"];')
+            else:
+                lines.append(f'  {source} -> {unbound[ident]} [label="{edge.parameter}", style=dashed];')
+    lines.append('}')
+    return '\n'.join(lines)
+
+
+def render_mermaid(graph: DependencyGraph) -> str:
+    """The graph as a Mermaid ``graph LR`` document."""
+    bound, unbound = _identifiers(graph)
+    lines = ['graph LR']
+    for node in graph.nodes:
+        label = f'{_mermaid_escape(fmt_key(node.key))}<br/>{_mermaid_escape(", ".join(annotation_parts(node)))}'
+        lines.append(f'  {bound[(node.key, node.tag)]}["{label}"]')
+    for ident, name in unbound.items():
+        lines.append(f'  {name}["{_mermaid_escape(fmt_key(ident[0]))}<br/>unbound"]')
+    for node in graph.nodes:
+        source = bound[(node.key, node.tag)]
+        for edge in node.dependencies:
+            ident = (edge.key, edge.tag)
+            if ident in bound:
+                lines.append(f'  {source} -->|{edge.parameter}| {bound[ident]}')
+            else:
+                lines.append(f'  {source} -.->|{edge.parameter}| {unbound[ident]}')
+    return '\n'.join(lines)
+
+
+def _identifiers(graph: DependencyGraph) -> tuple[dict[_Ident, str], dict[_Ident, str]]:
+    """Stable identifiers: ``n<plan index>`` for a bound node, ``u<n>`` for an unbound target.
+
+    An index keeps a key containing a quote or a bracket out of the identifier
+    position in both formats, and both dictionaries are built in walk order, so
+    iterating them is deterministic.
+    """
+    bound = {(node.key, node.tag): f'n{index}' for index, node in enumerate(graph.nodes)}
+    unbound: dict[_Ident, str] = {}
+    for node in graph.nodes:
+        for edge in node.dependencies:
+            ident = (edge.key, edge.tag)
+            if ident in bound or ident in unbound:
+                continue
+            unbound[ident] = f'u{len(unbound)}'
+    return bound, unbound
+
+
+def _dot_escape(text: str) -> str:
+    return text.replace('\\', '\\\\').replace('"', '\\"')
+
+
+def _mermaid_escape(text: str) -> str:
+    return text.replace('"', '#quot;')

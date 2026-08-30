@@ -1,5 +1,8 @@
 """The three text renderings of a dependency graph."""
 
+import os
+import subprocess
+import sys
 from collections.abc import Generator
 
 import pytest
@@ -221,3 +224,87 @@ def test_a_tie_between_equal_length_chains_matches_the_freeze_error() -> None:
     graph = build_graph(build_plan(defaulted.records()))
 
     assert render_tree(graph, missing, None) == str(raised.value)
+
+
+def test_dot_declares_every_node_and_edge_in_plan_order() -> None:
+    assert build().dot() == (
+        'digraph depin {\n'
+        '  rankdir=LR;\n'
+        '  n0 [label="Config\\nsingleton, class", shape=box];\n'
+        '  n1 [label="Store\\nsingleton, class", shape=box];\n'
+        '  n2 [label="Service\\nsingleton, class", shape=box];\n'
+        '  n1 -> n0 [label="config"];\n'
+        '  n2 -> n1 [label="store"];\n'
+        '  n2 -> n0 [label="config"];\n'
+        '}'
+    )
+
+
+def test_mermaid_declares_every_node_and_edge_in_plan_order() -> None:
+    assert build().mermaid() == (
+        'graph LR\n'
+        '  n0["Config<br/>singleton, class"]\n'
+        '  n1["Store<br/>singleton, class"]\n'
+        '  n2["Service<br/>singleton, class"]\n'
+        '  n1 -->|config| n0\n'
+        '  n2 -->|store| n1\n'
+        '  n2 -->|config| n0'
+    )
+
+
+def test_an_unbound_default_becomes_a_dashed_node_in_both_formats() -> None:
+    class Client:
+        def __init__(self, timeout: float = 5.0) -> None:
+            self.timeout = timeout
+
+    graph = build_graph(build_plan(Container().bind(Client).records()))
+    assert '  u0 [label="float\\nunbound", shape=box, style=dashed];' in graph.dot()
+    assert '  n0 -> u0 [label="timeout", style=dashed];' in graph.dot()
+    assert '  u0["float<br/>unbound"]' in graph.mermaid()
+    assert '  n0 -.->|timeout| u0' in graph.mermaid()
+
+
+def test_a_quote_in_a_key_is_escaped_per_format() -> None:
+    weird = Token[int]('a "quoted" name')
+    graph = build_graph(build_plan(Container().value(weird, 1).records()))
+    assert '\\"quoted\\"' in graph.dot()
+    assert '#quot;quoted#quot;' in graph.mermaid()
+
+
+def test_both_exports_are_identical_on_two_calls() -> None:
+    graph = build()
+    assert graph.dot() == graph.dot()
+    assert graph.mermaid() == graph.mermaid()
+
+
+def test_both_exports_declare_one_node_per_provider() -> None:
+    graph = build()
+    assert graph.dot().count('shape=box];') == len(graph.nodes)
+    assert graph.mermaid().count('["') == len(graph.nodes)
+
+
+@pytest.mark.skip(reason='enabled in Task 5')
+def test_the_exports_do_not_depend_on_the_hash_seed() -> None:
+    program = (
+        'from depin import Container\n'
+        'class Config: ...\n'
+        'class Store:\n'
+        '    def __init__(self, config: Config) -> None: ...\n'
+        'class Service:\n'
+        '    def __init__(self, store: Store, config: Config) -> None: ...\n'
+        'di = Container().bind(Config).bind(Store).bind(Service).freeze()\n'
+        'print(di.graph().dot())\n'
+        'print(di.graph().mermaid())\n'
+        'print(di.explain(Service))\n'
+    )
+    outputs = [
+        subprocess.run(
+            [sys.executable, '-c', program],
+            capture_output=True,
+            check=True,
+            text=True,
+            env={**os.environ, 'PYTHONHASHSEED': seed},
+        ).stdout
+        for seed in ('0', '1', '12345')
+    ]
+    assert outputs[0] == outputs[1] == outputs[2]
