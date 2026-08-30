@@ -54,16 +54,23 @@ class _AsyncWaiter:
 
 
 class _Flight:
-    __slots__ = ('_event', '_mutex', '_waiters', 'finished')
+    __slots__ = ('_event', '_mutex', '_waiters', 'finished', 'leader')
 
-    def __init__(self) -> None:
-        self._event = threading.Event()
+    def __init__(self, leader: '_Leader') -> None:
+        self._event: threading.Event | None = None
         self._mutex = threading.Lock()
         self._waiters: list[_AsyncWaiter] = []
         self.finished = False
+        self.leader = leader
 
     def wait_sync(self) -> None:
-        self._event.wait()
+        with self._mutex:
+            if self.finished:
+                return
+            if self._event is None:
+                self._event = threading.Event()
+            event = self._event
+        event.wait()
 
     async def wait_async(self) -> None:
         loop = asyncio.get_running_loop()
@@ -89,7 +96,9 @@ class _Flight:
             self.finished = True
             waiters = tuple(self._waiters)
             self._waiters.clear()
-        self._event.set()
+            event = self._event
+        if event is not None:
+            event.set()
         for waiter in waiters:
             if waiter.loop.is_closed():
                 continue
@@ -103,6 +112,17 @@ class _Flight:
     def _complete_waiter(future: asyncio.Future[None]) -> None:
         if not future.done():
             future.set_result(None)
+
+
+class _Leader:
+    __slots__ = ('flight',)
+
+    def __init__(self) -> None:
+        self.flight: _Flight | None = None
+
+    @property
+    def finished(self) -> bool:
+        return self.flight is not None and self.flight.finished
 
 
 class ScopeFrame:
@@ -123,7 +143,7 @@ class ScopeFrame:
 
     def __init__(self, parent: 'ScopeFrame | None' = None) -> None:
         self._cache: dict[object, object] = {}
-        self._flights: dict[object, _Flight] = {}
+        self._flights: dict[object, _Flight | _Leader] = {}
         self._teardowns: list[Teardown] = []
         self._mutex = threading.Lock()
         self.parent = parent
@@ -221,22 +241,74 @@ class ScopeFrame:
             self._teardowns.clear()
         return records
 
-    def start_flight(self, key: object) -> tuple[_Flight, bool]:
-        """Join a per-key construction flight, or start one when none is active."""
+    def claim_cached(self, key: object) -> tuple[object, _Flight | _Leader | None]:
+        """Atomically return a cached value or claim/join its construction flight."""
         with self._mutex:
+            value = self._cache.get(key, MISSING)
+            if value is not MISSING:
+                return value, None
             flight = self._flights.get(key)
-            if flight is not None:
-                return flight, False
-            flight = _Flight()
-            self._flights[key] = flight
-            return flight, True
+            if flight is None:
+                leader = _Leader()
+                self._flights[key] = leader
+                return MISSING, leader
+            if isinstance(flight, _Flight):
+                return MISSING, flight
+            joined = _Flight(flight)
+            flight.flight = joined
+            self._flights[key] = joined
+            return MISSING, joined
 
-    def finish_flight(self, key: object, flight: _Flight) -> None:
-        """Finish ``flight`` and remove it only when it remains active for ``key``."""
+    def is_leader(self, claim: _Flight | _Leader | None) -> bool:
+        return isinstance(claim, _Leader)
+
+    def publish(self, key: object, leader: object, value: object) -> _Flight | None:
+        """Cache a leader's value and return any followers to signal after unlocking."""
         with self._mutex:
-            if self._flights.get(key) is flight:
+            active = self._flights.get(key)
+            if active is leader:
+                self._cache[key] = value
                 del self._flights[key]
-        flight.finish()
+                return None
+            if isinstance(leader, _Leader) and isinstance(active, _Flight) and active.leader is leader:
+                self._cache[key] = value
+                del self._flights[key]
+                return active
+            return None
+
+    def abort(self, key: object, leader: object) -> _Flight | None:
+        """Remove a failed leader's flight and return any followers to signal after unlocking."""
+        with self._mutex:
+            active = self._flights.get(key)
+            if active is leader:
+                del self._flights[key]
+                return None
+            if isinstance(leader, _Leader) and isinstance(active, _Flight) and active.leader is leader:
+                del self._flights[key]
+                return active
+            return None
+
+    def start_flight(self, key: object) -> tuple[_Flight | _Leader, bool]:
+        """Join a per-key construction flight, or start one when none is active."""
+        value, flight = self.claim_cached(key)
+        if value is not MISSING or flight is None:
+            raise KeyError(key)
+        return flight, isinstance(flight, _Leader)
+
+    def wait_sync(self, flight: _Flight | _Leader) -> None:
+        if isinstance(flight, _Flight):
+            flight.wait_sync()
+
+    async def wait_async(self, flight: _Flight | _Leader) -> None:
+        if isinstance(flight, _Flight):
+            await flight.wait_async()
+
+    def finish_flight(self, key: object, flight: _Flight | _Leader) -> None:
+        """Finish ``flight`` and remove it only when it remains active for ``key``."""
+        if isinstance(flight, _Leader):
+            follower = self.abort(key, flight)
+            if follower is not None:
+                follower.finish()
 
 
 _active: ContextVar[ScopeFrame | None] = ContextVar('depin_active_frame', default=None)

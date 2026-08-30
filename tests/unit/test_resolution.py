@@ -92,6 +92,45 @@ else:
     )
 
 
+def test_sync_dynamic_cycle_during_parameter_resolution_raises() -> None:
+    script = """
+from depin import Container
+from depin.errors import CircularDependencyError
+
+frozen: object
+
+class A: ...
+class B: ...
+
+def make_a(value: B) -> A:
+    return A()
+
+def make_b() -> B:
+    return frozen.resolve(A)
+
+frozen = Container().bind(make_a, provides=A).bind(make_b, provides=B).freeze()
+try:
+    frozen.resolve(A)
+except CircularDependencyError as exc:
+    print(exc)
+else:
+    raise AssertionError('dynamic resolution cycle did not raise CircularDependencyError')
+"""
+    completed = subprocess.run(
+        [sys.executable, '-c', script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=2,
+        cwd=Path(frozen_module.__file__).parents[2],
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout == (
+        'A is already constructing in this context; '
+        'resolve a different dependency or break the recursive provider call\n'
+    )
+
+
 def test_sync_single_flight_keeps_unrelated_singletons_independent() -> None:
     script = """
 import threading

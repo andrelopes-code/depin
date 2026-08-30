@@ -482,8 +482,7 @@ async def test_async_and_sync_resolution_share_one_flight() -> None:
         root: ScopeFrame = object.__getattribute__(frozen, '_root')
         flight, constructs = root.start_flight((Value, None))
         assert not constructs
-        event: threading.Event = object.__getattribute__(flight, '_event')
-        object.__setattr__(flight, '_event', RecordingEvent(event))
+        object.__setattr__(flight, '_event', RecordingEvent(threading.Event()))
         follower = threading.Thread(target=sync_follower)
         follower.start()
         follower_waiting.wait()
@@ -501,13 +500,16 @@ async def test_async_and_sync_resolution_share_one_flight() -> None:
 @pytest.mark.asyncio
 async def test_closed_loop_waiter_does_not_mask_a_live_waiter() -> None:
     frame = ScopeFrame()
-    flight, leader = frame.start_flight(object())
-    assert leader
+    key = object()
+    leader, constructs = frame.start_flight(key)
+    assert constructs
+    flight, joins = frame.start_flight(key)
+    assert not joins
     closed_waiter_registered = threading.Event()
 
     def register_closed_waiter() -> None:
         loop = asyncio.new_event_loop()
-        task = loop.create_task(flight.wait_async())
+        task = loop.create_task(frame.wait_async(flight))
         loop.call_soon(loop.stop)
         loop.run_forever()
         assert not task.done()
@@ -522,13 +524,13 @@ async def test_closed_loop_waiter_does_not_mask_a_live_waiter() -> None:
     value = object()
 
     async def wait_for_value() -> object:
-        await flight.wait_async()
+        await frame.wait_async(flight)
         return value
 
     live_waiter = asyncio.create_task(wait_for_value())
     await _checkpoint()
     try:
-        frame.finish_flight(object(), flight)
+        frame.finish_flight(key, leader)
         await _checkpoint()
         assert live_waiter.done()
         assert await live_waiter is value
@@ -643,6 +645,28 @@ async def test_async_child_task_self_resolution_raises_instead_of_waiting() -> N
 
 
 @pytest.mark.asyncio
+async def test_async_dynamic_cycle_during_parameter_resolution_raises() -> None:
+    frozen: FrozenContainer
+
+    class A: ...
+
+    class B: ...
+
+    async def make_a(value: B) -> A:
+        return A()
+
+    async def make_b() -> B:
+        child = asyncio.create_task(frozen.aresolve(A))
+        await child
+        return B()
+
+    frozen = Container().bind(make_a, provides=A).bind(make_b, provides=B).freeze()
+    async with asyncio.timeout(1):
+        with pytest.raises(CircularDependencyError, match='already constructing'):
+            await frozen.aresolve(A)
+
+
+@pytest.mark.asyncio
 async def test_stale_and_duplicate_flight_completion_do_not_signal_replacement() -> None:
     frame = ScopeFrame()
     old, leader = frame.start_flight(object())
@@ -654,6 +678,8 @@ async def test_stale_and_duplicate_flight_completion_do_not_signal_replacement()
     frame.finish_flight(key, first)
     replacement, leader = frame.start_flight(key)
     assert leader
+    _follower, joins = frame.start_flight(key)
+    assert not joins
     frame.finish_flight(key, first)
     assert not replacement.finished
     frame.finish_flight(key, replacement)

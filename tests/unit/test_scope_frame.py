@@ -18,15 +18,17 @@ def test_active_frame_raises_without_push() -> None:
 async def test_finishing_flight_completes_registered_async_waiter() -> None:
     frame = ScopeFrame()
     key = object()
-    flight, constructs = frame.start_flight(key)
+    leader, constructs = frame.start_flight(key)
     assert constructs
+    flight, joins = frame.start_flight(key)
+    assert not joins
 
-    waiter = asyncio.create_task(flight.wait_async())
+    waiter = asyncio.create_task(frame.wait_async(flight))
     checkpoint = asyncio.get_running_loop().create_future()
     asyncio.get_running_loop().call_soon(checkpoint.set_result, None)
     await checkpoint
 
-    frame.finish_flight(key, flight)
+    frame.finish_flight(key, leader)
     await asyncio.wait_for(waiter, timeout=1)
 
 
@@ -87,7 +89,7 @@ def test_start_flight_designates_one_leader_and_joins_followers() -> None:
     second, second_constructs = frame.start_flight(key)
 
     assert first_constructs
-    assert second is first
+    assert second is not first
     assert not second_constructs
 
 

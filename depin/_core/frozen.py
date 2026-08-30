@@ -14,7 +14,17 @@ from depin._core.teardown import Teardown
 from depin._core.typeguards import is_provider_key
 from depin.errors import AsyncInSyncContextError, CircularDependencyError, MissingProviderError
 
-_constructing: ContextVar[tuple[tuple[ScopeFrame, object], ...]] = ContextVar('depin_constructing', default=())
+
+class _Constructing:
+    __slots__ = ('cache_id', 'frame', 'parent')
+
+    def __init__(self, frame: ScopeFrame, cache_id: object, parent: '_Constructing | None') -> None:
+        self.frame = frame
+        self.cache_id = cache_id
+        self.parent = parent
+
+
+_constructing: ContextVar[_Constructing | None] = ContextVar('depin_constructing', default=None)
 
 
 class FrozenContainer:
@@ -348,75 +358,92 @@ class FrozenContainer:
     def _resolve_sync(self, spec: ProviderSpec) -> object:
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
-        frame = self._cache_target(spec)
-        if frame is None:
+        if spec.scope is Scope.TRANSIENT:
             return self._construct_sync(spec)
+        if spec.scope is Scope.SINGLETON:
+            return self._resolve_cached_sync(spec, self._root)
+        return self._resolve_cached_sync(spec, active_frame())
+
+    def _resolve_cached_sync(self, spec: ProviderSpec, frame: ScopeFrame) -> object:
         cache_id = (spec.key, spec.tag)
         cached = frame.lookup(cache_id)
         if cached is not MISSING:
             return cached
         while True:
-            if self._is_constructing(frame, cache_id):
-                raise CircularDependencyError(
-                    f'{fmt_key(spec.key)} is already constructing in this context; '
-                    'resolve a different dependency or break the recursive provider call'
-                )
-            flight, constructs = frame.start_flight(cache_id)
-            if not constructs:
-                flight.wait_sync()
+            cached, claim = frame.claim_cached(cache_id)
+            if cached is not MISSING:
+                return cached
+            if not frame.is_leader(claim):
+                if self._is_constructing(frame, cache_id):
+                    raise CircularDependencyError(
+                        f'{fmt_key(spec.key)} is already constructing in this context; '
+                        'resolve a different dependency or break the recursive provider call'
+                    )
+                if claim is not None:
+                    frame.wait_sync(claim)
                 continue
+            leader = claim
+            token = _constructing.set(_Constructing(frame, cache_id, _constructing.get()))
             try:
-                cached = frame.lookup(cache_id)
-                if cached is not MISSING:
-                    return cached
-                with self._construction(frame, cache_id):
-                    value = self._construct_sync(spec)
-                frame.provide(cache_id, value)
-                return value
+                kwargs = self._resolve_params_sync(spec) if spec.params else {}
+                value = construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+            except BaseException:
+                follower = frame.abort(cache_id, leader)
+                if follower is not None:
+                    follower.finish()
+                raise
             finally:
-                frame.finish_flight(cache_id, flight)
+                _constructing.reset(token)
+            follower = frame.publish(cache_id, leader, value)
+            if follower is not None:
+                follower.finish()
+            return value
 
     async def _resolve_async(self, spec: ProviderSpec) -> object:
         frame = self._cache_target(spec)
         if frame is None:
             return await self._construct_async(spec)
         cache_id = (spec.key, spec.tag)
+        cached = frame.lookup(cache_id)
+        if cached is not MISSING:
+            return cached
         while True:
-            cached = frame.lookup(cache_id)
+            cached, claim = frame.claim_cached(cache_id)
             if cached is not MISSING:
                 return cached
-            if self._is_constructing(frame, cache_id):
-                raise CircularDependencyError(
-                    f'{fmt_key(spec.key)} is already constructing in this context; '
-                    'resolve a different dependency or break the recursive provider call'
-                )
-            flight, constructs = frame.start_flight(cache_id)
-            if not constructs:
-                await flight.wait_async()
+            if not frame.is_leader(claim):
+                if self._is_constructing(frame, cache_id):
+                    raise CircularDependencyError(
+                        f'{fmt_key(spec.key)} is already constructing in this context; '
+                        'resolve a different dependency or break the recursive provider call'
+                    )
+                if claim is not None:
+                    await frame.wait_async(claim)
                 continue
+            leader = claim
+            token = _constructing.set(_Constructing(frame, cache_id, _constructing.get()))
             try:
-                cached = frame.lookup(cache_id)
-                if cached is not MISSING:
-                    return cached
-                with self._construction(frame, cache_id):
-                    value = await self._construct_async(spec)
-                frame.provide(cache_id, value)
-                return value
+                kwargs = await self._resolve_params_async(spec) if spec.params else {}
+                value = await construct.asynchronous(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+            except BaseException:
+                follower = frame.abort(cache_id, leader)
+                if follower is not None:
+                    follower.finish()
+                raise
             finally:
-                frame.finish_flight(cache_id, flight)
+                _constructing.reset(token)
+            follower = frame.publish(cache_id, leader, value)
+            if follower is not None:
+                follower.finish()
+            return value
 
     def _is_constructing(self, frame: ScopeFrame, cache_id: object) -> bool:
-        return any(
-            current_frame is frame and current_key == cache_id for current_frame, current_key in _constructing.get()
-        )
-
-    @contextlib.contextmanager
-    def _construction(self, frame: ScopeFrame, cache_id: object) -> Generator[None]:
-        token = _constructing.set((*_constructing.get(), (frame, cache_id)))
-        try:
-            yield
-        finally:
-            _constructing.reset(token)
+        current = _constructing.get()
+        while current is not None:
+            if current.frame is frame and current.cache_id == cache_id:
+                return True
+            current = current.parent
+        return False
 
     def _construct_sync(self, spec: ProviderSpec) -> object:
         kwargs = self._resolve_params_sync(spec) if spec.params else {}
