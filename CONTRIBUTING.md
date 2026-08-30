@@ -105,6 +105,24 @@ You can check coverage locally with:
 uv run pytest --cov=depin --cov-report=term-missing
 ```
 
+### Mutation testing
+
+Mutation testing verifies that the unit suite rejects behavior changes in
+`depin/_core/`. Run the complete local gate with:
+
+```bash
+rm -rf mutants
+uv run mutmut run
+uv run mutmut export-cicd-stats
+uv run python -m scripts.check_mutation_threshold mutants/mutmut-cicd-stats.json
+uv run mutmut results
+```
+
+The run requires at least 95% killed mutants, at most 5% surviving mutants,
+and zero inconclusive results. It runs weekly, on demand, and for pull requests
+that change the core, tests, its configuration, or this gate. `mutants/` is
+disposable generated state and must never be committed.
+
 ## Benchmarks
 
 `benchmarks/` holds `pytest-benchmark` suites that guard hot paths — container

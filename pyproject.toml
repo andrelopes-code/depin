@@ -56,6 +56,7 @@ dev = [
     "fastapi>=0.133",
     "mypy>=1.18",
     "hypothesis>=6.138,<6.156",
+    "mutmut>=3.7,<4",
 ]
 # The extended matrix runs free-threaded and pre-release interpreters, where
 # `fastapi` and its compiled transitive dependencies have no wheels. The core
@@ -145,3 +146,9 @@ branch = true
 [tool.coverage.report]
 fail_under = 95
 show_missing = true
+
+[tool.mutmut]
+source_paths = ["depin"]
+also_copy = ["scripts"]
+only_mutate = ["depin/_core/*.py"]
+pytest_add_cli_args_test_selection = ["tests/unit"]
