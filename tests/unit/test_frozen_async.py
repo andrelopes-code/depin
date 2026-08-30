@@ -243,7 +243,8 @@ async def test_async_singleton_failure_wakes_a_follower_to_retry() -> None:
     release_failure.set()
     with pytest.raises(RuntimeError, match='first construction fails'):
         await leader
-    assert await follower == 7
+    async with asyncio.timeout(1):
+        assert await follower == 7
     assert attempts == 2
 
 
@@ -278,7 +279,8 @@ async def test_cancelled_async_singleton_constructor_wakes_a_follower_to_retry()
     with pytest.raises(asyncio.CancelledError):
         await leader
     await cancelled.wait()
-    assert await follower == 7
+    async with asyncio.timeout(1):
+        assert await follower == 7
     assert attempts == 2
 
 
@@ -329,8 +331,8 @@ async def test_async_follower_does_not_occupy_the_default_executor() -> None:
     loop = asyncio.get_running_loop()
     executor = ThreadPoolExecutor(max_workers=1)
     loop.set_default_executor(executor)
+    leader = asyncio.create_task(frozen.aresolve(int))
     try:
-        leader = asyncio.create_task(frozen.aresolve(int))
         await started.wait()
         follower = asyncio.create_task(frozen.aresolve(int))
         marker = loop.create_future()
@@ -358,19 +360,20 @@ async def test_cancelled_async_follower_does_not_occupy_the_default_executor() -
     loop = asyncio.get_running_loop()
     executor = ThreadPoolExecutor(max_workers=1)
     loop.set_default_executor(executor)
+    leader = asyncio.create_task(frozen.aresolve(int))
     try:
-        leader = asyncio.create_task(frozen.aresolve(int))
         await started.wait()
         follower = asyncio.create_task(frozen.aresolve(int))
         marker = loop.create_future()
         loop.call_soon(marker.set_result, None)
         await marker
         follower.cancel()
+        release.set()
         with pytest.raises(asyncio.CancelledError):
             await follower
+    finally:
         release.set()
         assert await leader == 7
-    finally:
         executor.shutdown(wait=True)
 
 
@@ -522,8 +525,22 @@ def test_sync_self_resolution_raises_instead_of_waiting_for_its_own_flight() -> 
         return frozen.resolve(int)
 
     frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
-    with pytest.raises(CircularDependencyError, match='already constructing'):
-        frozen.resolve(int)
+    finished = threading.Event()
+    errors: list[BaseException] = []
+
+    def resolve() -> None:
+        try:
+            _ = frozen.resolve(int)
+        except BaseException as exc:
+            errors.append(exc)
+        finally:
+            finished.set()
+
+    thread = threading.Thread(target=resolve, daemon=True)
+    thread.start()
+    assert finished.wait(1)
+    assert len(errors) == 1
+    assert isinstance(errors[0], CircularDependencyError)
 
 
 @pytest.mark.asyncio
@@ -535,8 +552,9 @@ async def test_async_child_task_self_resolution_raises_instead_of_waiting() -> N
         return await child
 
     frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
-    with pytest.raises(CircularDependencyError, match='already constructing'):
-        await frozen.aresolve(int)
+    async with asyncio.timeout(1):
+        with pytest.raises(CircularDependencyError, match='already constructing'):
+            await frozen.aresolve(int)
 
 
 @pytest.mark.asyncio

@@ -61,6 +61,18 @@ def test_lookup_reports_absence_without_raising() -> None:
     assert 'nope' in frame
 
 
+def test_start_flight_designates_one_leader_and_joins_followers() -> None:
+    frame = ScopeFrame()
+    key = object()
+
+    first, first_constructs = frame.start_flight(key)
+    second, second_constructs = frame.start_flight(key)
+
+    assert first_constructs
+    assert second is first
+    assert not second_constructs
+
+
 def test_a_scope_value_must_be_supplied_before_it_resolves() -> None:
     class Marker: ...
 
