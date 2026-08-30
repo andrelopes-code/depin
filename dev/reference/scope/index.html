@@ -795,10 +795,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.sync_lock_for" class="md-nav__link">
+  <a href="#depin.ScopeFrame.claim_cached" class="md-nav__link">
     <span class="md-ellipsis">
       
-        sync_lock_for
+        claim_cached
       
     </span>
   </a>
@@ -806,10 +806,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.async_lock_for" class="md-nav__link">
+  <a href="#depin.ScopeFrame.publish" class="md-nav__link">
     <span class="md-ellipsis">
       
-        async_lock_for
+        publish
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.abort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        abort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.start_flight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        start_flight
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.finish_flight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        finish_flight
       
     </span>
   </a>
@@ -1026,10 +1059,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.sync_lock_for" class="md-nav__link">
+  <a href="#depin.ScopeFrame.claim_cached" class="md-nav__link">
     <span class="md-ellipsis">
       
-        sync_lock_for
+        claim_cached
       
     </span>
   </a>
@@ -1037,10 +1070,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#depin.ScopeFrame.async_lock_for" class="md-nav__link">
+  <a href="#depin.ScopeFrame.publish" class="md-nav__link">
     <span class="md-ellipsis">
       
-        async_lock_for
+        publish
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.abort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        abort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.start_flight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        start_flight
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.finish_flight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        finish_flight
       
     </span>
   </a>
@@ -1428,17 +1494,19 @@ an event loop to run.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="depin.ScopeFrame.sync_lock_for" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">sync_lock_for</span>
+<h3 id="depin.ScopeFrame.claim_cached" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">claim_cached</span>
 
 
-<a href="#depin.ScopeFrame.sync_lock_for" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">sync_lock_for</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span>
+<a href="#depin.ScopeFrame.claim_cached" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">claim_cached</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="n">_Leader</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Return a per-key mutex, created on first use, for single-flight construction.</p>
+        <p>Atomically return a cached value or claim/join its construction flight.</p>
 
 
     </div>
@@ -1448,17 +1516,81 @@ an event loop to run.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="depin.ScopeFrame.async_lock_for" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">async_lock_for</span>
+<h3 id="depin.ScopeFrame.publish" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">publish</span>
 
 
-<a href="#depin.ScopeFrame.async_lock_for" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">async_lock_for</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Lock</span>
+<a href="#depin.ScopeFrame.publish" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">publish</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">leader</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">object</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Return a per-key async lock, created on first use, for single-flight construction.</p>
+        <p>Cache a leader's value and return any followers to signal after unlocking.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.ScopeFrame.abort" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">abort</span>
+
+
+<a href="#depin.ScopeFrame.abort" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">abort</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">leader</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Remove a failed leader's flight and return any followers to signal after unlocking.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.ScopeFrame.start_flight" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">start_flight</span>
+
+
+<a href="#depin.ScopeFrame.start_flight" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">start_flight</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">_Flight</span> <span class="o">|</span> <span class="n">_Leader</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Join a per-key construction flight, or start one when none is active.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.ScopeFrame.finish_flight" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">finish_flight</span>
+
+
+<a href="#depin.ScopeFrame.finish_flight" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">finish_flight</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">flight</span><span class="p">:</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="n">_Leader</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Finish <code>flight</code> and remove it only when it remains active for <code>key</code>.</p>
 
 
     </div>

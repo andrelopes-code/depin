@@ -1121,8 +1121,8 @@ providers in tests with <code>override()</code>.</p>
 and the root scope. It is safe to share across threads and tasks: scopes are
 tracked per <code>contextvars.Context</code>, so concurrent requests never see each
 other's scoped instances, and construction of a cached provider is
-single-flighted under both a thread lock and an asyncio lock — a singleton is
-built exactly once no matter how many threads or tasks race for it.</p>
+single-flighted across threads and event loops — a singleton is built
+exactly once no matter how many threads or tasks race for it.</p>
 
 
 <details class="example" open>
@@ -1295,6 +1295,16 @@ raises rather than blocking an event loop — use <code>aresolve()</code> instea
               </div>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CircularDependencyError (depin.errors.CircularDependencyError)" href="../errors/#depin.errors.CircularDependencyError">CircularDependencyError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>This context re-enters construction of the same cached provider.</p>
+              </div>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -1416,6 +1426,16 @@ under concurrency.</p>
             <td>
               <div class="doc-md-description">
                 <p><code>key</code> is scoped and no scope is active.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CircularDependencyError (depin.errors.CircularDependencyError)" href="../errors/#depin.errors.CircularDependencyError">CircularDependencyError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>This task re-enters construction of the same cached provider.</p>
               </div>
             </td>
           </tr>
