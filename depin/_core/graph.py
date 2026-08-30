@@ -12,7 +12,7 @@ from types import ModuleType
 from depin._core.markers import get_provides
 from depin._core.providers import ASYNC_SHAPES, build_specs
 from depin._core.scope import Scope
-from depin._core.spec import BindRecord, ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
+from depin._core.spec import BindRecord, ProviderKey, ProviderSpec, ResolutionPlan, fmt_chain, fmt_key
 from depin.errors import (
     CaptiveDependencyError,
     CircularDependencyError,
@@ -73,7 +73,10 @@ def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index) -> None:
     # Deepest chain first: the longest resolution path is the most informative
     # one to show when several providers are unsatisfied.
     ordered = sorted(missing.items(), key=lambda kv: len(kv[1][0]), reverse=True)
-    lines = [_format_missing(ident, chain, owner, param_name) for ident, (chain, owner, param_name) in ordered]
+    lines = [
+        format_missing(ident[0], tuple(spec.key for spec in chain), owner.key, param_name)
+        for ident, (chain, owner, param_name) in ordered
+    ]
     if len(lines) == 1:
         raise MissingProviderError(lines[0])
     body = '\n  - '.join(lines)
@@ -122,20 +125,23 @@ def _collect_missing(
             stack.append((dep, (*current_chain, dep)))
 
 
-def _format_missing(
-    ident: _Ident,
-    chain: tuple[ProviderSpec, ...],
-    owner: ProviderSpec,
+def format_missing(
+    key: ProviderKey,
+    chain: tuple[ProviderKey, ...],
+    owner: ProviderKey,
     param_name: str,
 ) -> str:
-    key, _tag = ident
-    path = ' -> '.join(fmt_key(s.key) for s in chain)
-    suggestions = _suggest_candidates(key)
+    """The message `build_plan` raises for an unsatisfied parameter.
+
+    Also used by `depin._core.render` for a key that `explain()` is asked about
+    and no binding provides, so the two paths report one chain in one wording.
+    """
+    suggestions = suggest_candidates(key)
     extra = f'; candidates: {", ".join(suggestions)}' if suggestions else ''
     return (
         f'no provider for {fmt_key(key)} '
-        f'(required by {fmt_key(owner.key)}.{param_name}; '
-        f'resolution chain: {path} -> {fmt_key(key)}){extra}'
+        f'(required by {fmt_key(owner)}.{param_name}; '
+        f'resolution chain: {fmt_chain((*chain, key))}){extra}'
     )
 
 
@@ -150,13 +156,13 @@ def _loaded_modules() -> list[object]:
     behind, on every version. On 3.12 only, `typing` also registers
     `typing.io`/`typing.re` as classes standing in for modules; CPython removed
     both in 3.13. Returning `object` keeps the `isinstance` guard in
-    `_suggest_candidates` meaningful instead of flagged as unreachable by a
+    `suggest_candidates` meaningful instead of flagged as unreachable by a
     checker that trusts the narrower stub.
     """
     return list(sys.modules.values())
 
 
-def _suggest_candidates(target: object) -> list[str]:
+def suggest_candidates(target: object) -> list[str]:
     """Scan loaded modules for `@provides(target)` hints. Used only at error time.
 
     Candidates are found by walking every module in ``sys.modules`` and every

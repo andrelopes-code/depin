@@ -118,3 +118,12 @@ def fmt_key(key: object) -> str:
     if isinstance(key, type):
         return key.__qualname__
     return repr(key)
+
+
+def fmt_chain(keys: Iterable[object]) -> str:
+    """Render a resolution path as ``A -> B -> C``, in walk order.
+
+    Every rendered path in the library goes through here, so an error message
+    and a diagnostic can never disagree about how a chain is spelled.
+    """
+    return ' -> '.join(fmt_key(key) for key in keys)
