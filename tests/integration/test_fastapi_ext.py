@@ -53,3 +53,27 @@ async def test_request_is_available_as_scoped_dependency() -> None:
     async with AsyncClient(transport=transport, base_url='http://t') as client:
         r = await client.get('/probe/abc')
     assert r.json() == {'p': '/probe/abc'}
+
+
+@pytest.mark.asyncio
+async def test_the_graph_describes_a_request_scoped_binding() -> None:
+    class Session:
+        pass
+
+    frozen = Container().bind(Session, scope=Scope.SCOPED).freeze()
+
+    app = FastAPI()
+    app.add_middleware(RequestScope, container=frozen)
+
+    @app.get('/explain')
+    async def _explain(session: Inject[Session]) -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
+        del session
+        return {'tree': frozen.explain(Session), 'dot': frozen.graph().dot()}
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        body = (await client.get('/explain')).json()
+
+    assert body['tree'] == ('test_the_graph_describes_a_request_scoped_binding.<locals>.Session  [scoped, class]')
+    assert 'digraph depin {' in body['dot']
+    assert frozen.graph().node(Session).scope is Scope.SCOPED

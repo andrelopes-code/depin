@@ -9,6 +9,8 @@ from depin._core.spec import (
     ProviderShape,
     ProviderSpec,
     ResolutionPlan,
+    fmt_chain,
+    fmt_key,
 )
 
 
@@ -57,3 +59,21 @@ def test_resolution_plan_lookup() -> None:
     )
     plan = ResolutionPlan(order=(spec,), by_key={(C, None): spec})
     assert plan.by_key[(C, None)] is spec
+
+
+def test_fmt_chain_joins_keys_with_arrows() -> None:
+    class First: ...
+
+    class Second: ...
+
+    assert fmt_chain([First, Second]) == f'{fmt_key(First)} -> {fmt_key(Second)}'
+
+
+def test_fmt_chain_of_one_key_has_no_arrow() -> None:
+    class Only: ...
+
+    assert fmt_chain([Only]) == fmt_key(Only)
+
+
+def test_fmt_chain_of_nothing_is_empty() -> None:
+    assert fmt_chain([]) == ''

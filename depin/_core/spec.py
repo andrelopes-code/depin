@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import Enum
 from typing import Protocol, TypeGuard, runtime_checkable
 
 from depin._core.markers import Token
@@ -10,18 +10,54 @@ from depin._core.scope import Scope
 
 
 class ProviderShape(Enum):
-    CLASS = auto()
-    FUNCTION = auto()
-    ASYNC_FUNCTION = auto()
-    GENERATOR = auto()
-    ASYNC_GENERATOR = auto()
-    CONTEXT_MANAGER = auto()
-    ASYNC_CONTEXT_MANAGER = auto()
-    VALUE = auto()
-    FRAME = auto()
+    """How a provider produces its value, and whether it owns a teardown.
+
+    Reported by `GraphNode.shape`. `Container.freeze()` infers it from the
+    binding: a class, a factory's kind, or a value.
+
+    Attributes:
+        CLASS: A class, instantiated with its resolved constructor arguments.
+        FUNCTION: A synchronous factory, called with its resolved arguments.
+        ASYNC_FUNCTION: A coroutine factory, awaited. Requires `aresolve`.
+        GENERATOR: A generator factory that yields once and resumes at
+            teardown. Cannot be transient.
+        ASYNC_GENERATOR: An async generator factory that yields once and
+            resumes at teardown. Requires `aresolve` and cannot be transient.
+        CONTEXT_MANAGER: A factory returning a context manager, entered on
+            construction and exited at teardown. Cannot be transient.
+        ASYNC_CONTEXT_MANAGER: A factory returning an async context manager.
+            Requires `aresolve` and cannot be transient.
+        VALUE: A value bound directly with `Container.value`; nothing is called.
+        FRAME: A value the active scope frame supplies, bound with
+            `Container.scope_value`; nothing is called.
+
+    Example:
+        ```pycon
+        >>> from depin import Container, ProviderShape
+        >>> class Config: ...
+        >>> di = Container().bind(Config).freeze()
+        >>> di.graph().node(Config).shape is ProviderShape.CLASS
+        True
+
+        ```
+    """
+
+    CLASS = 'class'
+    FUNCTION = 'function'
+    ASYNC_FUNCTION = 'async function'
+    GENERATOR = 'generator'
+    ASYNC_GENERATOR = 'async generator'
+    CONTEXT_MANAGER = 'context manager'
+    ASYNC_CONTEXT_MANAGER = 'async context manager'
+    VALUE = 'value'
+    FRAME = 'frame'
 
 
 type ProviderKey = type[object] | Token[object] | str
+"""What a provider can be bound and resolved under: a class, a `Token`, or a name."""
+
+type Ident = tuple[ProviderKey, str | None]
+"""A provider's identity: its key paired with its tag. Private to `_core`."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,3 +154,12 @@ def fmt_key(key: object) -> str:
     if isinstance(key, type):
         return key.__qualname__
     return repr(key)
+
+
+def fmt_chain(keys: Iterable[object]) -> str:
+    """Render a resolution path as ``A -> B -> C``, in walk order.
+
+    Every rendered path in the library goes through here, so an error message
+    and a diagnostic can never disagree about how a chain is spelled.
+    """
+    return ' -> '.join(fmt_key(key) for key in keys)

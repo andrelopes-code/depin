@@ -10,8 +10,13 @@ import depin
 EXPECTED_EXPORTS = (
     'Bindings',
     'Container',
+    'DependencyGraph',
     'FrozenContainer',
+    'GraphEdge',
+    'GraphNode',
     'Named',
+    'ProviderKey',
+    'ProviderShape',
     'Registry',
     'Scope',
     'ScopeDecorator',

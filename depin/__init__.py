@@ -25,11 +25,12 @@ from importlib.metadata import PackageNotFoundError, version
 
 from depin._core.bindings import ScopeDecorator
 from depin._core.container import Container
+from depin._core.diagnostics import DependencyGraph, GraphEdge, GraphNode
 from depin._core.frozen import FrozenContainer
 from depin._core.markers import Named, Tag, Token, injected, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope, ScopeFrame
-from depin._core.spec import Bindings
+from depin._core.spec import Bindings, ProviderKey, ProviderShape
 
 try:
     __version__ = version('pydepin')
@@ -41,8 +42,13 @@ except PackageNotFoundError:
 __all__ = (
     'Bindings',
     'Container',
+    'DependencyGraph',
     'FrozenContainer',
+    'GraphEdge',
+    'GraphNode',
     'Named',
+    'ProviderKey',
+    'ProviderShape',
     'Registry',
     'Scope',
     'ScopeDecorator',

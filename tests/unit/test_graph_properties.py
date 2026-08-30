@@ -9,7 +9,7 @@ from hypothesis import strategies as st
 
 from depin import Container, Scope
 from depin._core.frozen import FrozenContainer
-from depin._core.spec import ResolutionPlan
+from depin._core.spec import ResolutionPlan, fmt_key
 from depin.errors import CaptiveDependencyError, CircularDependencyError, DepinError
 
 
@@ -214,3 +214,85 @@ def test_an_acyclic_graph_never_reports_a_cycle(case: GraphCase) -> None:
 def test_a_graph_without_a_singleton_to_scoped_path_is_not_captive(case: GraphCase) -> None:
     result = _freeze_result(case)
     assert not result.startswith('captive:'), result
+
+
+@given(case=_graphs())
+def test_every_planned_provider_appears_as_exactly_one_node(case: GraphCase) -> None:
+    container = _materialize(case)
+    try:
+        frozen = container.freeze()
+    except DepinError:
+        return
+    graph = frozen.graph()
+    idents = [(node.key, node.tag) for node in graph.nodes]
+    assert len(idents) == len(set(idents))
+    assert len(idents) == len(_frozen_plan(frozen).order)
+
+
+@example(
+    case=GraphCase(
+        size=2,
+        edges=frozenset({(1, 0)}),
+        scopes=(Scope.SINGLETON, Scope.SINGLETON),
+        registered=(True, True),
+        duplicates=frozenset(),
+    )
+)
+@given(case=_graphs())
+def test_every_edge_either_indexes_a_node_or_is_unsatisfied(case: GraphCase) -> None:
+    container = _materialize(case)
+    try:
+        graph = container.freeze().graph()
+    except DepinError:
+        return
+    for node in graph.nodes:
+        for edge in node.dependencies:
+            assert edge.satisfied is (graph.find(edge.key, tag=edge.tag) is not None)
+
+
+@given(case=_graphs())
+def test_each_export_declares_one_entry_per_node(case: GraphCase) -> None:
+    container = _materialize(case)
+    try:
+        graph = container.freeze().graph()
+    except DepinError:
+        return
+    # An unbound dot node ends `style=dashed];`, never `shape=box];`, so that
+    # count is exact; an unbound mermaid node still opens with `["`, so that
+    # count only lower-bounds the node total.
+    assert graph.dot().count('shape=box];') == len(graph.nodes)
+    assert graph.mermaid().count('["') >= len(graph.nodes)
+
+
+@example(
+    case=GraphCase(
+        size=2,
+        edges=frozenset({(1, 0)}),
+        scopes=(Scope.SINGLETON, Scope.SINGLETON),
+        registered=(True, True),
+        duplicates=frozenset(),
+    )
+)
+@given(case=_graphs())
+def test_explain_names_every_key_reachable_from_its_root(case: GraphCase) -> None:
+    container = _materialize(case)
+    try:
+        frozen = container.freeze()
+    except DepinError:
+        return
+    graph = frozen.graph()
+    for root in graph.roots:
+        text = frozen.explain(root.key, tag=root.tag)
+        reachable: set[tuple[object, str | None]] = set()
+        pending = [root]
+        while pending:
+            node = pending.pop()
+            if (node.key, node.tag) in reachable:
+                continue
+            reachable.add((node.key, node.tag))
+            for edge in node.dependencies:
+                child = graph.find(edge.key, tag=edge.tag)
+                if child is not None:
+                    pending.append(child)
+        for key, _tag in reachable:
+            assert fmt_key(key) in text

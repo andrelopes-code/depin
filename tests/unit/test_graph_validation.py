@@ -29,7 +29,7 @@ class MissingProviderSuggestionTarget:
 class MissingProviderSuggestionCandidate(MissingProviderSuggestionTarget):
     """The `@provides` class the suggestion scan is expected to find.
 
-    Module-level by necessity: `_suggest_candidates` finds classes by walking
+    Module-level by necessity: `suggest_candidates` finds classes by walking
     `sys.modules`, so a function-local class is invisible to it, and no real
     application decorates a function-local class with `@provides` either.
     """
