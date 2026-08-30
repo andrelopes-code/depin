@@ -257,7 +257,10 @@ def test_each_export_declares_one_entry_per_node(case: GraphCase) -> None:
         graph = container.freeze().graph()
     except DepinError:
         return
-    assert graph.dot().count('shape=box];') >= len(graph.nodes)
+    # An unbound dot node ends `style=dashed];`, never `shape=box];`, so that
+    # count is exact; an unbound mermaid node still opens with `["`, so that
+    # count only lower-bounds the node total.
+    assert graph.dot().count('shape=box];') == len(graph.nodes)
     assert graph.mermaid().count('["') >= len(graph.nodes)
 
 
