@@ -11,7 +11,7 @@ from typing import Final
 
 from depin._core import teardown
 from depin._core.teardown import Teardown
-from depin.errors import OutsideScopeError
+from depin.errors import DepinError, OutsideScopeError
 
 
 class Scope(Enum):
@@ -317,11 +317,11 @@ class ScopeFrame:
                 return active
             return None
 
-    def start_flight(self, key: object) -> tuple[_Flight | _Leader, bool]:
+    def _start_flight(self, key: object) -> tuple[_Flight | _Leader, bool]:
         """Join a per-key construction flight, or start one when none is active."""
         value, flight = self.claim_cached(key)
         if value is not MISSING or flight is None:
-            raise KeyError(key)
+            raise DepinError(f'cannot begin construction flight for key {key!r}: value is already cached')
         return flight, isinstance(flight, _Leader)
 
     def wait_sync(self, flight: _Flight | _Leader) -> None:

@@ -1,5 +1,7 @@
 """Asynchronous resolution: every provider shape reached through aresolve()."""
 
+# pyright: reportPrivateUsage=false
+
 import asyncio
 import contextlib
 import threading
@@ -495,7 +497,7 @@ async def test_async_and_sync_resolution_share_one_flight() -> None:
     try:
         provider_started.wait()
         root: ScopeFrame = object.__getattribute__(frozen, '_root')
-        flight, constructs = root.start_flight((Value, None))
+        flight, constructs = root._start_flight((Value, None))
         assert not constructs
         object.__setattr__(flight, '_event', RecordingEvent(threading.Event()))
         follower = threading.Thread(target=sync_follower)
@@ -516,9 +518,9 @@ async def test_async_and_sync_resolution_share_one_flight() -> None:
 async def test_closed_loop_waiter_does_not_mask_a_live_waiter() -> None:
     frame = ScopeFrame()
     key = object()
-    leader, constructs = frame.start_flight(key)
+    leader, constructs = frame._start_flight(key)
     assert constructs
-    flight, joins = frame.start_flight(key)
+    flight, joins = frame._start_flight(key)
     assert not joins
     closed_waiter_registered = threading.Event()
 
@@ -806,16 +808,16 @@ async def test_stale_inherited_async_scope_context_cannot_resolve_after_abort() 
 @pytest.mark.asyncio
 async def test_stale_and_duplicate_flight_completion_do_not_signal_replacement() -> None:
     frame = ScopeFrame()
-    old, leader = frame.start_flight(object())
+    old, leader = frame._start_flight(object())
     assert leader
     frame.finish_flight(object(), old)
     key = object()
-    first, leader = frame.start_flight(key)
+    first, leader = frame._start_flight(key)
     assert leader
     frame.finish_flight(key, first)
-    replacement, leader = frame.start_flight(key)
+    replacement, leader = frame._start_flight(key)
     assert leader
-    _follower, joins = frame.start_flight(key)
+    _follower, joins = frame._start_flight(key)
     assert not joins
     frame.finish_flight(key, first)
     assert not replacement.finished

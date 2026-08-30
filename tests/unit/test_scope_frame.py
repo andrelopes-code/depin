@@ -1,5 +1,7 @@
 """The scope frame: value chaining, scope_value bindings, and frame lifetime."""
 
+# pyright: reportPrivateUsage=false
+
 import asyncio
 import threading
 
@@ -7,7 +9,7 @@ import pytest
 
 from depin._core.container import Container
 from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, push_frame
-from depin.errors import MissingProviderError, OutsideScopeError
+from depin.errors import DepinError, MissingProviderError, OutsideScopeError
 
 
 async def _checkpoint() -> None:
@@ -26,9 +28,9 @@ def test_active_frame_raises_without_push() -> None:
 async def test_finishing_flight_completes_registered_async_waiter() -> None:
     frame = ScopeFrame()
     key = object()
-    leader, constructs = frame.start_flight(key)
+    leader, constructs = frame._start_flight(key)
     assert constructs
-    flight, joins = frame.start_flight(key)
+    flight, joins = frame._start_flight(key)
     assert not joins
 
     waiter = asyncio.create_task(frame.wait_async(flight))
@@ -44,9 +46,9 @@ async def test_finishing_flight_completes_registered_async_waiter() -> None:
 async def test_publish_makes_value_visible_before_followers_are_signalled() -> None:
     frame = ScopeFrame()
     key = object()
-    leader, constructs = frame.start_flight(key)
+    leader, constructs = frame._start_flight(key)
     assert constructs
-    flight, joins = frame.start_flight(key)
+    flight, joins = frame._start_flight(key)
     assert not joins
 
     waiter = asyncio.create_task(frame.wait_async(flight))
@@ -66,11 +68,11 @@ async def test_publish_makes_value_visible_before_followers_are_signalled() -> N
 async def test_abort_wakes_all_followers_and_allows_one_replacement_leader() -> None:
     frame = ScopeFrame()
     key = object()
-    leader, constructs = frame.start_flight(key)
+    leader, constructs = frame._start_flight(key)
     assert constructs
-    flight_one, joins = frame.start_flight(key)
+    flight_one, joins = frame._start_flight(key)
     assert not joins
-    flight_two, joins = frame.start_flight(key)
+    flight_two, joins = frame._start_flight(key)
     assert not joins
     waiter_one = asyncio.create_task(frame.wait_async(flight_one))
     waiter_two = asyncio.create_task(frame.wait_async(flight_two))
@@ -82,9 +84,9 @@ async def test_abort_wakes_all_followers_and_allows_one_replacement_leader() -> 
     followers.finish()
     await asyncio.wait_for(asyncio.gather(waiter_one, waiter_two), timeout=1)
 
-    replacement, replacement_leader = frame.start_flight(key)
+    replacement, replacement_leader = frame._start_flight(key)
     assert replacement_leader
-    follower, follower_leader = frame.start_flight(key)
+    follower, follower_leader = frame._start_flight(key)
     assert not follower_leader
     signalled = frame.publish(key, replacement, 'replacement')
     assert signalled is follower
@@ -97,9 +99,9 @@ async def test_abort_wakes_all_followers_and_allows_one_replacement_leader() -> 
 async def test_cancelling_one_async_follower_leaves_another_waiter_live() -> None:
     frame = ScopeFrame()
     key = object()
-    leader, constructs = frame.start_flight(key)
+    leader, constructs = frame._start_flight(key)
     assert constructs
-    flight, joins = frame.start_flight(key)
+    flight, joins = frame._start_flight(key)
     assert not joins
     cancelled = asyncio.create_task(frame.wait_async(flight))
     live = asyncio.create_task(frame.wait_async(flight))
@@ -118,18 +120,18 @@ async def test_cancelling_one_async_follower_leaves_another_waiter_live() -> Non
 async def test_stale_publish_cannot_cache_or_signal_a_replacement_flight() -> None:
     frame = ScopeFrame()
     key = object()
-    old, constructs = frame.start_flight(key)
+    old, constructs = frame._start_flight(key)
     assert constructs
-    old_follower, joins = frame.start_flight(key)
+    old_follower, joins = frame._start_flight(key)
     assert not joins
     abandoned = frame.abort(key, old)
     assert abandoned is old_follower
     assert abandoned is not None
     abandoned.finish()
 
-    replacement, replacement_leader = frame.start_flight(key)
+    replacement, replacement_leader = frame._start_flight(key)
     assert replacement_leader
-    replacement_follower, joins = frame.start_flight(key)
+    replacement_follower, joins = frame._start_flight(key)
     assert not joins
     assert frame.publish(key, old, 'stale') is None
     assert frame.lookup(key) is MISSING
@@ -148,9 +150,9 @@ async def test_stale_publish_cannot_cache_or_signal_a_replacement_flight() -> No
 async def test_flight_completion_resumes_waiter_on_its_owning_loop_and_thread() -> None:
     frame = ScopeFrame()
     key = object()
-    leader, constructs = frame.start_flight(key)
+    leader, constructs = frame._start_flight(key)
     assert constructs
-    flight, joins = frame.start_flight(key)
+    flight, joins = frame._start_flight(key)
     assert not joins
     owner_loop = asyncio.get_running_loop()
     owner_thread = threading.get_ident()
@@ -231,8 +233,8 @@ def test_start_flight_designates_one_leader_and_joins_followers() -> None:
     frame = ScopeFrame()
     key = object()
 
-    first, first_constructs = frame.start_flight(key)
-    second, second_constructs = frame.start_flight(key)
+    first, first_constructs = frame._start_flight(key)
+    second, second_constructs = frame._start_flight(key)
 
     assert first_constructs
     assert second is not first
@@ -258,7 +260,7 @@ def test_child_claim_skips_empty_ancestors_before_joining_a_flight() -> None:
     parent = ScopeFrame(grandparent)
     child = ScopeFrame(parent)
     key = object()
-    leader, constructs = parent.start_flight(key)
+    leader, constructs = parent._start_flight(key)
     assert constructs
 
     value, flight = child.claim_cached(key)
@@ -274,7 +276,7 @@ def test_child_joined_flight_keeps_ancestor_leader_and_finishes() -> None:
     parent = ScopeFrame()
     child = ScopeFrame(parent)
     key = object()
-    leader, constructs = parent.start_flight(key)
+    leader, constructs = parent._start_flight(key)
     assert constructs
 
     value, flight = child.claim_cached(key)
@@ -335,7 +337,7 @@ def test_second_child_joins_shared_flight_materialized_in_ancestor() -> None:
     first_child = ScopeFrame(parent)
     second_child = ScopeFrame(parent)
     key = object()
-    leader, constructs = parent.start_flight(key)
+    leader, constructs = parent._start_flight(key)
     assert constructs
 
     first_value, first_flight = first_child.claim_cached(key)
@@ -353,17 +355,17 @@ def test_start_flight_raises_for_cached_key() -> None:
     key = object()
     frame.provide(key, 'cached')
 
-    with pytest.raises(KeyError) as exc_info:
-        frame.start_flight(key)
-    assert exc_info.value.args == (key,)
+    with pytest.raises(DepinError, match='value is already cached') as exc_info:
+        frame._start_flight(key)
+    assert key.__repr__() in str(exc_info.value)
 
 
 def test_finishing_a_flight_twice_is_idempotent() -> None:
     frame = ScopeFrame()
     key = object()
-    leader, constructs = frame.start_flight(key)
+    leader, constructs = frame._start_flight(key)
     assert constructs
-    follower, joins = frame.start_flight(key)
+    follower, joins = frame._start_flight(key)
     assert not joins
     assert not follower.finished
     signalled = frame.publish(key, leader, 'value')
@@ -380,9 +382,9 @@ def test_finishing_a_flight_twice_is_idempotent() -> None:
 async def test_non_flight_waits_and_non_leader_finish_are_noops() -> None:
     frame = ScopeFrame()
     key = object()
-    leader, constructs = frame.start_flight(key)
+    leader, constructs = frame._start_flight(key)
     assert constructs
-    follower, joins = frame.start_flight(key)
+    follower, joins = frame._start_flight(key)
     assert not joins
 
     frame.wait_sync(leader)
@@ -400,9 +402,9 @@ async def test_non_flight_waits_and_non_leader_finish_are_noops() -> None:
 async def test_closed_waiter_does_not_stop_signal_to_later_live_waiter() -> None:
     frame = ScopeFrame()
     key = object()
-    leader, constructs = frame.start_flight(key)
+    leader, constructs = frame._start_flight(key)
     assert constructs
-    flight, joins = frame.start_flight(key)
+    flight, joins = frame._start_flight(key)
     assert not joins
     registered = threading.Event()
     cancelled = threading.Event()
