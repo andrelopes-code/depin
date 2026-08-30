@@ -2,14 +2,17 @@
 
 import asyncio
 import contextlib
+import threading
 from collections.abc import AsyncGenerator, Generator
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
 from depin._core.container import Container
+from depin._core.frozen import FrozenContainer
 from depin._core.markers import Token
-from depin._core.scope import Scope
-from depin.errors import AsyncInSyncContextError
+from depin._core.scope import Scope, ScopeFrame
+from depin.errors import AsyncInSyncContextError, CircularDependencyError
 
 
 @pytest.mark.asyncio
@@ -273,3 +276,163 @@ async def test_many_async_tasks_construct_a_singleton_once() -> None:
     values = await asyncio.gather(*tasks)
     assert attempts == 1
     assert all(value is values[0] for value in values)
+
+
+@pytest.mark.asyncio
+async def test_async_follower_does_not_occupy_the_default_executor() -> None:
+    started = asyncio.Event()
+    release = asyncio.Event()
+    constructed = 0
+
+    async def make() -> int:
+        nonlocal constructed
+        constructed += 1
+        started.set()
+        await release.wait()
+        return await asyncio.to_thread(lambda: 7)
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
+    loop = asyncio.get_running_loop()
+    executor = ThreadPoolExecutor(max_workers=1)
+    loop.set_default_executor(executor)
+    try:
+        leader = asyncio.create_task(frozen.aresolve(int))
+        await started.wait()
+        follower = asyncio.create_task(frozen.aresolve(int))
+        marker = loop.create_future()
+        loop.call_soon(marker.set_result, None)
+        await marker
+        release.set()
+        assert await leader == 7
+        assert await follower == 7
+    finally:
+        executor.shutdown(wait=True)
+    assert constructed == 1
+
+
+@pytest.mark.asyncio
+async def test_cancelled_async_follower_does_not_occupy_the_default_executor() -> None:
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def make() -> int:
+        started.set()
+        await release.wait()
+        return await asyncio.to_thread(lambda: 7)
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
+    loop = asyncio.get_running_loop()
+    executor = ThreadPoolExecutor(max_workers=1)
+    loop.set_default_executor(executor)
+    try:
+        leader = asyncio.create_task(frozen.aresolve(int))
+        await started.wait()
+        follower = asyncio.create_task(frozen.aresolve(int))
+        marker = loop.create_future()
+        loop.call_soon(marker.set_result, None)
+        await marker
+        follower.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await follower
+        release.set()
+        assert await leader == 7
+    finally:
+        executor.shutdown(wait=True)
+
+
+@pytest.mark.asyncio
+async def test_sync_and_async_resolution_share_one_flight() -> None:
+    started = threading.Event()
+    release = threading.Event()
+    constructed: list[object] = []
+
+    def make() -> object:
+        started.set()
+        release.wait()
+        value = object()
+        constructed.append(value)
+        return value
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=object).freeze()
+    leader = asyncio.create_task(asyncio.to_thread(frozen.resolve, object))
+    await asyncio.to_thread(started.wait)
+    follower = asyncio.create_task(frozen.aresolve(object))
+    marker = asyncio.get_running_loop().create_future()
+    asyncio.get_running_loop().call_soon(marker.set_result, None)
+    await marker
+    release.set()
+    first, second = await asyncio.gather(leader, follower)
+    assert first is second
+    assert len(constructed) == 1
+
+
+@pytest.mark.asyncio
+async def test_async_and_sync_resolution_share_one_flight() -> None:
+    started = asyncio.Event()
+    release = asyncio.Event()
+    constructed: list[object] = []
+
+    def make() -> object:
+        value = object()
+        constructed.append(value)
+        return value
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=object).freeze()
+
+    async def async_leader() -> object:
+        started.set()
+        await release.wait()
+        return await frozen.aresolve(object)
+
+    leader = asyncio.create_task(async_leader())
+    await started.wait()
+    follower = asyncio.create_task(asyncio.to_thread(frozen.resolve, object))
+    marker = asyncio.get_running_loop().create_future()
+    asyncio.get_running_loop().call_soon(marker.set_result, None)
+    await marker
+    release.set()
+    first, second = await asyncio.gather(leader, follower)
+    assert first is second
+    assert len(constructed) == 1
+
+
+def test_sync_self_resolution_raises_instead_of_waiting_for_its_own_flight() -> None:
+    frozen: FrozenContainer
+
+    def make() -> int:
+        return frozen.resolve(int)
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
+    with pytest.raises(CircularDependencyError, match='already constructing'):
+        frozen.resolve(int)
+
+
+@pytest.mark.asyncio
+async def test_async_child_task_self_resolution_raises_instead_of_waiting() -> None:
+    frozen: FrozenContainer
+
+    async def make() -> int:
+        child = asyncio.create_task(frozen.aresolve(int))
+        return await child
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=int).freeze()
+    with pytest.raises(CircularDependencyError, match='already constructing'):
+        await frozen.aresolve(int)
+
+
+@pytest.mark.asyncio
+async def test_stale_and_duplicate_flight_completion_do_not_signal_replacement() -> None:
+    frame = ScopeFrame()
+    old, leader = frame.start_flight(object())
+    assert leader
+    frame.finish_flight(object(), old)
+    key = object()
+    first, leader = frame.start_flight(key)
+    assert leader
+    frame.finish_flight(key, first)
+    replacement, leader = frame.start_flight(key)
+    assert leader
+    frame.finish_flight(key, first)
+    assert not replacement.finished
+    frame.finish_flight(key, replacement)
+    assert replacement.finished

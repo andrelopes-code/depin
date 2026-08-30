@@ -1,9 +1,9 @@
 """The immutable runtime: resolve values, open scopes, inject, and override."""
 
-import asyncio
 import contextlib
 import inspect
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
+from contextvars import ContextVar
 from typing import overload
 
 from depin._core import construct, injection, overrides
@@ -12,7 +12,9 @@ from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional
 from depin._core.spec import ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
 from depin._core.teardown import Teardown
 from depin._core.typeguards import is_provider_key
-from depin.errors import AsyncInSyncContextError, MissingProviderError
+from depin.errors import AsyncInSyncContextError, CircularDependencyError, MissingProviderError
+
+_constructing: ContextVar[tuple[tuple[ScopeFrame, object], ...]] = ContextVar('depin_constructing', default=())
 
 
 class FrozenContainer:
@@ -80,6 +82,7 @@ class FrozenContainer:
             MissingProviderError: No provider is registered for ``key`` / ``tag``.
             AsyncInSyncContextError: The provider, or a dependency, is async.
             OutsideScopeError: ``key`` is scoped and no scope is active.
+            CircularDependencyError: This context re-enters construction of the same cached provider.
 
         Example:
             ```pycon
@@ -116,6 +119,7 @@ class FrozenContainer:
         Raises:
             MissingProviderError: No provider is registered for ``key`` / ``tag``.
             OutsideScopeError: ``key`` is scoped and no scope is active.
+            CircularDependencyError: This task re-enters construction of the same cached provider.
         """
         spec = self._lookup(key, tag)
         # See the matching note in `resolve`: plan-level erasure of provider
@@ -351,17 +355,26 @@ class FrozenContainer:
         cached = frame.lookup(cache_id)
         if cached is not MISSING:
             return cached
-        # Single-flight across threads: without the lock two threads can both
-        # miss the cache and construct the value twice, leaving one instance
-        # orphaned along with its teardown. Locks are taken in dependency order
-        # over an acyclic graph, so they cannot deadlock.
-        with frame.sync_lock_for(cache_id):
-            cached = frame.lookup(cache_id)
-            if cached is not MISSING:
-                return cached
-            value = self._construct_sync(spec)
-            frame.provide(cache_id, value)
-            return value
+        while True:
+            if self._is_constructing(frame, cache_id):
+                raise CircularDependencyError(
+                    f'{fmt_key(spec.key)} is already constructing in this context; '
+                    'resolve a different dependency or break the recursive provider call'
+                )
+            flight, constructs = frame.start_flight(cache_id)
+            if not constructs:
+                flight.wait_sync()
+                continue
+            try:
+                cached = frame.lookup(cache_id)
+                if cached is not MISSING:
+                    return cached
+                with self._construction(frame, cache_id):
+                    value = self._construct_sync(spec)
+                frame.provide(cache_id, value)
+                return value
+            finally:
+                frame.finish_flight(cache_id, flight)
 
     async def _resolve_async(self, spec: ProviderSpec) -> object:
         frame = self._cache_target(spec)
@@ -372,19 +385,38 @@ class FrozenContainer:
             cached = frame.lookup(cache_id)
             if cached is not MISSING:
                 return cached
-            event, constructs = frame.start_async_flight(cache_id)
+            if self._is_constructing(frame, cache_id):
+                raise CircularDependencyError(
+                    f'{fmt_key(spec.key)} is already constructing in this context; '
+                    'resolve a different dependency or break the recursive provider call'
+                )
+            flight, constructs = frame.start_flight(cache_id)
             if not constructs:
-                await asyncio.to_thread(event.wait)
+                await flight.wait_async()
                 continue
             try:
                 cached = frame.lookup(cache_id)
                 if cached is not MISSING:
                     return cached
-                value = await self._construct_async(spec)
+                with self._construction(frame, cache_id):
+                    value = await self._construct_async(spec)
                 frame.provide(cache_id, value)
                 return value
             finally:
-                frame.finish_async_flight(cache_id, event)
+                frame.finish_flight(cache_id, flight)
+
+    def _is_constructing(self, frame: ScopeFrame, cache_id: object) -> bool:
+        return any(
+            current_frame is frame and current_key == cache_id for current_frame, current_key in _constructing.get()
+        )
+
+    @contextlib.contextmanager
+    def _construction(self, frame: ScopeFrame, cache_id: object) -> Generator[None]:
+        token = _constructing.set((*_constructing.get(), (frame, cache_id)))
+        try:
+            yield
+        finally:
+            _constructing.reset(token)
 
     def _construct_sync(self, spec: ProviderSpec) -> object:
         kwargs = self._resolve_params_sync(spec) if spec.params else {}

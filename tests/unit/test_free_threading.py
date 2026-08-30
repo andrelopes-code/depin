@@ -132,36 +132,19 @@ def _run_cross_loop_singleton(connection: Connection) -> None:
     connection.close()
 
 
-class _RendezvousLockTable:
-    def __init__(self, guard: LockType, rendezvous: threading.Barrier) -> None:
-        self._guard = guard
-        self._rendezvous = rendezvous
-        self._values: dict[object, LockType] = {}
-
-    def get(self, key: object) -> LockType | None:
-        value = self._values.get(key)
-        # Capturing before the rendezvous lets unguarded workers see absence before a write; the guard avoids deadlock.
-        if value is None and not self._guard.locked():
-            _ = self._rendezvous.wait()
-        return value
-
-    def __setitem__(self, key: object, value: LockType) -> None:
-        self._values[key] = value
-
-
 class _RendezvousFlightTable:
     def __init__(self, guard: LockType, rendezvous: threading.Barrier) -> None:
         self._guard = guard
         self._rendezvous = rendezvous
-        self._values: dict[object, threading.Event] = {}
+        self._values: dict[object, object] = {}
 
-    def get(self, key: object) -> threading.Event | None:
+    def get(self, key: object) -> object | None:
         value = self._values.get(key)
         if value is None and not self._guard.locked():
             _ = self._rendezvous.wait()
         return value
 
-    def __setitem__(self, key: object, value: threading.Event) -> None:
+    def __setitem__(self, key: object, value: object) -> None:
         self._values[key] = value
 
     def __delitem__(self, key: object) -> None:
@@ -249,49 +232,27 @@ def test_scopes_stay_isolated_and_every_teardown_runs_with_no_gil() -> None:
     assert len(torn_down) == THREADS
 
 
-def test_the_per_key_lock_table_survives_concurrent_creation() -> None:
+def test_the_unified_flight_table_survives_concurrent_creation() -> None:
     frame = ScopeFrame()
     mutex = object.__getattribute__(frame, '_mutex')
     assert isinstance(mutex, type(threading.Lock()))
-    object.__setattr__(frame, '_sync_locks', _RendezvousLockTable(mutex, threading.Barrier(THREADS)))
+    object.__setattr__(frame, '_flights', _RendezvousFlightTable(mutex, threading.Barrier(THREADS)))
 
     key = object()
-    handed_out: list[LockType] = []
+    handed_out: list[tuple[object, bool]] = []
     record = threading.Lock()
     start = threading.Barrier(THREADS)
 
     def worker() -> None:
         _ = start.wait()
-        lock = frame.sync_lock_for(key)
-        with record:
-            handed_out.append(lock)
-
-    _run_in_threads(worker)
-
-    assert len(handed_out) == THREADS
-    assert all(lock is handed_out[0] for lock in handed_out)
-
-
-def test_the_async_flight_table_survives_concurrent_creation() -> None:
-    frame = ScopeFrame()
-    mutex = object.__getattribute__(frame, '_mutex')
-    object.__setattr__(frame, '_async_flights', _RendezvousFlightTable(mutex, threading.Barrier(THREADS)))
-
-    key = object()
-    handed_out: list[tuple[threading.Event, bool]] = []
-    record = threading.Lock()
-    start = threading.Barrier(THREADS)
-
-    def worker() -> None:
-        _ = start.wait()
-        flight = frame.start_async_flight(key)
+        flight = frame.start_flight(key)
         with record:
             handed_out.append(flight)
 
     _run_in_threads(worker)
 
     assert len(handed_out) == THREADS
-    assert all(event is handed_out[0][0] for event, _ in handed_out)
+    assert all(flight is handed_out[0][0] for flight, _ in handed_out)
     assert sum(constructs for _, constructs in handed_out) == 1
 
 

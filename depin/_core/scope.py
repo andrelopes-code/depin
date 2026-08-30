@@ -1,9 +1,11 @@
 """Provider lifetimes and the scope machinery that backs scoped resolution."""
 
+import asyncio
 import contextlib
 import threading
 from collections.abc import Generator
 from contextvars import ContextVar
+from dataclasses import dataclass
 from enum import Enum
 from typing import Final
 
@@ -45,6 +47,65 @@ class _Missing:
 MISSING: Final = _Missing()
 
 
+@dataclass(eq=False, slots=True)
+class _AsyncWaiter:
+    loop: asyncio.AbstractEventLoop
+    future: asyncio.Future[None]
+
+
+class _Flight:
+    __slots__ = ('_event', '_mutex', '_waiters', 'finished')
+
+    def __init__(self) -> None:
+        self._event = threading.Event()
+        self._mutex = threading.Lock()
+        self._waiters: list[_AsyncWaiter] = []
+        self.finished = False
+
+    def wait_sync(self) -> None:
+        self._event.wait()
+
+    async def wait_async(self) -> None:
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        waiter = _AsyncWaiter(loop, future)
+        with self._mutex:
+            if self.finished:
+                return
+            self._waiters.append(waiter)
+        try:
+            await future
+        finally:
+            with self._mutex:
+                for index, current in enumerate(self._waiters):
+                    if current is waiter:
+                        del self._waiters[index]
+                        break
+
+    def finish(self) -> None:
+        with self._mutex:
+            if self.finished:
+                return
+            self.finished = True
+            waiters = tuple(self._waiters)
+            self._waiters.clear()
+        self._event.set()
+        errors: list[RuntimeError] = []
+        for waiter in waiters:
+            try:
+                waiter.loop.call_soon_threadsafe(self._complete_waiter, waiter.future)
+            except RuntimeError as exc:
+                if not waiter.loop.is_closed():
+                    errors.append(exc)
+        if errors:
+            raise ExceptionGroup('depin flight completion errors', errors)
+
+    @staticmethod
+    def _complete_waiter(future: asyncio.Future[None]) -> None:
+        if not future.done():
+            future.set_result(None)
+
+
 class ScopeFrame:
     """The per-scope store yielded by `FrozenContainer.scope()`.
 
@@ -59,12 +120,11 @@ class ScopeFrame:
     single-flighted.
     """
 
-    __slots__ = ('_async_flights', '_cache', '_mutex', '_sync_locks', '_teardowns', 'parent')
+    __slots__ = ('_cache', '_flights', '_mutex', '_teardowns', 'parent')
 
     def __init__(self, parent: 'ScopeFrame | None' = None) -> None:
         self._cache: dict[object, object] = {}
-        self._sync_locks: dict[object, threading.Lock] = {}
-        self._async_flights: dict[object, threading.Event] = {}
+        self._flights: dict[object, _Flight] = {}
         self._teardowns: list[Teardown] = []
         self._mutex = threading.Lock()
         self.parent = parent
@@ -162,31 +222,22 @@ class ScopeFrame:
             self._teardowns.clear()
         return records
 
-    def sync_lock_for(self, key: object) -> threading.Lock:
-        """Return a per-key mutex, created on first use, for single-flight construction."""
-        with self._mutex:
-            lock = self._sync_locks.get(key)
-            if lock is None:
-                lock = threading.Lock()
-                self._sync_locks[key] = lock
-            return lock
-
-    def start_async_flight(self, key: object) -> tuple[threading.Event, bool]:
+    def start_flight(self, key: object) -> tuple[_Flight, bool]:
         """Join a per-key construction flight, or start one when none is active."""
         with self._mutex:
-            event = self._async_flights.get(key)
-            if event is not None:
-                return event, False
-            event = threading.Event()
-            self._async_flights[key] = event
-            return event, True
+            flight = self._flights.get(key)
+            if flight is not None:
+                return flight, False
+            flight = _Flight()
+            self._flights[key] = flight
+            return flight, True
 
-    def finish_async_flight(self, key: object, event: threading.Event) -> None:
-        """Finish ``event`` only when it remains the active flight for ``key``."""
+    def finish_flight(self, key: object, flight: _Flight) -> None:
+        """Finish ``flight`` and remove it only when it remains active for ``key``."""
         with self._mutex:
-            if self._async_flights.get(key) is event:
-                del self._async_flights[key]
-        event.set()
+            if self._flights.get(key) is flight:
+                del self._flights[key]
+        flight.finish()
 
 
 _active: ContextVar[ScopeFrame | None] = ContextVar('depin_active_frame', default=None)
