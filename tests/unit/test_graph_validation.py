@@ -354,6 +354,7 @@ def test_duplicate_message_names_key_and_tag() -> None:
     assert 'Iface' in msg
     assert 'primary' in msg
     assert 'two bindings resolve to the same key' in msg
+    assert 'Remove one, or give them distinct tags' in msg
     assert 'distinct tags to register multiple implementations' in msg
 
 
@@ -379,6 +380,20 @@ def test_multiple_missing_providers_are_deepest_first_and_keep_parameter_names()
     assert '.Leaf -> ' in message
 
 
+def test_multiple_missing_provider_lines_keep_the_documented_bullet_separator() -> None:
+    class First: ...
+
+    class Second: ...
+
+    class Service:
+        def __init__(self, first: First, second: Second) -> None: ...
+
+    with pytest.raises(MissingProviderError) as exc:
+        _ = build_plan(Registry().bind(Service).records())
+
+    assert '\n  - ' in str(exc.value)
+
+
 def test_missing_scan_continues_after_a_defaulted_parameter() -> None:
     class Missing: ...
 
@@ -402,6 +417,10 @@ def test_singleton_depending_on_scoped_is_rejected() -> None:
     msg = str(exc.value)
     assert 'Service' in msg
     assert 'Session' in msg
+    assert (
+        'singleton test_singleton_depending_on_scoped_is_rejected.<locals>.Service '
+        'depends on scoped test_singleton_depending_on_scoped_is_rejected.<locals>.Session' in msg
+    )
 
 
 def test_singleton_capturing_scoped_through_transient_is_rejected() -> None:
@@ -497,6 +516,17 @@ def test_singleton_transient_diamond_is_allowed() -> None:
     )
     plan = build_plan(r.records())
     assert len(plan.order) == 4
+
+
+def test_captive_check_reaches_a_scoped_dependency_after_an_optional_parameter() -> None:
+    class Session: ...
+
+    class Service:
+        def __init__(self, unused: int = 1, *, session: Session) -> None: ...
+
+    registry = Registry().bind(Session, scope=Scope.SCOPED).bind(Service, scope=Scope.SINGLETON)
+    with pytest.raises(CaptiveDependencyError):
+        _ = build_plan(registry.records())
 
 
 def test_sync_chain_with_async_dep_rejected() -> None:
