@@ -1,7 +1,9 @@
 """Graph validation performed by freeze(): duplicates, cycles, captives, async reach."""
 
+import multiprocessing
 import sys
 from collections.abc import AsyncGenerator
+from multiprocessing.connection import Connection
 from types import ModuleType
 from typing import Annotated, override
 
@@ -35,6 +37,38 @@ class MissingProviderSuggestionCandidate(MissingProviderSuggestionTarget):
     """
 
 
+class _MissingCycleA:
+    def __init__(self, b: '_MissingCycleB') -> None: ...
+
+
+class _MissingCycleB:
+    def __init__(self, a: _MissingCycleA, absent: '_MissingCycleDependency') -> None: ...
+
+
+class _MissingCycleDependency: ...
+
+
+class _MissingChainRoot:
+    def __init__(self, dep: '_MissingChainDependency') -> None: ...
+
+
+class _MissingChainDependency:
+    def __init__(self, absent: _MissingCycleDependency) -> None: ...
+
+
+def _freeze_cycle_with_missing_dependency(connection: Connection) -> None:
+    try:
+        _ = Container().bind(_MissingCycleA).bind(_MissingCycleB).freeze()
+    except MissingProviderError:
+        connection.send_bytes(b'missing-provider')
+    except BaseException as error:
+        connection.send_bytes(f'unexpected:{error!r}'.encode())
+    else:
+        connection.send_bytes(b'frozen')
+    finally:
+        connection.close()
+
+
 def test_missing_provider_raises() -> None:
     class A: ...
 
@@ -44,6 +78,34 @@ def test_missing_provider_raises() -> None:
     r = Registry().bind(B, scope=Scope.SINGLETON)
     with pytest.raises(MissingProviderError, match='A'):
         _ = build_plan(r.records())
+
+
+def test_freeze_reports_a_missing_dependency_without_looping_on_a_cycle() -> None:
+    with pytest.raises(MissingProviderError):
+        _ = Container().bind(_MissingChainRoot).bind(_MissingChainDependency).freeze()
+
+    context = multiprocessing.get_context('fork')
+    parent, child = context.Pipe(duplex=False)
+    process = context.Process(target=_freeze_cycle_with_missing_dependency, args=(child,))
+    try:
+        process.start()
+        child.close()
+        if not parent.poll(3):
+            pytest.fail('freeze worker sent no result within 3 seconds')
+        result = parent.recv_bytes()
+        process.join(5)
+        if process.is_alive():
+            pytest.fail('freeze worker did not exit within 5 seconds')
+        assert process.exitcode == 0
+        assert result == b'missing-provider'
+    finally:
+        parent.close()
+        if process.is_alive():
+            process.terminate()
+            process.join(5)
+        if process.is_alive():
+            process.kill()
+            process.join(5)
 
 
 def test_default_value_satisfies_missing() -> None:
