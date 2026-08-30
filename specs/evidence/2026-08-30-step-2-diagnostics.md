@@ -73,9 +73,23 @@ which itself rejects cycles) and checks the search terminates instead of
 looping forever. The five gates were re-run after adding it, all green, before
 this figure was taken.
 
-This coverage figure is from a single local interpreter, not the
-per-interpreter matrix Step 1's template reports; that matrix follows from CI,
-which has not run for this branch.
+The figure above is from a single local interpreter. CI measured the matrix on
+pull request #36 at `addb851`, run `33327834712`:
+
+| Job | Coverage | Tests |
+| --- | --- | --- |
+| ubuntu-latest, 3.12 | 98.64% | 497 passed, 6 skipped |
+| ubuntu-latest, 3.13 | 98.54% | 497 passed, 6 skipped |
+| ubuntu-latest, 3.14 | 98.50% | 497 passed, 6 skipped |
+| macos-latest, 3.12 | 98.54% | 497 passed, 6 skipped |
+| windows-latest, 3.12 | 98.54% | 497 passed, 6 skipped |
+| free-threaded 3.13t | 96.53% | 441 passed |
+| free-threaded 3.14t | 96.44% | 441 passed |
+
+The free-threaded jobs run `tests/unit` only, which is why their totals are
+lower and their counts smaller; both clear the 95% floor. All sixteen checks
+passed, including the mutation job, the benchmark gate, the 3.15 pre-release
+job and the advisory `ty` job.
 
 ## Mutation
 
