@@ -353,3 +353,56 @@ GIL_ENABLED False
 ```
 
 All five independent totals satisfy the repository's 95% coverage gate.
+
+## Final repository audit
+
+The complete gate sequence below ran on evidence commit
+`f142a52ab2c56f1365e789e6aeacd0f7d05fc865`. That commit changes only this
+evidence file relative to the measured implementation commit.
+
+```console
+$ uv run ruff format
+101 files left unchanged
+EXIT=0
+$ uv run ruff check
+All checks passed!
+EXIT=0
+$ uv run basedpyright
+0 errors, 0 warnings, 0 notes
+EXIT=0
+$ uv run mypy
+Success: no issues found in 67 source files
+EXIT=0
+$ uv run pytest
+422 passed, 6 skipped
+EXIT=0
+```
+
+The additional Step 1 checks also passed:
+
+```console
+$ uv run --group docs mkdocs build --strict
+INFO - Documentation built
+EXIT=0
+$ uv run --group bench pytest benchmarks --benchmark-only
+8 passed
+EXIT=0
+$ uv run mutmut run
+1253/1253  1218 killed  0 timeout  0 suspicious  35 survived  0 skipped  0 no_tests
+7.72 mutations/second
+EXIT=0
+$ uv run mutmut export-cicd-stats
+Saved CI/CD stats to mutants/mutmut-cicd-stats.json
+EXIT=0
+$ uv run python -m scripts.check_mutation_threshold mutants/mutmut-cicd-stats.json
+mutation score: 97.2% (1218 killed, 35 survived, 1253 total)
+EXIT=0
+$ git diff --check
+EXIT=0
+$ git status --short
+EXIT=0
+```
+
+The docs command printed Material for MkDocs' upstream MkDocs 2.0 advisory
+banner, but no MkDocs diagnostic; strict mode exited 0. The five repository
+gates, benchmark suite, and mutation run emitted no warnings or waivers.
