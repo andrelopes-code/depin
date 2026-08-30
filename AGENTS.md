@@ -170,6 +170,8 @@ and listed in `examples/README.md`.
 | `registry.py` | `Registry` and its `|` composition. |
 | `providers.py` | `BindRecord` → `ProviderSpec`: key, shape, parameters. |
 | `graph.py` | Validation and ordering into a `ResolutionPlan`. |
+| `diagnostics.py` | The public graph view over a validated plan. |
+| `render.py` | The resolution tree, `dot`, and `mermaid` renderings of that view. |
 | `frozen.py` | The runtime: resolve, scope, inject, override. |
 | `construct.py` | Calling a provider according to its shape. |
 | `scope.py` | Lifetimes, the scope frame, and its locks. |

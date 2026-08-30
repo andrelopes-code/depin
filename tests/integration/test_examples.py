@@ -5,6 +5,8 @@ from httpx import ASGITransport, AsyncClient
 
 from examples.fastapi_app.main import build_container, create_app
 from examples.fastapi_app.registries import Database
+from examples.graph_diagnostics.main import Repo, Settings
+from examples.graph_diagnostics.main import build as build_diagnostics
 from examples.minimal_sync.main import Database as MinimalDatabase
 from examples.minimal_sync.main import UserRepo, build
 from examples.scopes.main import AUDIT, Connection, UnitOfWork
@@ -56,6 +58,17 @@ def test_testing_example_overrides_a_protocol_deep_in_the_graph() -> None:
         assert di[Report].render() == 'report at 2026-01-01'
 
     assert di[Report].render() == 'report at real-time'
+
+
+def test_graph_diagnostics_example_explains_and_exports_its_graph() -> None:
+    di = build_diagnostics()
+    tree = di.explain(Repo)
+
+    assert tree.splitlines()[0] == 'Repo  [scoped, class]'
+    assert '(shown above)' in tree
+    assert di.graph().node(Settings).scope.value == 'singleton'
+    assert di.graph().mermaid().startswith('graph LR')
+    assert di.graph().dot().startswith('digraph depin {')
 
 
 @pytest.mark.asyncio

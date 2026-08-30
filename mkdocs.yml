@@ -57,6 +57,7 @@ nav:
       - Lifetimes and scopes: guide/lifetimes.md
       - Composing bindings: guide/composition.md
       - Testing: guide/testing.md
+      - Inspecting the graph: guide/diagnostics.md
       - FastAPI: guide/fastapi.md
   - Support policy: support-policy.md
   - Reference:
@@ -66,4 +67,5 @@ nav:
       - Scope: reference/scope.md
       - Markers: reference/markers.md
       - Errors: reference/errors.md
+      - Graph diagnostics: reference/diagnostics.md
       - FastAPI: reference/fastapi.md
