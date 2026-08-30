@@ -200,6 +200,15 @@ def test_an_acyclic_graph_never_reports_a_cycle(case: GraphCase) -> None:
         duplicates=frozenset(),
     )
 )
+@example(
+    GraphCase(
+        size=2,
+        edges=frozenset({(1, 0)}),
+        scopes=(Scope.SINGLETON, Scope.SINGLETON),
+        registered=(True, True),
+        duplicates=frozenset(),
+    )
+)
 @settings(max_examples=200, deadline=None)
 @given(_non_captive_graphs())
 def test_a_graph_without_a_singleton_to_scoped_path_is_not_captive(case: GraphCase) -> None:
