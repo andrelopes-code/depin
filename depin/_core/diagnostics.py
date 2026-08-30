@@ -18,6 +18,19 @@ class GraphEdge:
     ``satisfied`` is false only for a parameter that carries a default and that
     no binding provides. `Container.freeze()` rejects every other unsatisfied
     parameter, so a frozen graph holds no other kind.
+
+    Example:
+        ```pycon
+        >>> from depin import Container
+        >>> class Config: ...
+        >>> class Service:
+        ...     def __init__(self, config: Config) -> None: ...
+        >>> di = Container().bind(Config).bind(Service).freeze()
+        >>> edge = di.graph().node(Service).dependencies[0]
+        >>> edge.parameter, edge.satisfied
+        ('config', True)
+
+        ```
     """
 
     parameter: str
@@ -32,6 +45,17 @@ class GraphNode:
 
     ``dependencies`` is in the provider's own parameter order, which is what
     makes every rendering of the graph reproducible.
+
+    Example:
+        ```pycon
+        >>> from depin import Container, ProviderShape
+        >>> class Config: ...
+        >>> di = Container().bind(Config).freeze()
+        >>> node = di.graph().node(Config)
+        >>> node.scope.value, node.shape is ProviderShape.CLASS
+        ('singleton', True)
+
+        ```
     """
 
     key: ProviderKey
@@ -49,6 +73,21 @@ class DependencyGraph:
     node never precedes one it depends on. The view describes the plan
     `Container.freeze()` validated, so an active `FrozenContainer.override`
     does not change it.
+
+    Example:
+        ```pycon
+        >>> from depin import Container
+        >>> class Config: ...
+        >>> class Service:
+        ...     def __init__(self, config: Config) -> None: ...
+        >>> di = Container().bind(Config).bind(Service).freeze()
+        >>> print(di.graph().mermaid())
+        graph LR
+          n0["Config<br/>singleton, class"]
+          n1["Service<br/>singleton, class"]
+          n1 -->|config| n0
+
+        ```
     """
 
     __slots__ = ('_index', '_nodes')
@@ -86,6 +125,8 @@ class DependencyGraph:
 
     def dot(self) -> str:
         """Render the graph as a Graphviz ``digraph`` document."""
+        # Deferred: depin._core.render imports DependencyGraph from this module,
+        # so a module-level import here would be circular.
         from depin._core import render
 
         return render.render_dot(self)

@@ -10,6 +10,38 @@ from depin._core.scope import Scope
 
 
 class ProviderShape(Enum):
+    """How a provider produces its value, and whether it owns a teardown.
+
+    Reported by `GraphNode.shape`. `Container.freeze()` infers it from the
+    binding: a class, a factory's kind, or a value.
+
+    Attributes:
+        CLASS: A class, instantiated with its resolved constructor arguments.
+        FUNCTION: A synchronous factory, called with its resolved arguments.
+        ASYNC_FUNCTION: A coroutine factory, awaited. Requires `aresolve`.
+        GENERATOR: A generator factory that yields once and resumes at
+            teardown. Cannot be transient.
+        ASYNC_GENERATOR: An async generator factory that yields once and
+            resumes at teardown. Requires `aresolve` and cannot be transient.
+        CONTEXT_MANAGER: A factory returning a context manager, entered on
+            construction and exited at teardown. Cannot be transient.
+        ASYNC_CONTEXT_MANAGER: A factory returning an async context manager.
+            Requires `aresolve` and cannot be transient.
+        VALUE: A value bound directly with `Container.value`; nothing is called.
+        FRAME: A value the active scope frame supplies, bound with
+            `Container.scope_value`; nothing is called.
+
+    Example:
+        ```pycon
+        >>> from depin import Container, ProviderShape
+        >>> class Config: ...
+        >>> di = Container().bind(Config).freeze()
+        >>> di.graph().node(Config).shape is ProviderShape.CLASS
+        True
+
+        ```
+    """
+
     CLASS = auto()
     FUNCTION = auto()
     ASYNC_FUNCTION = auto()
@@ -22,6 +54,7 @@ class ProviderShape(Enum):
 
 
 type ProviderKey = type[object] | Token[object] | str
+"""What a provider can be bound and resolved under: a class, a `Token`, or a name."""
 
 
 @dataclass(frozen=True, slots=True)

@@ -8,7 +8,19 @@ so a change that breaks the import still fails the suite.
 from collections.abc import Awaitable
 from typing import Protocol, assert_type
 
-from depin import Container, FrozenContainer, Scope, ScopeFrame, Token, injected, provides
+from depin import (
+    Container,
+    DependencyGraph,
+    FrozenContainer,
+    GraphEdge,
+    GraphNode,
+    ProviderShape,
+    Scope,
+    ScopeFrame,
+    Token,
+    injected,
+    provides,
+)
 
 
 class Config:
@@ -131,3 +143,18 @@ def test_a_protocol_key_keeps_its_type_through_subscript() -> None:
     di = Container().bind(MemStore).freeze()
     assert_type(di[Store], Store)
     assert_type(di.resolve(Store), Store)
+
+
+def test_graph_diagnostics_keep_their_types() -> None:
+    di = Container().bind(Config).bind(Service).freeze()
+    assert_type(di.graph(), DependencyGraph)
+    assert_type(di.graph().nodes, tuple[GraphNode, ...])
+    assert_type(di.graph().roots, tuple[GraphNode, ...])
+    assert_type(di.graph().node(Service), GraphNode)
+    assert_type(di.graph().find(Service), GraphNode | None)
+    assert_type(di.graph().node(Service).dependencies, tuple[GraphEdge, ...])
+    assert_type(di.graph().node(Service).shape, ProviderShape)
+    assert_type(di.graph().dot(), str)
+    assert_type(di.graph().mermaid(), str)
+    assert_type(di.explain(Service), str)
+    assert_type(di.explain(Service, tag='primary'), str)

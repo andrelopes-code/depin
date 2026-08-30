@@ -283,7 +283,6 @@ def test_both_exports_declare_one_node_per_provider() -> None:
     assert graph.mermaid().count('["') == len(graph.nodes)
 
 
-@pytest.mark.skip(reason='enabled in Task 5')
 def test_the_exports_do_not_depend_on_the_hash_seed() -> None:
     program = (
         'from depin import Container\n'
@@ -308,3 +307,33 @@ def test_the_exports_do_not_depend_on_the_hash_seed() -> None:
         for seed in ('0', '1', '12345')
     ]
     assert outputs[0] == outputs[1] == outputs[2]
+
+
+def test_explain_delegates_to_the_tree_renderer() -> None:
+    container = Container().bind(Config).bind(Store).bind(Service)
+    graph = build_graph(build_plan(container.records()))
+    assert container.freeze().explain(Service) == render_tree(graph, Service, None)
+
+
+def test_explain_accepts_a_tag() -> None:
+    di = Container().bind(Config, tag='primary').freeze()
+    assert di.explain(Config, tag='primary') == "Config  [singleton, class, tag='primary']"
+
+
+def test_explain_rejects_a_value_that_is_not_a_key() -> None:
+    di = Container().bind(Config).freeze()
+    with pytest.raises(MissingProviderError, match='not a valid key type'):
+        _ = di.explain(42)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+
+
+def test_explain_describes_the_plan_not_an_active_override() -> None:
+    container = Container().bind(Config).bind(Store)
+    di = container.freeze()
+    expected = render_tree(build_graph(build_plan(container.records())), Store, None)
+    with di.override(Config, Config()):
+        assert di.explain(Store) == expected
+
+
+def test_graph_returns_a_view_of_the_plan() -> None:
+    container = Container().bind(Config).bind(Store)
+    assert container.freeze().graph() == build_graph(build_plan(container.records()))

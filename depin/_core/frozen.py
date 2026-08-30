@@ -7,7 +7,9 @@ from contextvars import ContextVar
 from typing import overload
 
 from depin._core import construct, injection, overrides
+from depin._core.diagnostics import DependencyGraph, build_graph
 from depin._core.markers import Token
+from depin._core.render import render_tree
 from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional_frame, push_frame
 from depin._core.spec import ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
 from depin._core.teardown import Teardown
@@ -317,6 +319,65 @@ class FrozenContainer:
             raise MissingProviderError(f'cannot override {key!r}: not a valid key type')
         with overrides.pushed(key, tag, replacement):
             yield self
+
+    def graph(self) -> DependencyGraph:
+        """Return the validated dependency graph as data.
+
+        The view describes the plan `Container.freeze()` validated. An active
+        `override()` does not change it, so the graph and both of its exports
+        are the same on every call and in every context.
+
+        Example:
+            ```pycon
+            >>> from depin import Container
+            >>> class Config: ...
+            >>> class Service:
+            ...     def __init__(self, config: Config) -> None: ...
+            >>> di = Container().bind(Config).bind(Service).freeze()
+            >>> len(di.graph().nodes)
+            2
+            >>> di.graph().node(Service).dependencies[0].parameter
+            'config'
+
+            ```
+        """
+        return build_graph(self._plan)
+
+    def explain(self, key: ProviderKey, *, tag: str | None = None) -> str:
+        """Return the resolution tree below a key, as text.
+
+        Each line names the parameter that requires the node, the node's key,
+        its scope and provider shape, `async` when the node needs asynchronous
+        resolution, and its tag when it has one. A subtree already shown is
+        marked rather than repeated. A parameter with a default that nothing
+        provides is marked ``(unbound, default)``.
+
+        A key no binding provides returns the line `MissingProviderError`
+        carries for it, including the resolution chain when some provider
+        requires that key. Like `graph()`, the output describes the validated
+        plan, not an active `override()`.
+
+        Raises:
+            MissingProviderError: The value cannot be a provider key at all.
+                An unregistered key of a valid type is described in the
+                returned text instead.
+
+        Example:
+            ```pycon
+            >>> from depin import Container
+            >>> class Config: ...
+            >>> class Service:
+            ...     def __init__(self, config: Config) -> None: ...
+            >>> di = Container().bind(Config).bind(Service).freeze()
+            >>> print(di.explain(Service))
+            Service  [singleton, class]
+              config: Config  [singleton, class]
+
+            ```
+        """
+        if not is_provider_key(key):
+            raise MissingProviderError(f'cannot look up provider for {key!r}: not a valid key type')
+        return render_tree(self.graph(), key, tag)
 
     def _is_registered(self, key: ProviderKey, tag: str | None) -> bool:
         return (key, tag) in self._plan.by_key
