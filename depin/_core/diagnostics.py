@@ -142,6 +142,10 @@ class DependencyGraph:
         return self._nodes == other._nodes
 
     @override
+    def __hash__(self) -> int:
+        return hash(self._nodes)
+
+    @override
     def __repr__(self) -> str:
         return f'DependencyGraph({len(self._nodes)} nodes)'
 

@@ -118,6 +118,11 @@ def test_the_repr_reports_the_node_count() -> None:
     assert repr(build()) == 'DependencyGraph(3 nodes)'
 
 
+def test_a_graph_can_be_put_in_a_set() -> None:
+    plan = build_plan(Container().bind(Config).bind(Store).records())
+    assert {build_graph(plan), build_graph(plan)} == {build_graph(plan)}
+
+
 def test_a_node_is_hashable_and_structural() -> None:
     first = build().node(Config)
     second = build().node(Config)
