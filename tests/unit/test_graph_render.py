@@ -367,6 +367,8 @@ def test_the_tree_is_identical_on_two_calls() -> None:
 
 
 def _set_dynamic_attribute(target: object, name: str, value: object) -> None:
+    """Route through `setattr` on a `target: object` so basedpyright and mypy do not
+    flag setting an attribute the static type does not declare."""
     setattr(target, name, value)
 
 
