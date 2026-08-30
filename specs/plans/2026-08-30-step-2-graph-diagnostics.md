@@ -544,9 +544,7 @@ def test_a_leaf_renders_as_one_annotated_line() -> None:
 
 
 def test_a_tree_indents_each_level_by_two_spaces() -> None:
-    assert render_tree(build(), Store, None) == (
-        'Store  [singleton, class]\n  config: Config  [singleton, class]'
-    )
+    assert render_tree(build(), Store, None) == ('Store  [singleton, class]\n  config: Config  [singleton, class]')
 
 
 def test_a_repeated_subtree_is_rendered_once() -> None:
@@ -591,9 +589,7 @@ def test_an_unbound_default_renders_as_a_leaf() -> None:
             self.timeout = timeout
 
     graph = build_graph(build_plan(Container().bind(Client).records()))
-    assert render_tree(graph, Client, None) == (
-        'Client  [singleton, class]\n  timeout: float  (unbound, default)'
-    )
+    assert render_tree(graph, Client, None) == ('Client  [singleton, class]\n  timeout: float  (unbound, default)')
 
 
 def test_a_token_key_renders_by_its_repr() -> None:
@@ -976,17 +972,18 @@ An edge label is a Python parameter name, so it can contain neither `"` nor `|` 
 In `depin/_core/diagnostics.py`, insert directly above `__eq__`:
 
 ```python
-    def dot(self) -> str:
-        """Render the graph as a Graphviz ``digraph`` document."""
-        from depin._core import render
+def dot(self) -> str:
+    """Render the graph as a Graphviz ``digraph`` document."""
+    from depin._core import render
 
-        return render.render_dot(self)
+    return render.render_dot(self)
 
-    def mermaid(self) -> str:
-        """Render the graph as a Mermaid ``graph LR`` document."""
-        from depin._core import render
 
-        return render.render_mermaid(self)
+def mermaid(self) -> str:
+    """Render the graph as a Mermaid ``graph LR`` document."""
+    from depin._core import render
+
+    return render.render_mermaid(self)
 ```
 
 The import is deferred to call time on purpose: `render` imports the node types from this module, so a module-level import here would be circular.
