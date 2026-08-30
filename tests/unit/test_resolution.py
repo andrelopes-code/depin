@@ -2,10 +2,12 @@
 
 import subprocess
 import sys
+from pathlib import Path
 from typing import Annotated, Protocol
 
 import pytest
 
+from depin._core import frozen as frozen_module
 from depin._core.container import Container
 from depin._core.frozen import FrozenContainer
 from depin._core.markers import Tag, injected, provides
@@ -80,7 +82,8 @@ else:
         check=False,
         capture_output=True,
         text=True,
-        timeout=2,
+        timeout=0.25,
+        cwd=Path(frozen_module.__file__).parents[2],
     )
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout == (
