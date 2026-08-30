@@ -253,7 +253,7 @@ def _toposort(specs: Iterable[ProviderSpec], by_key: _Index) -> tuple[ProviderSp
             if dep_ident in visiting:
                 cycle_path = [(s.key, s.tag) for s, _ in stack]
                 cycle_path.append(dep_ident)
-                chain = ' -> '.join(fmt_key(k) for k, _ in cycle_path)
+                chain = fmt_chain(k for k, _ in cycle_path)
                 raise CircularDependencyError(f'cycle detected: {chain}')
             visiting.add(dep_ident)
             stack.append((dep, 0))
@@ -314,7 +314,7 @@ def _captive_chain(
 
 
 def _format_captive(root: ProviderSpec, dep: ProviderSpec, chain: tuple[ProviderSpec, ...]) -> str:
-    path = ' -> '.join(fmt_key(s.key) for s in chain)
+    path = fmt_chain(s.key for s in chain)
     return (
         f'captive dependency: singleton {fmt_key(root.key)} depends on scoped {fmt_key(dep.key)} '
         f'(chain: {path}). A singleton outlives every scope, so it would capture one '
