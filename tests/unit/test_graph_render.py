@@ -215,7 +215,7 @@ def test_an_unrelated_missing_edge_does_not_stop_the_search_for_the_real_one() -
         del other_dep, missing_dep
         return outer()
 
-    _set_dynamic_attribute(make_outer, '__annotations__', {'other_dep': other, 'missing_dep': missing, 'return': outer})
+    make_outer.__annotations__ = {'other_dep': other, 'missing_dep': missing, 'return': outer}
 
     graph = build_graph(build_plan(Container().bind(make_outer).records()))
     assert render_tree(graph, missing, None) == format_missing(missing, (outer,), outer, 'missing_dep')
@@ -290,7 +290,7 @@ def test_an_unbound_leaf_does_not_truncate_the_remaining_siblings() -> None:
         del missing_dep, config
         return multi()
 
-    _set_dynamic_attribute(make_multi, '__annotations__', {'missing_dep': missing, 'config': Config, 'return': multi})
+    make_multi.__annotations__ = {'missing_dep': missing, 'config': Config, 'return': multi}
 
     graph = build_graph(build_plan(Container().bind(Config).bind(make_multi).records()))
     assert render_tree(graph, multi, None) == (
@@ -346,7 +346,7 @@ def test_a_repeated_unbound_target_does_not_hide_a_later_one() -> None:
         del a, b, c
         return root_type()
 
-    _set_dynamic_attribute(make_root, '__annotations__', {'a': x_type, 'b': x_type, 'c': y_type, 'return': root_type})
+    make_root.__annotations__ = {'a': x_type, 'b': x_type, 'c': y_type, 'return': root_type}
 
     graph = build_graph(build_plan(Container().bind(make_root).records()))
     dot = graph.dot()
@@ -364,12 +364,6 @@ def test_a_backslash_in_a_key_is_escaped_in_dot() -> None:
 def test_the_tree_is_identical_on_two_calls() -> None:
     graph = build()
     assert render_tree(graph, Service, None) == render_tree(graph, Service, None)
-
-
-def _set_dynamic_attribute(target: object, name: str, value: object) -> None:
-    """Route through `setattr` on a `target: object` so basedpyright and mypy do not
-    flag setting an attribute the static type does not declare."""
-    setattr(target, name, value)
 
 
 def _chain_with_unbound_leaf() -> tuple[Container, Container, type[object]]:
@@ -396,8 +390,8 @@ def _chain_with_unbound_leaf() -> tuple[Container, Container, type[object]]:
         return outer()
 
     for factory in (make_inner_required, make_inner_defaulted):
-        _set_dynamic_attribute(factory, '__annotations__', {'dep': missing, 'return': inner})
-    _set_dynamic_attribute(make_outer, '__annotations__', {'dep': inner, 'return': outer})
+        factory.__annotations__ = {'dep': missing, 'return': inner}
+    make_outer.__annotations__ = {'dep': inner, 'return': outer}
 
     required = Container().bind(make_inner_required).bind(make_outer)
     defaulted = Container().bind(make_inner_defaulted).bind(make_outer)
@@ -454,11 +448,11 @@ def _two_equal_chains_to_one_unbound_leaf() -> tuple[Container, Container, type[
         return outer_b()
 
     for factory in (make_inner_a_required, make_inner_a_defaulted):
-        _set_dynamic_attribute(factory, '__annotations__', {'dep': missing, 'return': inner_a})
+        factory.__annotations__ = {'dep': missing, 'return': inner_a}
     for factory in (make_inner_b_required, make_inner_b_defaulted):
-        _set_dynamic_attribute(factory, '__annotations__', {'dep': missing, 'return': inner_b})
-    _set_dynamic_attribute(make_outer_a, '__annotations__', {'dep': inner_a, 'return': outer_a})
-    _set_dynamic_attribute(make_outer_b, '__annotations__', {'dep': inner_b, 'return': outer_b})
+        factory.__annotations__ = {'dep': missing, 'return': inner_b}
+    make_outer_a.__annotations__ = {'dep': inner_a, 'return': outer_a}
+    make_outer_b.__annotations__ = {'dep': inner_b, 'return': outer_b}
 
     required = Container().bind(make_inner_a_required).bind(make_outer_a).bind(make_inner_b_required).bind(make_outer_b)
     defaulted = (
@@ -511,10 +505,10 @@ def _two_equal_sibling_chains_to_one_unbound_leaf() -> tuple[Container, Containe
         return root_type()
 
     for factory in (make_branch_a_required, make_branch_a_defaulted):
-        _set_dynamic_attribute(factory, '__annotations__', {'dep': missing, 'return': branch_a})
+        factory.__annotations__ = {'dep': missing, 'return': branch_a}
     for factory in (make_branch_b_required, make_branch_b_defaulted):
-        _set_dynamic_attribute(factory, '__annotations__', {'dep': missing, 'return': branch_b})
-    _set_dynamic_attribute(make_root, '__annotations__', {'a': branch_a, 'b': branch_b, 'return': root_type})
+        factory.__annotations__ = {'dep': missing, 'return': branch_b}
+    make_root.__annotations__ = {'a': branch_a, 'b': branch_b, 'return': root_type}
 
     required = Container().bind(make_branch_a_required).bind(make_branch_b_required).bind(make_root)
     defaulted = Container().bind(make_branch_a_defaulted).bind(make_branch_b_defaulted).bind(make_root)
