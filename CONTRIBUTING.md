@@ -119,9 +119,11 @@ uv run mutmut results
 ```
 
 The run requires at least 95% killed mutants, at most 5% surviving mutants,
-and zero inconclusive results. It runs weekly, on demand, and for pull requests
-that change the core, tests, its configuration, or this gate. `mutants/` is
-disposable generated state and must never be committed.
+and zero inconclusive results. Mutmut gives each selected test a two-second
+watchdog so a deadlock is reported as a killed mutant instead of an inconclusive
+timeout. It runs weekly, on demand, and for pull requests that change the core,
+tests, its configuration, or this gate. `mutants/` is disposable generated
+state and must never be committed.
 
 ## Benchmarks
 
