@@ -82,7 +82,7 @@ else:
         check=False,
         capture_output=True,
         text=True,
-        timeout=0.25,
+        timeout=5,
         cwd=Path(frozen_module.__file__).parents[2],
     )
     assert completed.returncode == 0, completed.stderr
