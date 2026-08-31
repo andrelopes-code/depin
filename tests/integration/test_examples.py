@@ -3,14 +3,19 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from depin import ProviderShape
 from examples.aliasing.main import Page, RedisStore
 from examples.aliasing.main import build as build_aliasing
+from examples.collections.main import Dispatcher, EmailHandler, Handler, SmsHandler, WebhookHandler
+from examples.collections.main import build as build_collections
 from examples.fastapi_app.main import build_container, create_app
 from examples.fastapi_app.registries import Database
 from examples.graph_diagnostics.main import Repo, Settings
 from examples.graph_diagnostics.main import build as build_diagnostics
 from examples.minimal_sync.main import Database as MinimalDatabase
 from examples.minimal_sync.main import UserRepo, build
+from examples.optional_dependencies.main import Checkout, MetricsSink
+from examples.optional_dependencies.main import build as build_optional_dependencies
 from examples.scopes.main import AUDIT, Connection, UnitOfWork
 from examples.scopes.main import build as build_scopes
 from examples.testing.main import Clock, FrozenClock, Report
@@ -68,6 +73,24 @@ def test_aliasing_example_serves_one_instance_under_both_names() -> None:
     assert page.store is page.cache is di[RedisStore]
     assert page.render() == 'value-for-head + value-for-body'
     assert di[RedisStore].reads == ['head', 'body']
+
+
+def test_optional_dependencies_example_resolves_to_none_without_the_sink() -> None:
+    di = build_optional_dependencies(with_metrics=False)
+    assert di[Checkout].metrics is None
+
+
+def test_optional_dependencies_example_resolves_to_the_sink_when_bound() -> None:
+    di = build_optional_dependencies(with_metrics=True)
+    assert di[Checkout].metrics is di[MetricsSink]
+
+
+def test_collections_example_gathers_every_handler_in_declaration_order() -> None:
+    di = build_collections()
+    handlers = di.resolve(list[Handler])
+    assert handlers == [di[EmailHandler], di[SmsHandler], di[WebhookHandler]]
+    assert di[Dispatcher].handlers == handlers
+    assert di.graph().node(list[Handler]).shape is ProviderShape.COLLECTION
 
 
 def test_graph_diagnostics_example_explains_and_exports_its_graph() -> None:

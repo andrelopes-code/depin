@@ -9,6 +9,8 @@ Every example is a runnable module and is executed by
 | [`scopes`](scopes/main.py) | `python -m examples.scopes.main` | Singleton vs scoped lifetimes, teardown on scope exit, nested scopes. |
 | [`testing`](testing/main.py) | `python -m examples.testing.main` | `@provides` against a `Protocol`, and `override()` as a test seam. |
 | [`aliasing`](aliasing/main.py) | `python -m examples.aliasing.main` | `alias()` giving one instance two names, and `explain()` on the result. |
+| [`optional_dependencies`](optional_dependencies/main.py) | `python -m examples.optional_dependencies.main` | A `T \| None` parameter resolving to `None` or to the bound instance. |
+| [`collections`](collections/main.py) | `python -m examples.collections.main` | `collect()` gathering several handlers behind `list[Handler]`, and `explain()` on the collection. |
 | [`graph_diagnostics`](graph_diagnostics/main.py) | `python -m examples.graph_diagnostics.main` | `explain()` for one key, and the `mermaid` export of the whole graph. |
 | [`fastapi_app`](fastapi_app/main.py) | `uvicorn examples.fastapi_app.main:create_app --factory` | Registries, an app factory, one scope per request, `aclose()` on shutdown. |
 

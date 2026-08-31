@@ -1,6 +1,7 @@
 """The scenarios the regression gate watches: graph validation, resolution, scopes, injection."""
 
 import asyncio
+import types
 from collections.abc import Callable
 from typing import Protocol
 
@@ -8,6 +9,29 @@ import pytest
 
 from benchmarks.graphs import build_chain
 from depin import Container, Scope, injected
+
+
+class Element(Protocol): ...
+
+
+def _build_collection(size: int) -> tuple[Container, types.GenericAlias]:
+    """A collection of `size` independently bound members, in the style of `build_chain`.
+
+    Returns the unfrozen container and the ``list[Element]`` key the members are
+    gathered under.
+    """
+    container = Container()
+    members: list[type[object]] = []
+    for index in range(size):
+        member = type(f'Member{index}', (), {})
+
+        def make(node: type[object] = member) -> object:
+            return node()
+
+        make.__annotations__ = {'return': member}
+        container = container.bind(make, provides=member)
+        members.append(member)
+    return container.collect(Element, members), types.GenericAlias(list, (Element,))
 
 
 class Benchmark(Protocol):
@@ -52,6 +76,18 @@ def test_resolve_a_cached_singleton_through_an_alias(benchmark: Benchmark) -> No
 
     def resolve() -> object:
         return frozen.resolve(Aliased)
+
+    _ = benchmark(resolve)
+
+
+@pytest.mark.parametrize('size', [10, 100])
+def test_resolve_a_collection(benchmark: Benchmark, size: int) -> None:
+    container, key = _build_collection(size)
+    frozen = container.freeze()
+    _ = frozen.resolve(key)
+
+    def resolve() -> object:
+        return frozen.resolve(key)
 
     _ = benchmark(resolve)
 
