@@ -140,7 +140,7 @@ def test_checks_reports_needs_async_for_an_async_provider() -> None:
     async def service() -> Service:
         return Service()
 
-    def ping(svc: object) -> None: ...
+    def ping(svc: Service) -> None: ...
 
     di = Container().bind(service, check=ping).freeze()
     (check,) = di.checks()
@@ -163,7 +163,7 @@ def test_health_raises_async_in_sync_context_for_an_async_provider() -> None:
     async def service() -> Service:
         return Service()
 
-    def ping(svc: object) -> None: ...
+    def ping(svc: Service) -> None: ...
 
     di = Container().bind(service, check=ping).freeze()
     with pytest.raises(AsyncInSyncContextError, match='ahealth'):
@@ -191,9 +191,9 @@ def test_health_prints_the_refusal_message_naming_every_pending_key() -> None:
     async def build_second() -> Second:
         return Second()
 
-    def noop_first(_: object) -> None: ...
+    def noop_first(_: First) -> None: ...
 
-    def noop_second(_: object) -> None: ...
+    def noop_second(_: Second) -> None: ...
 
     di = Container().bind(build_first, check=noop_first).bind(build_second, check=noop_second).freeze()
     with pytest.raises(AsyncInSyncContextError) as excinfo:
@@ -206,13 +206,35 @@ def test_health_prints_the_refusal_message_naming_every_pending_key() -> None:
     assert ', ' in message
 
 
+async def test_every_check_runs_under_ahealth_even_when_an_earlier_one_failed() -> None:
+    ran: list[str] = []
+
+    class First: ...
+
+    class Second: ...
+
+    async def broken(_: First) -> None:
+        ran.append('first')
+        raise RuntimeError('boom')
+
+    async def fine(_: Second) -> None:
+        ran.append('second')
+
+    di = Container().bind(First, check=broken).bind(Second, check=fine).freeze()
+    report = await di.ahealth()
+    assert ran == ['first', 'second']
+    assert len(report.results) == 2
+    assert report.results[0].healthy is False
+    assert report.results[1].healthy is True
+
+
 async def test_ahealth_runs_both_async_providers_and_async_checks() -> None:
     class Service: ...
 
     async def service() -> Service:
         return Service()
 
-    async def ping(svc: object) -> bool:
+    async def ping(svc: Service) -> bool:
         return True
 
     di = Container().bind(service, check=ping).freeze()
@@ -226,7 +248,7 @@ async def test_ahealth_runs_a_sync_check_over_an_async_provider() -> None:
     async def service() -> Service:
         return Service()
 
-    def ping(svc: object) -> bool:
+    def ping(svc: Service) -> bool:
         return True
 
     di = Container().bind(service, check=ping).freeze()
@@ -239,7 +261,7 @@ async def test_a_raising_async_check_is_unhealthy_with_the_exception_on_the_resu
 
     error = ConnectionError('down')
 
-    async def ping(db: object) -> bool:
+    async def ping(db: Database) -> bool:
         raise error
 
     di = Container().bind(Database, check=ping).freeze()
@@ -333,7 +355,7 @@ def test_a_lifecycle_binding_check_still_runs() -> None:
     def pool() -> Generator[Pool]:
         yield Pool()
 
-    def ping(_: object) -> bool:
+    def ping(_: Pool) -> bool:
         return True
 
     di = Container().bind(pool, check=ping).freeze()

@@ -70,6 +70,7 @@ def test_a_binding_without_a_check_carries_none() -> None:
 def test_a_non_callable_check_is_rejected_at_freeze() -> None:
     class Database: ...
 
-    container = Container().bind(Database, check=3)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+    container = Container()
+    container.bind(Database, check=3)  # type: ignore[call-overload]  # pyright: ignore[reportArgumentType]
     with pytest.raises(InvalidProviderError, match='as a health check'):
         _ = container.freeze()

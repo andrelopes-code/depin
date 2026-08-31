@@ -58,15 +58,28 @@ singleton depending on it, measured directly off the plan. `warmup()` therefore
 gates on the singletons it would construct, which is the existing rule applied
 to a set of keys rather than to one.
 
-**`check: Callable[[T], object]` infers `T` from the binding.**
+**A single `check: Callable[[T], object]` signature binds `T` to the factory's
+declared return type, which is wrong for four provider shapes.**
 `bind(Database, check=ping)` with `def ping(db: Database) -> None`,
 `def is_open(db: Database) -> bool`, and `async def aping(db: Database) -> None`
-are all clean under `mypy --strict` and `basedpyright --strict`, as is
-`bind(make_database, check=ping)` where the key comes from a factory's return
-annotation, and `value(port, 8080, check=lambda value: value > 0)`. An `async
-def` check type-checks because a coroutine is an `object`; whether a check can
-run without an event loop is therefore a runtime question, answered by
-`inspect.iscoroutinefunction`.
+are clean under `mypy --strict` and `basedpyright --strict`, as is
+`bind(make_database, check=ping)` where the key comes from a plain factory's
+return annotation, and `value(port, 8080, check=lambda value: value > 0)`. But
+for a generator, async generator, context-manager, or async-context-manager
+factory, `T` unifies with the container the factory returns, not the value the
+check receives at runtime — `bind(pool, check=ping)` over
+`def pool() -> Generator[Pool]: yield Pool()` only type-checks if `ping` is
+annotated `def ping(p: Generator[Pool]) -> None`, which misdescribes the
+argument `ping` is actually called with. Seven `@overload`s on `bind` — one per
+provider shape (`type[T]`, `Callable[..., Generator[T]]`,
+`Callable[..., AsyncGenerator[T]]`, `Callable[..., AbstractContextManager[T]]`,
+`Callable[..., AbstractAsyncContextManager[T]]`, `Callable[..., Awaitable[T]]`,
+`Callable[..., T]`, container-returning forms ordered before the general
+`Callable[..., T]`) resolve `T` to the produced value in every case, so
+`bind(pool, check=ping)` type-checks with `ping` annotated `def ping(p: Pool)
+-> None`. An `async def` check type-checks because a coroutine is an `object`;
+whether a check can run without an event loop is therefore a runtime question,
+answered by `inspect.iscoroutinefunction`.
 
 **A decorated singleton is two singleton nodes.** After
 `bind(Config).decorate(Config, Loud)`, the plan holds `Config (undecorated)` and
@@ -98,9 +111,10 @@ async def ahealth(self) -> HealthReport: ...
 ```
 
 ```python
+@overload
 def bind[T](
     self,
-    source: type[T] | Callable[..., T],
+    source: type[T],
     *,
     scope: Scope = Scope.SINGLETON,
     provides: type[object] | None = None,
@@ -108,8 +122,78 @@ def bind[T](
     when: Condition | None = None,
     check: Callable[[T], object] | None = None,
 ) -> Self: ...
+@overload
+def bind[T](
+    self,
+    source: Callable[..., Generator[T]],
+    *,
+    scope: Scope = Scope.SINGLETON,
+    provides: type[object] | None = None,
+    tag: str | None = None,
+    when: Condition | None = None,
+    check: Callable[[T], object] | None = None,
+) -> Self: ...
+@overload
+def bind[T](
+    self,
+    source: Callable[..., AsyncGenerator[T]],
+    *,
+    scope: Scope = Scope.SINGLETON,
+    provides: type[object] | None = None,
+    tag: str | None = None,
+    when: Condition | None = None,
+    check: Callable[[T], object] | None = None,
+) -> Self: ...
+@overload
+def bind[T](
+    self,
+    source: Callable[..., AbstractContextManager[T]],
+    *,
+    scope: Scope = Scope.SINGLETON,
+    provides: type[object] | None = None,
+    tag: str | None = None,
+    when: Condition | None = None,
+    check: Callable[[T], object] | None = None,
+) -> Self: ...
+@overload
+def bind[T](
+    self,
+    source: Callable[..., AbstractAsyncContextManager[T]],
+    *,
+    scope: Scope = Scope.SINGLETON,
+    provides: type[object] | None = None,
+    tag: str | None = None,
+    when: Condition | None = None,
+    check: Callable[[T], object] | None = None,
+) -> Self: ...
+@overload
+def bind[T](
+    self,
+    source: Callable[..., Awaitable[T]],
+    *,
+    scope: Scope = Scope.SINGLETON,
+    provides: type[object] | None = None,
+    tag: str | None = None,
+    when: Condition | None = None,
+    check: Callable[[T], object] | None = None,
+) -> Self: ...
+@overload
+def bind[T](
+    self,
+    source: Callable[..., T],
+    *,
+    scope: Scope = Scope.SINGLETON,
+    provides: type[object] | None = None,
+    tag: str | None = None,
+    when: Condition | None = None,
+    check: Callable[[T], object] | None = None,
+) -> Self: ...
+```
 
+The implementation signature is not itself an overload; its `source` parameter
+widens to the union of all seven forms so it stays compatible with each.
 
+```python
 def value[T](
     self,
     token: Token[T],

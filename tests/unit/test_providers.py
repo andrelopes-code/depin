@@ -203,7 +203,8 @@ def test_factory_without_return_annotation_is_rejected() -> None:
 
 
 def test_non_callable_source_is_rejected() -> None:
-    r = Registry().bind(42, scope=Scope.SINGLETON)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+    r = Registry()
+    r.bind(42, scope=Scope.SINGLETON)  # type: ignore[call-overload]  # pyright: ignore[reportArgumentType]
     with pytest.raises(InvalidProviderError, match='cannot determine how to call'):
         _ = build_specs(r.records()).providers
 

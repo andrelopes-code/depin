@@ -1,6 +1,7 @@
 """The registration surface shared by `Container` and `Registry`."""
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Iterable, Sequence
+from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from typing import Self, final, overload
 
 from depin._core.markers import Token
@@ -79,9 +80,92 @@ class BindingCollector:
     def __init__(self) -> None:
         self._records: list[BindRecord] = []
 
+    @overload
     def bind[T](
         self,
-        source: type[T] | Callable[..., T],
+        source: type[T],
+        *,
+        scope: Scope = Scope.SINGLETON,
+        provides: type[object] | None = None,
+        tag: str | None = None,
+        when: Condition | None = None,
+        check: Callable[[T], object] | None = None,
+    ) -> Self: ...
+    @overload
+    def bind[T](
+        self,
+        source: Callable[..., Generator[T]],
+        *,
+        scope: Scope = Scope.SINGLETON,
+        provides: type[object] | None = None,
+        tag: str | None = None,
+        when: Condition | None = None,
+        check: Callable[[T], object] | None = None,
+    ) -> Self: ...
+    @overload
+    def bind[T](
+        self,
+        source: Callable[..., AsyncGenerator[T]],
+        *,
+        scope: Scope = Scope.SINGLETON,
+        provides: type[object] | None = None,
+        tag: str | None = None,
+        when: Condition | None = None,
+        check: Callable[[T], object] | None = None,
+    ) -> Self: ...
+    @overload
+    def bind[T](
+        self,
+        source: Callable[..., AbstractContextManager[T]],
+        *,
+        scope: Scope = Scope.SINGLETON,
+        provides: type[object] | None = None,
+        tag: str | None = None,
+        when: Condition | None = None,
+        check: Callable[[T], object] | None = None,
+    ) -> Self: ...
+    @overload
+    def bind[T](
+        self,
+        source: Callable[..., AbstractAsyncContextManager[T]],
+        *,
+        scope: Scope = Scope.SINGLETON,
+        provides: type[object] | None = None,
+        tag: str | None = None,
+        when: Condition | None = None,
+        check: Callable[[T], object] | None = None,
+    ) -> Self: ...
+    @overload
+    def bind[T](
+        self,
+        source: Callable[..., Awaitable[T]],
+        *,
+        scope: Scope = Scope.SINGLETON,
+        provides: type[object] | None = None,
+        tag: str | None = None,
+        when: Condition | None = None,
+        check: Callable[[T], object] | None = None,
+    ) -> Self: ...
+    @overload
+    def bind[T](
+        self,
+        source: Callable[..., T],
+        *,
+        scope: Scope = Scope.SINGLETON,
+        provides: type[object] | None = None,
+        tag: str | None = None,
+        when: Condition | None = None,
+        check: Callable[[T], object] | None = None,
+    ) -> Self: ...
+    def bind[T](
+        self,
+        source: type[T]
+        | Callable[..., Generator[T]]
+        | Callable[..., AsyncGenerator[T]]
+        | Callable[..., AbstractContextManager[T]]
+        | Callable[..., AbstractAsyncContextManager[T]]
+        | Callable[..., Awaitable[T]]
+        | Callable[..., T],
         *,
         scope: Scope = Scope.SINGLETON,
         provides: type[object] | None = None,
