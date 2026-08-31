@@ -11,7 +11,7 @@ from hypothesis import strategies as st
 from depin import Container, Scope
 from depin._core.frozen import FrozenContainer
 from depin._core.graph import INACTIVE_NOTE
-from depin._core.spec import ResolutionPlan, fmt_key
+from depin._core.spec import ResolutionPlan, Underlying, fmt_key
 from depin.errors import CaptiveDependencyError, CircularDependencyError, DepinError
 
 
@@ -128,6 +128,16 @@ def _bind_decorator(container: Container, name: str, key: type[object]) -> None:
 
 
 def _materialize(case: GraphCase) -> Container:
+    return _materialize_with_keys(case)[0]
+
+
+def _materialize_with_keys(case: GraphCase) -> tuple[Container, tuple[type[object], ...]]:
+    """`_materialize`, also returning the key each node index was registered under.
+
+    A property that must state what it expects independently of the plan needs
+    the same key objects `_materialize` bound — a name built from the index alone
+    would not be the object depin keyed the binding with.
+    """
     nodes = tuple(type(f'GraphNode{index}', (), {}) for index in range(case.size))
     # A node in `case.generics` is registered and referenced by a parameterised
     # generic key instead of its own class — see `_GenericContainer`.
@@ -170,7 +180,7 @@ def _materialize(case: GraphCase) -> Container:
         _bind_decorator(container, f'GraphDecorator{index}', keys[index])
     for index in case.inactive:
         _ = container.bind(type(f'GraphInactive{index}', (), {}), provides=keys[index], when=False)
-    return container
+    return container, keys
 
 
 def _freeze_result(case: GraphCase) -> str:
@@ -476,16 +486,36 @@ def test_declaring_a_check_changes_nothing_about_the_plan(case: GraphCase) -> No
     assert _freeze_result(case) == _freeze_result(replace(case, checks=frozenset()))
 
 
+def _expected_checked_keys(case: GraphCase, keys: tuple[type[object], ...]) -> set[tuple[object, str | None]]:
+    """The ``(key, tag)`` pairs `checks()` should report, computed from `case.checks` alone.
+
+    Independent of the plan `_materialize` produces: every index in `case.checks`
+    is registered (drawn from `registered_nodes`), so the only translation needed
+    is `decoration.py`'s — a decorated binding's check rides on `Underlying(key,
+    0)`, because the wrapper node takes the public key and the original
+    registration moves underneath it. A duplicated index is not represented here:
+    `_materialize` always gives it a second identical `bind()` call, which
+    `Container.freeze()` always rejects as `DuplicateProviderError`, so the case
+    never reaches the comparison below.
+    """
+    return {(Underlying(keys[index], 0) if index in case.decorations else keys[index], None) for index in case.checks}
+
+
 @settings(deadline=None)
 @given(case=_graphs())
-def test_checks_reports_exactly_the_specs_the_plan_marked_checked(case: GraphCase) -> None:
-    """A check is neither lost nor invented by validation, decoration, or the async pass."""
-    container = _materialize(case)
+def test_checks_reports_exactly_the_declared_checks(case: GraphCase) -> None:
+    """A check is neither lost nor invented by validation, decoration, or the async pass.
+
+    `expected` is derived from `case.checks` — what was declared — rather than
+    from the plan's own `spec.check is not None`, which is exactly what
+    `checks()` filters on and so could not catch a check the graph pass itself
+    dropped.
+    """
+    container, keys = _materialize_with_keys(case)
     try:
         frozen = container.freeze()
     except DepinError:
         return
-    plan = _frozen_plan(frozen)
-    expected = {(spec.key, spec.tag) for spec in plan.order if spec.check is not None}
+    expected = _expected_checked_keys(case, keys)
     actual = {(check.key, check.tag) for check in frozen.checks()}
     assert actual == expected
