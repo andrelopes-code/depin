@@ -645,3 +645,26 @@ def test_explain_describes_the_plan_not_an_active_override() -> None:
 def test_graph_returns_a_view_of_the_plan() -> None:
     container = Container().bind(Config).bind(Store)
     assert container.freeze().graph() == build_graph(build_plan(container.records()))
+
+
+def test_explain_renders_an_alias_and_its_target() -> None:
+    class Store: ...
+
+    class PostgresStore: ...
+
+    di = Container().bind(PostgresStore).alias(Store, to=PostgresStore).freeze()
+    prefix = 'test_explain_renders_an_alias_and_its_target.<locals>.'
+    assert di.explain(Store).replace(prefix, '') == (
+        'Store  [transient, alias]\n  target: PostgresStore  [singleton, class]'
+    )
+
+
+def test_the_exports_carry_the_alias_edge() -> None:
+    class Store: ...
+
+    class PostgresStore: ...
+
+    di = Container().bind(PostgresStore).alias(Store, to=PostgresStore).freeze()
+    assert '[label="target"]' in di.graph().dot()
+    assert '-->|target|' in di.graph().mermaid()
+    assert 'transient, alias' in di.graph().mermaid()
