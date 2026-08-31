@@ -153,7 +153,8 @@ def test_a_registry_carries_conditions_into_a_container() -> None:
 def test_a_condition_that_is_neither_a_bool_nor_a_callable_is_rejected() -> None:
     class Cache: ...
 
-    container = Container().bind(Cache, when=3)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+    container = Container()
+    container.bind(Cache, when=3)  # type: ignore[call-overload]  # pyright: ignore[reportArgumentType]
     with pytest.raises(InvalidProviderError, match='binding condition'):
         _ = container.freeze()
 
@@ -161,7 +162,8 @@ def test_a_condition_that_is_neither_a_bool_nor_a_callable_is_rejected() -> None
 def test_an_inactive_binding_is_never_introspected() -> None:
     # `3` is neither a class nor a callable, so `detect_shape` would reject it.
     # Freezing proves the record never reached introspection at all.
-    container = Container().bind(3, when=False)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+    container = Container()
+    container.bind(3, when=False)  # type: ignore[call-overload]  # pyright: ignore[reportArgumentType]
     assert container.freeze().graph().nodes == ()
 
 
@@ -216,8 +218,6 @@ def test_explain_and_freeze_report_an_inactive_key_alike() -> None:
     frozen = Container().bind(Cache, when=False).bind(DefaultedConsumer).freeze()
     explain_text = frozen.explain(Cache)
 
-    print(freeze_text)
-    print(explain_text)
     assert 'registered but inactive' in freeze_text
     assert freeze_text == explain_text
 

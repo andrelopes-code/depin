@@ -366,4 +366,5 @@ def _with_async_flags(order: Iterable[ProviderSpec], by_key: _Index) -> Iterable
             shape=spec.shape,
             needs_async=own,
             params=spec.params,
+            check=spec.check,
         )

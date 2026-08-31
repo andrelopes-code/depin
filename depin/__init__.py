@@ -27,10 +27,12 @@ from depin._core.bindings import ScopeDecorator
 from depin._core.container import Container
 from depin._core.diagnostics import DependencyGraph, GraphEdge, GraphNode
 from depin._core.frozen import FrozenContainer
+from depin._core.health import HealthCheck, HealthReport, HealthResult
 from depin._core.markers import Named, Tag, Token, injected, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope, ScopeFrame
 from depin._core.spec import Bindings, Condition, ProviderKey, ProviderShape, Underlying
+from depin._core.warmup import WarmupReport
 
 try:
     __version__ = version('pydepin')
@@ -47,6 +49,9 @@ __all__ = (
     'FrozenContainer',
     'GraphEdge',
     'GraphNode',
+    'HealthCheck',
+    'HealthReport',
+    'HealthResult',
     'Named',
     'ProviderKey',
     'ProviderShape',
@@ -57,6 +62,7 @@ __all__ = (
     'Tag',
     'Token',
     'Underlying',
+    'WarmupReport',
     'injected',
     'provides',
 )

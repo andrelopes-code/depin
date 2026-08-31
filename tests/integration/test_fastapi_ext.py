@@ -1,3 +1,5 @@
+import contextlib
+from collections.abc import AsyncGenerator
 from typing import Protocol
 
 import pytest
@@ -5,7 +7,7 @@ from fastapi import FastAPI
 from fastapi import Request as FastAPIRequest
 from httpx import ASGITransport, AsyncClient
 
-from depin import Container, Scope
+from depin import Container, FrozenContainer, Scope
 from depin.ext.fastapi import Inject, RequestScope
 
 
@@ -262,3 +264,84 @@ async def test_a_request_scoped_route_resolves_an_unbound_optional_to_none() -> 
     async with AsyncClient(transport=transport, base_url='http://t') as client:
         r = await client.get('/session')
     assert r.json() == {'has_cache': False}
+
+
+@pytest.mark.asyncio
+async def test_a_lifespan_warmup_constructs_singletons_before_the_first_request() -> None:
+    built: list[str] = []
+
+    class Pool:
+        def __init__(self) -> None:
+            built.append('Pool')
+
+    frozen = Container().bind(Pool).freeze()
+
+    @contextlib.asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+        del app
+        _ = await frozen.awarmup()
+        yield
+
+    app = FastAPI(lifespan=lifespan)
+    app.add_middleware(RequestScope, container=frozen)
+
+    @app.get('/ping')
+    async def _ping(pool: Inject[Pool]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        return {'is_the_warmed_pool': pool is frozen[Pool]}
+
+    transport = ASGITransport(app=app)
+    # ASGITransport does not run the lifespan on its own; drive it explicitly so
+    # the assertion below can tell warmup ran before the request did.
+    async with lifespan(app), AsyncClient(transport=transport, base_url='http://t') as client:
+        assert built == ['Pool']
+        r = await client.get('/ping')
+
+    assert r.json() == {'is_the_warmed_pool': True}
+
+
+@pytest.mark.asyncio
+async def test_a_readiness_route_reports_a_failing_check() -> None:
+    class Database:
+        def __init__(self) -> None:
+            self.connected = True
+
+    class Cache:
+        def __init__(self) -> None:
+            self.connected = False
+
+    def check_database(db: Database) -> bool:
+        return db.connected
+
+    def check_cache(cache: Cache) -> bool:
+        return cache.connected
+
+    frozen: FrozenContainer = Container().bind(Database, check=check_database).bind(Cache, check=check_cache).freeze()
+
+    app = FastAPI()
+    app.add_middleware(RequestScope, container=frozen)
+
+    @app.get('/ready')
+    async def _ready() -> dict[str, object]:  # pyright: ignore[reportUnusedFunction]
+        report = await frozen.ahealth()
+        return {
+            'healthy': report.healthy,
+            'results': [
+                {
+                    'key': result.key.__qualname__ if isinstance(result.key, type) else str(result.key),
+                    'healthy': result.healthy,
+                }
+                for result in report.results
+            ],
+        }
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        r = await client.get('/ready')
+
+    assert r.json() == {
+        'healthy': False,
+        'results': [
+            {'key': Database.__qualname__, 'healthy': True},
+            {'key': Cache.__qualname__, 'healthy': False},
+        ],
+    }

@@ -15,6 +15,8 @@ Every example is a runnable module and is executed by
 | [`conditional`](conditional/main.py) | `python -m examples.conditional.main` | `when=` choosing between two implementations of one key, a binding switched off entirely, and `explain()` on the inactive note. |
 | [`generic_keys`](generic_keys/main.py) | `python -m examples.generic_keys.main` | `Repo[User]` and `Repo[Order]` as two provider keys, a service depending on both, and `explain()` on one parameterisation. |
 | [`graph_diagnostics`](graph_diagnostics/main.py) | `python -m examples.graph_diagnostics.main` | `explain()` for one key, and the `mermaid` export of the whole graph. |
+| [`warmup`](warmup/main.py) | `python -m examples.warmup.main` | `warmup()` building every singleton in one pass, and a scoped provider it leaves alone. |
+| [`health`](health/main.py) | `python -m examples.health.main` | `bind(..., check=...)` declaring a check, `checks()` describing it, and `health()` reporting a passing and a failing one. |
 | [`fastapi_app`](fastapi_app/main.py) | `uvicorn examples.fastapi_app.main:create_app --factory` | Registries, an app factory, one scope per request, `aclose()` on shutdown. |
 
 Install the extras first:

@@ -137,7 +137,7 @@ def test_an_explicit_provides_is_validated_like_any_other_key(explicit: object, 
     class Impl: ...
 
     with pytest.raises(InvalidProviderError, match=fragment):
-        _ = Container().bind(Impl, provides=explicit).freeze()  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        _ = Container().bind(Impl, provides=explicit).freeze()  # type: ignore[call-overload]  # pyright: ignore[reportArgumentType]
 
 
 def test_two_spellings_of_one_key_cannot_both_be_registered() -> None:
@@ -164,7 +164,7 @@ def test_canonicity_is_enforced_inside_a_nested_key(nested: object) -> None:
     class Impl: ...
 
     with pytest.raises(InvalidProviderError, match='deprecated typing alias'):
-        _ = Container().bind(Impl, provides=nested).freeze()  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        _ = Container().bind(Impl, provides=nested).freeze()  # type: ignore[call-overload]  # pyright: ignore[reportArgumentType]
 
 
 def test_two_spellings_of_a_nested_key_cannot_both_be_registered() -> None:

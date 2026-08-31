@@ -205,6 +205,23 @@ def _classes_within(value: object) -> tuple[type[object], ...]:
     return ()
 
 
+def _checked(rec: BindRecord) -> object | None:
+    """The record's check, refused unless it can be called.
+
+    Annotated `object` rather than the declared callable type: the guard exists
+    for an untyped caller that broke the promise the annotation makes to a
+    checker, and a checker that trusts the annotation reads the raise as
+    unreachable.
+    """
+    check: object = rec.check
+    if check is None or callable(check):
+        return check
+    raise InvalidProviderError(
+        f'cannot use {check!r} as a health check for {rec.source!r}: a check is a callable that '
+        'receives the value the provider produced, and is healthy unless it raises or returns False.'
+    )
+
+
 def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec:
     if is_value_binding(rec.source):
         binding = rec.source
@@ -216,6 +233,7 @@ def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec
             shape=ProviderShape.VALUE,
             needs_async=False,
             params=(),
+            check=_checked(rec),
         )
 
     if is_frame_binding(rec.source):
@@ -290,6 +308,7 @@ def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec
         shape=shape,
         needs_async=False,
         params=_extract_params(source, shape, localns),
+        check=_checked(rec),
     )
 
 

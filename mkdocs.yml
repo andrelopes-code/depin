@@ -59,6 +59,7 @@ nav:
       - Resolution semantics: guide/resolution.md
       - Testing: guide/testing.md
       - Inspecting the graph: guide/diagnostics.md
+      - Warmup and health: guide/operations.md
       - FastAPI: guide/fastapi.md
   - Support policy: support-policy.md
   - Reference:
@@ -69,4 +70,5 @@ nav:
       - Markers: reference/markers.md
       - Errors: reference/errors.md
       - Graph diagnostics: reference/diagnostics.md
+      - Warmup and health: reference/operations.md
       - FastAPI: reference/fastapi.md

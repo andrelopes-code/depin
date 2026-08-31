@@ -8,7 +8,7 @@ from typing import Protocol
 import pytest
 
 from benchmarks.graphs import build_chain, build_decorated_chain, build_generic_chain
-from depin import Container, Scope, injected
+from depin import Container, FrozenContainer, Scope, WarmupReport, injected
 
 
 class Element(Protocol): ...
@@ -42,6 +42,13 @@ class Benchmark(Protocol):
     """
 
     def __call__[T](self, function: Callable[[], T]) -> T: ...
+    def pedantic[T](
+        self,
+        target: Callable[..., T],
+        *,
+        setup: Callable[[], tuple[tuple[object, ...], dict[str, object]]],
+        rounds: int = 1,
+    ) -> T: ...
 
 
 @pytest.mark.parametrize('size', [10, 100, 1000])
@@ -64,6 +71,28 @@ def test_freeze_a_chain_with_every_node_decorated(benchmark: Benchmark, size: in
     folding decorations into the plan is visible against the plain-chain baseline."""
     container, _ = build_decorated_chain(size)
     _ = benchmark(container.freeze)
+
+
+def test_warmup_a_chain(benchmark: Benchmark) -> None:
+    """Constructing every singleton in one pass, against `test_freeze_a_chain`'s cost
+    for the same graph size.
+
+    `setup` freezes a fresh container before each round, outside the window
+    `pytest-benchmark` times, so the timed callable is `warmup()` alone rather than
+    `freeze()` plus `warmup()`. A fresh container per round, rather than one frozen
+    container reused: a warmed container caches every singleton, so a second
+    `warmup()` on the same one would measure the cached branch instead of
+    construction.
+    """
+    container, _ = build_chain(1000)
+
+    def setup() -> tuple[tuple[FrozenContainer], dict[str, object]]:
+        return (container.freeze(),), {}
+
+    def warm(frozen: FrozenContainer) -> WarmupReport:
+        return frozen.warmup()
+
+    _ = benchmark.pedantic(warm, setup=setup, rounds=50)
 
 
 def test_resolve_a_cached_singleton(benchmark: Benchmark) -> None:

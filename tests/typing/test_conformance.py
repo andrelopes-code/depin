@@ -5,7 +5,8 @@ checker emits when an inferred type drifts. `pytest` collects the functions too,
 so a change that breaks the import still fails the suite.
 """
 
-from collections.abc import Awaitable
+import contextlib
+from collections.abc import AsyncGenerator, Awaitable, Generator
 from typing import Protocol, assert_type
 
 from depin import (
@@ -14,11 +15,14 @@ from depin import (
     FrozenContainer,
     GraphEdge,
     GraphNode,
+    HealthCheck,
+    HealthReport,
     ProviderShape,
     Scope,
     ScopeFrame,
     Token,
     Underlying,
+    WarmupReport,
     injected,
     provides,
 )
@@ -252,3 +256,112 @@ def test_an_underlying_key_is_an_explain_argument() -> None:
 
     di = Container().bind(Store).decorate(Store, Loud).freeze()
     assert_type(di.explain(Underlying(Store, 0)), str)
+
+
+def test_warmup_returns_a_warmup_report() -> None:
+    di = Container().bind(Config).freeze()
+    assert_type(di.warmup(), WarmupReport)
+
+
+def test_checks_returns_a_tuple_of_health_checks() -> None:
+    class Database: ...
+
+    def ping(db: Database) -> None: ...
+
+    di = Container().bind(Database, check=ping).freeze()
+    assert_type(di.checks(), tuple[HealthCheck, ...])
+
+
+def test_health_returns_a_health_report() -> None:
+    class Database: ...
+
+    def ping(db: Database) -> None: ...
+
+    di = Container().bind(Database, check=ping).freeze()
+    assert_type(di.health(), HealthReport)
+
+
+def test_bind_infers_the_check_parameter_from_the_bound_type() -> None:
+    class Database: ...
+
+    def ping(db: Database) -> None: ...
+
+    assert_type(Container().bind(Database, check=ping), Container)
+
+
+def test_bind_rejects_a_check_whose_parameter_does_not_match_the_binding() -> None:
+    class Database: ...
+
+    class Cache: ...
+
+    def ping(cache: Cache) -> None: ...
+
+    _ = Container().bind(Database, check=ping)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+
+
+def test_bind_infers_the_check_parameter_for_a_generator_factory() -> None:
+    class Pool: ...
+
+    def pool() -> Generator[Pool]:
+        yield Pool()
+
+    def ping(p: Pool) -> None: ...
+
+    assert_type(Container().bind(pool, check=ping), Container)
+
+
+def test_bind_infers_the_check_parameter_for_an_async_generator_factory() -> None:
+    class Pool: ...
+
+    async def pool() -> AsyncGenerator[Pool]:
+        yield Pool()
+
+    def ping(p: Pool) -> None: ...
+
+    assert_type(Container().bind(pool, check=ping), Container)
+
+
+def test_bind_infers_the_check_parameter_for_an_async_def_factory() -> None:
+    class Pool: ...
+
+    async def make_pool() -> Pool:
+        return Pool()
+
+    def ping(p: Pool) -> None: ...
+
+    assert_type(Container().bind(make_pool, check=ping), Container)
+
+
+def test_bind_infers_the_check_parameter_for_a_contextmanager_factory() -> None:
+    class Pool: ...
+
+    @contextlib.contextmanager
+    def pool() -> Generator[Pool]:
+        yield Pool()
+
+    def ping(p: Pool) -> None: ...
+
+    assert_type(Container().bind(pool, check=ping), Container)
+
+
+def test_bind_infers_the_check_parameter_for_an_asynccontextmanager_factory() -> None:
+    class Pool: ...
+
+    @contextlib.asynccontextmanager
+    async def pool() -> AsyncGenerator[Pool]:
+        yield Pool()
+
+    def ping(p: Pool) -> None: ...
+
+    assert_type(Container().bind(pool, check=ping), Container)
+
+
+def test_bind_infers_the_check_parameter_for_a_plain_factory() -> None:
+    class Pool: ...
+
+    def make_pool() -> Pool:
+        return Pool()
+
+    def ping(p: Pool) -> None: ...
+
+    assert_type(Container().bind(make_pool, check=ping), Container)

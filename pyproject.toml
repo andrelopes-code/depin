@@ -100,10 +100,17 @@ target-version = "py312"
 quote-style = "single"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PT"]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PT", "T20"]
 
 [tool.ruff.lint.isort]
 case-sensitive = true
+
+# print() is the point of these files: runnable examples, and the two CLI
+# scripts that report to stdout/stderr. Everywhere else, T20 stays enforced.
+[tool.ruff.lint.per-file-ignores]
+"examples/**" = ["T20"]
+"scripts/check_mutation_threshold.py" = ["T20"]
+"benchmarks/compare.py" = ["T20"]
 
 [tool.ruff.lint.flake8-bugbear]
 # injected() is designed to sit in default-value position; it returns a fresh
