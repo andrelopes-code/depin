@@ -28,6 +28,13 @@ from depin._core.container import Container
 from depin._core.diagnostics import DependencyGraph, GraphEdge, GraphNode
 from depin._core.frozen import FrozenContainer
 from depin._core.health import HealthCheck, HealthReport, HealthResult
+from depin._core.hosting import (
+    CONTRACT_VERSION,
+    ContractVersion,
+    Host,
+    hosted_container,
+    optional_hosted_container,
+)
 from depin._core.markers import Named, Tag, Token, injected, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope, ScopeFrame
@@ -41,10 +48,14 @@ except PackageNotFoundError:
     # distribution metadata to read the version from.
     __version__ = '0.0.0+unknown'
 
-__all__ = (
+# RUF022's isort-style sort groups SCREAMING_SNAKE_CASE names before CamelCase
+# ones; kept in plain ASCII order instead, matching tests/unit/test_public_api.py.
+__all__ = (  # noqa: RUF022
     'Bindings',
+    'CONTRACT_VERSION',
     'Condition',
     'Container',
+    'ContractVersion',
     'DependencyGraph',
     'FrozenContainer',
     'GraphEdge',
@@ -52,6 +63,7 @@ __all__ = (
     'HealthCheck',
     'HealthReport',
     'HealthResult',
+    'Host',
     'Named',
     'ProviderKey',
     'ProviderShape',
@@ -63,6 +75,8 @@ __all__ = (
     'Token',
     'Underlying',
     'WarmupReport',
+    'hosted_container',
     'injected',
+    'optional_hosted_container',
     'provides',
 )

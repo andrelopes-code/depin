@@ -9,8 +9,10 @@ import depin
 
 EXPECTED_EXPORTS = (
     'Bindings',
+    'CONTRACT_VERSION',
     'Condition',
     'Container',
+    'ContractVersion',
     'DependencyGraph',
     'FrozenContainer',
     'GraphEdge',
@@ -18,6 +20,7 @@ EXPECTED_EXPORTS = (
     'HealthCheck',
     'HealthReport',
     'HealthResult',
+    'Host',
     'Named',
     'ProviderKey',
     'ProviderShape',
@@ -29,7 +32,9 @@ EXPECTED_EXPORTS = (
     'Token',
     'Underlying',
     'WarmupReport',
+    'hosted_container',
     'injected',
+    'optional_hosted_container',
     'provides',
 )
 
