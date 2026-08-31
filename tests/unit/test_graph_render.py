@@ -52,15 +52,17 @@ def build() -> DependencyGraph:
 
 
 def test_a_leaf_renders_as_one_annotated_line() -> None:
-    assert render_tree(build(), Config, None) == 'Config  [singleton, class]'
+    assert render_tree(build(), Config, None, frozenset()) == 'Config  [singleton, class]'
 
 
 def test_a_tree_indents_each_level_by_two_spaces() -> None:
-    assert render_tree(build(), Store, None) == ('Store  [singleton, class]\n  config: Config  [singleton, class]')
+    assert render_tree(build(), Store, None, frozenset()) == (
+        'Store  [singleton, class]\n  config: Config  [singleton, class]'
+    )
 
 
 def test_a_repeated_subtree_is_rendered_once() -> None:
-    assert render_tree(build(), Service, None) == (
+    assert render_tree(build(), Service, None, frozenset()) == (
         'Service  [singleton, class]\n'
         '  store: Store  [singleton, class]\n'
         '    config: Config  [singleton, class]\n'
@@ -76,7 +78,7 @@ def test_an_async_provider_is_annotated_as_async() -> None:
         return Session()
 
     graph = build_graph(build_plan(Container().bind(session).records()))
-    assert render_tree(graph, Session, None) == (
+    assert render_tree(graph, Session, None, frozenset()) == (
         'test_an_async_provider_is_annotated_as_async.<locals>.Session  [singleton, async function, async]'
     )
 
@@ -89,14 +91,14 @@ def test_a_scoped_generator_reports_its_shape() -> None:
         yield Connection()
 
     graph = build_graph(build_plan(Container().bind(connection, scope=Scope.SCOPED).records()))
-    assert render_tree(graph, Connection, None) == (
+    assert render_tree(graph, Connection, None, frozenset()) == (
         'test_a_scoped_generator_reports_its_shape.<locals>.Connection  [scoped, generator]'
     )
 
 
 def test_a_tag_is_reported_in_the_annotations() -> None:
     graph = build_graph(build_plan(Container().bind(Config, tag='primary').records()))
-    assert render_tree(graph, Config, 'primary') == "Config  [singleton, class, tag='primary']"
+    assert render_tree(graph, Config, 'primary', frozenset()) == "Config  [singleton, class, tag='primary']"
 
 
 def test_an_unbound_default_renders_as_a_leaf() -> None:
@@ -105,7 +107,7 @@ def test_an_unbound_default_renders_as_a_leaf() -> None:
             self.timeout = timeout
 
     graph = build_graph(build_plan(Container().bind(Client).records()))
-    assert render_tree(graph, Client, None) == (
+    assert render_tree(graph, Client, None, frozenset()) == (
         'test_an_unbound_default_renders_as_a_leaf.<locals>.Client  [singleton, class]\n'
         '  timeout: float  (unbound, default)'
     )
@@ -114,14 +116,14 @@ def test_an_unbound_default_renders_as_a_leaf() -> None:
 def test_a_token_key_renders_by_its_repr() -> None:
     port = Token[int]('port')
     graph = build_graph(build_plan(Container().value(port, 8080).records()))
-    assert render_tree(graph, port, None) == "Token('port')  [singleton, value]"
+    assert render_tree(graph, port, None, frozenset()) == "Token('port')  [singleton, value]"
 
 
 def test_an_unregistered_key_that_nothing_requires_reports_the_lookup_wording() -> None:
     class Absent:
         pass
 
-    assert render_tree(build(), Absent, None) == (
+    assert render_tree(build(), Absent, None, frozenset()) == (
         'no provider for test_an_unregistered_key_that_nothing_requires_reports_the_lookup_wording'
         '.<locals>.Absent (tag=None)'
     )
@@ -162,7 +164,7 @@ def test_a_cycle_in_a_manually_built_graph_does_not_loop_the_missing_search() ->
         dependencies=(GraphEdge(parameter='a', key=A, tag=None, satisfied=True, optional=False, has_default=False),),
     )
     graph = DependencyGraph((node_a, node_b))
-    assert render_tree(graph, Missing, None) == f'no provider for {fmt_key(Missing)} (tag=None)'
+    assert render_tree(graph, Missing, None, frozenset()) == f'no provider for {fmt_key(Missing)} (tag=None)'
 
 
 def test_a_cycle_does_not_stop_the_search_for_a_sibling_missing_edge() -> None:
@@ -203,7 +205,9 @@ def test_a_cycle_does_not_stop_the_search_for_a_sibling_missing_edge() -> None:
         ),
     )
     graph = DependencyGraph((node_a, node_b))
-    assert render_tree(graph, Missing, None) == format_missing(Missing, (A, B), B, 'missing')
+    assert render_tree(graph, Missing, None, frozenset()) == format_missing(
+        Missing, (A, B), B, 'missing', inactive=False
+    )
 
 
 def test_an_unrelated_missing_edge_does_not_stop_the_search_for_the_real_one() -> None:
@@ -218,7 +222,9 @@ def test_an_unrelated_missing_edge_does_not_stop_the_search_for_the_real_one() -
     make_outer.__annotations__ = {'other_dep': other, 'missing_dep': missing, 'return': outer}
 
     graph = build_graph(build_plan(Container().bind(make_outer).records()))
-    assert render_tree(graph, missing, None) == format_missing(missing, (outer,), outer, 'missing_dep')
+    assert render_tree(graph, missing, None, frozenset()) == format_missing(
+        missing, (outer,), outer, 'missing_dep', inactive=False
+    )
 
 
 def test_the_absent_message_uses_the_requested_tag() -> None:
@@ -248,7 +254,7 @@ def test_the_absent_message_uses_the_requested_tag() -> None:
         _ = Container().bind(make_inner_required).freeze()
 
     graph = build_graph(build_plan(Container().bind(make_inner_defaulted).records()))
-    assert render_tree(graph, Missing, 'special') == str(raised.value)
+    assert render_tree(graph, Missing, 'special', frozenset()) == str(raised.value)
 
 
 def test_the_search_follows_a_tagged_intermediate_to_a_deeper_missing_leaf() -> None:
@@ -279,7 +285,7 @@ def test_the_search_follows_a_tagged_intermediate_to_a_deeper_missing_leaf() -> 
         _ = Container().bind(make_middle_required, tag='mid').bind(make_outer).freeze()
 
     graph = build_graph(build_plan(Container().bind(make_middle_defaulted, tag='mid').bind(make_outer).records()))
-    assert render_tree(graph, Missing, None) == str(raised.value)
+    assert render_tree(graph, Missing, None, frozenset()) == str(raised.value)
 
 
 def test_an_unbound_leaf_does_not_truncate_the_remaining_siblings() -> None:
@@ -293,7 +299,7 @@ def test_an_unbound_leaf_does_not_truncate_the_remaining_siblings() -> None:
     make_multi.__annotations__ = {'missing_dep': missing, 'config': Config, 'return': multi}
 
     graph = build_graph(build_plan(Container().bind(Config).bind(make_multi).records()))
-    assert render_tree(graph, multi, None) == (
+    assert render_tree(graph, multi, None, frozenset()) == (
         f'{fmt_key(multi)}  [singleton, function]\n'
         f'  missing_dep: {fmt_key(missing)}  (unbound, default)\n'
         '  config: Config  [singleton, class]'
@@ -308,7 +314,7 @@ def test_a_repeated_node_does_not_truncate_the_remaining_siblings() -> None:
             self.c = c
 
     graph = build_graph(build_plan(Container().bind(Config).bind(Store).bind(Multi).records()))
-    assert render_tree(graph, Multi, None) == (
+    assert render_tree(graph, Multi, None, frozenset()) == (
         f'{fmt_key(Multi)}  [singleton, class]\n'
         '  a: Store  [singleton, class]\n'
         '    config: Config  [singleton, class]\n'
@@ -323,7 +329,7 @@ def test_a_tagged_dependency_is_found_by_its_required_tag() -> None:
             self.store = store
 
     graph = build_graph(build_plan(Container().bind(Config).bind(Store, tag='primary').bind(Consumer).records()))
-    assert render_tree(graph, Consumer, None) == (
+    assert render_tree(graph, Consumer, None, frozenset()) == (
         f'{fmt_key(Consumer)}  [singleton, class]\n'
         "  store: Store  [singleton, class, tag='primary']\n"
         '    config: Config  [singleton, class]'
@@ -332,7 +338,7 @@ def test_a_tagged_dependency_is_found_by_its_required_tag() -> None:
 
 def test_the_absent_message_joins_multiple_candidates_with_comma_space() -> None:
     names = sorted(f'{cls.__module__}.{cls.__qualname__}' for cls in (MultiCandidateA, MultiCandidateB))
-    assert render_tree(build(), MultiCandidateTarget, None) == (
+    assert render_tree(build(), MultiCandidateTarget, None, frozenset()) == (
         f'no provider for {fmt_key(MultiCandidateTarget)} (tag=None); candidates: {", ".join(names)}'
     )
 
@@ -363,7 +369,7 @@ def test_a_backslash_in_a_key_is_escaped_in_dot() -> None:
 
 def test_the_tree_is_identical_on_two_calls() -> None:
     graph = build()
-    assert render_tree(graph, Service, None) == render_tree(graph, Service, None)
+    assert render_tree(graph, Service, None, frozenset()) == render_tree(graph, Service, None, frozenset())
 
 
 def _chain_with_unbound_leaf() -> tuple[Container, Container, type[object]]:
@@ -406,7 +412,7 @@ def test_explain_names_the_chain_the_freeze_error_names() -> None:
 
     graph = build_graph(build_plan(defaulted.records()))
 
-    assert render_tree(graph, missing, None) == str(raised.value)
+    assert render_tree(graph, missing, None, frozenset()) == str(raised.value)
 
 
 def _two_equal_chains_to_one_unbound_leaf() -> tuple[Container, Container, type[object]]:
@@ -469,7 +475,7 @@ def test_a_tie_between_equal_length_chains_matches_the_freeze_error() -> None:
 
     graph = build_graph(build_plan(defaulted.records()))
 
-    assert render_tree(graph, missing, None) == str(raised.value)
+    assert render_tree(graph, missing, None, frozenset()) == str(raised.value)
 
 
 def _two_equal_sibling_chains_to_one_unbound_leaf() -> tuple[Container, Container, type[object]]:
@@ -523,7 +529,7 @@ def test_a_tie_between_sibling_chains_matches_the_freeze_error() -> None:
 
     graph = build_graph(build_plan(defaulted.records()))
 
-    assert render_tree(graph, missing, None) == str(raised.value)
+    assert render_tree(graph, missing, None, frozenset()) == str(raised.value)
 
 
 def _chain_through_a_bound_and_defaulted_intermediate() -> tuple[Container, Container, type[object]]:
@@ -566,7 +572,7 @@ def test_a_bound_and_defaulted_intermediate_does_not_shorten_the_chain() -> None
     graph = build_graph(build_plan(defaulted.records()))
 
     assert 'Outer' in str(raised.value)
-    assert render_tree(graph, missing, None) == str(raised.value)
+    assert render_tree(graph, missing, None, frozenset()) == str(raised.value)
 
 
 def test_an_optional_only_dependency_reports_the_no_chain_wording() -> None:
@@ -588,7 +594,7 @@ def test_an_optional_only_dependency_reports_the_no_chain_wording() -> None:
 
     graph = build_graph(build_plan(Container().bind(make_owner).records()))
 
-    assert render_tree(graph, missing, None) == f'no provider for {fmt_key(missing)} (tag=None)'
+    assert render_tree(graph, missing, None, frozenset()) == f'no provider for {fmt_key(missing)} (tag=None)'
 
 
 def test_dot_declares_every_node_and_edge_in_plan_order() -> None:
@@ -685,7 +691,7 @@ def test_the_exports_do_not_depend_on_the_hash_seed() -> None:
 def test_explain_delegates_to_the_tree_renderer() -> None:
     container = Container().bind(Config).bind(Store).bind(Service)
     graph = build_graph(build_plan(container.records()))
-    assert container.freeze().explain(Service) == render_tree(graph, Service, None)
+    assert container.freeze().explain(Service) == render_tree(graph, Service, None, frozenset())
 
 
 def test_explain_accepts_a_tag() -> None:
@@ -702,7 +708,7 @@ def test_explain_rejects_a_value_that_is_not_a_key() -> None:
 def test_explain_describes_the_plan_not_an_active_override() -> None:
     container = Container().bind(Config).bind(Store)
     di = container.freeze()
-    expected = render_tree(build_graph(build_plan(container.records())), Store, None)
+    expected = render_tree(build_graph(build_plan(container.records())), Store, None, frozenset())
     with di.override(Config, Config()):
         assert di.explain(Store) == expected
 
@@ -805,3 +811,49 @@ def test_a_generic_key_renders_by_its_parameterisation_not_by_repr() -> None:
     assert di.explain(Repo[User]).replace(prefix, '') == 'Repo[User]  [singleton, function]'
     assert '[label="Repo[User]\\nsingleton, function", shape=box]' in di.graph().dot().replace(prefix, '')
     assert 'Repo[User]<br/>singleton, function' in di.graph().mermaid().replace(mermaid_prefix, '')
+
+
+def test_explain_shows_the_decoration_chain() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    di = Container().bind(Store).decorate(Store, Loud).freeze()
+    rendered = di.explain(Store)
+    assert rendered.splitlines()[0].startswith(f'{Store.__qualname__}  [singleton, class]')
+    assert f'inner: {Store.__qualname__} (undecorated)  [singleton, class]' in rendered
+
+
+def test_explain_shows_two_decoration_layers() -> None:
+    class Store: ...
+
+    class Upper:
+        def __init__(self, inner: Store) -> None: ...
+
+    class Bracket:
+        def __init__(self, inner: Store) -> None: ...
+
+    di = Container().bind(Store).decorate(Store, Upper).decorate(Store, Bracket).freeze()
+    rendered = di.explain(Store)
+    assert f'{Store.__qualname__} (decorated x1)' in rendered
+    assert f'{Store.__qualname__} (undecorated)' in rendered
+
+
+def test_the_exports_carry_a_decorated_node() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    graph = Container().bind(Store).decorate(Store, Loud).freeze().graph()
+    assert '(undecorated)' in graph.mermaid()
+    assert '(undecorated)' in graph.dot()
+    assert '|inner|' in graph.mermaid()
+
+
+def test_explain_names_an_inactive_binding() -> None:
+    class Cache: ...
+
+    di = Container().bind(Cache, when=False).freeze()
+    assert 'registered but inactive' in di.explain(Cache)

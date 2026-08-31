@@ -9,6 +9,7 @@ import depin
 
 EXPECTED_EXPORTS = (
     'Bindings',
+    'Condition',
     'Container',
     'DependencyGraph',
     'FrozenContainer',
@@ -23,6 +24,7 @@ EXPECTED_EXPORTS = (
     'ScopeFrame',
     'Tag',
     'Token',
+    'Underlying',
     'injected',
     'provides',
 )

@@ -7,7 +7,7 @@ from typing import Protocol
 
 import pytest
 
-from benchmarks.graphs import build_chain, build_generic_chain
+from benchmarks.graphs import build_chain, build_decorated_chain, build_generic_chain
 from depin import Container, Scope, injected
 
 
@@ -58,6 +58,14 @@ def test_freeze_a_chain_of_generic_keys(benchmark: Benchmark, size: int) -> None
     _ = benchmark(container.freeze)
 
 
+@pytest.mark.parametrize('size', [10, 100, 1000])
+def test_freeze_a_chain_with_every_node_decorated(benchmark: Benchmark, size: int) -> None:
+    """`test_freeze_a_chain`, with one decorator over every node, so the cost of
+    folding decorations into the plan is visible against the plain-chain baseline."""
+    container, _ = build_decorated_chain(size)
+    _ = benchmark(container.freeze)
+
+
 def test_resolve_a_cached_singleton(benchmark: Benchmark) -> None:
     container, leaf = build_chain(100)
     frozen = container.freeze()
@@ -84,6 +92,32 @@ def test_resolve_a_cached_singleton_through_an_alias(benchmark: Benchmark) -> No
 
     def resolve() -> object:
         return frozen.resolve(Aliased)
+
+    _ = benchmark(resolve)
+
+
+def test_resolve_a_singleton_through_a_two_deep_decoration_chain(benchmark: Benchmark) -> None:
+    """`test_resolve_a_cached_singleton`, with two decorators wrapping the leaf.
+
+    Measures the cost of the two extra nodes decoration inserts between the
+    cached value and the public key.
+    """
+
+    class Store: ...
+
+    class Middle:
+        def __init__(self, inner: Store) -> None:
+            self.inner = inner
+
+    class Outer:
+        def __init__(self, inner: Store) -> None:
+            self.inner = inner
+
+    frozen = Container().bind(Store).decorate(Store, Middle).decorate(Store, Outer).freeze()
+    _ = frozen.resolve(Store)
+
+    def resolve() -> object:
+        return frozen.resolve(Store)
 
     _ = benchmark(resolve)
 

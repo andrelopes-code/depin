@@ -172,6 +172,74 @@ async def test_a_route_resolves_a_generic_key() -> None:
 
 
 @pytest.mark.asyncio
+async def test_a_route_resolves_a_decorated_scoped_provider() -> None:
+    class Counter:
+        def __init__(self) -> None:
+            self.value = 0
+
+        def tick(self) -> int:
+            self.value += 1
+            return self.value
+
+    class Doubled:
+        def __init__(self, inner: Counter) -> None:
+            self.inner = inner
+
+        def tick(self) -> int:
+            return self.inner.tick() * 2
+
+    frozen = Container().bind(Counter, scope=Scope.SCOPED).decorate(Counter, Doubled).freeze()
+
+    app = FastAPI()
+    app.add_middleware(RequestScope, container=frozen)
+
+    @app.get('/tick')
+    async def _tick(c: Inject[Counter]) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]
+        return {'n': c.tick(), 'again': c.tick()}
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        r = await client.get('/tick')
+    # A plain Counter would answer {'n': 1, 'again': 2}; the wrapper is what
+    # doubles every tick before the route sees it.
+    assert r.json() == {'n': 2, 'again': 4}
+
+
+@pytest.mark.asyncio
+async def test_a_route_resolves_the_binding_selected_by_condition() -> None:
+    class Store(Protocol):
+        def label(self) -> str: ...
+
+    class Postgres:
+        def label(self) -> str:
+            return 'postgres'
+
+    class Memory:
+        def label(self) -> str:
+            return 'memory'
+
+    production = False
+    frozen = (
+        Container()
+        .bind(Postgres, provides=Store, when=production)
+        .bind(Memory, provides=Store, when=not production)
+        .freeze()
+    )
+
+    app = FastAPI()
+    app.add_middleware(RequestScope, container=frozen)
+
+    @app.get('/store')
+    async def _store(store: Inject[Store]) -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
+        return {'label': store.label()}
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        r = await client.get('/store')
+    assert r.json() == {'label': 'memory'}
+
+
+@pytest.mark.asyncio
 async def test_a_request_scoped_route_resolves_an_unbound_optional_to_none() -> None:
     class Cache:
         def get(self) -> str:

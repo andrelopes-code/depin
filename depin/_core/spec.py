@@ -1,10 +1,10 @@
 """Internal binding and resolution data structures, plus the public `Bindings` protocol."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from types import GenericAlias, UnionType
-from typing import Final, Protocol, TypeGuard, get_args, get_origin, runtime_checkable
+from typing import Final, Protocol, TypeGuard, final, get_args, get_origin, runtime_checkable
 
 from depin._core.markers import Token
 from depin._core.scope import Scope
@@ -62,7 +62,45 @@ class ProviderShape(Enum):
     COLLECTION = 'collection'
 
 
-type ProviderKey = type[object] | Token[object] | str | GenericAlias
+@final
+@dataclass(frozen=True, slots=True)
+class Underlying:
+    """The key a decorated binding's inner form is registered under.
+
+    `Container.decorate` leaves the wrapper on the public key and moves what it
+    wraps here, so both are ordinary nodes of the validated graph: the wrapper
+    reaches its inner form over a real edge, and the inner form keeps the
+    lifetime, the cache entry, and the teardown it had undecorated.
+
+    ``applied`` counts the decorators already applied below the public key, so
+    the registered binding is ``Underlying(key, 0)`` and a second decorator over
+    the same key sees ``Underlying(key, 1)``. Construct one to inspect a
+    decorated binding — `FrozenContainer.explain` and `DependencyGraph.find`
+    accept it — not to register anything.
+
+    Example:
+        ```pycon
+        >>> from depin import Container, ProviderShape, Underlying
+        >>> class Store:
+        ...     def get(self) -> str:
+        ...         return 'plain'
+        >>> class Loud:
+        ...     def __init__(self, inner: Store) -> None:
+        ...         self.inner = inner
+        ...     def get(self) -> str:
+        ...         return self.inner.get().upper()
+        >>> di = Container().bind(Store).decorate(Store, Loud).freeze()
+        >>> di.graph().node(Underlying(Store, 0)).shape is ProviderShape.CLASS
+        True
+
+        ```
+    """
+
+    key: 'ProviderKey'
+    applied: int
+
+
+type ProviderKey = type[object] | Token[object] | str | GenericAlias | Underlying
 """What a provider can be bound and resolved under: a class, a `Token`, a name, or a parameterised generic.
 
 The parameterised case needs no member of its own. A generic written in
@@ -72,6 +110,9 @@ expression position — ``Repo[User]``, ``Reader[User]`` — has the static type
 produces, such as ``list[Handler]``. A deprecated ``typing`` alias
 (``typing.List[X]``) is a key at neither level: `Container.freeze()` rejects it
 and names the canonical spelling to write instead.
+
+An `Underlying` is the fifth: the identity `Container.decorate` moves a
+decorated binding's inner form to, so the wrapper can occupy the public key.
 """
 
 type Ident = tuple[ProviderKey, str | None]
@@ -160,6 +201,24 @@ def is_collection_binding(value: object) -> TypeGuard[CollectionBinding]:
     return isinstance(value, CollectionBinding)
 
 
+@dataclass(frozen=True, slots=True)
+class DecorateBinding:
+    """Marker source for `Container.decorate(key, wrapper)`.
+
+    The binding carries its own key because `BindRecord.provides` admits only a
+    class, while a decorated key may equally be a `Token`, a string, or a
+    parameterised generic. It carries no tag of its own: a decorator has no
+    identity to tag, so the tag on `BindRecord` is the decorated binding's.
+    """
+
+    key: ProviderKey
+    wrapper: object
+
+
+def is_decorate_binding(value: object) -> TypeGuard[DecorateBinding]:
+    return isinstance(value, DecorateBinding)
+
+
 def collection_key(element: ProviderKey) -> ProviderKey:
     """The key a collection over ``element`` is registered under.
 
@@ -175,12 +234,23 @@ def collection_param(index: int) -> str:
     return f'{COLLECTION_PARAM_PREFIX}{index}'
 
 
+type Condition = bool | Callable[[], bool]
+"""What `when=` accepts on a registration.
+
+A ``bool`` is read where it is written. A callable is called once per
+`Container.freeze()`, with no arguments, and its result is read for truth — so a
+predicate over configuration or the environment is evaluated when the graph is
+built, not when a value is resolved.
+"""
+
+
 @dataclass(frozen=True, slots=True)
 class BindRecord:
     source: object
     scope: Scope
     provides: type[object] | None
     tag: str | None
+    condition: Condition | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -205,9 +275,42 @@ class ProviderSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class DecorationSpec:
+    """One wrapper over one binding, before it is given a key of its own.
+
+    `depin._core.decoration` decides the key: it depends on how many decorators
+    target the same binding, which no single record knows. ``inner`` names the
+    parameter that receives the value being wrapped.
+    """
+
+    key: ProviderKey
+    tag: str | None
+    source: object
+    shape: ProviderShape
+    params: tuple[ParamSpec, ...]
+    inner: str
+
+
+@dataclass(frozen=True, slots=True)
+class SpecSet:
+    """What `build_specs` reads out of a set of records.
+
+    Decorations are kept apart from providers because a decorator claims no key
+    of its own until `depin._core.decoration` knows how many decorators target
+    the same binding. `inactive` names the keys that a condition kept out, so a
+    missing-provider message can say so.
+    """
+
+    providers: tuple[ProviderSpec, ...]
+    decorations: tuple[DecorationSpec, ...]
+    inactive: frozenset[Ident]
+
+
+@dataclass(frozen=True, slots=True)
 class ResolutionPlan:
     order: tuple[ProviderSpec, ...]
     by_key: Mapping[tuple[ProviderKey, str | None], ProviderSpec]
+    inactive: frozenset[Ident] = frozenset()
 
 
 @runtime_checkable
@@ -240,10 +343,22 @@ class Bindings(Protocol):
 def fmt_key(key: object) -> str:
     if isinstance(key, type):
         return key.__qualname__
+    if isinstance(key, Underlying):
+        return fmt_underlying(key)
     origin = get_origin(key)
     if isinstance(origin, type) and origin is not UnionType:
         return fmt_parameterised(origin, get_args(key))
     return repr(key)
+
+
+def fmt_underlying(key: Underlying) -> str:
+    """Spell a decoration layer as ``Store (undecorated)`` or ``Store (decorated x2)``.
+
+    The wrapped key goes through `fmt_key` itself, so a decorated `Token`,
+    string, or parameterised key renders the way it does everywhere else.
+    """
+    layer = 'undecorated' if key.applied == 0 else f'decorated x{key.applied}'
+    return f'{fmt_key(key.key)} ({layer})'
 
 
 def fmt_parameterised(origin: type[object], arguments: tuple[object, ...]) -> str:

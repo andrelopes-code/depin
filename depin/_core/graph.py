@@ -8,7 +8,9 @@ singletons, and which providers transitively need async resolution.
 import sys
 from collections.abc import Iterable
 from types import ModuleType
+from typing import Final
 
+from depin._core import decoration
 from depin._core.markers import get_provides
 from depin._core.providers import ASYNC_SHAPES, build_specs
 from depin._core.scope import Scope
@@ -22,26 +24,38 @@ from depin.errors import (
 
 type _Index = dict[Ident, ProviderSpec]
 
+INACTIVE_NOTE: Final[str] = '; a conditional binding for this key is registered but inactive'
+
 
 def build_plan(records: Iterable[BindRecord]) -> ResolutionPlan:
     """Validate the bindings and return the plan the frozen container resolves from.
 
+    Duplicates are checked against the keys the user wrote, before the
+    decoration fold moves any of them, so `DuplicateProviderError` still names
+    the binding itself rather than its undecorated position. Everything after
+    the fold sees ordinary nodes.
+
     Raises:
         DuplicateProviderError: Two bindings share a key and tag.
-        MissingProviderError: A required dependency has no provider.
+        MissingProviderError: A required dependency has no provider, or a
+            decorator names a key that nothing binds.
         CircularDependencyError: The graph contains a cycle.
         CaptiveDependencyError: A singleton depends on a scoped provider.
-        InvalidProviderError: A binding lacks the type information to infer a key.
-        InvalidScopeError: A lifecycle provider is bound as transient.
+        InvalidProviderError: A binding lacks the type information to infer a key,
+            carries a condition that is neither a bool nor a callable, or decorates
+            a `Container.scope_value` binding.
+        InvalidScopeError: A lifecycle provider is bound as transient, or a
+            lifecycle decorator wraps a transient binding.
     """
     specs = build_specs(records)
-    _check_duplicates(specs)
-    by_key = _index(specs)
-    _check_missing(specs, by_key)
-    order = _toposort(specs, by_key)
+    _check_duplicates(specs.providers)
+    providers = decoration.apply(specs.providers, specs.decorations, specs.inactive)
+    by_key = _index(providers)
+    _check_missing(providers, by_key, specs.inactive)
+    order = _toposort(providers, by_key)
     _check_captive(order, by_key)
     resolved = tuple(_with_async_flags(order, by_key))
-    return ResolutionPlan(order=resolved, by_key=_index(resolved))
+    return ResolutionPlan(order=resolved, by_key=_index(resolved), inactive=specs.inactive)
 
 
 def _index(specs: Iterable[ProviderSpec]) -> _Index:
@@ -62,7 +76,7 @@ def _check_duplicates(specs: Iterable[ProviderSpec]) -> None:
         seen.add(ident)
 
 
-def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index) -> None:
+def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index, inactive: frozenset[Ident]) -> None:
     all_specs = tuple(specs)
     if not _any_unsatisfied(all_specs, by_key):
         return
@@ -73,7 +87,7 @@ def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index) -> None:
     # one to show when several providers are unsatisfied.
     ordered = sorted(missing.items(), key=lambda kv: len(kv[1][0]), reverse=True)
     lines = [
-        format_missing(ident[0], tuple(spec.key for spec in chain), owner.key, param_name)
+        format_missing(ident[0], tuple(spec.key for spec in chain), owner.key, param_name, inactive=ident in inactive)
         for ident, (chain, owner, param_name) in ordered
     ]
     if len(lines) == 1:
@@ -135,18 +149,22 @@ def format_missing(
     chain: tuple[ProviderKey, ...],
     owner: ProviderKey,
     param_name: str,
+    *,
+    inactive: bool,
 ) -> str:
     """The message `build_plan` raises for an unsatisfied parameter.
 
     Also used by `depin._core.render` for a key that `explain()` is asked about
-    and no binding provides, so the two paths report one chain in one wording.
+    and no binding provides, so the two paths report one chain in one wording —
+    the note about an inactive conditional binding included.
     """
     suggestions = suggest_candidates(key)
     extra = f'; candidates: {", ".join(suggestions)}' if suggestions else ''
+    note = INACTIVE_NOTE if inactive else ''
     return (
         f'no provider for {fmt_key(key)} '
         f'(required by {fmt_key(owner)}.{param_name}; '
-        f'resolution chain: {fmt_chain((*chain, key))}){extra}'
+        f'resolution chain: {fmt_chain((*chain, key))}){note}{extra}'
     )
 
 

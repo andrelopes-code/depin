@@ -21,7 +21,7 @@ def test_build_specs_for_simple_class() -> None:
     class A: ...
 
     r = Registry().bind(A, scope=Scope.SINGLETON)
-    specs = build_specs(r.records())
+    specs = build_specs(r.records()).providers
 
     assert len(specs) == 1
     spec = specs[0]
@@ -39,7 +39,7 @@ def test_build_specs_resolves_provides_attribute() -> None:
     class StdLogger(Logger): ...
 
     r = Registry().bind(StdLogger, scope=Scope.SINGLETON)
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     assert spec.key is Logger
 
 
@@ -49,14 +49,14 @@ def test_build_specs_resolves_explicit_provides_kwarg() -> None:
     class Redis(Cache): ...
 
     r = Registry().bind(Redis, provides=Cache, scope=Scope.SINGLETON)
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     assert spec.key is Cache
 
 
 def test_build_specs_value_record_emits_value_shape() -> None:
     tok = Token[int]('x')
     r = Registry().value(tok, 42)
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     assert spec.key == tok
     assert spec.shape is ProviderShape.VALUE
     assert spec.source == 42
@@ -69,14 +69,14 @@ def test_build_specs_value_record_preserves_its_tag() -> None:
     token = Token[int]('x')
     record = BindRecord(source=ValueBinding(token, 42), scope=Scope.SINGLETON, provides=None, tag='chosen')
 
-    [spec] = list(build_specs((record,)))
+    [spec] = list(build_specs((record,)).providers)
 
     assert spec.tag == 'chosen'
 
 
 def test_build_specs_scope_value_preserves_its_registration_details() -> None:
     token = Token[int]('request.id')
-    [spec] = list(build_specs(Registry().scope_value(token, tag='request').records()))
+    [spec] = list(build_specs(Registry().scope_value(token, tag='request').records()).providers)
     assert spec.key == token
     assert spec.tag == 'request'
     assert isinstance(spec.source, FrameBinding)
@@ -92,7 +92,7 @@ def test_generator_in_transient_rejected() -> None:
 
     r = Registry().bind(gen, scope=Scope.TRANSIENT)
     with pytest.raises(InvalidScopeError, match='owns a teardown') as exc:
-        _ = build_specs(r.records())
+        _ = build_specs(r.records()).providers
     assert 'Use Scope.SINGLETON or Scope.SCOPED' in str(exc.value)
 
 
@@ -101,7 +101,7 @@ def test_generator_in_transient_explains_its_teardown_contract() -> None:
         yield 0
 
     with pytest.raises(InvalidScopeError) as exc:
-        _ = build_specs(Registry().bind(gen, scope=Scope.TRANSIENT).records())
+        _ = build_specs(Registry().bind(gen, scope=Scope.TRANSIENT).records()).providers
     assert 'provider owns a teardown, and a transient value is never cached, so nothing would drain it.' in str(
         exc.value
     )
@@ -115,7 +115,7 @@ def test_param_specs_extracted_from_init() -> None:
             self.a = a
 
     r = Registry().bind(A, scope=Scope.SINGLETON).bind(B, scope=Scope.SINGLETON)
-    specs = build_specs(r.records())
+    specs = build_specs(r.records()).providers
     by_key = {spec.key: spec for spec in specs}
 
     assert by_key[B].params[0].name == 'a'
@@ -127,7 +127,7 @@ def test_param_specs_skip_self_and_var() -> None:
         def __init__(self, *args: object, **kwargs: object) -> None: ...
 
     r = Registry().bind(A, scope=Scope.SINGLETON)
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     assert spec.params == ()
 
 
@@ -140,7 +140,7 @@ def test_param_specs_skip_cls_and_continue_after_variadic_parameters() -> None:
 
     [factory_spec] = [
         candidate
-        for candidate in build_specs(Registry().bind(Dependency).bind(factory).records())
+        for candidate in build_specs(Registry().bind(Dependency).bind(factory).records()).providers
         if candidate.key is int
     ]
     assert [(param.name, param.key) for param in factory_spec.params] == [('dependency', Dependency)]
@@ -151,7 +151,7 @@ def test_param_specs_continue_after_an_unannotated_default() -> None:
         return required
 
     del factory.__annotations__['optional']
-    [spec] = list(build_specs(Registry().bind(factory, provides=int).records()))
+    [spec] = list(build_specs(Registry().bind(factory, provides=int).records()).providers)
 
     assert [(param.name, param.has_default) for param in spec.params] == [('optional', True), ('required', False)]
 
@@ -162,7 +162,7 @@ def test_param_spec_uses_default_when_no_provider_marker() -> None:
             self.value = value
 
     r = Registry().bind(A, scope=Scope.SINGLETON)
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     [p] = spec.params
     assert p.has_default is True
     assert p.default == 7
@@ -175,7 +175,7 @@ def test_param_spec_picks_token_from_annotated() -> None:
         return len(url)
 
     r = Registry().bind(factory, scope=Scope.SINGLETON)
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     [p] = spec.params
     assert p.key == tok
 
@@ -187,7 +187,7 @@ def test_param_spec_picks_tag() -> None:
         return 0
 
     r = Registry().bind(factory, scope=Scope.SINGLETON, provides=int)
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     [p] = spec.params
     assert p.tag == 'primary'
     assert p.key is Cache
@@ -199,13 +199,13 @@ def test_factory_without_return_annotation_is_rejected() -> None:
 
     r = Registry().bind(make, scope=Scope.SINGLETON)  # pyright: ignore[reportUnknownArgumentType]
     with pytest.raises(InvalidProviderError, match='cannot infer the provider key'):
-        _ = build_specs(r.records())
+        _ = build_specs(r.records()).providers
 
 
 def test_non_callable_source_is_rejected() -> None:
     r = Registry().bind(42, scope=Scope.SINGLETON)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
     with pytest.raises(InvalidProviderError, match='cannot determine how to call'):
-        _ = build_specs(r.records())
+        _ = build_specs(r.records()).providers
 
 
 def test_parameter_without_annotation_or_default_is_rejected() -> None:
@@ -216,7 +216,7 @@ def test_parameter_without_annotation_or_default_is_rejected() -> None:
 
     r = Registry().bind(A, scope=Scope.SINGLETON)
     with pytest.raises(InvalidProviderError, match='no type annotation and no default') as exc:
-        _ = build_specs(r.records())
+        _ = build_specs(r.records()).providers
     assert 'so depin cannot tell what to inject' in str(exc.value)
 
 
@@ -225,7 +225,7 @@ def test_async_factory_key_unwraps_the_coroutine_return() -> None:
         return 0
 
     r = Registry().bind(make, scope=Scope.SINGLETON, provides=int)
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     assert spec.key is int
 
 
@@ -234,7 +234,7 @@ def test_generator_factory_key_unwraps_the_yield_type() -> None:
         yield 0
 
     r = Registry().bind(make, scope=Scope.SINGLETON)
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     assert spec.key is int
 
 
@@ -243,7 +243,7 @@ def test_async_generator_factory_key_unwraps_the_yield_type() -> None:
         yield 0
 
     r = Registry().bind(make, scope=Scope.SINGLETON)
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     assert spec.key is int
     assert spec.shape is ProviderShape.ASYNC_GENERATOR
 
@@ -307,7 +307,7 @@ def test_forward_references_between_bound_classes_resolve_for_key_and_parameters
 
     class Dependency: ...
 
-    specs = build_specs(Registry().bind(Consumer).bind(Dependency).records())
+    specs = build_specs(Registry().bind(Consumer).bind(Dependency).records()).providers
     consumer = next(spec for spec in specs if spec.key is Consumer)
     assert consumer.params[0].key is Dependency
 
@@ -318,7 +318,9 @@ def test_forward_reference_return_annotation_resolves_against_bound_classes() ->
     def make() -> 'Produced':
         return Produced()
 
-    spec = next(spec for spec in build_specs(Registry().bind(Produced).bind(make).records()) if spec.source is make)
+    spec = next(
+        spec for spec in build_specs(Registry().bind(Produced).bind(make).records()).providers if spec.source is make
+    )
     assert spec.key is Produced
 
 
@@ -330,7 +332,7 @@ def test_forward_reference_resolves_a_class_registered_only_as_an_alias_key() ->
         return 0
 
     r = Registry().alias(Store, to=int).bind(make, provides=int)
-    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    spec = next(spec for spec in build_specs(r.records()).providers if spec.source is make)
     assert spec.params[0].key is Store
 
 
@@ -342,7 +344,7 @@ def test_forward_reference_resolves_a_class_registered_only_as_an_alias_target()
         return 0
 
     r = Registry().alias('legacy', to=Impl).bind(make, provides=int)
-    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    spec = next(spec for spec in build_specs(r.records()).providers if spec.source is make)
     assert spec.params[0].key is Impl
 
 
@@ -354,7 +356,7 @@ def test_forward_reference_resolves_a_class_registered_only_as_a_scope_value_key
         return 0
 
     r = Registry().scope_value(Principal).bind(make, provides=int)
-    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    spec = next(spec for spec in build_specs(r.records()).providers if spec.source is make)
     assert spec.params[0].key is Principal
 
 
@@ -366,7 +368,7 @@ def test_forward_reference_resolves_a_class_registered_only_as_a_collection_elem
         return 0
 
     r = Registry().collect(Handler, []).bind(make, provides=int)
-    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    spec = next(spec for spec in build_specs(r.records()).providers if spec.source is make)
     assert spec.params[0].key is Handler
 
 
@@ -378,7 +380,7 @@ def test_forward_reference_resolves_a_class_registered_only_as_a_collection_memb
         return 0
 
     r = Registry().collect('handlers', [Impl]).bind(make, provides=int)
-    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    spec = next(spec for spec in build_specs(r.records()).providers if spec.source is make)
     assert spec.params[0].key is Impl
 
 
@@ -451,7 +453,7 @@ def test_fmt_key_renders_a_class_by_its_qualname() -> None:
 def test_a_builtin_without_an_inspectable_signature_declares_no_parameters() -> None:
     """`inspect.signature` refuses some C callables; such a provider simply takes nothing."""
     r = Registry().bind(min, scope=Scope.SINGLETON, provides=int)  # pyright: ignore[reportArgumentType]
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     assert spec.params == ()
 
 
@@ -460,7 +462,7 @@ def test_an_unannotated_parameter_with_a_default_is_left_to_the_callable() -> No
         return retries  # type: ignore[no-any-return]  # pyright: ignore[reportUnknownVariableType]
 
     r = Registry().bind(make, scope=Scope.SINGLETON, provides=int)  # pyright: ignore[reportUnknownArgumentType]
-    [spec] = list(build_specs(r.records()))
+    [spec] = list(build_specs(r.records()).providers)
     [param] = spec.params
     assert param.has_default
     assert param.default == 3
@@ -477,7 +479,7 @@ def test_an_unresolvable_annotation_is_reported_as_such() -> None:
 
     r = Registry().bind(make, scope=Scope.SINGLETON, provides=int)  # pyright: ignore[reportUnknownArgumentType]
     with pytest.raises(InvalidProviderError, match='could not be resolved') as exc:
-        _ = build_specs(r.records())
+        _ = build_specs(r.records()).providers
     assert 'so depin can resolve the forward reference.' in str(exc.value)
 
 
@@ -488,7 +490,7 @@ def test_an_unsubscripted_container_annotation_keys_by_the_bare_class() -> None:
         yield object()
 
     r = Registry().bind(gen, scope=Scope.SINGLETON)  # pyright: ignore[reportUnknownArgumentType]
-    (spec,) = build_specs(r.records())
+    (spec,) = build_specs(r.records()).providers
     assert spec.key is Iterator
 
 
@@ -500,7 +502,7 @@ def test_an_unresolvable_return_annotation_is_reported_as_such() -> None:
 
     r = Registry().bind(make, scope=Scope.SINGLETON)  # pyright: ignore[reportUnknownArgumentType]
     with pytest.raises(InvalidProviderError, match='it declares a return annotation'):
-        _ = build_specs(r.records())
+        _ = build_specs(r.records()).providers
 
 
 def test_a_class_named_only_by_an_explicit_provides_resolves_a_forward_reference() -> None:
@@ -513,7 +515,7 @@ def test_a_class_named_only_by_an_explicit_provides_resolves_a_forward_reference
         return 0
 
     r = Registry().bind(Other, provides=Impl).bind(make, provides=int)
-    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    spec = next(spec for spec in build_specs(r.records()).providers if spec.source is make)
     assert spec.params[0].key is Impl
 
 
@@ -527,5 +529,5 @@ def test_a_class_named_only_inside_a_generic_key_resolves_a_forward_reference() 
         return 0
 
     r = Registry().alias(Box[Impl], to='boxes').bind(make, provides=int)
-    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    spec = next(spec for spec in build_specs(r.records()).providers if spec.source is make)
     assert spec.params[0].key is Impl

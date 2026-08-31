@@ -2,7 +2,8 @@ import typing
 from collections.abc import Sequence
 from typing import Protocol
 
-from depin._core.typeguards import is_canonical_generic
+from depin._core.spec import Underlying
+from depin._core.typeguards import is_canonical_generic, is_provider_key
 
 
 def test_the_canonical_generic_spellings_are_accepted() -> None:
@@ -27,3 +28,9 @@ def test_the_deprecated_typing_aliases_are_not_canonical() -> None:
 def test_a_non_class_origin_is_not_canonical() -> None:
     """Called directly: `Literal['a']` never reaches the predicate through `is_generic_key`, which rejects it first."""
     assert not is_canonical_generic(typing.Literal['a'])
+
+
+def test_an_underlying_key_is_a_provider_key() -> None:
+    class Store: ...
+
+    assert is_provider_key(Underlying(Store, 0))

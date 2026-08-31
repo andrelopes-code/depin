@@ -44,6 +44,39 @@ def build_chain(size: int, *, scope: Scope = Scope.SINGLETON) -> tuple[Container
     return container, leaf
 
 
+def _decorator(node: type[object]) -> Callable[..., object]:
+    """A pass-through decorator over `node`, annotated the way `_provider` is.
+
+    The wrapper's single parameter must be annotated with the exact key it
+    decorates, which — like every node type here — does not exist until the
+    benchmark picks a size.
+    """
+
+    def wrap(inner: object) -> object:
+        return inner
+
+    wrap.__annotations__ = {'inner': node, 'return': node}
+    return wrap
+
+
+def build_decorated_chain(size: int, *, scope: Scope = Scope.SINGLETON) -> tuple[Container, type[object]]:
+    """`build_chain`, with one pass-through decorator applied to every node.
+
+    Isolates what `depin._core.decoration`'s fold costs `freeze()`, against the
+    plain chain `build_chain` produces at the same size.
+    """
+    container = Container()
+    previous: type[object] | None = None
+    leaf: type[object] = object
+    for index in range(size):
+        leaf = type(f'DecoratedNode{index}', (), {})
+        container = container.bind(_provider(leaf, previous), provides=leaf, scope=scope).decorate(
+            leaf, _decorator(leaf)
+        )
+        previous = leaf
+    return container, leaf
+
+
 class GenericWrapper[T]:
     """The one generic origin `build_generic_chain` parameterises over.
 

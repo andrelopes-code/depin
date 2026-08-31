@@ -11,6 +11,7 @@ from depin._core.spec import (
     ProviderShape,
     ProviderSpec,
     ResolutionPlan,
+    Underlying,
     collection_key,
     collection_param,
     fmt_chain,
@@ -147,3 +148,36 @@ def test_fmt_key_renders_a_nested_generic() -> None:
     class Repo[T]: ...
 
     assert fmt_key(Repo[Repo[User]]) == f'{fmt_key(Repo)}[{fmt_key(Repo)}[{fmt_key(User)}]]'
+
+
+def test_underlying_compares_and_hashes_by_value() -> None:
+    class Store: ...
+
+    assert Underlying(Store, 0) == Underlying(Store, 0)
+    assert hash(Underlying(Store, 0)) == hash(Underlying(Store, 0))
+    assert Underlying(Store, 0) != Underlying(Store, 1)
+
+
+def test_underlying_nests() -> None:
+    class Store: ...
+
+    assert Underlying(Underlying(Store, 0), 1) == Underlying(Underlying(Store, 0), 1)
+
+
+def test_an_undecorated_key_renders_as_undecorated() -> None:
+    class Store: ...
+
+    assert fmt_key(Underlying(Store, 0)) == f'{Store.__qualname__} (undecorated)'
+
+
+def test_an_intermediate_layer_renders_with_its_depth() -> None:
+    class Store: ...
+
+    assert fmt_key(Underlying(Store, 2)) == f'{Store.__qualname__} (decorated x2)'
+
+
+def test_an_underlying_generic_key_renders_through_fmt_key() -> None:
+    class Handler: ...
+
+    rendered = fmt_key(Underlying(list[Handler], 0))
+    assert rendered == f'list[{Handler.__qualname__}] (undecorated)'

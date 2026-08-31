@@ -11,15 +11,21 @@ from depin._core.spec import (
     ALIAS_PARAM,
     BindRecord,
     CollectionBinding,
+    DecorateBinding,
+    DecorationSpec,
+    Ident,
     ParamSpec,
     ProviderKey,
     ProviderShape,
     ProviderSpec,
+    SpecSet,
+    Underlying,
     collection_key,
     collection_param,
     fmt_key,
     is_alias_binding,
     is_collection_binding,
+    is_decorate_binding,
     is_frame_binding,
     is_value_binding,
 )
@@ -62,11 +68,102 @@ _UNWRAP_SHAPES = frozenset(
 )
 
 
-def build_specs(records: Iterable[BindRecord]) -> tuple[ProviderSpec, ...]:
-    """Convert every record into a spec, resolving forward references between them."""
-    records = tuple(records)
-    localns = _registered_classes(records)
-    return tuple(_record_to_spec(rec, localns) for rec in records)
+def build_specs(records: Iterable[BindRecord]) -> SpecSet:
+    """Convert every active record into a spec, resolving forward references between them.
+
+    A record whose condition does not hold is dropped before anything reads its
+    shape or its annotations, which is what makes `when` usable on a binding
+    that cannot be introspected in the deployment that switches it off.
+    """
+    active, inactive = _partition(records)
+    localns = _registered_classes(active)
+    providers: list[ProviderSpec] = []
+    decorations: list[DecorationSpec] = []
+    for rec in active:
+        source = rec.source
+        if is_decorate_binding(source):
+            decorations.append(_decoration_spec(rec, source, localns))
+        else:
+            providers.append(_record_to_spec(rec, localns))
+    return SpecSet(
+        providers=tuple(providers),
+        decorations=tuple(decorations),
+        inactive=frozenset(_inactive_idents(inactive, localns)),
+    )
+
+
+def _partition(records: Iterable[BindRecord]) -> tuple[tuple[BindRecord, ...], tuple[BindRecord, ...]]:
+    active: list[BindRecord] = []
+    inactive: list[BindRecord] = []
+    for rec in records:
+        target = active if is_active(rec) else inactive
+        target.append(rec)
+    return tuple(active), tuple(inactive)
+
+
+def is_active(rec: BindRecord) -> bool:
+    """Whether a record's condition admits it into the plan.
+
+    Raises:
+        InvalidProviderError: The condition is neither a bool nor a callable.
+    """
+    # Annotated `object` rather than `Condition | None`: the guard has to reject
+    # a value an untyped caller passed, and a checker that trusts the annotation
+    # reads the final branch as unreachable.
+    condition: object = rec.condition
+    if condition is None:
+        return True
+    if isinstance(condition, bool):
+        return condition
+    if callable(condition):
+        return bool(condition())
+    raise InvalidProviderError(
+        f'cannot use {condition!r} as a binding condition: `when` takes a bool, or a callable '
+        'of no arguments returning one, which depin calls inside freeze().'
+    )
+
+
+def _inactive_idents(records: Iterable[BindRecord], localns: dict[str, object]) -> Iterable[Ident]:
+    for rec in records:
+        key = _declared_key(rec, localns)
+        if key is not None:
+            yield (key, rec.tag)
+
+
+def _declared_key(rec: BindRecord, localns: dict[str, object]) -> ProviderKey | None:
+    """The key an inactive record would have claimed, where it is readable without introspecting the provider.
+
+    Used only to tell a caller that a key they are missing is registered behind
+    a condition that did not hold. It never raises: a record whose key could
+    only come from an annotation that does not resolve contributes nothing, and
+    is simply not named in the note.
+
+    A `decorate` record declares no key of its own — the key it names belongs
+    to the binding it wraps — so it falls through to the same `None` a
+    non-callable source gets.
+    """
+    source = rec.source
+    if is_value_binding(source):
+        return source.token
+    if is_frame_binding(source):
+        return source.key
+    if is_alias_binding(source):
+        return source.key if is_provider_key(source.key) else None
+    if is_collection_binding(source):
+        element = source.element
+        return collection_key(element) if is_provider_key(element) else None
+    if rec.provides is not None:
+        return rec.provides
+    if isinstance(source, type):
+        attr = get_provides(source)
+        return attr if attr is not None else source
+    if not callable(source):
+        return None
+    returned = _safe_type_hints(source, localns).get('return')
+    if detect_shape(source) in _UNWRAP_SHAPES:
+        arguments = get_args(returned)
+        returned = arguments[0] if arguments else None
+    return returned if is_provider_key(returned) else None
 
 
 def _registered_classes(records: Iterable[BindRecord]) -> dict[str, object]:
@@ -93,12 +190,16 @@ def _classes_reachable_from(rec: BindRecord) -> tuple[type[object], ...]:
         candidates += (source.key, source.target)
     elif is_collection_binding(source):
         candidates += (source.element, *source.members)
+    elif is_decorate_binding(source):
+        candidates += (source.key, source.wrapper)
     return tuple(cls for candidate in candidates for cls in _classes_within(candidate))
 
 
 def _classes_within(value: object) -> tuple[type[object], ...]:
     if isinstance(value, type):
         return (value,)
+    if isinstance(value, Underlying):
+        return _classes_within(value.key)
     if is_parameterised_generic(value):
         return tuple(cls for argument in get_args(value) for cls in _classes_within(argument))
     return ()
@@ -192,6 +293,45 @@ def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec
     )
 
 
+def _decoration_spec(rec: BindRecord, binding: DecorateBinding, localns: dict[str, object]) -> DecorationSpec:
+    key = as_provider_key(binding.key)
+    shape = detect_shape(binding.wrapper)
+    params = _extract_params(binding.wrapper, shape, localns)
+    return DecorationSpec(
+        key=key,
+        tag=rec.tag,
+        source=binding.wrapper,
+        shape=shape,
+        params=params,
+        inner=_inner_param(params, key, rec.tag, binding.wrapper),
+    )
+
+
+def _inner_param(params: tuple[ParamSpec, ...], key: ProviderKey, tag: str | None, wrapper: object) -> str:
+    """The parameter of a decorator that receives the value it wraps.
+
+    Identified by key and tag rather than by position, so a decorator reads like
+    any other provider: the parameter annotated with what it decorates is the one
+    that gets it.
+    """
+    matches = tuple(param.name for param in params if (param.key, param.tag) == (key, tag))
+    # Checked before `not matches` rather than after: basedpyright's tuple-length narrowing
+    # misinfers `matches` as `tuple[()]` at `matches[0]` when the empty-tuple guard runs first.
+    if len(matches) > 1:
+        raise InvalidProviderError(
+            f'the decorator {wrapper!r} declares {len(matches)} parameters for {fmt_key(key)} '
+            f'(tag={tag!r}): {", ".join(matches)}. Exactly one parameter receives the value being '
+            'wrapped, and depin cannot tell which of these it is.'
+        )
+    if not matches:
+        raise InvalidProviderError(
+            f'the decorator {wrapper!r} declares no parameter for {fmt_key(key)} (tag={tag!r}): a '
+            'decorator receives the value it wraps through a parameter annotated with the key it '
+            'decorates. Annotate one parameter with it.'
+        )
+    return matches[0]
+
+
 def _reject_repeated_members(collection: CollectionBinding) -> None:
     seen: set[ProviderKey] = set()
     for member in collection.members:
@@ -256,6 +396,15 @@ def unwrap_container_type(annotation: object) -> ProviderKey | None:
 
 
 def as_provider_key(value: object) -> ProviderKey:
+    """Narrow ``value`` to a key usable to register a binding.
+
+    Raises:
+        InvalidProviderError: ``value`` is not a provider key, or is an
+            `Underlying` — a key `is_provider_key` admits for inspecting a
+            graph, but which names no binding a caller can register.
+    """
+    if isinstance(value, Underlying):
+        raise invalid_key_error(value)
     if is_provider_key(value):
         return value
     raise invalid_key_error(value)

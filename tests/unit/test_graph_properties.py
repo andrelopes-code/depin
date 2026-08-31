@@ -1,7 +1,7 @@
 """Generative checks for the provider-graph validator."""
 
 import inspect
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import GenericAlias
 
 import pytest
@@ -10,6 +10,7 @@ from hypothesis import strategies as st
 
 from depin import Container, Scope
 from depin._core.frozen import FrozenContainer
+from depin._core.graph import INACTIVE_NOTE
 from depin._core.spec import ResolutionPlan, fmt_key
 from depin.errors import CaptiveDependencyError, CircularDependencyError, DepinError
 
@@ -25,6 +26,8 @@ class GraphCase:
     optionals: frozenset[tuple[int, int]] = frozenset()
     collections: frozenset[int] = frozenset()
     generics: frozenset[int] = frozenset()
+    decorations: frozenset[int] = frozenset()
+    inactive: frozenset[int] = frozenset()
 
 
 class _GenericMarker0: ...
@@ -102,6 +105,23 @@ def _bind_consumer(container: Container, name: str, key: object) -> None:
     _ = container.bind(consumer)
 
 
+def _bind_decorator(container: Container, name: str, key: type[object]) -> None:
+    """Decorate `key` with a generated class taking the undecorated value as its one parameter."""
+    parameters = [
+        inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        inspect.Parameter('inner', inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=key),
+    ]
+
+    def initialize(self: object, **values: object) -> None:
+        return None
+
+    _set_dynamic_attribute(initialize, '__annotations__', {'inner': key})
+    _set_dynamic_attribute(initialize, '__signature__', inspect.Signature(parameters))
+    wrapper = type(name, (), {})
+    _set_dynamic_attribute(wrapper, '__init__', initialize)
+    _ = container.decorate(key, wrapper)
+
+
 def _materialize(case: GraphCase) -> Container:
     nodes = tuple(type(f'GraphNode{index}', (), {}) for index in range(case.size))
     # A node in `case.generics` is registered and referenced by a parameterised
@@ -140,6 +160,10 @@ def _materialize(case: GraphCase) -> Container:
         element = type(f'GraphCollectionElement{index}', (), {})
         _ = container.collect(element, [keys[index]])
         _bind_consumer(container, f'GraphCollectionConsumer{index}', GenericAlias(list, (element,)))
+    for index in case.decorations:
+        _bind_decorator(container, f'GraphDecorator{index}', keys[index])
+    for index in case.inactive:
+        _ = container.bind(type(f'GraphInactive{index}', (), {}), provides=keys[index], when=False)
     return container
 
 
@@ -183,6 +207,9 @@ def _graphs(draw: st.DrawFn) -> GraphCase:
     optionals = draw(st.sets(st.sampled_from(tuple(edges)))) if edges else frozenset[tuple[int, int]]()
     collections = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
     generics = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
+    decorations = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
+    unregistered = tuple(index for index, is_registered in enumerate(registered) if not is_registered)
+    inactive = draw(st.sets(st.sampled_from(unregistered))) if unregistered else frozenset[int]()
     return GraphCase(
         size,
         frozenset(edges),
@@ -193,6 +220,8 @@ def _graphs(draw: st.DrawFn) -> GraphCase:
         frozenset(optionals),
         frozenset(collections),
         frozenset(generics),
+        frozenset(decorations),
+        frozenset(inactive),
     )
 
 
@@ -417,3 +446,16 @@ def test_explain_names_every_key_reachable_from_its_root(case: GraphCase) -> Non
                     pending.append(child)
         for key, _tag in reachable:
             assert fmt_key(key) in text
+
+
+@settings(deadline=None)
+@given(_graphs())
+def test_an_inactive_binding_leaves_the_plan_as_if_it_were_never_written(case: GraphCase) -> None:
+    """A `when=False` binding must produce exactly the plan that omitting it produces.
+
+    Only the note naming the key as inactive may differ, which is the one thing
+    an omitted binding cannot say.
+    """
+    with_inactive = _freeze_result(case).replace(INACTIVE_NOTE, '')
+    without = _freeze_result(replace(case, inactive=frozenset()))
+    assert with_inactive == without

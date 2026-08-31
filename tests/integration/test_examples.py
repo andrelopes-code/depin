@@ -8,6 +8,15 @@ from examples.aliasing.main import Page, RedisStore
 from examples.aliasing.main import build as build_aliasing
 from examples.collections.main import Dispatcher, EmailHandler, Handler, SmsHandler, WebhookHandler
 from examples.collections.main import build as build_collections
+from examples.conditional.main import Checkout as SwitchedCheckout
+from examples.conditional.main import MemoryStore, Metrics, PostgresStore
+from examples.conditional.main import Settings as CheckoutSettings
+from examples.conditional.main import build as build_conditional
+from examples.decoration.main import LOG as DECORATION_LOG
+from examples.decoration.main import READS as DECORATION_READS
+from examples.decoration.main import Page as DecoratedPage
+from examples.decoration.main import Store as DecoratedStore
+from examples.decoration.main import build as build_decoration
 from examples.fastapi_app.main import build_container, create_app
 from examples.fastapi_app.registries import Database
 from examples.generic_keys.main import Order, ReportService, User
@@ -94,6 +103,45 @@ def test_collections_example_gathers_every_handler_in_declaration_order() -> Non
     assert handlers == [di[EmailHandler], di[SmsHandler], di[WebhookHandler]]
     assert di[Dispatcher].handlers == handlers
     assert di.graph().node(list[Handler]).shape is ProviderShape.COLLECTION
+
+
+def test_decoration_example_caches_repeated_reads_and_logs_every_call() -> None:
+    DECORATION_LOG.clear()
+    DECORATION_READS.clear()
+    di = build_decoration()
+    page = di[DecoratedPage]
+
+    assert page.render('a') == 'row-a'
+    assert page.render('a') == 'row-a'
+    assert page.render('b') == 'row-b'
+
+    # Logged (outermost) sees every call; Cached (inner) hides the repeated
+    # read for 'a' from SqlStore.
+    assert DECORATION_LOG == ['a', 'a', 'b']
+    assert DECORATION_READS == ['a', 'b']
+
+    tree = di.explain(DecoratedStore)
+    assert 'decorated x1' in tree
+    assert 'undecorated' in tree
+
+
+def test_conditional_example_switches_the_store_by_environment() -> None:
+    di = build_conditional(CheckoutSettings(environment='production', use_metrics=True))
+    checkout = di[SwitchedCheckout]
+
+    assert isinstance(checkout.store, PostgresStore)
+    assert checkout.metrics is not None
+    assert checkout.complete() == 'pg'
+    assert checkout.metrics.events == ['checkout.completed']
+
+
+def test_conditional_example_resolves_an_inactive_binding_to_none() -> None:
+    di = build_conditional(CheckoutSettings(environment='development', use_metrics=False))
+    checkout = di[SwitchedCheckout]
+
+    assert isinstance(checkout.store, MemoryStore)
+    assert checkout.metrics is None
+    assert 'registered but inactive' in di.explain(Metrics)
 
 
 def test_generic_keys_example_resolves_each_parameterisation_to_its_own_repo() -> None:

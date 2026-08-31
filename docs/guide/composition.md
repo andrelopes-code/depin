@@ -170,6 +170,146 @@ depin does not verify that the target satisfies the alias key. A `Protocol` that
 is not `runtime_checkable` cannot be checked at runtime, and a structural alias
 between two unrelated classes is a legitimate thing to write.
 
+## Decoration
+
+`decorate(key, wrapper)` wraps a binding that already exists. Every consumer of
+`key` receives what `wrapper` returns; the binding that was registered keeps
+its own lifetime, cache entry, and teardown, reachable at `Underlying(key, 0)`.
+
+```pycon
+>>> from depin import Container
+>>> class Store:
+...     def get(self) -> str:
+...         return 'row'
+>>> class Cached:
+...     def __init__(self, inner: Store) -> None:
+...         self.inner = inner
+...         self.hits = 0
+...
+...     def get(self) -> str:
+...         self.hits += 1
+...         return self.inner.get()
+>>> di = Container().bind(Store).decorate(Store, Cached).freeze()
+>>> di[Store].get()
+'row'
+
+```
+
+`wrapper` declares exactly one parameter whose key and tag are the decorated
+ones — `inner` above — which receives the undecorated value. Any further
+parameter is an ordinary dependency, resolved from the graph like any other:
+
+```pycon
+>>> class Prefix:
+...     text = '>> '
+>>> class Verbose:
+...     def __init__(self, inner: Store, prefix: Prefix) -> None:
+...         self.inner = inner
+...         self.prefix = prefix
+...
+...     def get(self) -> str:
+...         return f'{self.prefix.text}{self.inner.get()}'
+>>> di = Container().bind(Prefix).bind(Store).decorate(Store, Verbose).freeze()
+>>> di[Store].get()
+'>> row'
+
+```
+
+Two decorators over one key both apply, the last registered wrapping the
+first:
+
+```pycon
+>>> class Upper:
+...     def __init__(self, inner: Store) -> None:
+...         self.inner = inner
+...
+...     def get(self) -> str:
+...         return self.inner.get().upper()
+>>> class Bracket:
+...     def __init__(self, inner: Store) -> None:
+...         self.inner = inner
+...
+...     def get(self) -> str:
+...         return f'[{self.inner.get()}]'
+>>> di = Container().bind(Store).decorate(Store, Upper).decorate(Store, Bracket).freeze()
+>>> di[Store].get()
+'[ROW]'
+>>> print(di.explain(Store))
+Store  [singleton, class]
+  inner: Store (decorated x1)  [singleton, class]
+    inner: Store (undecorated)  [singleton, class]
+
+```
+
+`explain()` reads outward to inward: the outermost wrapper on the public key,
+each further wrapper under `Store (decorated x`*n*`)`, and the registered
+binding itself under `Store (undecorated)`. A decorator is a real node, so it
+participates in validation like any other: an unbound key, a cycle through the
+wrapper's own dependencies, and an async wrapper over a sync binding are all
+checked the way an ordinary provider's would be.
+
+A `scope_value` binding cannot be decorated. A value supplied by whoever opens
+the scope is read from the active frame before the plan is consulted, so a
+parameter would receive the undecorated value while `resolve()` returned the
+decorated one; `freeze()` rejects the decorator with `InvalidProviderError`
+rather than leave it half-working.
+
+## Conditional bindings
+
+`when=` keeps a binding out of the plan unless a condition holds. It is
+accepted by `bind`, `value`, `scope_value`, `alias`, `collect`, `decorate`, and
+the `singleton` / `scoped` / `transient` decorators.
+
+```pycon
+>>> from depin import Container
+>>> class Store: ...
+>>> class Postgres(Store): ...
+>>> class Memory(Store): ...
+>>> production = False
+>>> di = (
+...     Container()
+...     .bind(Postgres, provides=Store, when=lambda: production)
+...     .bind(Memory, provides=Store, when=lambda: not production)
+...     .freeze()
+... )
+>>> isinstance(di.resolve(Store), Memory)
+True
+
+```
+
+A `bool` is read at the call that appends the record. A callable is called
+once inside `freeze()`, with no arguments, and again on every later freeze of
+the same builder — a container is a builder, and two freezes may legitimately
+differ. Either way, the condition is settled before anything else is
+validated: an inactive binding contributes no node, appears in no plan, and is
+never introspected for its shape or its parameters. Two bindings for one key,
+with exactly one condition active, is the deployment switch shown above; two
+active at once still raises `DuplicateProviderError`.
+
+A parameter that requires an inactive binding is unsatisfied, exactly as an
+unbound key is — it escapes only through a default or a `T | None`
+annotation:
+
+```pycon
+>>> class Cache: ...
+>>> class Service:
+...     def __init__(self, cache: Cache | None = None) -> None:
+...         self.cache = cache
+>>> di = Container().bind(Cache, when=False).bind(Service).freeze()
+>>> di[Service].cache is None
+True
+
+```
+
+`MissingProviderError` and `explain()` both name the cause: a key only an
+inactive binding declares gets `registered but inactive` appended after the
+chain, instead of being reported as unbound outright.
+
+A decorator over an inactive binding needs the same condition. Decorating a
+key that no active binding occupies raises `MissingProviderError`, because the
+decoration has nothing to wrap; give `decorate(..., when=...)` the identical
+predicate so the wrapper disappears along with what it wraps.
+
 ## Where to freeze
 
 Freeze once, at the composition root — the entry point that knows the whole

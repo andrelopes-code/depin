@@ -1,7 +1,7 @@
 """Text renderings of a `DependencyGraph`: a resolution tree, Graphviz, and Mermaid."""
 
 from depin._core.diagnostics import DependencyGraph, GraphEdge, GraphNode
-from depin._core.graph import format_missing, suggest_candidates
+from depin._core.graph import INACTIVE_NOTE, format_missing, suggest_candidates
 from depin._core.spec import Ident, ProviderKey, fmt_key
 
 
@@ -15,11 +15,21 @@ def annotation_parts(node: GraphNode) -> list[str]:
     return parts
 
 
-def render_tree(graph: DependencyGraph, key: ProviderKey, tag: str | None) -> str:
-    """The resolution tree below ``(key, tag)``, or the missing-provider line for it."""
+def render_tree(
+    graph: DependencyGraph,
+    key: ProviderKey,
+    tag: str | None,
+    inactive: frozenset[Ident],
+) -> str:
+    """The resolution tree below ``(key, tag)``, or the missing-provider line for it.
+
+    ``inactive`` is the plan's set of keys a condition kept out; it decides whether the
+    missing-provider line, when one is produced, carries the note that the key is registered
+    but inactive rather than unbound outright.
+    """
     root = graph.find(key, tag=tag)
     if root is None:
-        return _render_absent(graph, key, tag)
+        return _render_absent(graph, key, tag, inactive)
 
     lines: list[str] = []
     expanded: set[Ident] = set()
@@ -46,14 +56,21 @@ def render_tree(graph: DependencyGraph, key: ProviderKey, tag: str | None) -> st
     return '\n'.join(lines)
 
 
-def _render_absent(graph: DependencyGraph, key: ProviderKey, tag: str | None) -> str:
+def _render_absent(
+    graph: DependencyGraph,
+    key: ProviderKey,
+    tag: str | None,
+    inactive: frozenset[Ident],
+) -> str:
+    is_inactive = (key, tag) in inactive
     required = _deepest_requirement(graph, key, tag)
     if required is not None:
         chain, owner, parameter = required
-        return format_missing(key, chain, owner, parameter)
+        return format_missing(key, chain, owner, parameter, inactive=is_inactive)
     suggestions = suggest_candidates(key)
     extra = f'; candidates: {", ".join(suggestions)}' if suggestions else ''
-    return f'no provider for {fmt_key(key)} (tag={tag!r}){extra}'
+    note = INACTIVE_NOTE if is_inactive else ''
+    return f'no provider for {fmt_key(key)} (tag={tag!r}){note}{extra}'
 
 
 def _deepest_requirement(

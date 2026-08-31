@@ -10,8 +10,8 @@ class Container(BindingCollector):
     """Mutable builder for a dependency graph.
 
     Collect bindings with `bind()`, `value()`, `scope_value()`, `alias()`,
-    `collect()`, and the `singleton()` / `scoped()` / `transient()` decorators, then call `freeze()`
-    to validate the graph and obtain an immutable `FrozenContainer`. A
+    `collect()`, `decorate()`, and the `singleton()` / `scoped()` / `transient()` decorators, then call
+    `freeze()` to validate the graph and obtain an immutable `FrozenContainer`. A
     ``Container`` performs no resolution itself; nothing is constructed until you
     resolve from the frozen view. Registration order does not matter — providers
     are matched by key and ordered at `freeze()` time.
@@ -51,10 +51,14 @@ class Container(BindingCollector):
         every factory exposes enough type information to infer its key and
         parameters. The frozen container also pre-computes which providers need
         async resolution, so `FrozenContainer.resolve()` can reject async
-        providers up front instead of blocking an event loop.
+        providers up front instead of blocking an event loop. Every binding's
+        `when` condition is evaluated here as well; a binding whose condition
+        does not hold contributes no node and is not validated at all.
 
         Raises:
-            MissingProviderError: A required dependency has no provider.
+            MissingProviderError: A required dependency has no provider, a
+                decorator names a key nothing binds, or a parameter requires a
+                key that only an inactive binding declares.
             CircularDependencyError: The dependency graph contains a cycle.
             DuplicateProviderError: Two bindings resolve to the same key and tag,
                 or a collection lists the same member twice.
@@ -64,10 +68,14 @@ class Container(BindingCollector):
                 default, a binding is neither a class nor a callable, an
                 alias names a key or a target that is not a class, a `Token`,
                 a string, or a `list[X]`, a collection names an element or a
-                member that is not one of those either, or a parameter is
-                annotated with a union that names two or more providers.
+                member that is not one of those either, a parameter is
+                annotated with a union that names two or more providers, a
+                decorator declares no parameter for the key it decorates (or
+                declares two or more), the decorated binding is a
+                `scope_value`, or a `when` value is neither a `bool` nor a
+                callable.
             InvalidScopeError: A generator or context-manager provider is bound
-                as transient.
+                as transient, or such a decorator wraps a transient binding.
 
         Example:
             ```pycon

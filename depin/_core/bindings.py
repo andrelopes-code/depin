@@ -10,13 +10,18 @@ from depin._core.spec import (
     BindRecord,
     Bindings,
     CollectionBinding,
+    Condition,
+    DecorateBinding,
     FrameBinding,
     ProviderKey,
     ValueBinding,
 )
 from depin.errors import InvalidProviderError
 
-type _BindFn = Callable[[type[object] | Callable[..., object], Scope, type[object] | None, str | None], None]
+type _BindFn = Callable[
+    [type[object] | Callable[..., object], Scope, type[object] | None, str | None, Condition | None],
+    None,
+]
 
 
 @final
@@ -27,7 +32,7 @@ class ScopeDecorator:
     returns the target unchanged, so it works as a decorator.
     """
 
-    __slots__ = ('_bind', '_provides', '_scope', '_tag')
+    __slots__ = ('_bind', '_provides', '_scope', '_tag', '_when')
 
     def __init__(
         self,
@@ -35,11 +40,13 @@ class ScopeDecorator:
         scope: Scope,
         provides: type[object] | None,
         tag: str | None,
+        when: Condition | None,
     ) -> None:
         self._bind = bind
         self._scope = scope
         self._provides = provides
         self._tag = tag
+        self._when = when
 
     @overload
     def __call__[T](self, target: type[T]) -> type[T]: ...
@@ -55,7 +62,7 @@ class ScopeDecorator:
             raise InvalidProviderError(
                 f'cannot register {target!r} with a scope decorator: expected a class or a callable'
             )
-        self._bind(target, self._scope, self._provides, self._tag)
+        self._bind(target, self._scope, self._provides, self._tag, self._when)
         return target
 
 
@@ -79,6 +86,7 @@ class BindingCollector:
         scope: Scope = Scope.SINGLETON,
         provides: type[object] | None = None,
         tag: str | None = None,
+        when: Condition | None = None,
     ) -> Self:
         """Register a class or factory as a provider.
 
@@ -98,6 +106,8 @@ class BindingCollector:
                 example to bind a concrete class against a ``Protocol``.
             tag: Disambiguator when several providers share a key; resolve it with
                 a matching ``tag`` or ``Annotated[..., Tag(...)]``.
+            when: Condition deciding whether this binding enters the plan.
+                A callable is evaluated inside `Container.freeze()`.
 
         Returns:
             ``self``, for chaining.
@@ -114,15 +124,21 @@ class BindingCollector:
 
             ```
         """
-        self._records.append(BindRecord(source=source, scope=scope, provides=provides, tag=tag))
+        self._records.append(BindRecord(source=source, scope=scope, provides=provides, tag=tag, condition=when))
         return self
 
-    def value[T](self, token: Token[T], value: T) -> Self:
+    def value[T](self, token: Token[T], value: T, *, when: Condition | None = None) -> Self:
         """Bind a ready-made value to a `Token`.
 
         The value is registered as a singleton and returned as-is on resolution —
         no construction, no parameter wiring. Use this for configuration and other
         plain values that have no factory.
+
+        Args:
+            token: The key to register the value under.
+            value: The value returned on resolution.
+            when: Condition deciding whether this binding enters the plan.
+                A callable is evaluated inside `Container.freeze()`.
 
         Example:
             ```pycon
@@ -135,11 +151,13 @@ class BindingCollector:
             ```
         """
         self._records.append(
-            BindRecord(source=ValueBinding(token, value), scope=Scope.SINGLETON, provides=None, tag=None)
+            BindRecord(
+                source=ValueBinding(token, value), scope=Scope.SINGLETON, provides=None, tag=None, condition=when
+            )
         )
         return self
 
-    def scope_value[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> Self:
+    def scope_value[T](self, key: type[T] | Token[T], *, tag: str | None = None, when: Condition | None = None) -> Self:
         """Declare a key whose value is supplied by whoever opens the scope.
 
         No factory is called. At resolution time the value must already have been
@@ -149,6 +167,10 @@ class BindingCollector:
         `OutsideScopeError`, and resolving inside a scope that never received the
         value raises `MissingProviderError`. This is how the FastAPI integration
         exposes the per-request ``Request``.
+
+        Args:
+            when: Condition deciding whether this binding enters the plan.
+                A callable is evaluated inside `Container.freeze()`.
 
         Example:
             ```pycon
@@ -168,7 +190,9 @@ class BindingCollector:
 
             ```
         """
-        self._records.append(BindRecord(source=FrameBinding(key), scope=Scope.SCOPED, provides=None, tag=tag))
+        self._records.append(
+            BindRecord(source=FrameBinding(key), scope=Scope.SCOPED, provides=None, tag=tag, condition=when)
+        )
         return self
 
     def alias(
@@ -178,6 +202,7 @@ class BindingCollector:
         to: ProviderKey,
         tag: str | None = None,
         to_tag: str | None = None,
+        when: Condition | None = None,
     ) -> Self:
         """Register ``key`` as a second name for an existing binding.
 
@@ -206,6 +231,8 @@ class BindingCollector:
             tag: Disambiguator for the alias, matching the ``tag`` of a
                 resolution or of an ``Annotated[..., Tag(...)]`` parameter.
             to_tag: The target's tag, when the target is registered under one.
+            when: Condition deciding whether this binding enters the plan.
+                A callable is evaluated inside `Container.freeze()`.
 
         Returns:
             ``self``, for chaining.
@@ -231,6 +258,7 @@ class BindingCollector:
                 scope=Scope.TRANSIENT,
                 provides=None,
                 tag=tag,
+                condition=when,
             )
         )
         return self
@@ -241,6 +269,7 @@ class BindingCollector:
         members: Sequence[ProviderKey],
         *,
         tag: str | None = None,
+        when: Condition | None = None,
     ) -> Self:
         """Register a list of existing bindings under the key ``list[element]``.
 
@@ -270,6 +299,8 @@ class BindingCollector:
                 ``list[...]`` as a forward reference and fails to resolve it.
             members: The bindings to gather, in the order they should appear.
             tag: Disambiguator when several collections share an element.
+            when: Condition deciding whether this binding enters the plan.
+                A callable is evaluated inside `Container.freeze()`.
 
         Returns:
             ``self``, for chaining.
@@ -298,6 +329,76 @@ class BindingCollector:
                 scope=Scope.TRANSIENT,
                 provides=None,
                 tag=tag,
+                condition=when,
+            )
+        )
+        return self
+
+    def decorate(
+        self,
+        key: ProviderKey,
+        wrapper: type[object] | Callable[..., object],
+        *,
+        tag: str | None = None,
+        when: Condition | None = None,
+    ) -> Self:
+        """Wrap an existing binding without changing its registration.
+
+        Every consumer of ``key`` receives what ``wrapper`` returns, including
+        consumers deep in the graph. The binding that was registered keeps its
+        lifetime, its cache entry, and its teardown: it is built once, in the
+        position it would have occupied undecorated, and the wrapper is built
+        after it and torn down before it.
+
+        ``wrapper`` declares one parameter whose key and tag are the decorated
+        ones — that parameter receives the value being wrapped — and any number
+        of further parameters, which are ordinary dependencies resolved from the
+        graph. The wrapper takes no scope of its own: it runs at the lifetime of
+        the binding it wraps.
+
+        Decorators stack. Two calls over one key apply in registration order, so
+        the last registered is the outermost.
+
+        Args:
+            key: The binding to wrap. A class, a `Token`, a string, or a
+                parameterised generic.
+            wrapper: A class or factory producing the decorated value. Any
+                provider shape is accepted, async ones included; an async
+                wrapper makes the key resolvable only through
+                `FrozenContainer.aresolve`.
+            tag: The decorated binding's tag, when it has one.
+            when: Condition deciding whether this decorator enters the plan.
+                A callable is evaluated inside `Container.freeze()`.
+
+        Returns:
+            ``self``, for chaining.
+
+        Example:
+            ```pycon
+            >>> from depin import Container
+            >>> class Store:
+            ...     def get(self) -> str:
+            ...         return 'plain'
+            >>> class Loud:
+            ...     def __init__(self, inner: Store) -> None:
+            ...         self.inner = inner
+            ...     def get(self) -> str:
+            ...         return self.inner.get().upper()
+            >>> di = Container().bind(Store).decorate(Store, Loud).freeze()
+            >>> di[Store].get()
+            'PLAIN'
+
+            ```
+        """
+        # The scope recorded here is never read: `depin._core.decoration` gives every wrapper node
+        # the scope of the binding it wraps.
+        self._records.append(
+            BindRecord(
+                source=DecorateBinding(key=key, wrapper=wrapper),
+                scope=Scope.TRANSIENT,
+                provides=None,
+                tag=tag,
+                condition=when,
             )
         )
         return self
@@ -307,8 +408,13 @@ class BindingCollector:
         *,
         provides: type[object] | None = None,
         tag: str | None = None,
+        when: Condition | None = None,
     ) -> ScopeDecorator:
         """Decorator form of ``bind(..., scope=Scope.SINGLETON)``.
+
+        Args:
+            when: Condition deciding whether this binding enters the plan.
+                A callable is evaluated inside `Container.freeze()`.
 
         Example:
             ```pycon
@@ -323,25 +429,37 @@ class BindingCollector:
 
             ```
         """
-        return ScopeDecorator(self._record_bind, Scope.SINGLETON, provides, tag)
+        return ScopeDecorator(self._record_bind, Scope.SINGLETON, provides, tag, when)
 
     def scoped(
         self,
         *,
         provides: type[object] | None = None,
         tag: str | None = None,
+        when: Condition | None = None,
     ) -> ScopeDecorator:
-        """Decorator form of ``bind(..., scope=Scope.SCOPED)``."""
-        return ScopeDecorator(self._record_bind, Scope.SCOPED, provides, tag)
+        """Decorator form of ``bind(..., scope=Scope.SCOPED)``.
+
+        Args:
+            when: Condition deciding whether this binding enters the plan.
+                A callable is evaluated inside `Container.freeze()`.
+        """
+        return ScopeDecorator(self._record_bind, Scope.SCOPED, provides, tag, when)
 
     def transient(
         self,
         *,
         provides: type[object] | None = None,
         tag: str | None = None,
+        when: Condition | None = None,
     ) -> ScopeDecorator:
-        """Decorator form of ``bind(..., scope=Scope.TRANSIENT)``."""
-        return ScopeDecorator(self._record_bind, Scope.TRANSIENT, provides, tag)
+        """Decorator form of ``bind(..., scope=Scope.TRANSIENT)``.
+
+        Args:
+            when: Condition deciding whether this binding enters the plan.
+                A callable is evaluated inside `Container.freeze()`.
+        """
+        return ScopeDecorator(self._record_bind, Scope.TRANSIENT, provides, tag, when)
 
     def include(self, *sources: Bindings) -> Self:
         """Append the bindings of one or more sources, in order.
@@ -379,5 +497,6 @@ class BindingCollector:
         scope: Scope,
         provides: type[object] | None,
         tag: str | None,
+        when: Condition | None,
     ) -> None:
-        self._records.append(BindRecord(source=source, scope=scope, provides=provides, tag=tag))
+        self._records.append(BindRecord(source=source, scope=scope, provides=provides, tag=tag, condition=when))

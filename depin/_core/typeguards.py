@@ -18,12 +18,12 @@ from types import GenericAlias, NoneType, UnionType
 from typing import Generic, TypeGuard, Union, get_args, get_origin
 
 from depin._core.markers import Token
-from depin._core.spec import ALIAS_PARAM, ParamSpec, ProviderKey, fmt_key, fmt_parameterised
+from depin._core.spec import ALIAS_PARAM, ParamSpec, ProviderKey, Underlying, fmt_key, fmt_parameterised
 from depin.errors import InvalidProviderError
 
 
 def is_provider_key(value: object) -> TypeGuard[ProviderKey]:
-    return isinstance(value, type | str | Token) or is_generic_key(value)
+    return isinstance(value, type | str | Token | Underlying) or is_generic_key(value)
 
 
 def generic_origin(value: object) -> type[object] | None:
@@ -89,9 +89,18 @@ def invalid_key_error(value: object) -> InvalidProviderError:
     """The error explaining why ``value`` cannot serve as a provider key.
 
     Shared by `as_provider_key` and the guard behind `provides`, so a value
-    rejected in either position is explained the same way. Only ever called for
-    a value `is_provider_key` rejects.
+    rejected in either position is explained the same way. Called for a value
+    `is_provider_key` rejects, and also for an `Underlying`: `is_provider_key`
+    admits one, because `explain()` and `graph().find()` accept one, but
+    `as_provider_key` refuses it on the stricter rule that registering a
+    binding is not inspecting one.
     """
+    if isinstance(value, Underlying):
+        return InvalidProviderError(
+            f'cannot register a binding under {fmt_key(value)}: Underlying names a layer of an '
+            'existing decoration chain, constructed to inspect a graph, not to register one. Use '
+            f'{fmt_key(value.key)} instead, the key the decoration wraps.'
+        )
     deprecated = _deprecated_alias_error_within(value)
     if deprecated is not None:
         return deprecated
