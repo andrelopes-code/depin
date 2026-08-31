@@ -619,3 +619,63 @@ def test_a_string_key_referenced_by_named_must_still_be_bound() -> None:
     )
     with pytest.raises(MissingProviderError, match='legacy_key'):
         _ = builder.freeze()
+
+
+def test_an_alias_to_an_unbound_target_is_rejected_at_freeze() -> None:
+    class Store: ...
+
+    class PostgresStore: ...
+
+    with pytest.raises(MissingProviderError, match='PostgresStore'):
+        _ = Container().alias(Store, to=PostgresStore).freeze()
+
+
+def test_two_aliases_under_one_identity_are_rejected() -> None:
+    class Store: ...
+
+    class First: ...
+
+    class Second: ...
+
+    builder = Container().bind(First).bind(Second).alias(Store, to=First).alias(Store, to=Second)
+    with pytest.raises(DuplicateProviderError, match='Store'):
+        _ = builder.freeze()
+
+
+def test_an_alias_over_a_bound_key_is_rejected() -> None:
+    class Store: ...
+
+    class PostgresStore: ...
+
+    builder = Container().bind(Store).bind(PostgresStore).alias(Store, to=PostgresStore)
+    with pytest.raises(DuplicateProviderError, match='Store'):
+        _ = builder.freeze()
+
+
+def test_a_cycle_through_an_alias_is_rejected() -> None:
+    class First: ...
+
+    class Second: ...
+
+    builder = Container().alias(First, to=Second).alias(Second, to=First)
+    with pytest.raises(CircularDependencyError, match='cycle detected'):
+        _ = builder.freeze()
+
+
+def test_a_singleton_reaching_a_scoped_target_through_an_alias_is_captive() -> None:
+    class Store: ...
+
+    class Session: ...
+
+    class Service:
+        def __init__(self, store: Store) -> None:
+            del store
+
+    builder = (
+        Container().bind(Session, scope=Scope.SCOPED).alias(Store, to=Session).bind(Service, scope=Scope.SINGLETON)
+    )
+    with pytest.raises(CaptiveDependencyError) as excinfo:
+        _ = builder.freeze()
+    assert 'Service -> Store -> Session' in str(excinfo.value).replace(
+        'test_a_singleton_reaching_a_scoped_target_through_an_alias_is_captive.<locals>.', ''
+    )
