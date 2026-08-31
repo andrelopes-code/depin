@@ -137,10 +137,12 @@ def _declared_key(rec: BindRecord, localns: dict[str, object]) -> ProviderKey | 
     a condition that did not hold. It never raises: a record whose key could
     only come from an annotation that does not resolve contributes nothing, and
     is simply not named in the note.
+
+    A `decorate` record declares no key of its own — the key it names belongs
+    to the binding it wraps — so it falls through to the same `None` a
+    non-callable source gets.
     """
     source = rec.source
-    if is_decorate_binding(source):
-        return None
     if is_value_binding(source):
         return source.token
     if is_frame_binding(source):
@@ -313,6 +315,8 @@ def _inner_param(params: tuple[ParamSpec, ...], key: ProviderKey, tag: str | Non
     that gets it.
     """
     matches = tuple(param.name for param in params if (param.key, param.tag) == (key, tag))
+    # Checked before `not matches` rather than after: basedpyright's tuple-length narrowing
+    # misinfers `matches` as `tuple[()]` at `matches[0]` when the empty-tuple guard runs first.
     if len(matches) > 1:
         raise InvalidProviderError(
             f'the decorator {wrapper!r} declares {len(matches)} parameters for {fmt_key(key)} '
