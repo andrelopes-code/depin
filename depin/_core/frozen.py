@@ -14,6 +14,7 @@ from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional
 from depin._core.spec import ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
 from depin._core.teardown import Teardown
 from depin._core.typeguards import is_provider_key
+from depin._core.warmup import WarmupReport, reject_async_singletons, singleton_specs, warmup_report
 from depin.errors import AsyncInSyncContextError, CircularDependencyError, MissingProviderError
 
 
@@ -236,6 +237,67 @@ class FrozenContainer:
         """
         await self._root.drain_async()
 
+    def warmup(self) -> WarmupReport:
+        """Construct every singleton now, instead of on first resolution.
+
+        Walks the plan in resolution order, building each singleton that is not
+        built already, so a provider that fails does so at startup rather than
+        on the first request that needs it. Scoped and transient providers are
+        untouched: a scoped value belongs to a scope, and a transient one is
+        never cached. Calling it twice constructs nothing the second time.
+
+        A failure propagates unchanged — a container with some singletons built
+        and one failed is a startup to abort, not a state to report.
+
+        Raises:
+            AsyncInSyncContextError: Some singleton needs async resolution.
+                Nothing is constructed before this is raised; use `awarmup()`.
+
+        Example:
+            ```pycon
+            >>> from depin import Container
+            >>> class Config: ...
+            >>> class Service:
+            ...     def __init__(self, config: Config) -> None: ...
+            >>> di = Container().bind(Config).bind(Service).freeze()
+            >>> report = di.warmup()
+            >>> len(report.constructed), len(report.cached)
+            (2, 0)
+
+            ```
+        """
+        specs = singleton_specs(self._plan)
+        reject_async_singletons(specs)
+        constructed: list[ProviderSpec] = []
+        cached: list[ProviderSpec] = []
+        for spec in specs:
+            if self._is_cached(spec):
+                cached.append(spec)
+                continue
+            # Routes through _resolve_any rather than _resolve_sync(spec) directly,
+            # so an active override() is honoured exactly as it is everywhere else.
+            _ = self._resolve_any(spec.key, spec.tag)
+            constructed.append(spec)
+        return warmup_report(self.graph(), constructed, cached)
+
+    async def awarmup(self) -> WarmupReport:
+        """Construct every singleton now; the async counterpart to `warmup()`.
+
+        Drives async singletons as well as sync ones, so it is what an ASGI
+        lifespan calls. Otherwise identical: resolution order, the same report,
+        and a failure that propagates unchanged.
+        """
+        specs = singleton_specs(self._plan)
+        constructed: list[ProviderSpec] = []
+        cached: list[ProviderSpec] = []
+        for spec in specs:
+            if self._is_cached(spec):
+                cached.append(spec)
+                continue
+            _ = await self._aresolve_any(spec.key, spec.tag)
+            constructed.append(spec)
+        return warmup_report(self.graph(), constructed, cached)
+
     @overload
     def inject[**P, R](self, fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]: ...
     @overload
@@ -411,6 +473,9 @@ class FrozenContainer:
         if override is not None:
             return override
         return self._plan.by_key.get((key, tag))
+
+    def _is_cached(self, spec: ProviderSpec) -> bool:
+        return self._root.lookup((spec.key, spec.tag)) is not MISSING
 
     def _cache_target(self, spec: ProviderSpec) -> ScopeFrame | None:
         """Return the frame that caches this spec, or None for transient scope."""
