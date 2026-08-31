@@ -1358,7 +1358,7 @@ git commit -m "test: pin freeze-time validation of collections"
 
 - [ ] **Step 1: Write the failing view and render tests**
 
-Append to `tests/unit/test_graph_view.py`:
+Append to `tests/unit/test_graph_view.py`. Note the default is a real instance, not `None`: `cache: Cache = None` is an `assignment` error under `mypy --strict`, and this cycle adds no suppression.
 
 ```python
 def test_an_unbound_optional_edge_reports_why_it_is_unsatisfied() -> None:
@@ -1377,8 +1377,10 @@ def test_an_unbound_optional_edge_reports_why_it_is_unsatisfied() -> None:
 def test_an_unbound_defaulted_edge_reports_why_it_is_unsatisfied() -> None:
     class Cache: ...
 
+    fallback = Cache()
+
     class Service:
-        def __init__(self, cache: Cache = None) -> None:
+        def __init__(self, cache: Cache = fallback) -> None:
             del cache
 
     edge = Container().bind(Service).freeze().graph().node(Service).dependencies[0]
