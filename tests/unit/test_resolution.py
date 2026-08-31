@@ -483,3 +483,45 @@ def test_a_tagged_parameter_ignores_a_frame_value_seeded_under_the_bare_key() ->
         page = frozen.resolve(Page)
 
     assert page.store.label == 'primary'
+
+
+@pytest.mark.parametrize('kind', ['default', 'optional'])
+def test_a_frame_seed_for_an_unbound_key_needs_scope_value_to_reach_a_parameter(kind: str) -> None:
+    class Extra: ...
+
+    default_value = Extra()
+
+    class ReportWithDefault:
+        def __init__(self, extra: Extra = default_value) -> None:
+            self.extra = extra
+
+    class ReportWithOptional:
+        def __init__(self, extra: Extra | None = None) -> None:
+            self.extra = extra
+
+    seeded = Extra()
+
+    if kind == 'default':
+        unbound_default = Container().bind(ReportWithDefault, scope=Scope.SCOPED).freeze()
+        with unbound_default.scope() as frame:
+            frame.provide(Extra, seeded)
+            without_scope_value_default = unbound_default.resolve(ReportWithDefault)
+        assert without_scope_value_default.extra is default_value
+
+        bound_default = Container().scope_value(Extra).bind(ReportWithDefault, scope=Scope.SCOPED).freeze()
+        with bound_default.scope() as frame:
+            frame.provide(Extra, seeded)
+            with_scope_value_default = bound_default.resolve(ReportWithDefault)
+        assert with_scope_value_default.extra is seeded
+    else:
+        unbound_optional = Container().bind(ReportWithOptional, scope=Scope.SCOPED).freeze()
+        with unbound_optional.scope() as frame:
+            frame.provide(Extra, seeded)
+            without_scope_value_optional = unbound_optional.resolve(ReportWithOptional)
+        assert without_scope_value_optional.extra is None
+
+        bound_optional = Container().scope_value(Extra).bind(ReportWithOptional, scope=Scope.SCOPED).freeze()
+        with bound_optional.scope() as frame:
+            frame.provide(Extra, seeded)
+            with_scope_value_optional = bound_optional.resolve(ReportWithOptional)
+        assert with_scope_value_optional.extra is seeded

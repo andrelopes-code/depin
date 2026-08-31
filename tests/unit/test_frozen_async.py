@@ -895,3 +895,46 @@ async def test_an_async_seeded_key_that_also_has_a_binding_resolves_to_its_bindi
         report = await frozen.aresolve(Report)
 
     assert report.clock.label == 'bound'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('kind', ['default', 'optional'])
+async def test_an_async_frame_seed_for_an_unbound_key_needs_scope_value_to_reach_a_parameter(kind: str) -> None:
+    class Extra: ...
+
+    default_value = Extra()
+
+    class ReportWithDefault:
+        def __init__(self, extra: Extra = default_value) -> None:
+            self.extra = extra
+
+    class ReportWithOptional:
+        def __init__(self, extra: Extra | None = None) -> None:
+            self.extra = extra
+
+    seeded = Extra()
+
+    if kind == 'default':
+        unbound_default = Container().bind(ReportWithDefault, scope=Scope.SCOPED).freeze()
+        async with unbound_default.ascope() as frame:
+            frame.provide(Extra, seeded)
+            without_scope_value_default = await unbound_default.aresolve(ReportWithDefault)
+        assert without_scope_value_default.extra is default_value
+
+        bound_default = Container().scope_value(Extra).bind(ReportWithDefault, scope=Scope.SCOPED).freeze()
+        async with bound_default.ascope() as frame:
+            frame.provide(Extra, seeded)
+            with_scope_value_default = await bound_default.aresolve(ReportWithDefault)
+        assert with_scope_value_default.extra is seeded
+    else:
+        unbound_optional = Container().bind(ReportWithOptional, scope=Scope.SCOPED).freeze()
+        async with unbound_optional.ascope() as frame:
+            frame.provide(Extra, seeded)
+            without_scope_value_optional = await unbound_optional.aresolve(ReportWithOptional)
+        assert without_scope_value_optional.extra is None
+
+        bound_optional = Container().scope_value(Extra).bind(ReportWithOptional, scope=Scope.SCOPED).freeze()
+        async with bound_optional.ascope() as frame:
+            frame.provide(Extra, seeded)
+            with_scope_value_optional = await bound_optional.aresolve(ReportWithOptional)
+        assert with_scope_value_optional.extra is seeded
