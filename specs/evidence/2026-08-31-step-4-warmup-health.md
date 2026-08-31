@@ -3,7 +3,7 @@
 Date: 2026-08-31
 
 Baseline commit (`main`, 0.11.0): `d2b8ceb31b25ca88b0c279676fe54629390cfd9c`
-Measured commit (this branch): `b459d89ddc92e485f7b63efcf066a9c83b55a982`
+Measured commit (this branch): `bfa4c705afff1708818a782b60512774b34e12e3`
 
 This document covers Steps 1 through 7 of the Task 6 brief, plus the Task 6
 addition (unifying the two examples' key-rendering helpers). All commands
@@ -15,6 +15,115 @@ The full commit range this cycle covers, oldest first: `e59cacb` (design),
 `29a5f71` (plan), `5bc34f5`, `c322034`, `3958c98`, `f130cd6`, `448b7dd`,
 `a80ad2a`, `e10b843`, `b6bd53b` (implementation and docs), `7724d64`
 (this task's examples fix), `b459d89` (this task's roadmap amendment).
+
+A final whole-branch review against PR #46 (base `d2b8ceb`) found twelve
+further defects, closed in one wave: `092de12`, `f484249`, `f701e6a`,
+`76dd6bc`, `f6e768c`, `2fae869`, `bfa4c70`. That wave is covered under "Final
+fix wave" below; every section after it that reports a number or a command's
+output has been re-run against `bfa4c70` and reflects that tree, not
+`b459d89`.
+
+## Final fix wave (PR #46 review)
+
+Twelve findings from a final whole-branch code review, applied together.
+
+1. **Decorator check claim.** `docs/guide/operations.md` and the design
+   spec's Semantics table both claimed a decorator can declare its own
+   `check=`; `decorate()` has no such parameter, and the spec's Out of scope
+   table already forbade one. Both corrected to state the real rule: a check
+   on a decorated binding verifies the undecorated value and is keyed
+   `Underlying(key, 0)`; `decorate()` takes no `check=`.
+2. **`print()` in `test_health.py`.** Removed the live `print(excinfo.value)`
+   and renamed
+   `test_health_prints_the_refusal_message_naming_every_pending_key` to
+   `test_health_refusal_message_names_every_pending_key`.
+3. **T20 enforcement.** `[tool.ruff.lint] select` gains `"T20"`.
+   `[tool.ruff.lint.per-file-ignores]` exempts `examples/**`,
+   `scripts/check_mutation_threshold.py`, and `benchmarks/compare.py` — the
+   only places printing is the file's purpose. Running `uv run ruff check`
+   with the rule on turned up two more live prints, pre-existing and
+   unrelated to this cycle's own work: `tests/unit/test_conditional.py`'s
+   `test_explain_and_freeze_report_an_inactive_key_alike` printed
+   `freeze_text` and `explain_text` for debugging; both calls deleted, the
+   assertions they preceded are unaffected.
+4. **Overload typing pinned for every shape.** `tests/typing/test_conformance.py`
+   guarded the seven-overload `check=` fix only for `type[T]`. Added six
+   `assert_type` cases — generator, async generator, `async def`,
+   `@contextmanager`, `@asynccontextmanager`, and plain factories — each
+   binding `check`'s parameter to the produced value's type. All pass under
+   `basedpyright --strict` and `mypy --strict`.
+5. **Async error-separation test.** Added
+   `test_ahealth_propagates_a_resolution_error_instead_of_reporting_it`: a
+   checked provider whose constructor raises, asserting the exception reaches
+   the caller from `ahealth()` rather than becoming a `HealthResult`.
+   Mutation proof: wrapping `ahealth()`'s `await self._aresolve_any(...)` in
+   a `try`/`except Exception` that turns the error into a `HealthResult`
+   made the new test fail with `Failed: DID NOT RAISE RuntimeError`;
+   reverting the wrap restored the pass. The mutation was never committed.
+6. **Check-property tautology.** `test_checks_reports_exactly_the_specs_the_plan_marked_checked`
+   derived `expected` from `plan.order`'s `spec.check is not None` — exactly
+   the predicate `checks()` itself filters on — so it could not detect a
+   check dropped by `graph._with_async_flags` or `decoration._chain`.
+   Renamed to `test_checks_reports_exactly_the_declared_checks` and rewritten
+   to derive `expected` from `case.checks` alone (`_expected_checked_keys`),
+   mapping each drawn index to the key it was registered under —
+   `Underlying(key, 0)` for a decorated index. `_materialize` gained a
+   `_materialize_with_keys` counterpart returning the per-index key objects
+   the property needs but the container itself does not expose. A duplicated
+   index is not represented in `_expected_checked_keys`: `_materialize`
+   always binds it twice, which `Container.freeze()` always rejects as
+   `DuplicateProviderError` before the plan exists, so the comparison never
+   runs for that case. Mutation proof: changing `check=spec.check` to
+   `check=None` in `graph._with_async_flags` made the rewritten property fail
+   immediately, with a Hypothesis-shrunk counterexample
+   (`GraphCase(size=3, registered=(False, False, True), checks=frozenset({2}), ...)`)
+   showing `checks()` returning nothing where one check was declared;
+   reverting the mutation restored the pass. The mutation was never
+   committed.
+7. **`warmup()` under an active override.** Added
+   `test_warmup_honours_an_active_override`: warms inside
+   `with di.override(Config, FakeConfig()):` and asserts the overridden
+   value is what `warmup()` constructed.
+8. **`awarmup`'s cached branch.** Added
+   `test_a_second_awarmup_reports_everything_cached`: two `await
+   di.awarmup()` calls; the second reports the singleton under `cached`,
+   covering `frozen.py`'s `awarmup` cache-hit branch — lines 305-306 before
+   this wave, now 308-309, shifted by the three-line `Raises:` block Fix 11
+   adds to `awarmup`'s docstring above it.
+9. **`as_check`'s raise, tested directly.** Added
+   `test_as_check_raises_for_a_non_callable_check` to
+   `tests/unit/test_typeguards.py`, calling `as_check(42, Store)` and
+   asserting `InvalidProviderError` naming "is not callable". Note for the
+   record: the precedent the task description named,
+   `as_alias_target`/`as_collection_members`, is actually covered in
+   `tests/unit/test_construct.py` (via `construct.sync` over a hand-built
+   `ProviderSpec`), not in `test_typeguards.py` — no such tests existed there
+   before this fix. The new test instead follows `test_typeguards.py`'s own
+   existing convention of calling a `typeguards` function directly.
+10. **Singular/plural refusal wording.** `warmup()`'s and `health()`'s
+    refusal messages read "they require" even for one key. Both now choose
+    the pronoun (and, for `health()`, the "check"/"checks" noun) by the
+    count of pending keys. Printed before writing the docs, on this tree:
+    - `warmup() cannot construct Pool: it requires async resolution. Call awarmup() instead.`
+    - `warmup() cannot construct First, Second: they require async resolution. Call awarmup() instead.`
+    - `health() cannot run the check for Pool: it requires an event loop, because the provider is async or the check is. Call ahealth() instead.`
+    `docs/guide/operations.md`'s two doctests updated to match verbatim.
+11. **Missing docstring sections.** `HealthCheck` and `HealthResult` gained
+    an `Example:`, executed by the doctest gate. `awarmup` gained `Raises:
+    CircularDependencyError`; `ahealth` gained `Raises: OutsideScopeError`
+    and `CircularDependencyError` — both reachable through `_aresolve_any`,
+    the same resolution path `aresolve()` documents those two exceptions
+    for. Neither method can raise `AsyncInSyncContextError`, since both
+    drive async providers directly, so neither Raises: section repeats it.
+12. **Warmup benchmark timed `freeze()` too.** `test_warmup_a_chain` built
+    and froze the container inside the timed callable. Rewritten to freeze a
+    fresh container per round in `benchmark.pedantic`'s `setup` (outside the
+    timed window), timing `warmup()` alone; `Benchmark`'s local `Protocol`
+    gained a `pedantic` method. A single frozen container was rejected: a
+    warmed container caches every singleton, so a second `warmup()` on the
+    same one would measure the cached branch, not construction — matching
+    the design spec's own semantics table entry for a repeated call. See
+    "Benchmarks" below for the isolated figure.
 
 ## The examples fix
 
@@ -43,7 +152,7 @@ none of which appear.
 
 ```console
 $ uv run ruff format
-159 files left unchanged
+160 files left unchanged
 EXIT=0
 
 $ uv run ruff check
@@ -59,13 +168,19 @@ Success: no issues found in 102 source files
 EXIT=0
 
 $ uv run pytest
-809 passed, 6 skipped in 19.16s
+821 passed, 6 skipped in 18.94s
 EXIT=0
 
 $ uv run --group docs mkdocs build --strict
-INFO    -  Documentation built in 3.33 seconds
+INFO    -  Documentation built in 3.31 seconds
 EXIT=0
 ```
+
+Re-run against `bfa4c70`, the final fix wave's tip. No `.py` file was added
+by this wave (`git diff --stat cd6f463 -- '*.py'` names only modifications);
+the `159` vs `160` file count between this run and the one above reflects
+`ruff format`'s own file discovery on this host at the two points in time,
+not a change this cycle made to what is tracked.
 
 The docs command prints the same upstream Material for MkDocs 2.0 advisory
 banner recorded in prior evidence files; no MkDocs diagnostic, exit 0.
@@ -143,6 +258,10 @@ suppression added or removed in count.
 
 ## Coverage
 
+Re-measured after the final fix wave (`bfa4c70`). Both lines the wave set out
+to close, `frozen.py`'s `awarmup` cache-hit branch and `typeguards.py`'s
+`as_check` raise, no longer appear in `Missing`:
+
 ```console
 $ uv run pytest --cov=depin --cov-report=term-missing
 ...
@@ -155,9 +274,9 @@ depin/_core/construct.py        51      0     24      1    99%   75->exit
 depin/_core/container.py        11      0      0      0   100%
 depin/_core/decoration.py       47      0     24      0   100%
 depin/_core/diagnostics.py      63      0      4      0   100%
-depin/_core/frozen.py          269      6    100      8    96%   305-306, 582, 589->591, 622, 629->631, 654->658, 696, 714
+depin/_core/frozen.py          269      4    100      7    97%   591, 598->600, 631, 638->640, 663->667, 705, 723
 depin/_core/graph.py           172      0     72      0   100%
-depin/_core/health.py           59      0      6      0   100%
+depin/_core/health.py           61      0      6      0   100%
 depin/_core/injection.py        39      0     16      1    98%   59->58
 depin/_core/introspect.py       70      1     36      3    96%   43, 71->69, 74->69
 depin/_core/markers.py          59      0      6      0   100%
@@ -165,40 +284,41 @@ depin/_core/overrides.py        23      0      4      0   100%
 depin/_core/providers.py       205      1    108      1    99%   413
 depin/_core/registry.py          8      0      0      0   100%
 depin/_core/render.py          113      0     56      0   100%
-depin/_core/scope.py           233      2     74      2    99%   88->87, 107-109, 113->exit
+depin/_core/scope.py           233      3     74      3    98%   69, 88->87, 107-109, 113->exit
 depin/_core/spec.py            131      0      6      0   100%
 depin/_core/teardown.py         45      0     14      2    97%   53->exit, 77->exit
-depin/_core/typeguards.py      105      1     42      1    99%   195
-depin/_core/warmup.py           22      0      2      0   100%
+depin/_core/typeguards.py      105      0     42      0   100%
+depin/_core/warmup.py           23      0      2      0   100%
 depin/errors.py                 11      0      0      0   100%
 depin/ext/__init__.py            0      0      0      0   100%
 depin/ext/fastapi.py            33      0      6      0   100%
 ------------------------------------------------------------------------
-TOTAL                         1843     11    604     19    99%
-Required test coverage of 95.0% reached. Total coverage: 98.77%
-809 passed, 6 skipped in 43.56s
+TOTAL                         1846      9    604     18    99%
+Required test coverage of 95.0% reached. Total coverage: 98.90%
+821 passed, 6 skipped in 40.11s
 EXIT=0
 ```
 
-Run a second time, unmodified, specifically to observe `scope.py`'s
-`_Flight.wait_sync` line:
+Every remaining miss is one already attributed below (`frozen.py`'s seven
+pre-existing entries, shifted by the fix wave's own docstring insertions;
+`providers.py:413`; `construct.py`, `introspect.py`, `injection.py`,
+`teardown.py`, all pre-existing and untouched by this cycle) plus
+`scope.py`'s `_Flight.wait_sync` line, the same roughly-one-in-two
+thread-scheduling branch prior evidence in this file already recorded as
+flaky rather than a regression — `scope.py` is untouched by this cycle (see
+"Untouched modules" below). Three consecutive runs on this tree missed line
+69 each time; that is a sample of the coin, not evidence the line's coverage
+changed. 98.90% is above the 95% floor.
 
-```console
-$ uv run pytest --cov=depin --cov-report=term-missing
-...
-depin/_core/scope.py           233      3     74      3    98%   69, 88->87, 107-109, 113->exit
-...
-Required test coverage of 95.0% reached. Total coverage: 98.69%
-809 passed, 6 skipped in 43.84s
-EXIT=0
-```
-
-The two runs land on opposite sides of the coin: the first misses `scope.py`
-nothing beyond its three pre-existing branches (line 69 covered), the second
-misses line 69 as well. This is the roughly-one-in-two behaviour of
-`_Flight.wait_sync`'s thread-scheduling path, not evidence the line's
-coverage changed — `scope.py` is untouched by this cycle (see "Untouched
-modules" below). Both totals, 98.77% and 98.69%, are above the 95% floor.
+`frozen.py`'s seven remaining pre-existing miss entries moved from `582,
+589->591, 622, 629->631, 654->658, 696, 714` (recorded earlier in this file,
+against `b459d89`) to `591, 598->600, 631, 638->640, 663->667, 705, 723` — a
+uniform +9-line shift, matching the two `Raises:` blocks the fix wave adds to
+`awarmup` (3 lines) and `ahealth` (6 lines), both above every one of these
+lines in the file. None of the shifted lines sit inside `awarmup`, `ahealth`,
+`checks`, or `health`; they remain in `_resolve_cached_sync`, `_resolve_async`,
+`_is_constructing`, `_resolve_params_sync`, and `_resolve_params_async`, as
+attributed below.
 
 `git diff --stat d2b8ceb -- 'depin/_core/*.py' depin/__init__.py` names ten
 modules this cycle changed, two of them new:
@@ -222,29 +342,34 @@ depin/_core/warmup.py     |  84 +++++++++++++++++++++++++
 below, checked against a detached worktree at `main` (`d2b8ceb`), built with
 `uv sync` and measured with `uv run pytest --cov=depin --cov-report=term-missing`.
 
-- **`depin/_core/frozen.py`, lines 305-306.** New this cycle. `git blame`
-  attributes both to `c3220344` (`feat: construct every singleton with
-  warmup`): the `if self._is_cached(spec): cached.append(spec); continue`
-  branch inside `awarmup`, taken when a singleton `awarmup` would build was
-  already constructed by an earlier `warmup()`/`awarmup()` call. No test
-  exercises `awarmup()` a second time against an already-warm container; the
-  sync counterpart's equivalent branch inside `warmup` is covered.
+- **`depin/_core/frozen.py`, lines 305-306 at `b459d89` — closed by the final
+  fix wave's Fix 8.** `git blame` attributed both to `c3220344` (`feat:
+  construct every singleton with warmup`): the `if self._is_cached(spec):
+  cached.append(spec); continue` branch inside `awarmup`, taken when a
+  singleton `awarmup` would build was already constructed by an earlier
+  `warmup()`/`awarmup()` call. `tests/unit/test_warmup.py`'s
+  `test_a_second_awarmup_reports_everything_cached` (Fix 8) now exercises it;
+  the branch is at lines 308-309 on the current tree (the fix wave's own
+  `Raises:` addition to `awarmup`'s docstring shifts it by 3) and no longer
+  appears in `Missing`, confirmed in "Coverage" above.
 
-- **`depin/_core/frozen.py`, line 582, branches `589->591`, line 622,
-  branches `629->631`, `654->658`, and lines 696 and 714.** Pre-existing.
-  The worktree measurement at `d2b8ceb` gives `depin/_core/frozen.py 229 4 90
-  7 97% Missing 442, 449->451, 482, 489->491, 514->518, 556, 574`. `git diff
-  d2b8ceb -- depin/_core/frozen.py` inserts 11 lines before line 116 (new
-  imports), 126 net lines between the baseline's lines 236 and 247 (the
-  `warmup`/`checks`/`health` methods), and 3 lines at baseline line 412 (the
-  new `_is_cached` helper) — a cumulative +140-line shift for everything
-  after it. Every baseline miss plus 140 lands exactly on the current miss:
-  442+140=582, 449→589/451→591, 482+140=622, 489→629/491→631, 514→654/518→658,
-  556+140=696, 574+140=714. None of these lines sit inside `_is_cached`,
-  `warmup`, `awarmup`, `checks`, `health`, or `ahealth`; all five belong to
-  `_resolve_cached_sync`, `_resolve_async`, `_is_constructing`,
-  `_resolve_params_sync`, and `_resolve_params_async`, none of which this
-  cycle's diff touches.
+- **`depin/_core/frozen.py`, lines 591, branches `598->600`, line 631,
+  branches `638->640`, `663->667`, and lines 705 and 723 (current tree).**
+  Pre-existing, and still the same statements/arcs the design cycle
+  measured — this is the same bullet as originally recorded, with the fix
+  wave's own further line shift applied. The worktree measurement at
+  `d2b8ceb` gives `depin/_core/frozen.py 229 4 90 7 97% Missing 442,
+  449->451, 482, 489->491, 514->518, 556, 574`; `b459d89` (this cycle's own
+  work) shifted every one by +140 (582, 589->591, 622, 629->631, 654->658,
+  696, 714, recorded earlier in this file); the final fix wave's `Raises:`
+  additions to `awarmup` (3 lines) and `ahealth` (6 lines) in
+  `depin/_core/frozen.py`, both above every line in this bullet, shift them a
+  further uniform +9: 582+9=591, 589→598/591→600, 622+9=631, 629→638/631→640,
+  654→663/658→667, 696+9=705, 714+9=723 — exactly the current `Missing` list.
+  None of these lines sit inside `_is_cached`, `warmup`, `awarmup`, `checks`,
+  `health`, or `ahealth`; all five belong to `_resolve_cached_sync`,
+  `_resolve_async`, `_is_constructing`, `_resolve_params_sync`, and
+  `_resolve_params_async`, none of which either cycle's diff touches.
 
 - **`depin/_core/providers.py`, line 413.** Pre-existing. The worktree
   measurement at `d2b8ceb` gives `depin/_core/providers.py 200 1 106 1 99%
@@ -252,32 +377,38 @@ below, checked against a detached worktree at `main` (`d2b8ceb`), built with
   inside `unwrap_container_type`, taken when `get_args(annotation)` is empty.
   `providers.py` grows by 19 lines this cycle (carrying `check` from record to
   spec); 394+19=413, and `unwrap_container_type` itself is outside the diff.
+  Untouched by the final fix wave.
 
-- **`depin/_core/typeguards.py`, line 195.** New this cycle. The worktree
-  measurement at `d2b8ceb` gives `depin/_core/typeguards.py 101 0 40 0 100%`
-  — no miss. Line 195 is the `raise InvalidProviderError(...)` branch of the
-  new `as_check`, taken when a declared `check` is not callable. Its own
-  docstring states the branch is unreachable through the public API, because
-  `Container.freeze()` already rejects a non-callable `check` before
-  `as_check` runs (mirroring `as_awaitable`'s equivalent raise, which is
-  reached only through an internal path and stays covered). No test calls
-  `as_check` directly or constructs a plan that reaches this branch.
+- **`depin/_core/typeguards.py`, line 195 at `b459d89` — closed by the final
+  fix wave's Fix 9.** The worktree measurement at `d2b8ceb` gives
+  `depin/_core/typeguards.py 101 0 40 0 100%` — no miss. Line 195 is the
+  `raise InvalidProviderError(...)` branch of `as_check`, taken when a
+  declared `check` is not callable; its docstring still states the branch is
+  unreachable through the public API, because `Container.freeze()` already
+  rejects a non-callable `check` before `as_check` runs. Fix 9 adds
+  `tests/unit/test_typeguards.py::test_as_check_raises_for_a_non_callable_check`,
+  calling `as_check(42, Store)` directly — the same way the module's other
+  narrowing functions are tested, bypassing the public API precisely because
+  the branch is unreachable through it. `depin/_core/typeguards.py` is at
+  100% line and branch coverage on the current tree, confirmed in "Coverage"
+  above.
 
 - **`depin/_core/construct.py`, branch `75->exit`; `depin/_core/scope.py`,
-  branches `88->87`, `107-109`, `113->exit` (plus line 69 on the second run);
+  branches `88->87`, `107-109`, `113->exit` (plus line 69, observed missed on
+  every run against the current tree — see "Coverage" above);
   `depin/_core/introspect.py`, line 43 and branches `71->69`, `74->69`;
   `depin/_core/injection.py`, branch `59->58`; `depin/_core/teardown.py`,
   branches `53->exit`, `77->exit`.** None of these five modules changed this
-  cycle (empty diff against `d2b8ceb`, confirmed under "Untouched modules"
-  below), so their misses are the same statements and arcs present on `main`,
-  unmoved. The worktree measurement at `d2b8ceb` reproduces every one at the
-  identical line and branch numbers.
+  cycle or the final fix wave (empty diff against `d2b8ceb`, confirmed under
+  "Untouched modules" below), so their misses are the same statements and
+  arcs present on `main`, unmoved. The worktree measurement at `d2b8ceb`
+  reproduces every one at the identical line and branch numbers.
 
-Two new misses this cycle: `frozen.py:305-306` (an untested `awarmup`
-already-cached branch) and `typeguards.py:195` (an `as_check` raise branch
-its own docstring documents as unreachable through the public API, the same
-class of defensive branch as other narrowing functions in the module). Both
-are within the 95% floor at either coverage run.
+Both misses the design cycle introduced are now closed: `frozen.py`'s
+`awarmup` already-cached branch (Fix 8) and `typeguards.py`'s `as_check`
+raise (Fix 9). The current tree's only misses are pre-existing ones untouched
+by either the design cycle or the final fix wave, plus `scope.py`'s
+already-documented flaky line. 98.90% is comfortably above the 95% floor.
 
 ## Suppression count
 
@@ -297,6 +428,11 @@ numbers, `116→127` and `139→150`, both moved by exactly the 11 lines this
 cycle's new imports add before line 116
 (`git show d2b8ceb:depin/_core/frozen.py` gives the same two lines at 116 and
 139). Text unchanged in both directions: nothing added, nothing removed.
+
+Re-run against `bfa4c70`, the final fix wave's tip: identical output, same
+two lines at 127 and 150. The wave's `Raises:` additions to `awarmup` and
+`ahealth` land after both suppressions in the file, so neither line moves.
+Still exactly three, still none added.
 
 ## Untouched modules
 
@@ -331,6 +467,12 @@ it, and neither `graph()`'s view nor its renderings gain a field to display.
 117 lines, and beyond the brief's expectation of a `check=` keyword addition:
 it gained seven `@overload`s mid-cycle, a defect found and fixed rather than
 planned, recorded in full under "The `bind` overload defect" above.
+
+The final fix wave (`bfa4c70`) touches none of the eleven modules above, nor
+`graph.py` beyond what is already shown, nor `bindings.py` at all — confirmed
+by `git diff --stat cd6f463 -- <same path list>`, empty. Its `depin/`
+changes are confined to `frozen.py`, `health.py`, and `warmup.py`, covered
+under "Final fix wave" above.
 
 ## Design measurements
 
@@ -388,43 +530,54 @@ revisited before 1.0.
 
 ## Benchmarks
 
+Re-run against `bfa4c70`, after Fix 12 rewrote `test_warmup_a_chain` to time
+`warmup()` alone (`benchmark.pedantic` with a fresh `freeze()` per round in
+`setup`, outside the timed window) instead of `freeze()` plus `warmup()`
+together:
+
 ```console
 $ uv run --group bench pytest benchmarks --benchmark-only
-23 passed in 19.64s
+23 passed in 22.14s
 ```
 
 | Case | Mean |
 | --- | ---: |
-| `test_resolve_a_singleton_through_a_two_deep_decoration_chain` | 2.1846 us |
-| `test_resolve_a_cached_singleton` | 2.2124 us |
-| `test_resolve_a_cached_singleton_through_an_alias` | 4.4787 us |
-| `test_call_through_an_inject_wrapper` | 7.1832 us |
-| `test_resolve_an_async_singleton` | 20.4643 us |
-| `test_resolve_a_collection[10]` | 22.5160 us |
-| `test_resolve_a_transient_chain` | 43.4174 us |
-| `test_resolve_a_collection[100]` | 159.2778 us |
-| `test_open_and_close_a_scope` | 234.7579 us |
-| `test_freeze_a_chain[10]` | 466.1812 us |
-| `test_freeze_a_chain_of_generic_keys[10]` | 838.9590 us |
-| `test_freeze_a_chain_with_every_node_decorated[10]` | 1,154.0123 us |
-| `test_export_a_large_graph_as_dot` | 2,676.7727 us |
-| `test_freeze_a_chain[100]` | 4,367.7477 us |
-| `test_build_the_graph_view` | 5,555.4300 us |
-| `test_explain_a_deep_chain` | 7,931.8106 us |
-| `test_freeze_a_chain_of_generic_keys[100]` | 8,261.9137 us |
-| `test_freeze_a_chain_with_every_node_decorated[100]` | 11,151.1989 us |
-| `test_explain_a_deep_chain_with_every_node_decorated` | 21,723.7628 us |
-| `test_freeze_a_chain[1000]` | 44,673.6185 us |
-| `test_warmup_a_chain` | 62,572.0068 us |
-| `test_freeze_a_chain_of_generic_keys[1000]` | 104,233.3590 us |
-| `test_freeze_a_chain_with_every_node_decorated[1000]` | 114,403.7324 us |
+| `test_resolve_a_singleton_through_a_two_deep_decoration_chain` | 2.1497 us |
+| `test_resolve_a_cached_singleton` | 2.2040 us |
+| `test_resolve_a_cached_singleton_through_an_alias` | 4.3603 us |
+| `test_call_through_an_inject_wrapper` | 6.9127 us |
+| `test_resolve_an_async_singleton` | 20.1513 us |
+| `test_resolve_a_collection[10]` | 21.6292 us |
+| `test_resolve_a_transient_chain` | 43.0597 us |
+| `test_resolve_a_collection[100]` | 154.6166 us |
+| `test_open_and_close_a_scope` | 227.1355 us |
+| `test_freeze_a_chain[10]` | 452.5388 us |
+| `test_freeze_a_chain_of_generic_keys[10]` | 805.2872 us |
+| `test_freeze_a_chain_with_every_node_decorated[10]` | 1,095.5650 us |
+| `test_export_a_large_graph_as_dot` | 2,659.4799 us |
+| `test_freeze_a_chain[100]` | 4,211.2316 us |
+| `test_build_the_graph_view` | 5,307.8598 us |
+| `test_explain_a_deep_chain` | 7,685.2405 us |
+| `test_freeze_a_chain_of_generic_keys[100]` | 7,924.3394 us |
+| `test_freeze_a_chain_with_every_node_decorated[100]` | 11,240.8021 us |
+| `test_warmup_a_chain` | 15,734.4638 us |
+| `test_explain_a_deep_chain_with_every_node_decorated` | 22,412.2398 us |
+| `test_freeze_a_chain[1000]` | 44,116.7890 us |
+| `test_freeze_a_chain_of_generic_keys[1000]` | 98,461.5422 us |
+| `test_freeze_a_chain_with_every_node_decorated[1000]` | 119,920.1163 us |
 
-`test_warmup_a_chain` is the only new case this cycle
-(`git log -p d2b8ceb..HEAD -- benchmarks/` shows exactly this one function
-added, none removed). Every other case has a directly comparable figure in
+`test_warmup_a_chain` is not comparable to its `62,572.0068 us` figure
+recorded earlier in this file: that number timed `freeze()` plus `warmup()`
+over a 1000-node chain together, and `freeze()` alone over the same size
+(`test_freeze_a_chain[1000]`, `44,116.7890 us` here) accounts for nearly all
+of it. The isolated figure, `15,734.4638 us`, is what Fix 12 exists to make
+visible — a `warmup()` regression no longer hides inside the larger
+`freeze()` cost it used to share a measurement with. Every other case has a
+directly comparable figure either earlier in this file (unchanged in shape,
+though the absolute numbers move with host load run to run) or in
 `specs/evidence/2026-08-31-step-4-decoration-conditional.md`; none shows an
-order-of-magnitude change, consistent with this cycle touching no line in
-`construct.py` and adding no new `ProviderShape`.
+order-of-magnitude change, consistent with the final fix wave touching no
+line in `construct.py` and adding no new `ProviderShape`.
 
 The repository commits no benchmark baseline, so a "no regression" claim for
 the pre-existing cases is made by the CI benchmark job, which measures base
