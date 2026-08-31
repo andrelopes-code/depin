@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0](https://github.com/andrelopes-code/depin/compare/v0.10.0...v0.11.0) (2026-08-31)
+
+
+### Features
+
+* decorate a binding and register it under a condition ([0ab9737](https://github.com/andrelopes-code/depin/commit/0ab9737706dad3e407c80a0968a7e0b970b96507))
+
 ## [0.10.0](https://github.com/andrelopes-code/depin/compare/v0.9.0...v0.10.0) (2026-08-31)
 
 
