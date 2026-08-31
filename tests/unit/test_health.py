@@ -5,7 +5,8 @@ from collections.abc import Coroutine, Generator
 import pytest
 
 from depin import Container, Scope, Token, Underlying
-from depin._core.health import HealthCheck, HealthReport, HealthResult
+from depin._core.health import HealthCheck, HealthReport, HealthResult, run_check, run_check_async
+from depin._core.spec import ProviderShape, ProviderSpec, fmt_key
 from depin.errors import AsyncInSyncContextError, InvalidProviderError, OutsideScopeError
 
 
@@ -50,9 +51,11 @@ def test_a_raising_check_is_unhealthy_with_the_exception_on_the_result() -> None
     def ping(db: Database) -> bool:
         raise error
 
-    di = Container().bind(Database, check=ping).freeze()
+    di = Container().bind(Database, tag='primary', check=ping).freeze()
     report = di.health()
     (result,) = report.results
+    assert result.key is Database
+    assert result.tag == 'primary'
     assert result.healthy is False
     assert result.error is error
 
@@ -170,6 +173,23 @@ def test_health_raises_async_in_sync_context_for_an_async_provider() -> None:
         _ = di.health()
 
 
+def test_health_refusal_message_for_a_single_pending_check() -> None:
+    class Service: ...
+
+    async def service() -> Service:
+        return Service()
+
+    def ping(svc: Service) -> None: ...
+
+    di = Container().bind(service, check=ping).freeze()
+    with pytest.raises(AsyncInSyncContextError) as excinfo:
+        _ = di.health()
+    assert str(excinfo.value) == (
+        f'health() cannot run the check for {fmt_key(Service)}: it requires an event loop, because the '
+        'provider is async or the check is. Call ahealth() instead.'
+    )
+
+
 def test_health_raises_async_in_sync_context_for_an_async_check() -> None:
     class Database: ...
 
@@ -198,11 +218,10 @@ def test_health_refusal_message_names_every_pending_key() -> None:
     di = Container().bind(build_first, check=noop_first).bind(build_second, check=noop_second).freeze()
     with pytest.raises(AsyncInSyncContextError) as excinfo:
         _ = di.health()
-    message = str(excinfo.value)
-    assert 'First' in message
-    assert 'Second' in message
-    assert '->' not in message
-    assert ', ' in message
+    assert str(excinfo.value) == (
+        f'health() cannot run the checks for {fmt_key(First)}, {fmt_key(Second)}: they require an event loop, '
+        'because the provider is async or the check is. Call ahealth() instead.'
+    )
 
 
 async def test_every_check_runs_under_ahealth_even_when_an_earlier_one_failed() -> None:
@@ -241,6 +260,24 @@ async def test_ahealth_runs_both_async_providers_and_async_checks() -> None:
     assert report.results == (HealthResult(key=Service, tag=None, healthy=True, error=None),)
 
 
+async def test_ahealth_gives_the_async_check_the_resolved_value() -> None:
+    class Service: ...
+
+    async def service() -> Service:
+        return Service()
+
+    seen: list[object] = []
+
+    async def ping(svc: Service) -> bool:
+        seen.append(svc)
+        return True
+
+    di = Container().bind(service, check=ping).freeze()
+    _ = await di.ahealth()
+    assert len(seen) == 1
+    assert isinstance(seen[0], Service)
+
+
 async def test_ahealth_runs_a_sync_check_over_an_async_provider() -> None:
     class Service: ...
 
@@ -263,9 +300,11 @@ async def test_a_raising_async_check_is_unhealthy_with_the_exception_on_the_resu
     async def ping(db: Database) -> bool:
         raise error
 
-    di = Container().bind(Database, check=ping).freeze()
+    di = Container().bind(Database, tag='primary', check=ping).freeze()
     report = await di.ahealth()
     (result,) = report.results
+    assert result.key is Database
+    assert result.tag == 'primary'
     assert result.healthy is False
     assert result.error is error
 
@@ -298,11 +337,63 @@ def test_a_sync_check_returning_an_awaitable_raises_invalid_provider_error() -> 
 
     di = Container().bind(Database, check=ping).freeze()
     try:
-        with pytest.raises(InvalidProviderError):
+        with pytest.raises(InvalidProviderError) as excinfo:
             _ = di.health()
+        assert str(excinfo.value) == (
+            f'the health check for {fmt_key(Database)} returned an awaitable; an asynchronous check runs '
+            'under ahealth(), never under health().'
+        )
     finally:
         for coroutine in made:
             coroutine.close()
+
+
+def test_a_check_result_carries_its_binding_tag() -> None:
+    class Database: ...
+
+    def ping(db: Database) -> bool:
+        return True
+
+    di = Container().bind(Database, tag='primary', check=ping).freeze()
+    report = di.health()
+    assert report.results == (HealthResult(key=Database, tag='primary', healthy=True, error=None),)
+
+
+async def test_an_async_check_result_carries_its_binding_tag() -> None:
+    class Service: ...
+
+    async def service() -> Service:
+        return Service()
+
+    async def ping(svc: Service) -> bool:
+        return True
+
+    di = Container().bind(service, tag='primary', check=ping).freeze()
+    report = await di.ahealth()
+    assert report.results == (HealthResult(key=Service, tag='primary', healthy=True, error=None),)
+
+
+async def test_ahealth_runs_an_async_check_that_returns_false() -> None:
+    class Service: ...
+
+    async def service() -> Service:
+        return Service()
+
+    async def ping(svc: Service) -> bool:
+        return False
+
+    di = Container().bind(service, check=ping).freeze()
+    report = await di.ahealth()
+    assert report.results == (HealthResult(key=Service, tag=None, healthy=False, error=None),)
+
+
+def test_checks_reports_the_binding_tag() -> None:
+    class Database: ...
+
+    def ping(db: Database) -> None: ...
+
+    di = Container().bind(Database, tag='primary', check=ping).freeze()
+    assert di.checks() == (HealthCheck(key=Database, tag='primary', needs_async=False),)
 
 
 def test_a_check_on_a_scoped_binding_runs_inside_a_scope() -> None:
@@ -373,3 +464,34 @@ def test_a_lifecycle_binding_check_still_runs() -> None:
     di = Container().bind(pool, check=ping).freeze()
     report = di.health()
     assert report.healthy is True
+
+
+def _uncallable_check_spec(key: type, check: object) -> ProviderSpec:
+    return ProviderSpec(
+        key=key,
+        tag=None,
+        source=key,
+        scope=Scope.SINGLETON,
+        shape=ProviderShape.CLASS,
+        needs_async=False,
+        params=(),
+        check=check,
+    )
+
+
+def test_run_check_names_the_specs_own_provider_when_the_check_is_not_callable() -> None:
+    class Database: ...
+
+    spec = _uncallable_check_spec(Database, check=3)
+    with pytest.raises(InvalidProviderError) as excinfo:
+        run_check(spec, Database())
+    assert str(excinfo.value) == f'health check for {fmt_key(Database)} is not callable: 3'
+
+
+async def test_run_check_async_names_the_specs_own_provider_when_the_check_is_not_callable() -> None:
+    class Database: ...
+
+    spec = _uncallable_check_spec(Database, check=3)
+    with pytest.raises(InvalidProviderError) as excinfo:
+        _ = await run_check_async(spec, Database())
+    assert str(excinfo.value) == f'health check for {fmt_key(Database)} is not callable: 3'
