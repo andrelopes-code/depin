@@ -18,6 +18,7 @@ from depin import (
     Scope,
     ScopeFrame,
     Token,
+    Underlying,
     injected,
     provides,
 )
@@ -211,3 +212,43 @@ def test_a_generic_key_keeps_its_parameterisation() -> None:
     assert_type(di[Repo[User]], Repo[User])
     assert_type(di.resolve(Reader[User]), Reader[User])
     assert_type(di.resolve(list[Repo[User]]), list[Repo[User]])
+
+
+def test_decorate_returns_the_same_builder() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    assert_type(Container().bind(Store).decorate(Store, Loud), Container)
+
+
+def test_a_protocol_is_a_decoration_key() -> None:
+    class Store(Protocol):
+        def get(self) -> str: ...
+
+    class Impl:
+        def get(self) -> str:
+            return 'x'
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    assert_type(Container().bind(Impl, provides=Store).decorate(Store, Loud), Container)
+
+
+def test_a_condition_takes_both_spellings() -> None:
+    class Cache: ...
+
+    assert_type(Container().bind(Cache, when=True), Container)
+    assert_type(Container().bind(Cache, when=lambda: True), Container)
+
+
+def test_an_underlying_key_is_an_explain_argument() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    di = Container().bind(Store).decorate(Store, Loud).freeze()
+    assert_type(di.explain(Underlying(Store, 0)), str)

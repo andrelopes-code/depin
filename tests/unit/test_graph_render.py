@@ -807,3 +807,49 @@ def test_a_generic_key_renders_by_its_parameterisation_not_by_repr() -> None:
     assert di.explain(Repo[User]).replace(prefix, '') == 'Repo[User]  [singleton, function]'
     assert '[label="Repo[User]\\nsingleton, function", shape=box]' in di.graph().dot().replace(prefix, '')
     assert 'Repo[User]<br/>singleton, function' in di.graph().mermaid().replace(mermaid_prefix, '')
+
+
+def test_explain_shows_the_decoration_chain() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    di = Container().bind(Store).decorate(Store, Loud).freeze()
+    rendered = di.explain(Store)
+    assert rendered.splitlines()[0].startswith(f'{Store.__qualname__}  [singleton, class]')
+    assert f'inner: {Store.__qualname__} (undecorated)  [singleton, class]' in rendered
+
+
+def test_explain_shows_two_decoration_layers() -> None:
+    class Store: ...
+
+    class Upper:
+        def __init__(self, inner: Store) -> None: ...
+
+    class Bracket:
+        def __init__(self, inner: Store) -> None: ...
+
+    di = Container().bind(Store).decorate(Store, Upper).decorate(Store, Bracket).freeze()
+    rendered = di.explain(Store)
+    assert f'{Store.__qualname__} (decorated x1)' in rendered
+    assert f'{Store.__qualname__} (undecorated)' in rendered
+
+
+def test_the_exports_carry_a_decorated_node() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    graph = Container().bind(Store).decorate(Store, Loud).freeze().graph()
+    assert '(undecorated)' in graph.mermaid()
+    assert '(undecorated)' in graph.dot()
+    assert '|inner|' in graph.mermaid()
+
+
+def test_explain_names_an_inactive_binding() -> None:
+    class Cache: ...
+
+    di = Container().bind(Cache, when=False).freeze()
+    assert 'registered but inactive' in di.explain(Cache)
