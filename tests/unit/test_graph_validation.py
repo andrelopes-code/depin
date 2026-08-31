@@ -17,6 +17,7 @@ from depin.errors import (
     CaptiveDependencyError,
     CircularDependencyError,
     DuplicateProviderError,
+    InvalidProviderError,
     MissingProviderError,
 )
 
@@ -679,3 +680,53 @@ def test_a_singleton_reaching_a_scoped_target_through_an_alias_is_captive() -> N
     assert 'Service -> Store -> Session' in str(excinfo.value).replace(
         'test_a_singleton_reaching_a_scoped_target_through_an_alias_is_captive.<locals>.', ''
     )
+
+
+def test_two_collections_over_one_element_are_rejected() -> None:
+    class Handler: ...
+
+    class First: ...
+
+    class Second: ...
+
+    builder = Container().bind(First).bind(Second).collect(Handler, [First]).collect(Handler, [Second])
+    with pytest.raises(DuplicateProviderError, match='list'):
+        _ = builder.freeze()
+
+
+def test_a_cycle_through_a_collection_is_rejected() -> None:
+    class Handler: ...
+
+    class Member:
+        def __init__(self, handlers: list[Handler]) -> None:
+            del handlers
+
+    builder = Container().bind(Member).collect(Handler, [Member])
+    with pytest.raises(CircularDependencyError, match='cycle detected'):
+        _ = builder.freeze()
+
+
+def test_a_singleton_over_a_collection_with_a_scoped_member_is_captive() -> None:
+    class Handler: ...
+
+    class Session: ...
+
+    class Dispatcher:
+        def __init__(self, handlers: list[Handler]) -> None:
+            del handlers
+
+    builder = (
+        Container()
+        .bind(Session, scope=Scope.SCOPED)
+        .collect(Handler, [Session])
+        .bind(Dispatcher, scope=Scope.SINGLETON)
+    )
+    with pytest.raises(CaptiveDependencyError) as excinfo:
+        _ = builder.freeze()
+    assert 'Session' in str(excinfo.value)
+    assert 'list[' in str(excinfo.value)
+
+
+def test_an_invalid_collection_element_is_rejected() -> None:
+    with pytest.raises(InvalidProviderError, match=r'not a valid key type|as a provider key'):
+        _ = Container().collect(42, []).freeze()  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
