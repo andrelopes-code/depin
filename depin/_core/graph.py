@@ -8,6 +8,7 @@ singletons, and which providers transitively need async resolution.
 import sys
 from collections.abc import Iterable
 from types import ModuleType
+from typing import Final
 
 from depin._core.markers import get_provides
 from depin._core.providers import ASYNC_SHAPES, build_specs
@@ -21,6 +22,8 @@ from depin.errors import (
 )
 
 type _Index = dict[Ident, ProviderSpec]
+
+INACTIVE_NOTE: Final[str] = '; a conditional binding for this key is registered but inactive'
 
 
 def build_plan(records: Iterable[BindRecord]) -> ResolutionPlan:
@@ -38,7 +41,7 @@ def build_plan(records: Iterable[BindRecord]) -> ResolutionPlan:
     specs = build_specs(records)
     _check_duplicates(specs.providers)
     by_key = _index(specs.providers)
-    _check_missing(specs.providers, by_key)
+    _check_missing(specs.providers, by_key, specs.inactive)
     order = _toposort(specs.providers, by_key)
     _check_captive(order, by_key)
     resolved = tuple(_with_async_flags(order, by_key))
@@ -63,7 +66,7 @@ def _check_duplicates(specs: Iterable[ProviderSpec]) -> None:
         seen.add(ident)
 
 
-def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index) -> None:
+def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index, inactive: frozenset[Ident] = frozenset()) -> None:
     all_specs = tuple(specs)
     if not _any_unsatisfied(all_specs, by_key):
         return
@@ -74,7 +77,7 @@ def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index) -> None:
     # one to show when several providers are unsatisfied.
     ordered = sorted(missing.items(), key=lambda kv: len(kv[1][0]), reverse=True)
     lines = [
-        format_missing(ident[0], tuple(spec.key for spec in chain), owner.key, param_name)
+        format_missing(ident[0], tuple(spec.key for spec in chain), owner.key, param_name, inactive=ident in inactive)
         for ident, (chain, owner, param_name) in ordered
     ]
     if len(lines) == 1:
@@ -136,18 +139,22 @@ def format_missing(
     chain: tuple[ProviderKey, ...],
     owner: ProviderKey,
     param_name: str,
+    *,
+    inactive: bool = False,
 ) -> str:
     """The message `build_plan` raises for an unsatisfied parameter.
 
     Also used by `depin._core.render` for a key that `explain()` is asked about
-    and no binding provides, so the two paths report one chain in one wording.
+    and no binding provides, so the two paths report one chain in one wording —
+    the note about an inactive conditional binding included.
     """
     suggestions = suggest_candidates(key)
     extra = f'; candidates: {", ".join(suggestions)}' if suggestions else ''
+    note = INACTIVE_NOTE if inactive else ''
     return (
         f'no provider for {fmt_key(key)} '
         f'(required by {fmt_key(owner)}.{param_name}; '
-        f'resolution chain: {fmt_chain((*chain, key))}){extra}'
+        f'resolution chain: {fmt_chain((*chain, key))}){note}{extra}'
     )
 
 

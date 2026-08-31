@@ -358,6 +358,9 @@ class FrozenContainer:
         requires that key. Like `graph()`, the output describes the validated
         plan, not an active `override()`.
 
+        When the key is registered behind a condition that did not hold, the
+        line says so, in the same wording `Container.freeze()` uses.
+
         Raises:
             MissingProviderError: The value cannot be a provider key at all.
                 An unregistered key of a valid type is described in the
@@ -378,7 +381,7 @@ class FrozenContainer:
         """
         if not is_provider_key(key):
             raise MissingProviderError(f'cannot look up provider for {key!r}: not a valid key type')
-        return render_tree(self.graph(), key, tag)
+        return render_tree(self.graph(), key, tag, self._plan.inactive)
 
     def _is_registered(self, key: ProviderKey, tag: str | None) -> bool:
         return (key, tag) in self._plan.by_key

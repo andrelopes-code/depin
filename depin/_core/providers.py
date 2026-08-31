@@ -111,9 +111,42 @@ def is_active(rec: BindRecord) -> bool:
 
 
 def _inactive_idents(records: Iterable[BindRecord], localns: dict[str, object]) -> Iterable[Ident]:
-    # Filled in by Task 2, which needs the key-resolution machinery below to
-    # name an inactive record's identity without introspecting its source.
-    return ()
+    for rec in records:
+        key = _declared_key(rec, localns)
+        if key is not None:
+            yield (key, rec.tag)
+
+
+def _declared_key(rec: BindRecord, localns: dict[str, object]) -> ProviderKey | None:
+    """The key an inactive record would have claimed, where it is readable without introspecting the provider.
+
+    Used only to tell a caller that a key they are missing is registered behind
+    a condition that did not hold. It never raises: a record whose key could
+    only come from an annotation that does not resolve contributes nothing, and
+    is simply not named in the note.
+    """
+    source = rec.source
+    if is_value_binding(source):
+        return source.token
+    if is_frame_binding(source):
+        return source.key
+    if is_alias_binding(source):
+        return source.key if is_provider_key(source.key) else None
+    if is_collection_binding(source):
+        element = source.element
+        return collection_key(element) if is_provider_key(element) else None
+    if rec.provides is not None:
+        return rec.provides
+    if isinstance(source, type):
+        attr = get_provides(source)
+        return attr if attr is not None else source
+    if not callable(source):
+        return None
+    returned = _safe_type_hints(source, localns).get('return')
+    if detect_shape(source) in _UNWRAP_SHAPES:
+        arguments = get_args(returned)
+        returned = arguments[0] if arguments else None
+    return returned if is_provider_key(returned) else None
 
 
 def _registered_classes(records: Iterable[BindRecord]) -> dict[str, object]:

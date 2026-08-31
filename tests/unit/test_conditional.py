@@ -3,6 +3,7 @@
 import pytest
 
 from depin import Container, Registry, Token
+from depin._core.spec import fmt_key
 from depin.errors import InvalidProviderError, MissingProviderError
 
 
@@ -161,3 +162,72 @@ def test_an_inactive_binding_is_never_introspected() -> None:
     # Freezing proves the record never reached introspection at all.
     container = Container().bind(3, when=False)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
     assert container.freeze().graph().nodes == ()
+
+
+def test_a_missing_inactive_key_is_named_as_inactive() -> None:
+    class Cache: ...
+
+    class Service:
+        def __init__(self, cache: Cache) -> None: ...
+
+    container = Container().bind(Cache, when=False).bind(Service)
+    with pytest.raises(MissingProviderError) as error:
+        _ = container.freeze()
+    assert 'registered but inactive' in str(error.value)
+
+
+def test_a_missing_key_with_no_inactive_binding_is_not_named_as_inactive() -> None:
+    class Cache: ...
+
+    class Service:
+        def __init__(self, cache: Cache) -> None: ...
+
+    with pytest.raises(MissingProviderError) as error:
+        _ = Container().bind(Service).freeze()
+    assert 'registered but inactive' not in str(error.value)
+
+
+def test_explain_and_freeze_report_an_inactive_key_alike() -> None:
+    class Cache: ...
+
+    class Service:
+        def __init__(self, cache: Cache) -> None: ...
+
+    container = Container().bind(Cache, when=False).bind(Service)
+    with pytest.raises(MissingProviderError) as error:
+        _ = container.freeze()
+    frozen = Container().bind(Cache, when=False).freeze()
+    assert 'registered but inactive' in frozen.explain(Cache)
+    assert fmt_key(Cache) in str(error.value)
+
+
+def test_an_inactive_factory_key_is_named_from_its_return_annotation() -> None:
+    class Cache: ...
+
+    def build_cache() -> Cache:
+        return Cache()
+
+    frozen = Container().bind(build_cache, when=False).freeze()
+    assert 'registered but inactive' in frozen.explain(Cache)
+
+
+def test_an_inactive_alias_key_is_named() -> None:
+    class Store: ...
+
+    class Reader: ...
+
+    frozen = Container().bind(Store).alias(Reader, to=Store, when=False).freeze()
+    assert 'registered but inactive' in frozen.explain(Reader)
+
+
+def test_an_inactive_value_token_is_named() -> None:
+    port = Token[int]('port')
+    frozen = Container().value(port, 1, when=False).freeze()
+    assert 'registered but inactive' in frozen.explain(port)
+
+
+def test_an_inactive_collection_key_is_named() -> None:
+    class Handler: ...
+
+    frozen = Container().collect(Handler, [], when=False).freeze()
+    assert 'registered but inactive' in frozen.explain(list[Handler])
