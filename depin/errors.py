@@ -114,11 +114,16 @@ class TeardownError(DepinError, RuntimeError):
 
 
 class ContainerNotBoundError(DepinError, RuntimeError):
-    """A dependency was resolved with no container bound to the request.
+    """No container is hosted in the context a dependency was resolved from.
 
-    Raised by the FastAPI integration when ``Inject[T]`` is evaluated outside a
-    `RequestScope`. Install the middleware with
-    ``app.add_middleware(RequestScope, container=...)``.
+    Raised by `depin.hosted_container()` when no `depin.Host` has published a
+    container here, and by an integration that reads the host itself — the
+    FastAPI integration raises it when ``Inject[T]`` is evaluated outside a
+    `RequestScope`, naming the middleware to install.
+
+    Resolve it by opening a scope with ``Host.scope()`` / ``Host.ascope()``
+    around the unit of work, or by publishing the container with
+    ``Host.activated()``.
 
     Inherits ``RuntimeError``, so existing ``except RuntimeError`` handlers keep
     working.
