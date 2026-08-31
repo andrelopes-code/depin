@@ -244,6 +244,20 @@ class ScopeFrame:
             self._teardowns.clear()
         return records
 
+    def take_all(self) -> tuple[Teardown, ...]:
+        """Take every pending teardown and drop the cache, as one atomic step.
+
+        The two must move together: a teardown taken while the value it
+        belongs to is still cached would run against a value the frame goes on
+        serving, and a value dropped while its teardown is left behind leaks
+        the resource with nothing that remembers it.
+        """
+        with self._mutex:
+            records = tuple(reversed(self._teardowns))
+            self._teardowns.clear()
+            self._cache.clear()
+        return records
+
     def claim_cached(self, key: object) -> tuple[object, _Flight | _Leader | None]:
         """Atomically return a cached value or claim/join its construction flight."""
         if self.parent is None:
@@ -366,3 +380,25 @@ def push_frame() -> Generator[ScopeFrame]:
         yield frame
     finally:
         _active.reset(token)
+
+
+def drop_sync(frame: ScopeFrame) -> None:
+    errors: list[Exception] = []
+    for record in frame.take_all():
+        try:
+            teardown.run_sync(record)
+        except Exception as exc:
+            errors.append(exc)
+    if errors:
+        raise ExceptionGroup('depin teardown errors', errors)
+
+
+async def drop_async(frame: ScopeFrame) -> None:
+    errors: list[Exception] = []
+    for record in frame.take_all():
+        try:
+            await teardown.run_async(record)
+        except Exception as exc:
+            errors.append(exc)
+    if errors:
+        raise ExceptionGroup('depin teardown errors', errors)

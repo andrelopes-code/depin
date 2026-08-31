@@ -20,7 +20,16 @@ from depin._core.health import (
 )
 from depin._core.markers import Token
 from depin._core.render import render_tree
-from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional_frame, push_frame
+from depin._core.scope import (
+    MISSING,
+    Scope,
+    ScopeFrame,
+    active_frame,
+    drop_async,
+    drop_sync,
+    optional_frame,
+    push_frame,
+)
 from depin._core.spec import ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
 from depin._core.teardown import Teardown
 from depin._core.typeguards import is_provider_key
@@ -246,6 +255,50 @@ class FrozenContainer:
         construction, collecting failures into an `ExceptionGroup`.
         """
         await self._root.drain_async()
+
+    def reset(self) -> None:
+        """Tear down every built singleton and drop the cache, so the next resolution rebuilds.
+
+        The difference from `close()` is what happens afterwards: `close()`
+        drains the singletons and leaves them cached, while `reset()` drops
+        them, so the container is usable again and builds fresh values on
+        demand. Scoped and transient providers are untouched — a scoped value
+        belongs to its scope, and a transient one is never cached.
+
+        Primarily a testing seam: it is what makes an `override()` reach a
+        consumer that was already built, and it is what the `depin.ext.pytest`
+        fixtures use.
+
+        Raises:
+            TeardownError: A singleton is an async provider; use `areset()`.
+            ExceptionGroup: One or more teardowns failed. Every failure is
+                reported, and the cache is dropped either way.
+
+        Example:
+            ```pycon
+            >>> from depin import Container
+            >>> class Clock: ...
+            >>> di = Container().bind(Clock).freeze()
+            >>> first = di[Clock]
+            >>> di.reset()
+            >>> di[Clock] is first
+            False
+
+            ```
+        """
+        drop_sync(self._root)
+
+    async def areset(self) -> None:
+        """Tear down every built singleton and drop the cache; the counterpart to `reset()`.
+
+        The one to call when any singleton is an async provider. Otherwise
+        identical.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed. Every failure is
+                reported, and the cache is dropped either way.
+        """
+        await drop_async(self._root)
 
     def warmup(self) -> WarmupReport:
         """Construct every singleton now, instead of on first resolution.
