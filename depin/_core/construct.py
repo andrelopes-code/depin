@@ -17,6 +17,7 @@ from depin._core.teardown import (
     Teardown,
 )
 from depin._core.typeguards import (
+    as_alias_target,
     as_async_context_manager,
     as_async_iterator,
     as_awaitable,
@@ -68,6 +69,8 @@ def sync(
             # `needs_async` flag is set, long before construction. Kept so the
             # match stays exhaustive over ProviderShape if a shape is added.
             raise AsyncInSyncContextError(f'{fmt_key(key)} is an async provider; resolve it with aresolve()')
+        case ProviderShape.ALIAS:
+            return as_alias_target(kwargs, key)
 
 
 async def asynchronous(

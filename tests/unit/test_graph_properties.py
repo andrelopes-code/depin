@@ -20,6 +20,7 @@ class GraphCase:
     scopes: tuple[Scope, ...]
     registered: tuple[bool, ...]
     duplicates: frozenset[int]
+    aliases: frozenset[int] = frozenset()
 
 
 def _set_dynamic_attribute(target: object, name: str, value: object) -> None:
@@ -58,6 +59,9 @@ def _materialize(case: GraphCase) -> Container:
             _ = container.bind(node, scope=case.scopes[index])
             if index in case.duplicates:
                 _ = container.bind(node, scope=case.scopes[index])
+    for index in case.aliases:
+        alias_key = type(f'GraphAlias{index}', (), {})
+        _ = container.alias(alias_key, to=nodes[index])
     return container
 
 
@@ -91,7 +95,8 @@ def _graphs(draw: st.DrawFn) -> GraphCase:
     registered = tuple(draw(st.lists(st.booleans(), min_size=size, max_size=size)))
     registered_nodes = tuple(index for index, is_registered in enumerate(registered) if is_registered)
     duplicates = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
-    return GraphCase(size, frozenset(edges), scopes, registered, frozenset(duplicates))
+    aliases = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
+    return GraphCase(size, frozenset(edges), scopes, registered, frozenset(duplicates), frozenset(aliases))
 
 
 def _has_singleton_to_scoped_path(case: GraphCase) -> bool:

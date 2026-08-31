@@ -17,7 +17,7 @@ from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from typing import TypeGuard
 
 from depin._core.markers import Token
-from depin._core.spec import ProviderKey, fmt_key
+from depin._core.spec import ALIAS_PARAM, ProviderKey, fmt_key
 from depin.errors import InvalidProviderError
 
 
@@ -91,3 +91,17 @@ def as_async_context_manager(value: object, key: object) -> AbstractAsyncContext
     raise InvalidProviderError(
         f'async context-manager provider for {fmt_key(key)} returned {value!r}, which is not an async context manager'
     )
+
+
+def as_alias_target(kwargs: dict[str, object], key: object) -> object:
+    """The value an alias node's single parameter resolved to.
+
+    Unreachable through the public API: `Container.freeze()` gives every alias
+    exactly one required parameter, and parameter resolution raises
+    `MissingProviderError` before construction when it cannot be satisfied.
+    The check keeps a defect inside the `DepinError` hierarchy instead of
+    surfacing as a `KeyError` with no provider named.
+    """
+    if ALIAS_PARAM in kwargs:
+        return kwargs[ALIAS_PARAM]
+    raise InvalidProviderError(f'alias for {fmt_key(key)} resolved no target binding')

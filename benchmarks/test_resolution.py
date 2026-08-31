@@ -37,6 +37,25 @@ def test_resolve_a_cached_singleton(benchmark: Benchmark) -> None:
     _ = benchmark(resolve)
 
 
+def test_resolve_a_cached_singleton_through_an_alias(benchmark: Benchmark) -> None:
+    """The alias hop, measured against `test_resolve_a_cached_singleton`.
+
+    The two cases resolve the same target from the same graph; the difference
+    between them is the cost of the extra transient node.
+    """
+
+    class Aliased(Protocol): ...
+
+    container, leaf = build_chain(100)
+    frozen = container.alias(Aliased, to=leaf).freeze()
+    _ = frozen.resolve(Aliased)
+
+    def resolve() -> object:
+        return frozen.resolve(Aliased)
+
+    _ = benchmark(resolve)
+
+
 def test_resolve_a_transient_chain(benchmark: Benchmark) -> None:
     container, leaf = build_chain(20, scope=Scope.TRANSIENT)
     frozen = container.freeze()

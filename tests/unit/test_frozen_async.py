@@ -821,3 +821,31 @@ async def test_stale_and_duplicate_flight_completion_do_not_signal_replacement()
     assert not replacement.finished
     frame.finish_flight(key, replacement)
     assert replacement.finished
+
+
+@pytest.mark.asyncio
+async def test_an_alias_to_an_async_target_resolves_under_aresolve() -> None:
+    class Store: ...
+
+    class Backend: ...
+
+    async def make() -> Backend:
+        return Backend()
+
+    di = Container().bind(make, provides=Backend).alias(Store, to=Backend).freeze()
+    via_alias: object = await di.aresolve(Store)
+    via_target: object = await di.aresolve(Backend)
+    assert via_alias is via_target
+
+
+def test_an_alias_to_an_async_target_is_rejected_by_resolve() -> None:
+    class Store: ...
+
+    class Backend: ...
+
+    async def make() -> Backend:
+        return Backend()
+
+    di = Container().bind(make, provides=Backend).alias(Store, to=Backend).freeze()
+    with pytest.raises(AsyncInSyncContextError, match='Store requires async resolution'):
+        _ = di.resolve(Store)

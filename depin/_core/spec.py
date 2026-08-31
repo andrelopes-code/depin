@@ -3,7 +3,7 @@
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import Protocol, TypeGuard, runtime_checkable
+from typing import Final, Protocol, TypeGuard, runtime_checkable
 
 from depin._core.markers import Token
 from depin._core.scope import Scope
@@ -30,6 +30,9 @@ class ProviderShape(Enum):
         VALUE: A value bound directly with `Container.value`; nothing is called.
         FRAME: A value the active scope frame supplies, bound with
             `Container.scope_value`; nothing is called.
+        ALIAS: A second name for another binding, declared with
+            `Container.alias`. Nothing is called and nothing is cached here —
+            the target owns the value, its cache entry, and its teardown.
 
     Example:
         ```pycon
@@ -51,6 +54,7 @@ class ProviderShape(Enum):
     ASYNC_CONTEXT_MANAGER = 'async context manager'
     VALUE = 'value'
     FRAME = 'frame'
+    ALIAS = 'alias'
 
 
 type ProviderKey = type[object] | Token[object] | str
@@ -87,6 +91,33 @@ class FrameBinding:
 
 def is_frame_binding(value: object) -> TypeGuard[FrameBinding]:
     return isinstance(value, FrameBinding)
+
+
+ALIAS_PARAM: Final[str] = 'target'
+"""The parameter an alias node declares for the binding it delegates to.
+
+It is a real `ParamSpec` name, so it is what `explain()` prints as the edge
+label and what the `dot` and `mermaid` exports write on the arrow.
+"""
+
+
+@dataclass(frozen=True, slots=True)
+class AliasBinding:
+    """Marker source for `Container.alias(key, to=...)`.
+
+    The alias carries its own key because `BindRecord.provides` admits only a
+    class, while an alias key may equally be a `Token` or a string. The alias's
+    own tag rides on `BindRecord.tag`, where every other binding's tag rides;
+    ``target_tag`` selects among tagged bindings on the other end.
+    """
+
+    key: ProviderKey
+    target: ProviderKey
+    target_tag: str | None
+
+
+def is_alias_binding(value: object) -> TypeGuard[AliasBinding]:
+    return isinstance(value, AliasBinding)
 
 
 @dataclass(frozen=True, slots=True)

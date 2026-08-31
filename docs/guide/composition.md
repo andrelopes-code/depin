@@ -128,6 +128,48 @@ When several implementations share one key, tag them apart:
 
 Inside a provider, select the tagged one with `Annotated[Cache, Tag('primary')]`.
 
+## Aliases
+
+`provides=` and `@provides` register a class *under* another key. An alias goes
+the other way: it adds a second name to a binding that already exists.
+
+```pycon
+>>> from typing import Protocol
+>>> from depin import Container
+>>> class Store(Protocol):
+...     def get(self) -> str: ...
+>>> class PostgresStore:
+...     def get(self) -> str:
+...         return 'pg'
+>>> di = Container().bind(PostgresStore).alias(Store, to=PostgresStore).freeze()
+>>> di.resolve(Store) is di[PostgresStore]
+True
+
+```
+
+Both names reach one instance. The target keeps its lifetime, its cache entry,
+and its teardown, so a singleton is still built once and closed once no matter
+which name asked for it.
+
+The alias itself is a transient indirection, and `explain()` says so:
+
+```pycon
+>>> print(di.explain(Store))
+Store  [transient, alias]
+  target: PostgresStore  [singleton, class]
+
+```
+
+`transient` describes the alias node, which caches nothing — not the target,
+which is the singleton on the line below it. Because the alias is a real node,
+it participates in validation like any other: an unbound target, a duplicate
+name, a cycle, and a singleton that reaches a scoped provider through an alias
+are all rejected by `freeze()`.
+
+depin does not verify that the target satisfies the alias key. A `Protocol` that
+is not `runtime_checkable` cannot be checked at runtime, and a structural alias
+between two unrelated classes is a legitimate thing to write.
+
 ## Where to freeze
 
 Freeze once, at the composition root — the entry point that knows the whole

@@ -3,7 +3,7 @@ import dataclasses
 import pytest
 
 from depin._core.markers import Named, Tag, Token, get_provides, injected, is_inject_marker, provides
-from depin.errors import DepinError
+from depin.errors import DepinError, InvalidProviderError
 
 
 def test_token_is_typed_key() -> None:
@@ -134,3 +134,17 @@ def test_inject_marker_is_frozen() -> None:
     field = 'tag'
     with pytest.raises(dataclasses.FrozenInstanceError):
         setattr(marker, field, 'mutated')
+
+
+def test_provides_rejects_a_non_class_target() -> None:
+    with pytest.raises(InvalidProviderError, match='expected a class'):
+        _ = provides('Store')  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+
+
+def test_provides_returns_the_decorated_class_unchanged() -> None:
+    class Store: ...
+
+    class MemStore: ...
+
+    assert provides(Store)(MemStore) is MemStore
+    assert get_provides(MemStore) is Store

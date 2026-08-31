@@ -4,6 +4,7 @@ import pytest
 
 from depin._core.scope import Scope
 from depin._core.spec import (
+    AliasBinding,
     BindRecord,
     ParamSpec,
     ProviderShape,
@@ -11,6 +12,7 @@ from depin._core.spec import (
     ResolutionPlan,
     fmt_chain,
     fmt_key,
+    is_alias_binding,
 )
 
 
@@ -25,6 +27,7 @@ def test_provider_shape_members() -> None:
         'ASYNC_CONTEXT_MANAGER',
         'VALUE',
         'FRAME',
+        'ALIAS',
     }
     assert {s.name for s in ProviderShape} == expected
 
@@ -77,3 +80,18 @@ def test_fmt_chain_of_one_key_has_no_arrow() -> None:
 
 def test_fmt_chain_of_nothing_is_empty() -> None:
     assert fmt_chain([]) == ''
+
+
+def test_alias_binding_is_immutable() -> None:
+    class Store: ...
+
+    binding = AliasBinding(key=Store, target=Store, target_tag=None)
+    with pytest.raises(FrozenInstanceError):
+        setattr(binding, 'target_tag', 'x')  # noqa: B010
+
+
+def test_is_alias_binding_narrows_only_alias_bindings() -> None:
+    class Store: ...
+
+    assert is_alias_binding(AliasBinding(key=Store, target=Store, target_tag=None))
+    assert not is_alias_binding(Store)

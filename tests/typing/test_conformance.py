@@ -135,7 +135,7 @@ def test_a_protocol_key_keeps_its_type_through_subscript() -> None:
     class Store(Protocol):
         def get(self) -> str: ...
 
-    @provides(Store)  # type: ignore[type-abstract]  # mypy rejects type[Protocol] for a type[A] parameter
+    @provides(Store)
     class MemStore:
         def get(self) -> str:
             return 'v'
@@ -158,3 +158,18 @@ def test_graph_diagnostics_keep_their_types() -> None:
     assert_type(di.graph().mermaid(), str)
     assert_type(di.explain(Service), str)
     assert_type(di.explain(Service, tag='primary'), str)
+
+
+def test_alias_keeps_the_builder_type_and_the_resolved_type() -> None:
+    class Store(Protocol):
+        def get(self) -> str: ...
+
+    class MemStore:
+        def get(self) -> str:
+            return 'v'
+
+    builder = Container().bind(MemStore)
+    assert_type(builder.alias(Store, to=MemStore), Container)
+    di = builder.freeze()
+    assert_type(di.resolve(Store), Store)
+    assert_type(di[Store], Store)

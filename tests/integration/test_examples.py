@@ -3,6 +3,8 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from examples.aliasing.main import Page, RedisStore
+from examples.aliasing.main import build as build_aliasing
 from examples.fastapi_app.main import build_container, create_app
 from examples.fastapi_app.registries import Database
 from examples.graph_diagnostics.main import Repo, Settings
@@ -58,6 +60,14 @@ def test_testing_example_overrides_a_protocol_deep_in_the_graph() -> None:
         assert di[Report].render() == 'report at 2026-01-01'
 
     assert di[Report].render() == 'report at real-time'
+
+
+def test_aliasing_example_serves_one_instance_under_both_names() -> None:
+    di = build_aliasing()
+    page = di[Page]
+    assert page.store is page.cache is di[RedisStore]
+    assert page.render() == 'value-for-head + value-for-body'
+    assert di[RedisStore].reads == ['head', 'body']
 
 
 def test_graph_diagnostics_example_explains_and_exports_its_graph() -> None:

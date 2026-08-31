@@ -6,7 +6,7 @@ Four pages, in the order most projects need them.
   rebuilt, and when its teardown runs. Read this first; almost every question
   about depin is really a question about lifetimes.
 - **[Composing bindings](composition.md)** — registries, containers built from
-  several sources, tags, protocols, and tokens.
+  several sources, tags, protocols, tokens, and aliases.
 - **[Testing](testing.md)** — replacing a dependency without rebuilding the
   graph, and wiring test functions with `@inject`.
 - **[FastAPI](fastapi.md)** — the optional ASGI integration: one scope per

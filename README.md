@@ -24,8 +24,7 @@ Type-first dependency injection for Python 3.12+.
   runtime dependencies.**
 - No `# type: ignore` at call sites: `resolve()`, `frozen[key]`, `injected()`,
   and `Inject[T]` are all precisely typed under `basedpyright --strict` and
-  `mypy --strict`. One documented exception outside that list: see the
-  [support policy](https://andrelopes-code.github.io/depin/support-policy/#known-limitation-provides-and-typet).
+  `mypy --strict`.
 
 ## Install
 
@@ -111,6 +110,8 @@ suite.
 - **Tokens** for values: `Token[str]('db.url')`, resolved via `di[token]`.
 - **Registries** for composition: `Container(infra, services).freeze()`.
 - **Protocols**: `@provides(Store)` on the implementation, then `di.resolve(Store)`.
+- **Aliases** for a second name on one binding:
+  `di.alias(Store, to=PostgresStore)`, with no second instance.
 - **Tags** when several implementations share a key:
   `di.resolve(Cache, tag='primary')`.
 - **Scope-supplied values**: `di.scope_value(Request)`, filled by middleware with
