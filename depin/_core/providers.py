@@ -11,10 +11,12 @@ from depin._core.spec import (
     ALIAS_PARAM,
     BindRecord,
     CollectionBinding,
+    Ident,
     ParamSpec,
     ProviderKey,
     ProviderShape,
     ProviderSpec,
+    SpecSet,
     collection_key,
     collection_param,
     fmt_key,
@@ -62,11 +64,56 @@ _UNWRAP_SHAPES = frozenset(
 )
 
 
-def build_specs(records: Iterable[BindRecord]) -> tuple[ProviderSpec, ...]:
-    """Convert every record into a spec, resolving forward references between them."""
-    records = tuple(records)
-    localns = _registered_classes(records)
-    return tuple(_record_to_spec(rec, localns) for rec in records)
+def build_specs(records: Iterable[BindRecord]) -> SpecSet:
+    """Convert every active record into a spec, resolving forward references between them.
+
+    A record whose condition does not hold is dropped before anything reads its
+    shape or its annotations, which is what makes `when` usable on a binding
+    that cannot be introspected in the deployment that switches it off.
+    """
+    active, inactive = _partition(records)
+    localns = _registered_classes(active)
+    return SpecSet(
+        providers=tuple(_record_to_spec(rec, localns) for rec in active),
+        inactive=frozenset(_inactive_idents(inactive, localns)),
+    )
+
+
+def _partition(records: Iterable[BindRecord]) -> tuple[tuple[BindRecord, ...], tuple[BindRecord, ...]]:
+    active: list[BindRecord] = []
+    inactive: list[BindRecord] = []
+    for rec in records:
+        target = active if is_active(rec) else inactive
+        target.append(rec)
+    return tuple(active), tuple(inactive)
+
+
+def is_active(rec: BindRecord) -> bool:
+    """Whether a record's condition admits it into the plan.
+
+    Raises:
+        InvalidProviderError: The condition is neither a bool nor a callable.
+    """
+    # Annotated `object` rather than `Condition | None`: the guard has to reject
+    # a value an untyped caller passed, and a checker that trusts the annotation
+    # reads the final branch as unreachable.
+    condition: object = rec.condition
+    if condition is None:
+        return True
+    if isinstance(condition, bool):
+        return condition
+    if callable(condition):
+        return bool(condition())
+    raise InvalidProviderError(
+        f'cannot use {condition!r} as a binding condition: `when` takes a bool, or a callable '
+        'of no arguments returning one, which depin calls inside freeze().'
+    )
+
+
+def _inactive_idents(records: Iterable[BindRecord], localns: dict[str, object]) -> Iterable[Ident]:
+    # Filled in by Task 2, which needs the key-resolution machinery below to
+    # name an inactive record's identity without introspecting its source.
+    return ()
 
 
 def _registered_classes(records: Iterable[BindRecord]) -> dict[str, object]:

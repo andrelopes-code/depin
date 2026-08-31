@@ -1,6 +1,6 @@
 """Internal binding and resolution data structures, plus the public `Bindings` protocol."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from types import GenericAlias, UnionType
@@ -175,12 +175,23 @@ def collection_param(index: int) -> str:
     return f'{COLLECTION_PARAM_PREFIX}{index}'
 
 
+type Condition = bool | Callable[[], bool]
+"""What `when=` accepts on a registration.
+
+A ``bool`` is read where it is written. A callable is called once per
+`Container.freeze()`, with no arguments, and its result is read for truth — so a
+predicate over configuration or the environment is evaluated when the graph is
+built, not when a value is resolved.
+"""
+
+
 @dataclass(frozen=True, slots=True)
 class BindRecord:
     source: object
     scope: Scope
     provides: type[object] | None
     tag: str | None
+    condition: Condition | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -205,9 +216,24 @@ class ProviderSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class SpecSet:
+    """What `build_specs` reads out of a set of records.
+
+    Decorations are kept apart from providers because a decorator claims no key
+    of its own until `depin._core.decoration` knows how many decorators target
+    the same binding. `inactive` names the keys that a condition kept out, so a
+    missing-provider message can say so.
+    """
+
+    providers: tuple[ProviderSpec, ...]
+    inactive: frozenset[Ident]
+
+
+@dataclass(frozen=True, slots=True)
 class ResolutionPlan:
     order: tuple[ProviderSpec, ...]
     by_key: Mapping[tuple[ProviderKey, str | None], ProviderSpec]
+    inactive: frozenset[Ident] = frozenset()
 
 
 @runtime_checkable

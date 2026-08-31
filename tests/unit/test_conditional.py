@@ -1,0 +1,163 @@
+"""Bindings under a predicate, decided inside `freeze()`."""
+
+import pytest
+
+from depin import Container, Registry, Token
+from depin.errors import InvalidProviderError, MissingProviderError
+
+
+def test_a_binding_with_a_true_condition_is_registered() -> None:
+    class Cache: ...
+
+    di = Container().bind(Cache, when=True).freeze()
+    assert isinstance(di[Cache], Cache)
+
+
+def test_a_binding_with_a_false_condition_is_absent() -> None:
+    class Cache: ...
+
+    di = Container().bind(Cache, when=False).freeze()
+    with pytest.raises(MissingProviderError):
+        _ = di[Cache]
+
+
+def test_an_inactive_binding_is_not_a_node_of_the_graph() -> None:
+    class Cache: ...
+
+    di = Container().bind(Cache, when=False).freeze()
+    assert di.graph().nodes == ()
+
+
+def test_a_predicate_is_called_once_per_freeze() -> None:
+    class Cache: ...
+
+    calls: list[int] = []
+
+    def predicate() -> bool:
+        calls.append(1)
+        return True
+
+    container = Container().bind(Cache, when=predicate)
+    _ = container.freeze()
+    assert len(calls) == 1
+    _ = container.freeze()
+    assert len(calls) == 2
+
+
+def test_a_predicate_is_not_called_before_freeze() -> None:
+    class Cache: ...
+
+    calls: list[int] = []
+
+    def predicate() -> bool:
+        calls.append(1)
+        return True
+
+    _ = Container().bind(Cache, when=predicate)
+    assert calls == []
+
+
+def test_two_bindings_for_one_key_are_switched_by_condition() -> None:
+    class Store: ...
+
+    class Postgres(Store): ...
+
+    class Memory(Store): ...
+
+    production = False
+    di = (
+        Container()
+        .bind(Postgres, provides=Store, when=lambda: production)
+        .bind(Memory, provides=Store, when=lambda: not production)
+        .freeze()
+    )
+    assert isinstance(di.resolve(Store), Memory)
+
+
+def test_an_inactive_binding_is_an_unsatisfied_dependency() -> None:
+    class Cache: ...
+
+    class Service:
+        def __init__(self, cache: Cache) -> None: ...
+
+    with pytest.raises(MissingProviderError):
+        _ = Container().bind(Cache, when=False).bind(Service).freeze()
+
+
+def test_an_inactive_dependency_is_excused_by_a_default() -> None:
+    class Cache: ...
+
+    class Service:
+        def __init__(self, cache: Cache | None = None) -> None:
+            self.cache = cache
+
+    di = Container().bind(Cache, when=False).bind(Service).freeze()
+    assert di[Service].cache is None
+
+
+def test_an_inactive_dependency_is_excused_by_an_optional_annotation() -> None:
+    class Cache: ...
+
+    class Service:
+        def __init__(self, cache: Cache | None) -> None:
+            self.cache = cache
+
+    di = Container().bind(Cache, when=False).bind(Service).freeze()
+    assert di[Service].cache is None
+
+
+def test_every_registration_method_takes_a_condition() -> None:
+    class Store: ...
+
+    class Handler: ...
+
+    class Request: ...
+
+    port = Token[int]('port')
+    container = (
+        Container()
+        .bind(Store, when=False)
+        .value(port, 1, when=False)
+        .scope_value(Request, when=False)
+        .alias(Handler, to=Store, when=False)
+        .collect(Handler, [Store], when=False)
+    )
+    assert container.freeze().graph().nodes == ()
+
+
+def test_a_scope_decorator_takes_a_condition() -> None:
+    container = Container()
+
+    @container.singleton(when=False)
+    class Cache: ...
+
+    @container.scoped(when=False)
+    class Session: ...
+
+    @container.transient(when=False)
+    class Ticket: ...
+
+    assert {rec.source for rec in container.records()} == {Cache, Session, Ticket}
+    assert container.freeze().graph().nodes == ()
+
+
+def test_a_registry_carries_conditions_into_a_container() -> None:
+    class Cache: ...
+
+    registry = Registry('infra').bind(Cache, when=False)
+    assert Container(registry).freeze().graph().nodes == ()
+
+
+def test_a_condition_that_is_neither_a_bool_nor_a_callable_is_rejected() -> None:
+    class Cache: ...
+
+    container = Container().bind(Cache, when=3)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+    with pytest.raises(InvalidProviderError, match='binding condition'):
+        _ = container.freeze()
+
+
+def test_an_inactive_binding_is_never_introspected() -> None:
+    # `3` is neither a class nor a callable, so `detect_shape` would reject it.
+    # Freezing proves the record never reached introspection at all.
+    container = Container().bind(3, when=False)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+    assert container.freeze().graph().nodes == ()

@@ -31,17 +31,18 @@ def build_plan(records: Iterable[BindRecord]) -> ResolutionPlan:
         MissingProviderError: A required dependency has no provider.
         CircularDependencyError: The graph contains a cycle.
         CaptiveDependencyError: A singleton depends on a scoped provider.
-        InvalidProviderError: A binding lacks the type information to infer a key.
+        InvalidProviderError: A binding lacks the type information to infer a key,
+            or carries a condition that is neither a bool nor a callable.
         InvalidScopeError: A lifecycle provider is bound as transient.
     """
     specs = build_specs(records)
-    _check_duplicates(specs)
-    by_key = _index(specs)
-    _check_missing(specs, by_key)
-    order = _toposort(specs, by_key)
+    _check_duplicates(specs.providers)
+    by_key = _index(specs.providers)
+    _check_missing(specs.providers, by_key)
+    order = _toposort(specs.providers, by_key)
     _check_captive(order, by_key)
     resolved = tuple(_with_async_flags(order, by_key))
-    return ResolutionPlan(order=resolved, by_key=_index(resolved))
+    return ResolutionPlan(order=resolved, by_key=_index(resolved), inactive=specs.inactive)
 
 
 def _index(specs: Iterable[ProviderSpec]) -> _Index:
