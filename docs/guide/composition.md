@@ -302,8 +302,8 @@ True
 ```
 
 `MissingProviderError` and `explain()` both name the cause: a key only an
-inactive binding declares reads `registered but inactive` in the chain,
-instead of being reported as unbound outright.
+inactive binding declares gets `registered but inactive` appended after the
+chain, instead of being reported as unbound outright.
 
 A decorator over an inactive binding needs the same condition. Decorating a
 key that no active binding occupies raises `MissingProviderError`, because the
