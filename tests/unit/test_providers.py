@@ -1,8 +1,8 @@
 """Spec building: how a binding record becomes a provider key, shape and parameters."""
 
-from collections.abc import AsyncGenerator, Generator, Iterator
+from collections.abc import AsyncGenerator, Callable, Generator, Iterator
 from contextlib import contextmanager
-from typing import Annotated
+from typing import Annotated, Literal
 
 import pytest
 
@@ -321,14 +321,83 @@ def test_forward_reference_return_annotation_resolves_against_bound_classes() ->
     assert spec.key is Produced
 
 
+def test_forward_reference_resolves_a_class_registered_only_as_an_alias_key() -> None:
+    class Store: ...
+
+    def make(dep: 'Store') -> int:
+        del dep
+        return 0
+
+    r = Registry().alias(Store, to=int).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Store
+
+
+def test_forward_reference_resolves_a_class_registered_only_as_an_alias_target() -> None:
+    class Impl: ...
+
+    def make(dep: 'Impl') -> int:
+        del dep
+        return 0
+
+    r = Registry().alias('legacy', to=Impl).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Impl
+
+
+def test_forward_reference_resolves_a_class_registered_only_as_a_scope_value_key() -> None:
+    class Principal: ...
+
+    def make(dep: 'Principal') -> int:
+        del dep
+        return 0
+
+    r = Registry().scope_value(Principal).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Principal
+
+
+def test_forward_reference_resolves_a_class_registered_only_as_a_collection_element() -> None:
+    class Handler: ...
+
+    def make(dep: 'Handler') -> int:
+        del dep
+        return 0
+
+    r = Registry().collect(Handler, []).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Handler
+
+
+def test_forward_reference_resolves_a_class_registered_only_as_a_collection_member() -> None:
+    class Impl: ...
+
+    def make(dep: 'Impl') -> int:
+        del dep
+        return 0
+
+    r = Registry().collect('handlers', [Impl]).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Impl
+
+
 @pytest.mark.parametrize('key', [int, 'legacy', Token[int]('k')])
 def test_as_provider_key_accepts_classes_strings_and_tokens(key: object) -> None:
     assert as_provider_key(key) == key
 
 
 def test_as_provider_key_rejects_anything_else() -> None:
-    with pytest.raises(InvalidProviderError, match='a key must be a class, a Token, a string, or a list\\[X\\]'):
+    with pytest.raises(
+        InvalidProviderError, match='a key must be a class, a Token, a string, or a parameterised generic'
+    ):
         _ = as_provider_key(42)
+
+
+@pytest.mark.parametrize('value', [Callable[[int], str], tuple[int, ...], Literal['a']])
+def test_as_provider_key_catch_all_message_names_what_is_accepted(value: object) -> None:
+    """Pins the message a reader gets for a `Callable`, a variadic `tuple`, or a `Literal` key."""
+    with pytest.raises(InvalidProviderError, match='parameterised generic built by subscripting its origin'):
+        _ = as_provider_key(value)
 
 
 def test_as_provider_key_rejects_an_optional_union_outside_parameter_position() -> None:

@@ -66,13 +66,31 @@ def build_specs(records: Iterable[BindRecord]) -> tuple[ProviderSpec, ...]:
 
 
 def _registered_classes(records: Iterable[BindRecord]) -> dict[str, object]:
-    """Namespace of bound classes, so `from __future__ import annotations` hints resolve."""
+    """Namespace of every class reachable from a record, in whatever role it plays, so a forward reference resolves."""
     out: dict[str, object] = {}
     for rec in records:
-        src = rec.source
-        if isinstance(src, type):
-            out[src.__name__] = src
+        for cls in _classes_reachable_from(rec.source):
+            out[cls.__name__] = cls
     return out
+
+
+def _classes_reachable_from(source: object) -> tuple[type[object], ...]:
+    """Every class a record's source names, whether as itself, a marker key, target, element, or member.
+
+    A `Token`, a string, or a parameterised generic has no `__name__` to key the
+    namespace by, so only classes are collected.
+    """
+    if isinstance(source, type):
+        return (source,)
+    if is_frame_binding(source):
+        candidates: tuple[object, ...] = (source.key,)
+    elif is_alias_binding(source):
+        candidates = (source.key, source.target)
+    elif is_collection_binding(source):
+        candidates = (source.element, *source.members)
+    else:
+        candidates = ()
+    return tuple(candidate for candidate in candidates if isinstance(candidate, type))
 
 
 def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec:
@@ -234,12 +252,14 @@ def as_provider_key(value: object) -> ProviderKey:
             )
         raise InvalidProviderError(
             f'cannot use {value} as a provider key: depin reads `T | None` as an optional '
-            'dependency, but a union of two or more providers names no single key. Annotate '
-            'the parameter with the one you want, or select it with Annotated[..., Tag(...)].'
+            'dependency, but a union of two or more providers names no single key wherever it is used — '
+            'as a parameter annotation, an alias target, or a collection element. Write the one key you '
+            'mean instead, or, for a parameter, disambiguate with Annotated[..., Tag(...)].'
         )
     raise InvalidProviderError(
-        f'cannot use {value!r} as a provider key: a key must be a class, a Token, a string, or a list[X] '
-        '(built with list[...], not typing.List)'
+        f'cannot use {value!r} as a provider key: a key must be a class, a Token, a string, or a '
+        'parameterised generic built by subscripting its origin, such as list[X] or Repo[X] '
+        '(not the deprecated typing.List[X] form).'
     )
 
 
@@ -265,8 +285,8 @@ def _extract_params(source: object, shape: ProviderShape, localns: dict[str, obj
             if param.annotation is not inspect.Parameter.empty:
                 raise InvalidProviderError(
                     f"the annotation on parameter '{name}' of {source!r} could not be resolved "
-                    f'({param.annotation!r}). Import the name at module level, or bind the class '
-                    'so depin can resolve the forward reference.'
+                    f'({param.annotation!r}). Import the name at module level, or register it in any '
+                    'role, so depin can resolve the forward reference.'
                 )
             if param.default is inspect.Parameter.empty:
                 raise InvalidProviderError(
