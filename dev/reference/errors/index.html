@@ -541,6 +541,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing an integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/fastapi/" class="md-nav__link">
         
   
@@ -1046,6 +1074,34 @@
     
   
     Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration contract
   
 
     
@@ -1688,10 +1744,14 @@ working.</p>
 
 
 
-        <p>A dependency was resolved with no container bound to the request.</p>
-<p>Raised by the FastAPI integration when <code>Inject[T]</code> is evaluated outside a
-<code>RequestScope</code>. Install the middleware with
-<code>app.add_middleware(RequestScope, container=...)</code>.</p>
+        <p>No container is hosted in the context a dependency was resolved from.</p>
+<p>Raised by <code>depin.hosted_container()</code> when no <code>depin.Host</code> has published a
+container here, and by an integration that reads the host itself — the
+FastAPI integration raises it when <code>Inject[T]</code> is evaluated outside a
+<code>RequestScope</code>, naming the middleware to install.</p>
+<p>Resolve it by opening a scope with <code>Host.scope()</code> / <code>Host.ascope()</code>
+around the unit of work, or by publishing the container with
+<code>Host.activated()</code>.</p>
 <p>Inherits <code>RuntimeError</code>, so existing <code>except RuntimeError</code> handlers keep
 working.</p>
 

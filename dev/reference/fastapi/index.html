@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/fastapi/">
       
       
-        <link rel="prev" href="../operations/">
+        <link rel="prev" href="../hosting/">
       
       
       
@@ -539,6 +539,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing an integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/fastapi/" class="md-nav__link">
         
   
@@ -876,6 +904,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1067,6 +1123,9 @@
 <code>BaseHTTPMiddleware</code>) so streaming responses, server-sent events, and
 WebSockets pass through without buffering. Lifespan and other non-HTTP
 scopes are forwarded untouched, with no depin scope opened.</p>
+<p>The container is published to the request's context for the duration of
+the scope, so <code>depin.hosted_container()</code> reaches it from anywhere inside
+the request.</p>
 <p>For HTTP requests it places a metadata-only <code>fastapi.Request</code> into the
 active scope frame so scoped providers can read headers, URL, cookies, and
 state. That <code>Request</code> carries no receive channel: reading the body through
@@ -1149,9 +1208,12 @@ active <code>RequestScope</code>. No default-value markers and no
             </td>
             <td>
               <div class="doc-md-description">
-                <p><code>Inject[T]</code> was resolved outside a
-<code>RequestScope</code>. Install the middleware with
-<code>app.add_middleware(RequestScope, container=...)</code>.</p>
+                <p>No container is hosted in this context.
+Usually because the <code>RequestScope</code> middleware was never
+installed with <code>app.add_middleware(RequestScope,
+container=...)</code>; also raised for a route reached outside any
+active <code>Host</code> — for instance while it is being resolved from
+an ASGI lifespan hook with no <code>Host.activated()</code> in effect.</p>
               </div>
             </td>
           </tr>

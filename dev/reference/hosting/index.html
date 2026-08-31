@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/operations/">
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/hosting/">
       
       
-        <link rel="prev" href="../diagnostics/">
+        <link rel="prev" href="../operations/">
       
       
-        <link rel="next" href="../hosting/">
+        <link rel="next" href="../fastapi/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Warmup and health - depin</title>
+        <title>Integration contract - depin</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#warmup-and-health" class="md-skip">
+        <a href="#integration-contract" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Warmup and health
+              Integration contract
             
           </span>
         </div>
@@ -878,6 +878,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -897,7 +925,7 @@
   <span class="md-ellipsis">
     
   
-    Warmup and health
+    Integration contract
   
 
     
@@ -915,7 +943,7 @@
   <span class="md-ellipsis">
     
   
-    Warmup and health
+    Integration contract
   
 
     
@@ -941,55 +969,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#depin.WarmupReport" class="md-nav__link">
+  <a href="#depin.Host" class="md-nav__link">
     <span class="md-ellipsis">
       
-        WarmupReport
+        Host
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthCheck" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthCheck
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthResult" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthResult
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthReport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthReport
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="HealthReport">
+    <nav class="md-nav" aria-label="Host">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#depin.HealthReport.healthy" class="md-nav__link">
+  <a href="#depin.Host.container" class="md-nav__link">
     <span class="md-ellipsis">
       
-        healthy
+        container
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Host.activated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        activated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Host.scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Host.ascope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ascope
       
     </span>
   </a>
@@ -1001,38 +1029,54 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#depin.hosted_container" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        hosted_container
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.optional_hosted_container" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        optional_hosted_container
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ContractVersion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ContractVersion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.CONTRACT_VERSION" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CONTRACT_VERSION
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../hosting/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Integration contract
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1100,55 +1144,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#depin.WarmupReport" class="md-nav__link">
+  <a href="#depin.Host" class="md-nav__link">
     <span class="md-ellipsis">
       
-        WarmupReport
+        Host
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthCheck" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthCheck
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthResult" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthResult
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthReport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthReport
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="HealthReport">
+    <nav class="md-nav" aria-label="Host">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#depin.HealthReport.healthy" class="md-nav__link">
+  <a href="#depin.Host.container" class="md-nav__link">
     <span class="md-ellipsis">
       
-        healthy
+        container
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Host.activated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        activated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Host.scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Host.ascope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ascope
       
     </span>
   </a>
@@ -1157,6 +1201,50 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.hosted_container" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        hosted_container
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.optional_hosted_container" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        optional_hosted_container
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ContractVersion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ContractVersion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.CONTRACT_VERSION" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CONTRACT_VERSION
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1180,389 +1268,53 @@
   
 
 
-<h1 id="warmup-and-health">Warmup and health<a class="headerlink" href="#warmup-and-health" title="Permanent link">&para;</a></h1>
-<p>The data behind <code>FrozenContainer.warmup()</code> / <code>awarmup()</code> and
-<code>FrozenContainer.checks()</code> / <code>health()</code> / <code>ahealth()</code>.</p>
+<h1 id="integration-contract">Integration contract<a class="headerlink" href="#integration-contract" title="Permanent link">&para;</a></h1>
+<p>The seam an integration uses to host a container inside a framework. See
+<a href="../../guide/integrations/">Writing an integration</a> for the narrative.</p>
 
 
 <div class="doc doc-object doc-class">
 
 
 
-<h2 id="depin.WarmupReport" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">WarmupReport</span>
+<h2 id="depin.Host" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">Host</span>
 
 
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.WarmupReport" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#depin.Host" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
 
 
 
-        <p>What a <code>FrozenContainer.warmup</code> call did, node by node.</p>
-<p>Both tuples are in resolution order, and both hold the same <code>GraphNode</code> the
-dependency graph exposes, so a caller reads a warmed provider's key, scope,
-shape, and dependencies off the node it already has.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.WarmupReport.constructed">constructed</span></code></td>
-            <td>
-                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="GraphNode
-
-
-  
-      dataclass
-   (depin._core.diagnostics.GraphNode)" href="../diagnostics/#depin.GraphNode">GraphNode</a>, ...]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Singletons this call built.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.WarmupReport.cached">cached</span></code></td>
-            <td>
-                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="GraphNode
-
-
-  
-      dataclass
-   (depin._core.diagnostics.GraphNode)" href="../diagnostics/#depin.GraphNode">GraphNode</a>, ...]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Singletons that were already built when the call began.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
+        <p>A <code>FrozenContainer</code> hosted inside a framework.</p>
+<p>An integration builds one <code>Host</code> when the application is wired, then opens
+a scope per unit of work — an HTTP request, a CLI invocation, a queue
+message. Inside that scope the container is published to the current
+<code>contextvars.Context</code>, so code that carries only an annotation reaches it
+through <code>hosted_container()</code>.</p>
+<p>The publication is context-local, so concurrent requests and concurrent
+tasks never see each other's container, and two hosts in one process nest
+the published container: the innermost wins and the enclosing one is
+restored on exit.</p>
+<p>Scopes do not nest that way. The scope frame stack is process-wide and
+shared by every container, so a scope opened inside another host's scope
+becomes a child of that frame, and a key already cached there is what the
+inner scope resolves — the inner container's own binding never runs. Two
+different containers must not nest their scopes.</p>
 
 
 <details class="example" open>
   <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">warmup</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">constructed</span><span class="p">]</span>
-<span class="go">['Config']</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">warmup</span><span class="p">()</span><span class="o">.</span><span class="n">cached</span> <span class="o">==</span> <span class="n">report</span><span class="o">.</span><span class="n">constructed</span>
-<span class="go">True</span>
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthCheck" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthCheck</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthCheck" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>A verification callable a binding declared, as data.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.key">key</span></code></td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The provider whose value the check verifies.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.tag">tag</span></code></td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>That provider's tag, when it has one.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.needs_async">needs_async</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Whether running it requires an event loop, because the
-provider needs async resolution or the check is a coroutine
-function.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">check</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">checks</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">check</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">needs_async</span>
-<span class="go">('Database', None, False)</span>
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthResult" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthResult</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthResult" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>What one check said.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.key">key</span></code></td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The provider whose value was verified.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.tag">tag</span></code></td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>That provider's tag, when it has one.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.healthy">healthy</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>False when the check raised or returned <code>False</code>.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.error">error</span></code></td>
-            <td>
-                  <code><span title="Exception">Exception</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The exception the check raised, when it raised one.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="n">ready</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">ready</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">health</span><span class="p">()</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">healthy</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">error</span>
-<span class="go">('Database', False, None)</span>
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthReport" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthReport</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthReport" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>Every check's outcome, in resolution order.</p>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="n">ready</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">ready</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">health</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span><span class="o">.</span><span class="n">healthy</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">results</span><span class="p">)</span>
-<span class="go">(True, 1)</span>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Host</span><span class="p">,</span> <span class="n">Token</span><span class="p">,</span> <span class="n">hosted_container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">request_id</span> <span class="o">=</span> <span class="n">Token</span><span class="p">[</span><span class="nb">str</span><span class="p">](</span><span class="s1">'request_id'</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">scope_value</span><span class="p">(</span><span class="n">request_id</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">host</span> <span class="o">=</span> <span class="n">Host</span><span class="p">(</span><span class="n">di</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">host</span><span class="o">.</span><span class="n">scope</span><span class="p">()</span> <span class="k">as</span> <span class="n">frame</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">frame</span><span class="o">.</span><span class="n">provide</span><span class="p">(</span><span class="n">request_id</span><span class="p">,</span> <span class="s1">'r-1'</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">hosted_container</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">request_id</span><span class="p">)</span>
+<span class="go">'r-1'</span>
 </code></pre></div>
 </details>
 
@@ -1587,21 +1339,21 @@ function.</p>
 
 
 
-<h3 id="depin.HealthReport.healthy" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">healthy</span>
+<h3 id="depin.Host.container" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">container</span>
 
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
-<a href="#depin.HealthReport.healthy" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="n">healthy</span><span class="p">:</span> <span class="nb">bool</span>
+<a href="#depin.Host.container" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">container</span><span class="p">:</span> <span class="n">FrozenContainer</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Whether every check passed. An empty report is healthy.</p>
+        <p>The container this host was built around.</p>
 
     </div>
 
@@ -1610,9 +1362,390 @@ function.</p>
 
 
 
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.Host.activated" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">activated</span>
+
+
+<a href="#depin.Host.activated" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">activated</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Publish the container for the duration of the block, opening no scope.</p>
+<p>What an integration uses outside a unit of work: an ASGI lifespan, a
+process-wide CLI setup, anything that resolves singletons through
+<code>hosted_container()</code> without a scope to open.</p>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Host</span><span class="p">,</span> <span class="n">hosted_container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">Host</span><span class="p">(</span><span class="n">di</span><span class="p">)</span><span class="o">.</span><span class="n">activated</span><span class="p">():</span>
+<span class="gp">... </span>    <span class="n">hosted_container</span><span class="p">()</span> <span class="ow">is</span> <span class="n">di</span>
+<span class="go">True</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.Host.scope" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">scope</span>
+
+
+<a href="#depin.Host.scope" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">scope</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">ScopeFrame</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Publish the container and open one synchronous scope around a unit of work.</p>
+<p>Yields the scope's frame so the caller can seed the framework's own
+objects into it with <code>ScopeFrame.provide</code> before anything resolves. On
+exit the scope's teardowns run first and the publication is undone
+after, so a teardown can still reach the container.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TeardownError">TeardownError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An async provider left a teardown in this sync
+scope. Use <code>ascope()</code> instead.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One or more teardowns failed when the scope
+closed. Every failure is included; one does not hide another.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Host</span><span class="p">,</span> <span class="n">Token</span><span class="p">,</span> <span class="n">hosted_container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">job</span> <span class="o">=</span> <span class="n">Token</span><span class="p">[</span><span class="nb">str</span><span class="p">](</span><span class="s1">'job'</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">scope_value</span><span class="p">(</span><span class="n">job</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">Host</span><span class="p">(</span><span class="n">di</span><span class="p">)</span><span class="o">.</span><span class="n">scope</span><span class="p">()</span> <span class="k">as</span> <span class="n">frame</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">frame</span><span class="o">.</span><span class="n">provide</span><span class="p">(</span><span class="n">job</span><span class="p">,</span> <span class="s1">'reindex'</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">hosted_container</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">job</span><span class="p">)</span>
+<span class="go">'reindex'</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.Host.ascope" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">ascope</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+<a href="#depin.Host.ascope" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">ascope</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="n">ScopeFrame</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Publish the container and open one asynchronous scope; the counterpart to <code>scope()</code>.</p>
+<p>Required when any provider in the scope is async. Otherwise identical:
+the frame is yielded for seeding, teardowns run before the publication
+is undone.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One or more teardowns failed when the scope
+closed. Every failure is included; one does not hide another.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Host</span><span class="p">,</span> <span class="n">Token</span><span class="p">,</span> <span class="n">hosted_container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">job</span> <span class="o">=</span> <span class="n">Token</span><span class="p">[</span><span class="nb">str</span><span class="p">](</span><span class="s1">'job'</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">scope_value</span><span class="p">(</span><span class="n">job</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">async</span> <span class="k">with</span> <span class="n">Host</span><span class="p">(</span><span class="n">di</span><span class="p">)</span><span class="o">.</span><span class="n">ascope</span><span class="p">()</span> <span class="k">as</span> <span class="n">frame</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="n">frame</span><span class="o">.</span><span class="n">provide</span><span class="p">(</span><span class="n">job</span><span class="p">,</span> <span class="s1">'reindex'</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="nb">print</span><span class="p">(</span><span class="k">await</span> <span class="n">hosted_container</span><span class="p">()</span><span class="o">.</span><span class="n">aresolve</span><span class="p">(</span><span class="n">job</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">run</span><span class="p">())</span>
+<span class="go">reindex</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
 
 
   </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="depin.hosted_container" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">hosted_container</span>
+
+
+<a href="#depin.hosted_container" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">hosted_container</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">FrozenContainer</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Return the container hosted in this context.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ContainerNotBoundError (depin.errors.ContainerNotBoundError)" href="../errors/#depin.errors.ContainerNotBoundError">ContainerNotBoundError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>No <code>Host</code> has published a container here.
+Open a scope with <code>Host.scope()</code> / <code>Host.ascope()</code>, or publish one
+with <code>Host.activated()</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Host</span><span class="p">,</span> <span class="n">hosted_container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">Host</span><span class="p">(</span><span class="n">di</span><span class="p">)</span><span class="o">.</span><span class="n">activated</span><span class="p">():</span>
+<span class="gp">... </span>    <span class="n">hosted_container</span><span class="p">()</span> <span class="ow">is</span> <span class="n">di</span>
+<span class="go">True</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="depin.optional_hosted_container" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">optional_hosted_container</span>
+
+
+<a href="#depin.optional_hosted_container" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">optional_hosted_container</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">FrozenContainer</span> <span class="o">|</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Return the container hosted in this context, or <code>None</code> when there is none.</p>
+<p>The non-raising counterpart to <code>hosted_container()</code>. An integration uses it
+to raise its own message, naming the setup step its users actually
+forgot — installing a middleware, registering a plugin — rather than the
+contract-level one.</p>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">optional_hosted_container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">optional_hosted_container</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="depin.ContractVersion" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">ContractVersion</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#depin.ContractVersion" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>The version of the integration contract a release of depin implements.</p>
+<p>The minor number rises when an operation is added and every existing one
+keeps its meaning; the major number rises when an operation changes meaning
+or is removed. An integration that needs an operation added in <code>1.2</code>
+guards on <code>depin.CONTRACT_VERSION &gt;= ContractVersion(1, 2)</code>.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ContractVersion.major">major</span></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Rises on a breaking change to an existing operation.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ContractVersion.minor">minor</span></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Rises when an operation is added.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">CONTRACT_VERSION</span><span class="p">,</span> <span class="n">ContractVersion</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">CONTRACT_VERSION</span> <span class="o">&gt;=</span> <span class="n">ContractVersion</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">str</span><span class="p">(</span><span class="n">CONTRACT_VERSION</span><span class="p">)</span>
+<span class="go">'1.0'</span>
+</code></pre></div>
+</details>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="depin.CONTRACT_VERSION" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">CONTRACT_VERSION</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#depin.CONTRACT_VERSION" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">CONTRACT_VERSION</span><span class="p">:</span> <span class="n">Final</span> <span class="o">=</span> <span class="n">ContractVersion</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>The contract version this release of depin implements.</p>
 
     </div>
 

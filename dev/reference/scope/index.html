@@ -541,6 +541,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing an integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/fastapi/" class="md-nav__link">
         
   
@@ -1066,6 +1094,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../fastapi/" class="md-nav__link">
         
   
@@ -1445,7 +1501,10 @@ single-flighted.</p>
         <p>Place <code>value</code> into this frame under <code>key</code>.</p>
 <p>The counterpart of <code>Container.scope_value()</code>: whoever opens the scope
 supplies the value, and providers declared with <code>scope_value</code> read it
-back. Overwrites any value already stored under <code>key</code> in this frame.</p>
+back. Overwrites any value already stored under <code>key</code> in this frame.
+Seed before anything resolves: a <code>scope_value</code> key is cached in the
+scope on first use, so a later call here does not replace what a
+parameter already read.</p>
 
 
 <details class="example" open>

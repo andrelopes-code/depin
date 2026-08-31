@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/guide/fastapi/">
       
       
-        <link rel="prev" href="../operations/">
+        <link rel="prev" href="../integrations/">
       
       
         <link rel="next" href="../../support-policy/">
@@ -540,6 +540,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing an integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -983,6 +1011,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/fastapi/" class="md-nav__link">
         
   
@@ -1122,7 +1178,7 @@ an annotation that resolves a dependency into a route handler.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">contextlib</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncGenerator</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span><span class="p">,</span> <span class="n">Request</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">FrozenContainer</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">depin.ext.fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Inject</span><span class="p">,</span> <span class="n">RequestScope</span>
@@ -1131,7 +1187,7 @@ an annotation that resolves a dependency into a route handler.</p>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">create_app</span><span class="p">(</span><span class="n">container</span><span class="p">:</span> <span class="n">FrozenContainer</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FastAPI</span><span class="p">:</span>
-    <span class="n">di</span> <span class="o">=</span> <span class="n">container</span> <span class="k">if</span> <span class="n">container</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">Container</span><span class="p">(</span><span class="n">infra</span><span class="p">,</span> <span class="n">services</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+    <span class="n">di</span> <span class="o">=</span> <span class="n">container</span> <span class="k">if</span> <span class="n">container</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">Container</span><span class="p">(</span><span class="n">infra</span><span class="p">,</span> <span class="n">services</span><span class="p">)</span><span class="o">.</span><span class="n">scope_value</span><span class="p">(</span><span class="n">Request</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
 
     <span class="nd">@contextlib</span><span class="o">.</span><span class="n">asynccontextmanager</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
@@ -1155,8 +1211,13 @@ lifespan drains the singletons that own resources.</p>
 plain <code>T</code>; at runtime <code>Inject[T]</code> expands to <code>Annotated[T, Depends(...)]</code>, so
 FastAPI resolves it through its normal dependency plumbing. There is no
 default-value marker at the call site, and no <code># noqa: B008</code> waiver.</p>
-<p>Resolving it outside a <code>RequestScope</code> raises <code>ContainerNotBoundError</code>, which
-means the middleware is missing.</p>
+<p>Resolving it raises <code>ContainerNotBoundError</code> when no container is hosted in the
+current context. A missing <code>RequestScope</code> is the usual cause, not the
+definition: <code>Inject[T]</code> reads whichever container the current context carries,
+so a container published elsewhere — by <code>Host.activated()</code> in a lifespan, for
+instance — satisfies it just as well. Reached that way no scope is open, so a
+<em>scoped</em> provider then fails with <code>OutsideScopeError</code> rather than
+<code>ContainerNotBoundError</code>.</p>
 <h2 id="one-scope-per-request">One scope per request<a class="headerlink" href="#one-scope-per-request" title="Permanent link">&para;</a></h2>
 <p><code>RequestScope</code> is implemented directly against the ASGI protocol rather than
 Starlette's <code>BaseHTTPMiddleware</code>, so streaming responses, server-sent events and
@@ -1171,8 +1232,10 @@ response finishes:</p>
     <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </code></pre></div>
 <h2 id="reading-the-request">Reading the request<a class="headerlink" href="#reading-the-request" title="Permanent link">&para;</a></h2>
-<p>For HTTP requests the middleware places a <code>Request</code> into the scope frame, so a
-scoped provider can declare it:</p>
+<p>For HTTP requests the middleware places a <code>Request</code> into the scope frame. A
+scoped provider reads it back because the container declares the key with
+<code>scope_value(Request)</code>, as the wiring above does; without that declaration the
+graph fails at <code>freeze()</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="nd">@services</span><span class="o">.</span><span class="n">scoped</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">current_tenant</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tenant</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">Tenant</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s1">'x-tenant'</span><span class="p">])</span>

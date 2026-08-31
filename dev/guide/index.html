@@ -601,6 +601,34 @@
   
   
     <li class="md-nav__item">
+      <a href="integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing an integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="fastapi/" class="md-nav__link">
         
   
@@ -939,6 +967,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reference/hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/fastapi/" class="md-nav__link">
         
   
@@ -1025,7 +1081,7 @@
 
 
 <h1 id="guide">Guide<a class="headerlink" href="#guide" title="Permanent link">&para;</a></h1>
-<p>Six pages, in the order most projects need them.</p>
+<p>Eight pages, in the order most projects need them.</p>
 <ul>
 <li><strong><a href="lifetimes/">Lifetimes and scopes</a></strong> — how long a value lives, when it is
   rebuilt, and when its teardown runs. Read this first; almost every question
@@ -1040,6 +1096,11 @@
 <li><strong><a href="diagnostics/">Inspecting the graph</a></strong> — the resolution tree, <code>dot</code> and
   <code>mermaid</code> renderings, and how <code>freeze()</code> and <code>explain()</code> report the same
   chain.</li>
+<li><strong><a href="operations/">Warmup and health</a></strong> — building every singleton before the
+  first request, and declaring checks <code>health()</code> runs on demand.</li>
+<li><strong><a href="integrations/">Writing an integration</a></strong> — the contract a framework
+  host is built against: <code>Host</code>, <code>hosted_container</code>, and the version that
+  governs both.</li>
 <li><strong><a href="fastapi/">FastAPI</a></strong> — the optional ASGI integration: one scope per
   request, <code>Inject[T]</code>, and shutdown.</li>
 </ul>
