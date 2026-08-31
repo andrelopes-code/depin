@@ -296,6 +296,10 @@ class FrozenContainer:
         Drives async singletons as well as sync ones, so it is what an ASGI
         lifespan calls. Otherwise identical: resolution order, the same report,
         and a failure that propagates unchanged.
+
+        Raises:
+            CircularDependencyError: This task re-enters construction of the
+                same cached provider.
         """
         specs = singleton_specs(self._plan)
         constructed: list[ProviderSpec] = []
@@ -365,6 +369,11 @@ class FrozenContainer:
         """Run every declared check inside an event loop; the counterpart to `health()`.
 
         Drives async providers and `async def` checks. Otherwise identical.
+
+        Raises:
+            OutsideScopeError: A check's provider is scoped and no scope is active.
+            CircularDependencyError: This task re-enters construction of the
+                same cached provider.
         """
         specs = checked_specs(self._plan)
         results: list[HealthResult] = []

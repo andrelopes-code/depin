@@ -27,6 +27,18 @@ class HealthCheck:
         needs_async: Whether running it requires an event loop, because the
             provider needs async resolution or the check is a coroutine
             function.
+
+    Example:
+        ```pycon
+        >>> from depin import Container
+        >>> class Database: ...
+        >>> def ping(db: Database) -> None: ...
+        >>> di = Container().bind(Database, check=ping).freeze()
+        >>> check = di.checks()[0]
+        >>> check.key.__qualname__, check.tag, check.needs_async
+        ('Database', None, False)
+
+        ```
     """
 
     key: ProviderKey
@@ -44,6 +56,20 @@ class HealthResult:
         tag: That provider's tag, when it has one.
         healthy: False when the check raised or returned ``False``.
         error: The exception the check raised, when it raised one.
+
+    Example:
+        ```pycon
+        >>> from depin import Container
+        >>> class Database:
+        ...     ready = False
+        >>> def ping(db: Database) -> bool:
+        ...     return db.ready
+        >>> di = Container().bind(Database, check=ping).freeze()
+        >>> result = di.health().results[0]
+        >>> result.key.__qualname__, result.healthy, result.error
+        ('Database', False, None)
+
+        ```
     """
 
     key: ProviderKey
