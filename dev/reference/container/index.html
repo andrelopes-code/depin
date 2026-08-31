@@ -429,6 +429,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/resolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resolution semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/testing/" class="md-nav__link">
         
   
@@ -745,6 +773,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.Container.collect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        collect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.Container.singleton" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -865,6 +904,17 @@
     <span class="md-ellipsis">
       
         alias
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Registry.collect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        collect
       
     </span>
   </a>
@@ -1265,6 +1315,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.Container.collect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        collect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.Container.singleton" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1385,6 +1446,17 @@
     <span class="md-ellipsis">
       
         alias
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Registry.collect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        collect
       
     </span>
   </a>
@@ -1559,8 +1631,8 @@
 
 
         <p>Mutable builder for a dependency graph.</p>
-<p>Collect bindings with <code>bind()</code>, <code>value()</code>, <code>scope_value()</code>, <code>alias()</code>, and
-the <code>singleton()</code> / <code>scoped()</code> / <code>transient()</code> decorators, then call <code>freeze()</code>
+<p>Collect bindings with <code>bind()</code>, <code>value()</code>, <code>scope_value()</code>, <code>alias()</code>,
+<code>collect()</code>, and the <code>singleton()</code> / <code>scoped()</code> / <code>transient()</code> decorators, then call <code>freeze()</code>
 to validate the graph and obtain an immutable <code>FrozenContainer</code>. A
 <code>Container</code> performs no resolution itself; nothing is constructed until you
 resolve from the frozen view. Registration order does not matter — providers
@@ -2027,6 +2099,154 @@ resolution or of an <code>Annotated[..., Tag(...)]</code> parameter.</p>
 <div class="doc doc-object doc-function">
 
 
+<h3 id="depin.Container.collect" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">collect</span>
+
+
+<a href="#depin.Container.collect" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">collect</span><span class="p">(</span>
+    <span class="n">element</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span>
+    <span class="n">members</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ProviderKey</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Register a list of existing bindings under the key <code>list[element]</code>.</p>
+<p>Resolving that key returns each member's value, in the order given here.
+Members keep their own lifetimes, cache entries, and teardowns, so a
+singleton member is built once however many collections name it, and a
+scoped member is rebuilt per scope. Every resolution returns a new list,
+so no caller can mutate another's.</p>
+<p>The declaration is what makes a multi-binding explicit. Members stay bound
+under their own keys, so registering two implementations under one key by
+accident still raises <code>DuplicateProviderError</code>, and the collection
+occupies <code>list[element]</code>, which no ordinary binding claims.</p>
+<p>A collection is an ordinary node in the validated graph: an unbound
+member, a member listed twice, two collections over one element and tag,
+a cycle through a collection, and a singleton that reaches a scoped
+member through one are all rejected by <code>Container.freeze()</code>. An empty
+collection is legal and resolves to an empty list.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>element</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The key each member provides. The collection is registered
+under a list of it. A string element registers <code>list['name']</code>,
+which resolves directly through <code>FrozenContainer.resolve</code> or
+<code>frozen[list['name']]</code>, but cannot be written as a parameter
+annotation: <code>get_type_hints</code> treats the string inside
+<code>list[...]</code> as a forward reference and fails to resolve it.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>members</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The bindings to gather, in the order they should appear.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tag</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Disambiguator when several collections share an element.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.Self">Self</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>self</code>, for chaining.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Protocol</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Handler</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Email</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'email'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Sms</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'sms'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Email</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Sms</span><span class="p">)</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="n">Handler</span><span class="p">,</span> <span class="p">[</span><span class="n">Email</span><span class="p">,</span> <span class="n">Sms</span><span class="p">])</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">handler</span><span class="o">.</span><span class="n">run</span><span class="p">()</span> <span class="k">for</span> <span class="n">handler</span> <span class="ow">in</span> <span class="n">di</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="nb">list</span><span class="p">[</span><span class="n">Handler</span><span class="p">])]</span>
+<span class="go">['email', 'sms']</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h3 id="depin.Container.singleton" class="doc doc-heading">
             <span class="doc doc-object-name doc-function-name">singleton</span>
 
@@ -2223,7 +2443,8 @@ providers up front instead of blocking an event loop.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Two bindings resolve to the same key and tag.</p>
+                <p>Two bindings resolve to the same key and tag,
+or a collection lists the same member twice.</p>
               </div>
             </td>
           </tr>
@@ -2245,9 +2466,11 @@ providers up front instead of blocking an event loop.</p>
               <div class="doc-md-description">
                 <p>A factory lacks a return annotation (and no
 <code>provides=</code>), a parameter has no type annotation and no
-default, a binding is neither a class nor a callable, or an
-alias names a key or a target that is not a class, a <code>Token</code>, or
-a string.</p>
+default, a binding is neither a class nor a callable, an
+alias names a key or a target that is not a class, a <code>Token</code>,
+a string, or a <code>list[X]</code>, a collection names an element or a
+member that is not one of those either, or a parameter is
+annotated with a union that names two or more providers.</p>
               </div>
             </td>
           </tr>
@@ -2770,6 +2993,154 @@ resolution or of an <code>Annotated[..., Tag(...)]</code> parameter.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">PostgresStore</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="n">PostgresStore</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">Store</span><span class="p">)</span> <span class="ow">is</span> <span class="n">di</span><span class="p">[</span><span class="n">PostgresStore</span><span class="p">]</span>
 <span class="go">True</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.Registry.collect" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">collect</span>
+
+
+<a href="#depin.Registry.collect" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">collect</span><span class="p">(</span>
+    <span class="n">element</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span>
+    <span class="n">members</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ProviderKey</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Register a list of existing bindings under the key <code>list[element]</code>.</p>
+<p>Resolving that key returns each member's value, in the order given here.
+Members keep their own lifetimes, cache entries, and teardowns, so a
+singleton member is built once however many collections name it, and a
+scoped member is rebuilt per scope. Every resolution returns a new list,
+so no caller can mutate another's.</p>
+<p>The declaration is what makes a multi-binding explicit. Members stay bound
+under their own keys, so registering two implementations under one key by
+accident still raises <code>DuplicateProviderError</code>, and the collection
+occupies <code>list[element]</code>, which no ordinary binding claims.</p>
+<p>A collection is an ordinary node in the validated graph: an unbound
+member, a member listed twice, two collections over one element and tag,
+a cycle through a collection, and a singleton that reaches a scoped
+member through one are all rejected by <code>Container.freeze()</code>. An empty
+collection is legal and resolves to an empty list.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>element</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The key each member provides. The collection is registered
+under a list of it. A string element registers <code>list['name']</code>,
+which resolves directly through <code>FrozenContainer.resolve</code> or
+<code>frozen[list['name']]</code>, but cannot be written as a parameter
+annotation: <code>get_type_hints</code> treats the string inside
+<code>list[...]</code> as a forward reference and fails to resolve it.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>members</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The bindings to gather, in the order they should appear.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tag</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Disambiguator when several collections share an element.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.Self">Self</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>self</code>, for chaining.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Protocol</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Handler</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Email</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'email'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Sms</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'sms'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Email</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Sms</span><span class="p">)</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="n">Handler</span><span class="p">,</span> <span class="p">[</span><span class="n">Email</span><span class="p">,</span> <span class="n">Sms</span><span class="p">])</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">handler</span><span class="o">.</span><span class="n">run</span><span class="p">()</span> <span class="k">for</span> <span class="n">handler</span> <span class="ow">in</span> <span class="n">di</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="nb">list</span><span class="p">[</span><span class="n">Handler</span><span class="p">])]</span>
+<span class="go">['email', 'sms']</span>
 </code></pre></div>
 </details>
 

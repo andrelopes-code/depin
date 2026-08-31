@@ -489,6 +489,34 @@
   
   
     <li class="md-nav__item">
+      <a href="resolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resolution semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="testing/" class="md-nav__link">
         
   
@@ -941,15 +969,21 @@
 
 
 <h1 id="guide">Guide<a class="headerlink" href="#guide" title="Permanent link">&para;</a></h1>
-<p>Four pages, in the order most projects need them.</p>
+<p>Six pages, in the order most projects need them.</p>
 <ul>
 <li><strong><a href="lifetimes/">Lifetimes and scopes</a></strong> — how long a value lives, when it is
   rebuilt, and when its teardown runs. Read this first; almost every question
   about depin is really a question about lifetimes.</li>
 <li><strong><a href="composition/">Composing bindings</a></strong> — registries, containers built from
   several sources, tags, protocols, tokens, and aliases.</li>
+<li><strong><a href="resolution/">Resolution semantics</a></strong> — optional dependencies and
+  collection injection: what a <code>T | None</code> parameter and a <code>list[T]</code> parameter
+  mean, and when each resolves to <code>None</code> or to every registered provider.</li>
 <li><strong><a href="testing/">Testing</a></strong> — replacing a dependency without rebuilding the
   graph, and wiring test functions with <code>@inject</code>.</li>
+<li><strong><a href="diagnostics/">Inspecting the graph</a></strong> — the resolution tree, <code>dot</code> and
+  <code>mermaid</code> renderings, and how <code>freeze()</code> and <code>explain()</code> report the same
+  chain.</li>
 <li><strong><a href="fastapi/">FastAPI</a></strong> — the optional ASGI integration: one scope per
   request, <code>Inject[T]</code>, and shutdown.</li>
 </ul>

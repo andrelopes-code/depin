@@ -429,6 +429,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/resolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resolution semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/testing/" class="md-nav__link">
         
   
@@ -1939,8 +1967,9 @@ are the same on every call and in every context.</p>
 <p>Each line names the parameter that requires the node, the node's key,
 its scope and provider shape, <code>async</code> when the node needs asynchronous
 resolution, and its tag when it has one. A subtree already shown is
-marked rather than repeated. A parameter with a default that nothing
-provides is marked <code>(unbound, default)</code>.</p>
+marked rather than repeated. A parameter that nothing provides is marked
+<code>(unbound, default)</code> when it carries a default, or <code>(unbound, optional)</code>
+when it does not but admits <code>None</code>.</p>
 <p>A key no binding provides returns the line <code>MissingProviderError</code>
 carries for it, including the resolution chain when some provider
 requires that key. Like <code>graph()</code>, the output describes the validated

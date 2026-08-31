@@ -429,6 +429,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/resolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resolution semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/testing/" class="md-nav__link">
         
   
@@ -1185,12 +1213,14 @@
 
 
 <a href="#depin.ProviderKey" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nc">ProviderKey</span> <span class="o">=</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nc">ProviderKey</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">GenericAlias</span>
+<span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
 
-        <p>What a provider can be bound and resolved under: a class, a <code>Token</code>, or a name.</p>
+        <p>What a provider can be bound and resolved under: a class, a <code>Token</code>, a name, or a <code>list[...]</code> of one.</p>
     </div>
 
 </div>
@@ -1499,21 +1529,26 @@ makes every rendering of the graph reproducible.</p>
 
 
         <p>One provider parameter and the binding identity it resolves to.</p>
-<p><code>satisfied</code> is false only for a parameter that carries a default and that
-no binding provides. <code>Container.freeze()</code> rejects every other unsatisfied
-parameter, so a frozen graph holds no other kind.</p>
+<p><code>satisfied</code> is false for a parameter that no binding provides, which
+<code>Container.freeze()</code> allows only when the parameter carries a default or
+admits <code>None</code>. <code>has_default</code> and <code>optional</code> say which, and
+<code>has_default</code> wins when both hold, because depin never replaces a value
+the author wrote.</p>
 
 
 <details class="example" open>
   <summary>Example</summary>
   <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Cache</span><span class="p">:</span> <span class="o">...</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Service</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">,</span> <span class="n">cache</span><span class="p">:</span> <span class="n">Cache</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">edge</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">graph</span><span class="p">()</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">dependencies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">edge</span><span class="o">.</span><span class="n">parameter</span><span class="p">,</span> <span class="n">edge</span><span class="o">.</span><span class="n">satisfied</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bound</span><span class="p">,</span> <span class="n">unbound</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">graph</span><span class="p">()</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">dependencies</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bound</span><span class="o">.</span><span class="n">parameter</span><span class="p">,</span> <span class="n">bound</span><span class="o">.</span><span class="n">satisfied</span>
 <span class="go">('config', True)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">unbound</span><span class="o">.</span><span class="n">parameter</span><span class="p">,</span> <span class="n">unbound</span><span class="o">.</span><span class="n">satisfied</span><span class="p">,</span> <span class="n">unbound</span><span class="o">.</span><span class="n">optional</span><span class="p">,</span> <span class="n">unbound</span><span class="o">.</span><span class="n">has_default</span>
+<span class="go">('cache', False, True, False)</span>
 </code></pre></div>
 </details>
 
@@ -1681,6 +1716,18 @@ Requires <code>aresolve</code> and cannot be transient.</p>
                 <p>A second name for another binding, declared with
 <code>Container.alias</code>. Nothing is called and nothing is cached here —
 the target owns the value, its cache entry, and its teardown.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.ProviderShape.COLLECTION">COLLECTION</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of several bindings, declared with
+<code>Container.collect</code>. Nothing is cached here — each member keeps its
+own lifetime, and every resolution returns a new list over them.</p>
               </div>
             </td>
           </tr>
