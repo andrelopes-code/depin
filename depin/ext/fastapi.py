@@ -2,9 +2,12 @@
 
 Importing this module requires the ``fastapi`` extra (``pip install
 'pydepin[fastapi]'``); the depin core itself has no third-party dependencies.
+
+Written entirely against depin's public integration contract — `depin.Host`
+and `depin.optional_hosted_container` — so it is also the worked example the
+"writing an integration" guide points at.
 """
 
-from contextvars import ContextVar
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Request
@@ -12,10 +15,8 @@ from fastapi.params import Depends
 from starlette.types import ASGIApp, Receive, Send
 from starlette.types import Scope as ASGIScope
 
-from depin._core.frozen import FrozenContainer
+from depin import FrozenContainer, Host, optional_hosted_container
 from depin.errors import ContainerNotBoundError
-
-_active_container: ContextVar[FrozenContainer | None] = ContextVar('depin_fastapi_container', default=None)
 
 
 class RequestScope:
@@ -33,6 +34,10 @@ class RequestScope:
     would otherwise deadlock against FastAPI's own body parsing). Treat the body
     as a typed route parameter, not a provider input.
 
+    The container is published to the request's context for the duration of
+    the scope, so `depin.hosted_container()` reaches it from anywhere inside
+    the request.
+
     Example:
         Install the middleware once, then resolve scoped providers per request::
 
@@ -40,24 +45,20 @@ class RequestScope:
             app.add_middleware(RequestScope, container=di)
     """
 
-    __slots__ = ('_app', '_container')
+    __slots__ = ('_app', '_host')
 
     def __init__(self, app: ASGIApp, container: FrozenContainer) -> None:
         self._app = app
-        self._container = container
+        self._host = Host(container)
 
     async def __call__(self, scope: ASGIScope, receive: Receive, send: Send) -> None:
         if scope['type'] not in ('http', 'websocket'):
             await self._app(scope, receive, send)
             return
-        token = _active_container.set(self._container)
-        try:
-            async with self._container.ascope() as frame:
-                if scope['type'] == 'http':
-                    frame.provide(Request, Request(scope))
-                await self._app(scope, receive, send)
-        finally:
-            _active_container.reset(token)
+        async with self._host.ascope() as frame:
+            if scope['type'] == 'http':
+                frame.provide(Request, Request(scope))
+            await self._app(scope, receive, send)
 
 
 if TYPE_CHECKING:
@@ -86,7 +87,7 @@ else:
 
         def __class_getitem__(cls, key: object) -> object:
             async def resolver() -> object:
-                container = _active_container.get()
+                container = optional_hosted_container()
                 if container is None:
                     raise ContainerNotBoundError(
                         'Inject[...] resolved outside a RequestScope; install the middleware with '
