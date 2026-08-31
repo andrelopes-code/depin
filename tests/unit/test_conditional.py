@@ -5,7 +5,6 @@ from collections.abc import Generator
 import pytest
 
 from depin import Container, Registry, Token
-from depin._core.spec import fmt_key
 from depin.errors import InvalidProviderError, MissingProviderError
 
 
@@ -190,17 +189,37 @@ def test_a_missing_key_with_no_inactive_binding_is_not_named_as_inactive() -> No
 
 
 def test_explain_and_freeze_report_an_inactive_key_alike() -> None:
+    """`format_missing` is shared by `freeze()` and `explain()`, so the note about an inactive
+    conditional binding is meant to appear identically in both. A required parameter that
+    freeze() rejects can never itself sit in a frozen graph to ask `explain()` about, so the
+    second consumer below gives its parameter a default: `_check_missing` then lets `freeze()`
+    succeed, while `_deepest_requirement` still reports the chain the parameter would need if it
+    were required. `fmt_key` renders a class by `__qualname__`, so the second consumer's
+    `__qualname__` is set to match the first's, making the two captured lines comparable for
+    exact equality.
+    """
+
     class Cache: ...
 
-    class Service:
+    class RequiredConsumer:
         def __init__(self, cache: Cache) -> None: ...
 
-    container = Container().bind(Cache, when=False).bind(Service)
     with pytest.raises(MissingProviderError) as error:
-        _ = container.freeze()
-    frozen = Container().bind(Cache, when=False).freeze()
-    assert 'registered but inactive' in frozen.explain(Cache)
-    assert fmt_key(Cache) in str(error.value)
+        _ = Container().bind(Cache, when=False).bind(RequiredConsumer).freeze()
+    freeze_text = str(error.value)
+
+    class DefaultedConsumer:
+        def __init__(self, cache: Cache | None = None) -> None: ...
+
+    DefaultedConsumer.__qualname__ = RequiredConsumer.__qualname__
+
+    frozen = Container().bind(Cache, when=False).bind(DefaultedConsumer).freeze()
+    explain_text = frozen.explain(Cache)
+
+    print(freeze_text)
+    print(explain_text)
+    assert 'registered but inactive' in freeze_text
+    assert freeze_text == explain_text
 
 
 def test_an_inactive_factory_key_is_named_from_its_return_annotation() -> None:
