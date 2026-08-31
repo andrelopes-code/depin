@@ -546,6 +546,9 @@ class FrozenContainer:
             if dep is None:
                 if param.has_default:
                     continue
+                if param.optional:
+                    out[param.name] = None
+                    continue
                 raise MissingProviderError(f"missing provider for parameter '{param.name}' of {fmt_key(spec.key)}")
             out[param.name] = self._resolve_sync(dep)
         return out
@@ -560,6 +563,9 @@ class FrozenContainer:
             dep = self._lookup_optional(param.key, param.tag)
             if dep is None:
                 if param.has_default:
+                    continue
+                if param.optional:
+                    out[param.name] = None
                     continue
                 raise MissingProviderError(f"missing provider for parameter '{param.name}' of {fmt_key(spec.key)}")
             out[param.name] = await self._resolve_async(dep)
