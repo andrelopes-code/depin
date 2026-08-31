@@ -136,3 +136,19 @@ async def test_async_context_manager_contract_failure_names_the_bound_key() -> N
         str(exc.value)
         == 'async context-manager provider for _Result returned 42, which is not an async context manager'
     )
+
+
+def test_an_alias_spec_with_no_resolved_target_names_the_provider() -> None:
+    class Store: ...
+
+    spec = ProviderSpec(
+        key=Store,
+        tag=None,
+        source=None,
+        scope=Scope.TRANSIENT,
+        shape=ProviderShape.ALIAS,
+        needs_async=False,
+        params=(),
+    )
+    with pytest.raises(InvalidProviderError, match='Store'):
+        _ = sync(spec, {}, _no_teardown, _no_frame)

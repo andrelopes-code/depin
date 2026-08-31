@@ -8,11 +8,13 @@ from depin._core.introspect import AnnotatedMeta, detect_shape, extract_annotate
 from depin._core.markers import get_provides
 from depin._core.scope import Scope
 from depin._core.spec import (
+    ALIAS_PARAM,
     BindRecord,
     ParamSpec,
     ProviderKey,
     ProviderShape,
     ProviderSpec,
+    is_alias_binding,
     is_frame_binding,
     is_value_binding,
 )
@@ -87,6 +89,26 @@ def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec
             shape=ProviderShape.FRAME,
             needs_async=False,
             params=(),
+        )
+
+    if is_alias_binding(rec.source):
+        alias = rec.source
+        return ProviderSpec(
+            key=as_provider_key(alias.key),
+            tag=rec.tag,
+            source=alias,
+            scope=rec.scope,
+            shape=ProviderShape.ALIAS,
+            needs_async=False,
+            params=(
+                ParamSpec(
+                    name=ALIAS_PARAM,
+                    key=as_provider_key(alias.target),
+                    tag=alias.target_tag,
+                    has_default=False,
+                    default=None,
+                ),
+            ),
         )
 
     source = rec.source

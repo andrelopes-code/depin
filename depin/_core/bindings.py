@@ -5,7 +5,7 @@ from typing import Self, final, overload
 
 from depin._core.markers import Token
 from depin._core.scope import Scope
-from depin._core.spec import BindRecord, Bindings, FrameBinding, ValueBinding
+from depin._core.spec import AliasBinding, BindRecord, Bindings, FrameBinding, ProviderKey, ValueBinding
 from depin.errors import InvalidProviderError
 
 type _BindFn = Callable[[type[object] | Callable[..., object], Scope, type[object] | None, str | None], None]
@@ -161,6 +161,66 @@ class BindingCollector:
             ```
         """
         self._records.append(BindRecord(source=FrameBinding(key), scope=Scope.SCOPED, provides=None, tag=tag))
+        return self
+
+    def alias(
+        self,
+        key: ProviderKey,
+        *,
+        to: ProviderKey,
+        tag: str | None = None,
+        to_tag: str | None = None,
+    ) -> Self:
+        """Register ``key`` as a second name for an existing binding.
+
+        Resolving the alias resolves the target and returns its value. The target
+        keeps its own lifetime, its own cache entry, and its own teardown, so a
+        singleton reached through an alias is still built once and torn down
+        once, and both names return the same object.
+
+        The alias caches nothing itself, which is why it takes no scope. It is an
+        ordinary node in the validated graph: an unbound target, a duplicate
+        alias, a cycle through an alias, and a singleton that reaches a scoped
+        provider through one are all rejected by `Container.freeze()`, and the
+        alias appears in `FrozenContainer.explain()` and in both graph exports.
+
+        depin does not check that the target satisfies the alias key. A
+        ``Protocol`` that is not ``runtime_checkable`` cannot be checked at all,
+        and a structural alias between unrelated classes is legitimate.
+
+        Args:
+            key: The new name to register. A class, a `Token`, or a string.
+            to: The binding to delegate to. May itself be an alias.
+            tag: Disambiguator for the alias, matching the ``tag`` of a
+                resolution or of an ``Annotated[..., Tag(...)]`` parameter.
+            to_tag: The target's tag, when the target is registered under one.
+
+        Returns:
+            ``self``, for chaining.
+
+        Example:
+            ```pycon
+            >>> from typing import Protocol
+            >>> from depin import Container
+            >>> class Store(Protocol):
+            ...     def get(self) -> str: ...
+            >>> class PostgresStore:
+            ...     def get(self) -> str:
+            ...         return 'pg'
+            >>> di = Container().bind(PostgresStore).alias(Store, to=PostgresStore).freeze()
+            >>> di.resolve(Store) is di[PostgresStore]
+            True
+
+            ```
+        """
+        self._records.append(
+            BindRecord(
+                source=AliasBinding(key=key, target=to, target_tag=to_tag),
+                scope=Scope.TRANSIENT,
+                provides=None,
+                tag=tag,
+            )
+        )
         return self
 
     def singleton(
