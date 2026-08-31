@@ -11,6 +11,7 @@ Every example is a runnable module and is executed by
 | [`aliasing`](aliasing/main.py) | `python -m examples.aliasing.main` | `alias()` giving one instance two names, and `explain()` on the result. |
 | [`optional_dependencies`](optional_dependencies/main.py) | `python -m examples.optional_dependencies.main` | A `T \| None` parameter resolving to `None` or to the bound instance. |
 | [`collections`](collections/main.py) | `python -m examples.collections.main` | `collect()` gathering several handlers behind `list[Handler]`, and `explain()` on the collection. |
+| [`generic_keys`](generic_keys/main.py) | `python -m examples.generic_keys.main` | `Repo[User]` and `Repo[Order]` as two provider keys, a service depending on both, and `explain()` on one parameterisation. |
 | [`graph_diagnostics`](graph_diagnostics/main.py) | `python -m examples.graph_diagnostics.main` | `explain()` for one key, and the `mermaid` export of the whole graph. |
 | [`fastapi_app`](fastapi_app/main.py) | `uvicorn examples.fastapi_app.main:create_app --factory` | Registries, an app factory, one scope per request, `aclose()` on shutdown. |
 

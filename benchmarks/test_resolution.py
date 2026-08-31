@@ -7,7 +7,7 @@ from typing import Protocol
 
 import pytest
 
-from benchmarks.graphs import build_chain
+from benchmarks.graphs import build_chain, build_generic_chain
 from depin import Container, Scope, injected
 
 
@@ -47,6 +47,14 @@ class Benchmark(Protocol):
 @pytest.mark.parametrize('size', [10, 100, 1000])
 def test_freeze_a_chain(benchmark: Benchmark, size: int) -> None:
     container, _ = build_chain(size)
+    _ = benchmark(container.freeze)
+
+
+@pytest.mark.parametrize('size', [10, 100, 1000])
+def test_freeze_a_chain_of_generic_keys(benchmark: Benchmark, size: int) -> None:
+    """`test_freeze_a_chain`, with every key parameterised, so the canonical-form
+    check's cost on the freeze path is visible against the plain-key baseline."""
+    container, _ = build_generic_chain(size)
     _ = benchmark(container.freeze)
 
 
