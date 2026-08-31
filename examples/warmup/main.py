@@ -36,8 +36,9 @@ def build() -> FrozenContainer:
 
 def _names(nodes: tuple[GraphNode, ...]) -> list[str]:
     """`GraphNode.key` is a union of every key shape; every binding here is a
-    plain class, so narrowing to `type` is enough to print its name."""
-    return [node.key.__qualname__ for node in nodes if isinstance(node.key, type)]
+    plain class, so narrowing to `type` renders its name, and any other key
+    shape still renders through `str` rather than being dropped."""
+    return [node.key.__qualname__ if isinstance(node.key, type) else str(node.key) for node in nodes]
 
 
 def main() -> None:
