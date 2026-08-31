@@ -173,6 +173,7 @@ and listed in `examples/README.md`.
 | `diagnostics.py` | The public graph view over a validated plan. |
 | `render.py` | The resolution tree, `dot`, and `mermaid` renderings of that view. |
 | `frozen.py` | The runtime: resolve, scope, inject, override. |
+| `hosting.py` | The public integration contract: `Host` and the ambient container. |
 | `construct.py` | Calling a provider according to its shape. |
 | `scope.py` | Lifetimes, the scope frame, and its locks. |
 | `teardown.py` | Teardown records and the drains that run them. |

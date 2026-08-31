@@ -20,6 +20,10 @@ Type-first dependency injection for Python 3.12+.
   contention, and scopes are isolated per `contextvars.Context`.
 - Every failure is a `DepinError`. No stray `TypeError` from the middle of the
   library.
+- **A public integration contract**: `Host`, `hosted_container`, and a version
+  constant. `depin.ext.fastapi` is written on it, and so is any integration you
+  write yourself — no `depin._core` import required.
+  [Writing an integration](https://andrelopes-code.github.io/depin/guide/integrations/).
 - Optional FastAPI integration in `depin.ext.fastapi`. **The core has zero
   runtime dependencies.**
 - No `# type: ignore` at call sites: `resolve()`, `frozen[key]`, `injected()`,
