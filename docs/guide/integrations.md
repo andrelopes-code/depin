@@ -275,6 +275,10 @@ True
 
 ```
 
+It covers the four operations above and nothing else: an ordinary
+`FrozenContainer` method is versioned by the depin release that introduced it,
+not by this number.
+
 The minor number rises when an operation is added and every existing one
 keeps its meaning; the major number rises when an operation changes meaning
 or is removed. An integration that needs an operation added in `1.2` guards

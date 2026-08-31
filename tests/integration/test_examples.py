@@ -17,6 +17,10 @@ from examples.decoration.main import READS as DECORATION_READS
 from examples.decoration.main import Page as DecoratedPage
 from examples.decoration.main import Store as DecoratedStore
 from examples.decoration.main import build as build_decoration
+from examples.eviction.main import Clock as EvictionClock
+from examples.eviction.main import FakeClock as EvictionFakeClock
+from examples.eviction.main import Report as EvictionReport
+from examples.eviction.main import build as build_eviction
 from examples.fastapi_app.main import build_container, create_app
 from examples.fastapi_app.registries import Database
 from examples.generic_keys.main import Order, ReportService, User
@@ -35,10 +39,6 @@ from examples.minimal_sync.main import Database as MinimalDatabase
 from examples.minimal_sync.main import UserRepo, build
 from examples.optional_dependencies.main import Checkout, MetricsSink
 from examples.optional_dependencies.main import build as build_optional_dependencies
-from examples.pytest_plugin.main import Clock as PytestPluginClock
-from examples.pytest_plugin.main import FakeClock as PytestPluginFakeClock
-from examples.pytest_plugin.main import Report as PytestPluginReport
-from examples.pytest_plugin.main import build as build_pytest_plugin
 from examples.scopes.main import AUDIT, Connection, UnitOfWork
 from examples.scopes.main import build as build_scopes
 from examples.testing.main import Clock, FrozenClock, Report
@@ -95,22 +95,22 @@ def test_testing_example_overrides_a_protocol_deep_in_the_graph() -> None:
     assert di[Report].render() == 'report at real-time'
 
 
-def test_pytest_plugin_example_evicts_a_consumer_built_before_the_override() -> None:
-    di = build_pytest_plugin()
-    real = di[PytestPluginReport]
+def test_eviction_example_evicts_a_consumer_built_before_the_override() -> None:
+    di = build_eviction()
+    real = di[EvictionReport]
     assert real.render() == 'report at real-time'
 
-    with di.override(PytestPluginClock, PytestPluginFakeClock()):
-        assert di[PytestPluginClock].now() == 'fake-time'
+    with di.override(EvictionClock, EvictionFakeClock()):
+        assert di[EvictionClock].now() == 'fake-time'
         # Report was built and cached above; the override alone does not
         # touch it.
-        assert di[PytestPluginReport].render() == 'report at real-time'
+        assert di[EvictionReport].render() == 'report at real-time'
 
         di.reset()
-        assert di[PytestPluginReport].render() == 'report at fake-time'
+        assert di[EvictionReport].render() == 'report at fake-time'
 
     di.reset()
-    assert di[PytestPluginReport].render() == 'report at real-time'
+    assert di[EvictionReport].render() == 'report at real-time'
 
 
 def test_aliasing_example_serves_one_instance_under_both_names() -> None:

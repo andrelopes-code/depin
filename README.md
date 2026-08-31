@@ -35,7 +35,12 @@ Type-first dependency injection for Python 3.12+.
 ```bash
 uv add pydepin                # core
 uv add 'pydepin[fastapi]'     # with the FastAPI integration
+uv add 'pydepin[pytest]'      # with the tested pytest floor enforced
 ```
+
+The `depin.ext.pytest` fixtures are registered on the `pytest11` entry point
+by the distribution, so plain `pydepin` already provides them; the `pytest`
+extra only states the pytest version the plugin is tested against.
 
 Requires Python 3.12+. The distribution is `pydepin`; the import package is
 `depin`.

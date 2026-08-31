@@ -1,7 +1,7 @@
 """Evicting a singleton consumer's cache around an override.
 
 The pattern the `depin.ext.pytest` plugin's `depin_override` fixture
-automates. Run with ``python -m examples.pytest_plugin.main``.
+automates. Run with ``python -m examples.eviction.main``.
 """
 
 from typing import Protocol

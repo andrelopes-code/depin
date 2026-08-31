@@ -74,3 +74,4 @@ nav:
       - Warmup and health: reference/operations.md
       - Integration contract: reference/hosting.md
       - FastAPI: reference/fastapi.md
+      - pytest: reference/pytest.md

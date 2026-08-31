@@ -47,7 +47,7 @@ Three details worth knowing:
 
     ```pycon
     >>> di = Container().bind(Clock).bind(Report).freeze()
-    >>> real_report = di[Report]
+    >>> _ = di[Report]
     >>> with di.override(Clock, FrozenClock()):
     ...     di[Clock].now()
     ...     di[Report].render()
@@ -73,8 +73,11 @@ Three details worth knowing:
     ```
 
     The `depin.ext.pytest` fixtures below call `reset()` on both edges of the
-    block, so a test never has to reason about which consumers were built
-    first.
+    block, so a test never has to reason about which *singletons in the root
+    cache* were built first. A scoped value already cached in an open
+    `depin_scope` frame is outside that cache: neither edge evicts it, so it
+    keeps the dependency it was built with for as long as the scope stays
+    open.
 
 ## A pytest fixture
 
@@ -102,12 +105,14 @@ For an async graph use `aclose()` in the teardown half of the fixture.
 
 ## The pytest plugin
 
-Installing the `pytest` extra registers `depin.ext.pytest` on the `pytest11`
-entry point, so its fixtures are available in any suite with no
-`conftest.py` import:
+`depin.ext.pytest` is registered on the `pytest11` entry point by the
+distribution, so installing `pydepin` at all makes its fixtures available in
+any suite with no `conftest.py` import. The `pytest` extra adds nothing to
+that: it only states the pytest floor the plugin is tested against.
 
 ```bash
-uv add pydepin --extra pytest
+uv add pydepin                # the fixtures are already available
+uv add 'pydepin[pytest]'      # and the tested pytest floor is enforced
 ```
 
 The plugin defines `depin_container` itself, but only to raise: a suite that
@@ -140,8 +145,8 @@ def test_report_uses_the_fake_clock(depin_container, depin_override) -> None:
     with depin_override(Clock, FrozenClock()) as di:
         assert di[Report].render() == 'at 2026-01-01'
 
-    # The block leaves no trace: reset() on exit rebuilds Report against the
-    # real Clock the next time it is resolved.
+    # Report is a singleton in the root cache, so reset() on exit rebuilds it
+    # against the real Clock the next time it is resolved.
     assert depin_container[Report].render() == 'at real'
 ```
 
@@ -160,6 +165,14 @@ def test_job_sees_the_seeded_value(depin_container, depin_scope) -> None:
 ```
 
 `depin_ascope` is its async counterpart, built on `Host.ascope()`.
+
+One test may request `depin_scope` and `depin_override` together. Both edges
+of the override block reach the root cache only, so a scoped value already
+built inside the open scope is untouched and keeps the dependency it was
+constructed with.
+
+`examples/eviction/` in the repository runs the same eviction without pytest,
+as a plain module.
 
 ## Replacing bindings instead of overriding them
 
