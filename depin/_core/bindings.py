@@ -1,11 +1,19 @@
 """The registration surface shared by `Container` and `Registry`."""
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from typing import Self, final, overload
 
 from depin._core.markers import Token
 from depin._core.scope import Scope
-from depin._core.spec import AliasBinding, BindRecord, Bindings, FrameBinding, ProviderKey, ValueBinding
+from depin._core.spec import (
+    AliasBinding,
+    BindRecord,
+    Bindings,
+    CollectionBinding,
+    FrameBinding,
+    ProviderKey,
+    ValueBinding,
+)
 from depin.errors import InvalidProviderError
 
 type _BindFn = Callable[[type[object] | Callable[..., object], Scope, type[object] | None, str | None], None]
@@ -220,6 +228,69 @@ class BindingCollector:
         self._records.append(
             BindRecord(
                 source=AliasBinding(key=key, target=to, target_tag=to_tag),
+                scope=Scope.TRANSIENT,
+                provides=None,
+                tag=tag,
+            )
+        )
+        return self
+
+    def collect(
+        self,
+        element: ProviderKey,
+        members: Sequence[ProviderKey],
+        *,
+        tag: str | None = None,
+    ) -> Self:
+        """Register a list of existing bindings under the key ``list[element]``.
+
+        Resolving that key returns each member's value, in the order given here.
+        Members keep their own lifetimes, cache entries, and teardowns, so a
+        singleton member is built once however many collections name it, and a
+        scoped member is rebuilt per scope. Every resolution returns a new list,
+        so no caller can mutate another's.
+
+        The declaration is what makes a multi-binding explicit. Members stay bound
+        under their own keys, so registering two implementations under one key by
+        accident still raises `DuplicateProviderError`, and the collection
+        occupies `list[element]`, which no ordinary binding claims.
+
+        A collection is an ordinary node in the validated graph: an unbound
+        member, a member listed twice, two collections over one element and tag,
+        a cycle through a collection, and a singleton that reaches a scoped
+        member through one are all rejected by `Container.freeze()`. An empty
+        collection is legal and resolves to an empty list.
+
+        Args:
+            element: The key each member provides. The collection is registered
+                under a list of it.
+            members: The bindings to gather, in the order they should appear.
+            tag: Disambiguator when several collections share an element.
+
+        Returns:
+            ``self``, for chaining.
+
+        Example:
+            ```pycon
+            >>> from typing import Protocol
+            >>> from depin import Container
+            >>> class Handler(Protocol):
+            ...     def run(self) -> str: ...
+            >>> class Email:
+            ...     def run(self) -> str:
+            ...         return 'email'
+            >>> class Sms:
+            ...     def run(self) -> str:
+            ...         return 'sms'
+            >>> di = Container().bind(Email).bind(Sms).collect(Handler, [Email, Sms]).freeze()
+            >>> [handler.run() for handler in di.resolve(list[Handler])]
+            ['email', 'sms']
+
+            ```
+        """
+        self._records.append(
+            BindRecord(
+                source=CollectionBinding(element=element, members=tuple(members)),
                 scope=Scope.TRANSIENT,
                 provides=None,
                 tag=tag,

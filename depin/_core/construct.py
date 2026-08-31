@@ -22,6 +22,7 @@ from depin._core.typeguards import (
     as_async_iterator,
     as_awaitable,
     as_class,
+    as_collection_members,
     as_factory,
     as_sync_context_manager,
     as_sync_iterator,
@@ -71,6 +72,8 @@ def sync(
             raise AsyncInSyncContextError(f'{fmt_key(key)} is an async provider; resolve it with aresolve()')
         case ProviderShape.ALIAS:
             return as_alias_target(kwargs, key)
+        case ProviderShape.COLLECTION:
+            return as_collection_members(kwargs, tuple(param.name for param in spec.params), key)
 
 
 async def asynchronous(
