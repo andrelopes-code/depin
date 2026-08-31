@@ -89,12 +89,14 @@ def test_a_decorated_singleton_resolves_through_its_wrapper() -> None:
 def test_a_decorated_singleton_keeps_one_identity() -> None:
     class Store: ...
 
-    class Loud:
+    class Loud(Store):
         def __init__(self, inner: Store) -> None:
             self.inner = inner
 
     di = Container().bind(Store).decorate(Store, Loud).freeze()
-    assert di.resolve(Store) is di.resolve(Store)
+    resolved = di.resolve(Store)
+    assert resolved is di.resolve(Store)
+    assert isinstance(resolved, Loud)
 
 
 def test_the_undecorated_form_is_reachable_under_underlying() -> None:
@@ -191,7 +193,7 @@ def test_a_decorator_resolves_its_own_dependencies() -> None:
 def test_a_decorated_scoped_binding_is_rebuilt_per_scope() -> None:
     class Store: ...
 
-    class Loud:
+    class Loud(Store):
         def __init__(self, inner: Store) -> None:
             self.inner = inner
 
@@ -199,19 +201,26 @@ def test_a_decorated_scoped_binding_is_rebuilt_per_scope() -> None:
     with di.scope():
         first = di.resolve(Store)
         assert di.resolve(Store) is first
+        assert isinstance(first, Loud)
     with di.scope():
-        assert di.resolve(Store) is not first
+        second = di.resolve(Store)
+        assert second is not first
+        assert isinstance(second, Loud)
 
 
 def test_a_decorated_transient_binding_is_rebuilt_per_resolution() -> None:
     class Store: ...
 
-    class Loud:
+    class Loud(Store):
         def __init__(self, inner: Store) -> None:
             self.inner = inner
 
     di = Container().bind(Store, scope=Scope.TRANSIENT).decorate(Store, Loud).freeze()
-    assert di.resolve(Store) is not di.resolve(Store)
+    first = di.resolve(Store)
+    second = di.resolve(Store)
+    assert first is not second
+    assert isinstance(first, Loud)
+    assert isinstance(second, Loud)
 
 
 def test_a_decorated_alias_resolves_through_the_wrapper() -> None:
@@ -409,12 +418,16 @@ async def test_a_sync_decorator_over_an_async_binding_needs_aresolve() -> None:
 async def test_a_consumer_of_a_decorated_async_binding_needs_aresolve() -> None:
     class Store: ...
 
+    class Loud(Store):
+        def __init__(self, inner: Store) -> None:
+            self.inner = inner
+
     class Service:
         def __init__(self, store: Store) -> None:
             self.store = store
 
     async def loud(inner: Store) -> Store:
-        return Store()
+        return Loud(inner)
 
     di = Container().bind(Store).bind(Service).decorate(Store, loud).freeze()
     assert di.graph().node(Service).needs_async
@@ -430,8 +443,9 @@ def test_a_decorator_over_an_unbound_key_is_rejected() -> None:
             self.inner = inner
 
     container = Container().decorate(Store, Loud)
-    with pytest.raises(MissingProviderError, match='no binding is registered'):
+    with pytest.raises(MissingProviderError, match='no binding is registered') as error:
         _ = container.freeze()
+    assert 'condition that did not hold' not in str(error.value)
 
 
 def test_a_decorator_over_a_scope_value_binding_is_rejected() -> None:
@@ -455,3 +469,40 @@ def test_a_lifecycle_decorator_over_a_transient_binding_is_rejected() -> None:
     container = Container().bind(Store, scope=Scope.TRANSIENT).decorate(Store, loud)
     with pytest.raises(InvalidScopeError, match='cannot decorate transient'):
         _ = container.freeze()
+
+
+def test_an_inactive_decorator_leaves_the_binding_bare() -> None:
+    class Store:
+        def get(self) -> str:
+            return 'plain'
+
+    class Loud:
+        def __init__(self, inner: Store) -> None:
+            self.inner = inner
+
+    di = Container().bind(Store).decorate(Store, Loud, when=False).freeze()
+    assert di.resolve(Store).get() == 'plain'
+    assert di.graph().find(Underlying(Store, 0)) is None
+
+
+def test_a_decorator_over_an_inactive_binding_is_rejected() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    container = Container().bind(Store, when=False).decorate(Store, Loud)
+    with pytest.raises(MissingProviderError, match='same condition') as error:
+        _ = container.freeze()
+    assert 'registered under a condition that did not hold' in str(error.value)
+    assert 'no binding is registered' not in str(error.value)
+
+
+def test_a_decorator_sharing_its_binding_condition_disappears_with_it() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    di = Container().bind(Store, when=False).decorate(Store, Loud, when=False).freeze()
+    assert di.graph().nodes == ()

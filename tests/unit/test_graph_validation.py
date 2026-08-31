@@ -1,7 +1,7 @@
 """Graph validation performed by freeze(): duplicates, cycles, captives, async reach."""
 
 import sys
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 from types import ModuleType
 from typing import Annotated, Literal, override
 
@@ -18,6 +18,7 @@ from depin.errors import (
     CircularDependencyError,
     DuplicateProviderError,
     InvalidProviderError,
+    InvalidScopeError,
     MissingProviderError,
 )
 
@@ -758,3 +759,119 @@ def test_both_union_spellings_reaching_a_key_position_are_rejected(key: object, 
 
     with pytest.raises(InvalidProviderError, match=fragment):
         _ = Container().alias(key, to=Target).freeze()  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+
+
+def test_decorating_an_unbound_key_is_rejected() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    container = Container().decorate(Store, Loud)
+    with pytest.raises(MissingProviderError, match='cannot decorate'):
+        _ = container.freeze()
+
+
+def test_decorating_a_key_bound_under_another_tag_is_rejected() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    container = Container().bind(Store, tag='primary').decorate(Store, Loud)
+    with pytest.raises(MissingProviderError, match='cannot decorate'):
+        _ = container.freeze()
+
+
+def test_decorating_a_scope_value_is_rejected() -> None:
+    class Request: ...
+
+    class Loud:
+        def __init__(self, inner: Request) -> None: ...
+
+    container = Container().scope_value(Request).decorate(Request, Loud)
+    with pytest.raises(InvalidProviderError, match='scope_value'):
+        _ = container.freeze()
+
+
+def test_a_lifecycle_decorator_over_a_transient_binding_is_rejected() -> None:
+    class Store: ...
+
+    def loud(inner: Store) -> Generator[Store]:
+        yield inner
+
+    container = Container().bind(Store, scope=Scope.TRANSIENT).decorate(Store, loud)
+    with pytest.raises(InvalidScopeError, match='never cached'):
+        _ = container.freeze()
+
+
+def test_a_decorator_that_is_not_callable_is_rejected() -> None:
+    class Store: ...
+
+    container = Container().bind(Store).decorate(Store, 3)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+    with pytest.raises(InvalidProviderError, match='cannot determine how to call'):
+        _ = container.freeze()
+
+
+def test_decorating_a_key_that_is_not_a_provider_key_is_rejected() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    container = Container().bind(Store).decorate(3, Loud)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+    with pytest.raises(InvalidProviderError, match='as a provider key'):
+        _ = container.freeze()
+
+
+def test_a_cycle_through_a_decorator_dependency_is_rejected() -> None:
+    class Store: ...
+
+    class Sidecar:
+        def __init__(self, store: Store) -> None: ...
+
+    class Loud:
+        def __init__(self, inner: Store, sidecar: Sidecar) -> None: ...
+
+    container = Container().bind(Store).bind(Sidecar).decorate(Store, Loud)
+    with pytest.raises(CircularDependencyError):
+        _ = container.freeze()
+
+
+def test_a_decorator_capturing_a_scoped_dependency_is_rejected() -> None:
+    class Store: ...
+
+    class Session: ...
+
+    class Loud:
+        def __init__(self, inner: Store, session: Session) -> None: ...
+
+    container = Container().bind(Store).bind(Session, scope=Scope.SCOPED).decorate(Store, Loud)
+    with pytest.raises(CaptiveDependencyError):
+        _ = container.freeze()
+
+
+def test_a_decorator_with_an_unbound_dependency_is_rejected() -> None:
+    class Store: ...
+
+    class Missing: ...
+
+    class Loud:
+        def __init__(self, inner: Store, missing: Missing) -> None: ...
+
+    container = Container().bind(Store).decorate(Store, Loud)
+    with pytest.raises(MissingProviderError):
+        _ = container.freeze()
+
+
+def test_a_duplicate_binding_is_still_reported_under_its_own_key() -> None:
+    class Store: ...
+
+    class Loud(Store):
+        def __init__(self, inner: Store) -> None: ...
+
+    container = Container().bind(Store).bind(Store).decorate(Store, Loud)
+    with pytest.raises(DuplicateProviderError) as error:
+        _ = container.freeze()
+    assert 'undecorated' not in str(error.value)
+    assert Store.__qualname__ in str(error.value)
