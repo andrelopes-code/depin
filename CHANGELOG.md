@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0](https://github.com/andrelopes-code/depin/compare/v0.9.0...v0.10.0) (2026-08-31)
+
+
+### Features
+
+* accept generic provider keys ([51ec4dc](https://github.com/andrelopes-code/depin/commit/51ec4dcd3acdcddeaed008f14da44a751232a504))
+
 ## [0.9.0](https://github.com/andrelopes-code/depin/compare/v0.8.0...v0.9.0) (2026-08-31)
 
 
