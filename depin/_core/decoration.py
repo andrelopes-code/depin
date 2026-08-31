@@ -100,7 +100,12 @@ def _check_targets(
 
 
 def _chain(spec: ProviderSpec, layers: Sequence[DecorationSpec]) -> Iterable[ProviderSpec]:
-    """The registered binding one layer down, then one node per wrapper above it."""
+    """The registered binding one layer down, then one node per wrapper above it.
+
+    Every yielded spec carries ``needs_async=False``: `graph._with_async_flags`
+    recomputes it for the whole plan after the fold, from each node's own shape
+    and its dependencies, so a value written here is never read.
+    """
     key = spec.key
     tag = spec.tag
     yield ProviderSpec(
@@ -109,7 +114,7 @@ def _chain(spec: ProviderSpec, layers: Sequence[DecorationSpec]) -> Iterable[Pro
         source=spec.source,
         scope=spec.scope,
         shape=spec.shape,
-        needs_async=spec.needs_async,
+        needs_async=False,
         params=spec.params,
     )
     outermost = len(layers) - 1
