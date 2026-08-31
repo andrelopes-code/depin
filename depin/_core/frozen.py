@@ -8,6 +8,16 @@ from typing import overload
 
 from depin._core import construct, injection, overrides
 from depin._core.diagnostics import DependencyGraph, build_graph
+from depin._core.health import (
+    HealthCheck,
+    HealthReport,
+    HealthResult,
+    checked_specs,
+    declared_checks,
+    reject_async_checks,
+    run_check,
+    run_check_async,
+)
 from depin._core.markers import Token
 from depin._core.render import render_tree
 from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional_frame, push_frame
@@ -297,6 +307,71 @@ class FrozenContainer:
             _ = await self._aresolve_any(spec.key, spec.tag)
             constructed.append(spec)
         return warmup_report(self.graph(), constructed, cached)
+
+    def checks(self) -> tuple[HealthCheck, ...]:
+        """Return the verification callables the bindings declared, as data.
+
+        Resolves nothing and runs nothing: this is the declaration, in
+        resolution order. `health()` and `ahealth()` are what run them.
+
+        Example:
+            ```pycon
+            >>> from depin import Container
+            >>> class Database: ...
+            >>> def ping(db: Database) -> None: ...
+            >>> di = Container().bind(Database, check=ping).freeze()
+            >>> [check.key.__qualname__ for check in di.checks()]
+            ['Database']
+
+            ```
+        """
+        return declared_checks(checked_specs(self._plan))
+
+    def health(self) -> HealthReport:
+        """Run every declared check and report what each said.
+
+        Each check receives the value its provider resolves to, and is healthy
+        unless it raises or returns ``False``. Every check runs: one failure
+        never hides another, and a raised exception is carried on its
+        `HealthResult` rather than propagating. An error raised while
+        *resolving* a provider does propagate — a container that cannot build a
+        provider is misused, not unhealthy.
+
+        Raises:
+            AsyncInSyncContextError: Some check needs an event loop, because its
+                provider is async or the check is. Nothing runs before this is
+                raised; use `ahealth()`.
+            InvalidProviderError: A check returned an awaitable.
+            OutsideScopeError: A check's provider is scoped and no scope is active.
+
+        Example:
+            ```pycon
+            >>> from depin import Container
+            >>> class Database:
+            ...     ready = False
+            >>> def ping(db: Database) -> bool:
+            ...     return db.ready
+            >>> di = Container().bind(Database, check=ping).freeze()
+            >>> di.health().healthy
+            False
+
+            ```
+        """
+        specs = checked_specs(self._plan)
+        reject_async_checks(specs)
+        return HealthReport(tuple(run_check(spec, self._resolve_any(spec.key, spec.tag)) for spec in specs))
+
+    async def ahealth(self) -> HealthReport:
+        """Run every declared check inside an event loop; the counterpart to `health()`.
+
+        Drives async providers and `async def` checks. Otherwise identical.
+        """
+        specs = checked_specs(self._plan)
+        results: list[HealthResult] = []
+        for spec in specs:
+            value = await self._aresolve_any(spec.key, spec.tag)
+            results.append(await run_check_async(spec, value))
+        return HealthReport(tuple(results))
 
     @overload
     def inject[**P, R](self, fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]: ...
