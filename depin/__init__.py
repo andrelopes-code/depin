@@ -48,11 +48,9 @@ except PackageNotFoundError:
     # distribution metadata to read the version from.
     __version__ = '0.0.0+unknown'
 
-# RUF022's isort-style sort groups SCREAMING_SNAKE_CASE names before CamelCase
-# ones; kept in plain ASCII order instead, matching tests/unit/test_public_api.py.
-__all__ = (  # noqa: RUF022
-    'Bindings',
+__all__ = (
     'CONTRACT_VERSION',
+    'Bindings',
     'Condition',
     'Container',
     'ContractVersion',

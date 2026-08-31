@@ -8,8 +8,8 @@ import pytest
 import depin
 
 EXPECTED_EXPORTS = (
-    'Bindings',
     'CONTRACT_VERSION',
+    'Bindings',
     'Condition',
     'Container',
     'ContractVersion',
@@ -39,9 +39,8 @@ EXPECTED_EXPORTS = (
 )
 
 
-def test_all_is_sorted_and_complete() -> None:
+def test_all_is_complete() -> None:
     assert depin.__all__ == EXPECTED_EXPORTS
-    assert list(depin.__all__) == sorted(depin.__all__)
 
 
 @pytest.mark.parametrize('name', EXPECTED_EXPORTS)
