@@ -57,11 +57,19 @@ jobs:
       # which imports the whole `depin` package. `coverage run -m pytest`
       # starts the collector first, before the interpreter imports anything,
       # so it sees that import.
+      #
+      # One command per step: this matrix includes `windows-latest`, where a
+      # multi-command `run:` block exits with the status of its last command
+      # alone, so a failing test run followed by a passing report would leave
+      # the step green.
       - name: Test
-        run: |
-          uv run coverage run -m pytest
-          uv run coverage xml
-          uv run coverage report --show-missing
+        run: uv run coverage run -m pytest
+
+      - name: Write the coverage XML
+        run: uv run coverage xml
+
+      - name: Report coverage
+        run: uv run coverage report --show-missing
 
       # Skipped entirely until CODECOV_TOKEN exists, so the absence of the
       # secret is visible as a skipped step rather than hidden behind a
@@ -106,10 +114,12 @@ jobs:
           uv run --no-sync python -c
           "import sys; assert sys._is_gil_enabled() is False, 'the GIL is enabled; this job proves nothing'"
 
-      - name: Test with coverage
-        run: |
-          uv run --no-sync coverage run -m pytest tests/unit
-          uv run --no-sync coverage report
+      # No coverage here. This job runs `tests/unit` only, so every module
+      # under `depin/ext/` is unexercised and drags the total toward the floor
+      # for a reason that has nothing to do with the locks this job tests. The
+      # `checks` job measures coverage against the whole suite.
+      - name: Test
+        run: uv run --no-sync pytest tests/unit
 
   prerelease:
     name: python 3.15 pre-release
