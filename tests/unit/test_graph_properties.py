@@ -28,6 +28,7 @@ class GraphCase:
     generics: frozenset[int] = frozenset()
     decorations: frozenset[int] = frozenset()
     inactive: frozenset[int] = frozenset()
+    checks: frozenset[int] = frozenset()
 
 
 class _GenericMarker0: ...
@@ -75,6 +76,10 @@ _GENERIC_KEYS: tuple[type[object], ...] = (
     _GenericContainer[_GenericMarker6],
     _GenericContainer[_GenericMarker7],
 )
+
+
+def _always_healthy(value: object) -> None:
+    return None
 
 
 def _set_dynamic_attribute(target: object, name: str, value: object) -> None:
@@ -149,9 +154,10 @@ def _materialize(case: GraphCase) -> Container:
     for index, node in enumerate(nodes):
         if case.registered[index]:
             provides = keys[index] if index in case.generics else None
-            _ = container.bind(node, scope=case.scopes[index], provides=provides)
+            check = _always_healthy if index in case.checks else None
+            _ = container.bind(node, scope=case.scopes[index], provides=provides, check=check)
             if index in case.duplicates:
-                _ = container.bind(node, scope=case.scopes[index], provides=provides)
+                _ = container.bind(node, scope=case.scopes[index], provides=provides, check=check)
     for index in case.aliases:
         alias_key = type(f'GraphAlias{index}', (), {})
         _ = container.alias(alias_key, to=keys[index])
@@ -210,6 +216,7 @@ def _graphs(draw: st.DrawFn) -> GraphCase:
     decorations = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
     unregistered = tuple(index for index, is_registered in enumerate(registered) if not is_registered)
     inactive = draw(st.sets(st.sampled_from(unregistered))) if unregistered else frozenset[int]()
+    checks = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
     return GraphCase(
         size,
         frozenset(edges),
@@ -222,6 +229,7 @@ def _graphs(draw: st.DrawFn) -> GraphCase:
         frozenset(generics),
         frozenset(decorations),
         frozenset(inactive),
+        frozenset(checks),
     )
 
 
@@ -459,3 +467,25 @@ def test_an_inactive_binding_leaves_the_plan_as_if_it_were_never_written(case: G
     with_inactive = _freeze_result(case).replace(INACTIVE_NOTE, '')
     without = _freeze_result(replace(case, inactive=frozenset()))
     assert with_inactive == without
+
+
+@settings(deadline=None)
+@given(_graphs())
+def test_declaring_a_check_changes_nothing_about_the_plan(case: GraphCase) -> None:
+    """A check is a value the plan carries, not a rule it applies."""
+    assert _freeze_result(case) == _freeze_result(replace(case, checks=frozenset()))
+
+
+@settings(deadline=None)
+@given(case=_graphs())
+def test_checks_reports_exactly_the_specs_the_plan_marked_checked(case: GraphCase) -> None:
+    """A check is neither lost nor invented by validation, decoration, or the async pass."""
+    container = _materialize(case)
+    try:
+        frozen = container.freeze()
+    except DepinError:
+        return
+    plan = _frozen_plan(frozen)
+    expected = {(spec.key, spec.tag) for spec in plan.order if spec.check is not None}
+    actual = {(check.key, check.tag) for check in frozen.checks()}
+    assert actual == expected
