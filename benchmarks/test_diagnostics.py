@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Protocol
 
-from benchmarks.graphs import build_chain
+from benchmarks.graphs import build_chain, build_decorated_chain
 
 
 class Benchmark(Protocol):
@@ -36,3 +36,16 @@ def test_export_a_large_graph_as_dot(benchmark: Benchmark) -> None:
     container, _ = build_chain(1000)
     graph = container.freeze().graph()
     _ = benchmark(graph.dot)
+
+
+def test_explain_a_deep_chain_with_every_node_decorated(benchmark: Benchmark) -> None:
+    """`test_explain_a_deep_chain`, with one decorator over every node, so the
+    cost of rendering a decoration chain is visible against the plain-chain
+    baseline."""
+    container, leaf = build_decorated_chain(1000)
+    frozen = container.freeze()
+
+    def explain() -> str:
+        return frozen.explain(leaf)
+
+    _ = benchmark(explain)
