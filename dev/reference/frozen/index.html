@@ -513,6 +513,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/fastapi/" class="md-nav__link">
         
   
@@ -834,6 +862,61 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.warmup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        warmup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.awarmup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        awarmup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.ahealth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ahealth
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.FrozenContainer.inject" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1010,6 +1093,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../fastapi/" class="md-nav__link">
         
   
@@ -1147,6 +1258,61 @@
     <span class="md-ellipsis">
       
         aclose
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.warmup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        warmup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.awarmup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        awarmup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        health
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.ahealth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ahealth
       
     </span>
   </a>
@@ -1760,6 +1926,297 @@ Failures are collected into an <code>ExceptionGroup</code>.</p>
 <p>The async counterpart to <code>close()</code>, and the one to call when any
 singleton is an async provider. Drains the root scope in reverse order of
 construction, collecting failures into an <code>ExceptionGroup</code>.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.FrozenContainer.warmup" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">warmup</span>
+
+
+<a href="#depin.FrozenContainer.warmup" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">warmup</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">WarmupReport</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Construct every singleton now, instead of on first resolution.</p>
+<p>Walks the plan in resolution order, building each singleton that is not
+built already, so a provider that fails does so at startup rather than
+on the first request that needs it. Scoped and transient providers are
+untouched: a scoped value belongs to a scope, and a transient one is
+never cached. Calling it twice constructs nothing the second time.</p>
+<p>A failure propagates unchanged — a container with some singletons built
+and one failed is a startup to abort, not a state to report.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="AsyncInSyncContextError (depin.errors.AsyncInSyncContextError)" href="../errors/#depin.errors.AsyncInSyncContextError">AsyncInSyncContextError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Some singleton needs async resolution.
+Nothing is constructed before this is raised; use <code>awarmup()</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Service</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">warmup</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">constructed</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">cached</span><span class="p">)</span>
+<span class="go">(2, 0)</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.FrozenContainer.awarmup" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">awarmup</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+<a href="#depin.FrozenContainer.awarmup" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">awarmup</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">WarmupReport</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Construct every singleton now; the async counterpart to <code>warmup()</code>.</p>
+<p>Drives async singletons as well as sync ones, so it is what an ASGI
+lifespan calls. Otherwise identical: resolution order, the same report,
+and a failure that propagates unchanged.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CircularDependencyError (depin.errors.CircularDependencyError)" href="../errors/#depin.errors.CircularDependencyError">CircularDependencyError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>This task re-enters construction of the
+same cached provider.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.FrozenContainer.checks" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">checks</span>
+
+
+<a href="#depin.FrozenContainer.checks" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">checks</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">HealthCheck</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the verification callables the bindings declared, as data.</p>
+<p>Resolves nothing and runs nothing: this is the declaration, in
+resolution order. <code>health()</code> and <code>ahealth()</code> are what run them.</p>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">check</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span> <span class="k">for</span> <span class="n">check</span> <span class="ow">in</span> <span class="n">di</span><span class="o">.</span><span class="n">checks</span><span class="p">()]</span>
+<span class="go">['Database']</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.FrozenContainer.health" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">health</span>
+
+
+<a href="#depin.FrozenContainer.health" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">health</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">HealthReport</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Run every declared check and report what each said.</p>
+<p>Each check receives the value its provider resolves to, and is healthy
+unless it raises or returns <code>False</code>. Every check runs: one failure
+never hides another, and a raised exception is carried on its
+<code>HealthResult</code> rather than propagating. An error raised while
+<em>resolving</em> a provider does propagate — a container that cannot build a
+provider is misused, not unhealthy.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="AsyncInSyncContextError (depin.errors.AsyncInSyncContextError)" href="../errors/#depin.errors.AsyncInSyncContextError">AsyncInSyncContextError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Some check needs an event loop, because its
+provider is async or the check is. Nothing runs before this is
+raised; use <code>ahealth()</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="InvalidProviderError">InvalidProviderError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A check returned an awaitable.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="OutsideScopeError">OutsideScopeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A check's provider is scoped and no scope is active.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">ready</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">ready</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">health</span><span class="p">()</span><span class="o">.</span><span class="n">healthy</span>
+<span class="go">False</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.FrozenContainer.ahealth" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">ahealth</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+<a href="#depin.FrozenContainer.ahealth" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">ahealth</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">HealthReport</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Run every declared check inside an event loop; the counterpart to <code>health()</code>.</p>
+<p>Drives async providers and <code>async def</code> checks. Otherwise identical.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="OutsideScopeError">OutsideScopeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A check's provider is scoped and no scope is active.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CircularDependencyError (depin.errors.CircularDependencyError)" href="../errors/#depin.errors.CircularDependencyError">CircularDependencyError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>This task re-enters construction of the
+same cached provider.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

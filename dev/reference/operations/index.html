@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/errors/">
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/operations/">
       
       
-        <link rel="prev" href="../markers/">
+        <link rel="prev" href="../diagnostics/">
       
       
-        <link rel="next" href="../diagnostics/">
+        <link rel="next" href="../fastapi/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Errors - depin</title>
+        <title>Warmup and health - depin</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#errors" class="md-skip">
+        <a href="#warmup-and-health" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Errors
+              Warmup and health
             
           </span>
         </div>
@@ -794,37 +794,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Errors
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../errors/" class="md-nav__link">
         
   
   
@@ -840,164 +813,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#depin.errors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        errors
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="errors">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.DepinError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DepinError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.MissingProviderError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MissingProviderError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.CircularDependencyError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CircularDependencyError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.AsyncInSyncContextError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        AsyncInSyncContextError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.OutsideScopeError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        OutsideScopeError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.DuplicateProviderError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DuplicateProviderError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.CaptiveDependencyError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CaptiveDependencyError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.InvalidProviderError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        InvalidProviderError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.InvalidScopeError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        InvalidScopeError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.TeardownError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        TeardownError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.ContainerNotBoundError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ContainerNotBoundError
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1035,10 +850,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../operations/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1054,6 +896,87 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#depin.WarmupReport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WarmupReport
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.HealthCheck" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HealthCheck
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.HealthResult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HealthResult
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.HealthReport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HealthReport
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="HealthReport">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#depin.HealthReport.healthy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        healthy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1121,132 +1044,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#depin.errors" class="md-nav__link">
+  <a href="#depin.WarmupReport" class="md-nav__link">
     <span class="md-ellipsis">
       
-        errors
+        WarmupReport
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="errors">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.HealthCheck" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HealthCheck
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.HealthResult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HealthResult
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.HealthReport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HealthReport
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="HealthReport">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#depin.errors.DepinError" class="md-nav__link">
+  <a href="#depin.HealthReport.healthy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DepinError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.MissingProviderError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MissingProviderError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.CircularDependencyError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CircularDependencyError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.AsyncInSyncContextError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        AsyncInSyncContextError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.OutsideScopeError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        OutsideScopeError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.DuplicateProviderError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DuplicateProviderError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.CaptiveDependencyError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CaptiveDependencyError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.InvalidProviderError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        InvalidProviderError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.InvalidScopeError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        InvalidScopeError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.TeardownError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        TeardownError
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#depin.errors.ContainerNotBoundError" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ContainerNotBoundError
+        healthy
       
     </span>
   </a>
@@ -1278,27 +1124,94 @@
   
 
 
-<h1 id="errors">Errors<a class="headerlink" href="#errors" title="Permanent link">&para;</a></h1>
+<h1 id="warmup-and-health">Warmup and health<a class="headerlink" href="#warmup-and-health" title="Permanent link">&para;</a></h1>
+<p>The data behind <code>FrozenContainer.warmup()</code> / <code>awarmup()</code> and
+<code>FrozenContainer.checks()</code> / <code>health()</code> / <code>ahealth()</code>.</p>
 
 
-<div class="doc doc-object doc-module">
+<div class="doc doc-object doc-class">
 
 
 
-<h2 id="depin.errors" class="doc doc-heading">
-            <span class="doc doc-object-name doc-module-name">errors</span>
+<h2 id="depin.WarmupReport" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">WarmupReport</span>
 
 
-<a href="#depin.errors" class="headerlink" title="Permanent link">&para;</a></h2>
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#depin.WarmupReport" class="headerlink" title="Permanent link">&para;</a></h2>
+
 
     <div class="doc doc-contents first">
 
-        <p>Exceptions raised by depin, all rooted at <code>DepinError</code>.</p>
-<p>Every failure depin raises inherits <code>DepinError</code>, so a single <code>except
-DepinError</code> handles the library uniformly. Errors that a caller might
-reasonably want to catch as a standard Python exception also inherit the
-matching builtin — <code>InvalidProviderError</code> is a <code>TypeError</code>,
-<code>InvalidScopeError</code> is a <code>ValueError</code>, <code>TeardownError</code> is a <code>RuntimeError</code>.</p>
+
+
+        <p>What a <code>FrozenContainer.warmup</code> call did, node by node.</p>
+<p>Both tuples are in resolution order, and both hold the same <code>GraphNode</code> the
+dependency graph exposes, so a caller reads a warmed provider's key, scope,
+shape, and dependencies off the node it already has.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.WarmupReport.constructed">constructed</span></code></td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="GraphNode
+
+
+  
+      dataclass
+   (depin._core.diagnostics.GraphNode)" href="../diagnostics/#depin.GraphNode">GraphNode</a>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Singletons this call built.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.WarmupReport.cached">cached</span></code></td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="GraphNode
+
+
+  
+      dataclass
+   (depin._core.diagnostics.GraphNode)" href="../diagnostics/#depin.GraphNode">GraphNode</a>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Singletons that were already built when the call began.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">warmup</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">constructed</span><span class="p">]</span>
+<span class="go">['Config']</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">warmup</span><span class="p">()</span><span class="o">.</span><span class="n">cached</span> <span class="o">==</span> <span class="n">report</span><span class="o">.</span><span class="n">constructed</span>
+<span class="go">True</span>
+</code></pre></div>
+</details>
 
 
 
@@ -1319,35 +1232,10 @@ matching builtin — <code>InvalidProviderError</code> is a <code>TypeError</cod
 
 
 
-<div class="doc doc-object doc-class">
 
 
 
-<h3 id="depin.errors.DepinError" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">DepinError</span>
-
-
-<a href="#depin.errors.DepinError" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-            <p class="doc doc-class-bases">
-              Bases: <code><span title="Exception">Exception</span></code></p>
-
-
-
-        <p>Base class for every error raised by depin.</p>
-<p>Catch this to handle any depin failure uniformly; catch a subclass for a
-specific cause. No depin code path raises an exception outside this
-hierarchy.</p>
-
-
-
-
-
-
-
-
+  </div>
 
     </div>
 
@@ -1357,32 +1245,108 @@ hierarchy.</p>
 
 
 
-<h3 id="depin.errors.MissingProviderError" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">MissingProviderError</span>
+<h2 id="depin.HealthCheck" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">HealthCheck</span>
 
 
-<a href="#depin.errors.MissingProviderError" class="headerlink" title="Permanent link">&para;</a></h3>
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#depin.HealthCheck" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
-    <div class="doc doc-contents ">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code></p>
-
-
-
-        <p>No provider is registered for a requested key.</p>
-<p>Raised at <code>Container.freeze()</code> for an unsatisfied dependency, or at
-resolution time for an unregistered key. Resolve by binding the key on the
-<code>Container</code>, passing the right <code>tag</code>, or giving the parameter a
-default.</p>
+    <div class="doc doc-contents first">
 
 
 
+        <p>A verification callable a binding declared, as data.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.HealthCheck.key">key</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The provider whose value the check verifies.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.HealthCheck.tag">tag</span></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>That provider's tag, when it has one.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.HealthCheck.needs_async">needs_async</span></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether running it requires an event loop, because the
+provider needs async resolution or the check is a coroutine
+function.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">check</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">checks</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">check</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">needs_async</span>
+<span class="go">('Database', None, False)</span>
+</code></pre></div>
+</details>
 
 
 
 
 
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
 
     </div>
 
@@ -1392,31 +1356,119 @@ default.</p>
 
 
 
-<h3 id="depin.errors.CircularDependencyError" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">CircularDependencyError</span>
+<h2 id="depin.HealthResult" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">HealthResult</span>
 
 
-<a href="#depin.errors.CircularDependencyError" class="headerlink" title="Permanent link">&para;</a></h3>
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#depin.HealthResult" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
-    <div class="doc doc-contents ">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code></p>
-
-
-
-        <p>A cycle was detected in the dependency graph.</p>
-<p>Raised by <code>Container.freeze()</code>. Break the cycle by introducing a
-<code>Token</code> or interface seam, or restructuring so one side no longer
-depends on the other.</p>
+    <div class="doc doc-contents first">
 
 
 
+        <p>What one check said.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.HealthResult.key">key</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The provider whose value was verified.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.HealthResult.tag">tag</span></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>That provider's tag, when it has one.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.HealthResult.healthy">healthy</span></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>False when the check raised or returned <code>False</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="depin.HealthResult.error">error</span></code></td>
+            <td>
+                  <code><span title="Exception">Exception</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The exception the check raised, when it raised one.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">ready</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">ready</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">health</span><span class="p">()</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">healthy</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">error</span>
+<span class="go">('Database', False, None)</span>
+</code></pre></div>
+</details>
 
 
 
 
 
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
 
     </div>
 
@@ -1426,286 +1478,80 @@ depends on the other.</p>
 
 
 
-<h3 id="depin.errors.AsyncInSyncContextError" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">AsyncInSyncContextError</span>
+<h2 id="depin.HealthReport" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">HealthReport</span>
 
 
-<a href="#depin.errors.AsyncInSyncContextError" class="headerlink" title="Permanent link">&para;</a></h3>
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
 
+<a href="#depin.HealthReport" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>Every check's outcome, in resolution order.</p>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">ready</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">ready</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">health</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span><span class="o">.</span><span class="n">healthy</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">results</span><span class="p">)</span>
+<span class="go">(True, 1)</span>
+</code></pre></div>
+</details>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="depin.HealthReport.healthy" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">healthy</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#depin.HealthReport.healthy" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">healthy</span><span class="p">:</span> <span class="nb">bool</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code></p>
 
-
-
-        <p>A synchronous resolution requires an async provider.</p>
-<p>Raised by <code>FrozenContainer.resolve()</code> (or <code>frozen[key]</code>) when the
-target — or something it depends on — is an async provider. Use
-<code>FrozenContainer.aresolve()</code> inside an event loop instead.</p>
-
-
-
-
-
-
-
-
+        <p>Whether every check passed. An empty report is healthy.</p>
 
     </div>
 
 </div>
 
-<div class="doc doc-object doc-class">
 
-
-
-<h3 id="depin.errors.OutsideScopeError" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">OutsideScopeError</span>
-
-
-<a href="#depin.errors.OutsideScopeError" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code></p>
-
-
-
-        <p>A scoped binding was resolved with no active scope.</p>
-<p>Raised when a <code>Scope.SCOPED</code> provider is resolved outside any
-<code>FrozenContainer.scope()</code> / <code>ascope</code> block. Open a scope around
-the resolution, or make the provider a singleton.</p>
-
-
-
-
-
-
-
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="depin.errors.DuplicateProviderError" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">DuplicateProviderError</span>
-
-
-<a href="#depin.errors.DuplicateProviderError" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code></p>
-
-
-
-        <p>Two bindings resolve to the same key and tag.</p>
-<p>Raised by <code>Container.freeze()</code>. Remove the redundant binding, or give
-the implementations distinct <code>tag</code> values to register several under one key.</p>
-
-
-
-
-
-
-
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="depin.errors.CaptiveDependencyError" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">CaptiveDependencyError</span>
-
-
-<a href="#depin.errors.CaptiveDependencyError" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code></p>
-
-
-
-        <p>A singleton depends on a scoped provider it would capture for life.</p>
-<p>Raised by <code>Container.freeze()</code>. A singleton outlives every scope, so
-it would pin one scope's instance forever. Make the consumer scoped, or the
-dependency a singleton.</p>
-
-
-
-
-
-
-
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="depin.errors.InvalidProviderError" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">InvalidProviderError</span>
-
-
-<a href="#depin.errors.InvalidProviderError" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code>, <code><span title="TypeError">TypeError</span></code></p>
-
-
-
-        <p>A binding does not carry the type information depin needs.</p>
-<p>Raised by <code>Container.freeze()</code> when a factory has no return annotation and
-no <code>provides=</code>, when a parameter has no type annotation and no default,
-when a value cannot serve as a provider key, or when the registered source
-is neither a class nor a callable. Also raised at resolution time if a
-provider returns something incompatible with its declared shape — an
-<code>@contextmanager</code> factory that returns a plain value, for instance.</p>
-<p>Inherits <code>TypeError</code>, so existing <code>except TypeError</code> handlers keep
-working.</p>
-
-
-
-
-
-
-
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="depin.errors.InvalidScopeError" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">InvalidScopeError</span>
-
-
-<a href="#depin.errors.InvalidScopeError" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code>, <code><span title="ValueError">ValueError</span></code></p>
-
-
-
-        <p>A binding requests a lifetime it cannot have.</p>
-<p>Raised by <code>Container.freeze()</code> when a generator or context-manager provider
-is bound as <code>Scope.TRANSIENT</code>: such providers own a teardown, and a
-transient value is never cached, so nothing would ever drain it. Bind it as
-singleton or scoped.</p>
-<p>Inherits <code>ValueError</code>, so existing <code>except ValueError</code> handlers keep
-working.</p>
-
-
-
-
-
-
-
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="depin.errors.TeardownError" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">TeardownError</span>
-
-
-<a href="#depin.errors.TeardownError" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code>, <code><span title="RuntimeError">RuntimeError</span></code></p>
-
-
-
-        <p>A provider's teardown could not run correctly.</p>
-<p>Raised when a generator provider yields a second time during teardown
-(a provider must yield exactly once), or when an async teardown is drained
-from a synchronous scope. Individual teardown failures raised by user code
-are collected into an <code>ExceptionGroup</code> instead, so one failure never hides
-another.</p>
-<p>Inherits <code>RuntimeError</code>, so existing <code>except RuntimeError</code> handlers keep
-working.</p>
-
-
-
-
-
-
-
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="depin.errors.ContainerNotBoundError" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">ContainerNotBoundError</span>
-
-
-<a href="#depin.errors.ContainerNotBoundError" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code>, <code><span title="RuntimeError">RuntimeError</span></code></p>
-
-
-
-        <p>A dependency was resolved with no container bound to the request.</p>
-<p>Raised by the FastAPI integration when <code>Inject[T]</code> is evaluated outside a
-<code>RequestScope</code>. Install the middleware with
-<code>app.add_middleware(RequestScope, container=...)</code>.</p>
-<p>Inherits <code>RuntimeError</code>, so existing <code>except RuntimeError</code> handlers keep
-working.</p>
-
-
-
-
-
-
-
-
-
-    </div>
-
-</div>
 
 
 

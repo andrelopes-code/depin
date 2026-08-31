@@ -513,6 +513,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/fastapi/" class="md-nav__link">
         
   
@@ -1226,6 +1254,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../fastapi/" class="md-nav__link">
         
   
@@ -1758,13 +1814,85 @@ containers, anything satisfying <code>Bindings</code>. Equivalent to calling
 
 
 <a href="#depin.Container.bind" class="headerlink" title="Permanent link">&para;</a></h3>
+          <div class="doc-overloads">
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
-    <span class="n">source</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">T</span><span class="p">],</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">],</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
     <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Generator</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AbstractContextManager</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AbstractAsyncContextManager</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Awaitable</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">T</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div>          </div>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Generator</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AbstractContextManager</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AbstractAsyncContextManager</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Awaitable</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">T</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -1794,7 +1922,7 @@ whole graph is wired by type.</p>
                 <code>source</code>
             </td>
             <td>
-                  <code><span title="type">type</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>] | <span title="collections.abc.Callable">Callable</span>[..., <span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]</code>
+                  <code><span title="type">type</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>] | <span title="collections.abc.Callable">Callable</span>[..., <span title="collections.abc.Generator">Generator</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]] | <span title="collections.abc.Callable">Callable</span>[..., <span title="collections.abc.AsyncGenerator">AsyncGenerator</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]] | <span title="collections.abc.Callable">Callable</span>[..., <span title="contextlib.AbstractContextManager">AbstractContextManager</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]] | <span title="collections.abc.Callable">Callable</span>[..., <span title="contextlib.AbstractAsyncContextManager">AbstractAsyncContextManager</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]] | <span title="collections.abc.Callable">Callable</span>[..., <span title="collections.abc.Awaitable">Awaitable</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]] | <span title="collections.abc.Callable">Callable</span>[..., <span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1875,6 +2003,25 @@ A callable is evaluated inside <code>Container.freeze()</code>.</p>
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>check</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>], <span title="object">object</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Callable verifying the produced value, exposed by
+<code>FrozenContainer.checks</code> and run by <code>FrozenContainer.health</code>.
+It receives the value and is healthy unless it raises or
+returns <code>False</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -1931,6 +2078,7 @@ A callable is evaluated inside <code>Container.freeze()</code>.</p>
     <span class="n">value</span><span class="p">:</span> <span class="n">T</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -1996,6 +2144,25 @@ plain values that have no factory.</p>
               <div class="doc-md-description">
                 <p>Condition deciding whether this binding enters the plan.
 A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>check</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="depin._core.bindings.BindingCollector.value[T]">T</span>], <span title="object">object</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Callable verifying the produced value, exposed by
+<code>FrozenContainer.checks</code> and run by <code>FrozenContainer.health</code>.
+It receives the value and is healthy unless it raises or
+returns <code>False</code>.</p>
               </div>
             </td>
             <td>
@@ -3089,13 +3256,85 @@ named registries keeps the first non-empty name.</p>
 
 
 <a href="#depin.Registry.bind" class="headerlink" title="Permanent link">&para;</a></h3>
+          <div class="doc-overloads">
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
-    <span class="n">source</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">T</span><span class="p">],</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">],</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
     <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Generator</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AbstractContextManager</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AbstractAsyncContextManager</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Awaitable</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div><div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">T</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div>          </div>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">bind</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Generator</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AbstractContextManager</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">AbstractAsyncContextManager</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Awaitable</span><span class="p">[</span><span class="n">T</span><span class="p">]]</span>
+    <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">T</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
+    <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -3125,7 +3364,7 @@ whole graph is wired by type.</p>
                 <code>source</code>
             </td>
             <td>
-                  <code><span title="type">type</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>] | <span title="collections.abc.Callable">Callable</span>[..., <span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]</code>
+                  <code><span title="type">type</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>] | <span title="collections.abc.Callable">Callable</span>[..., <span title="collections.abc.Generator">Generator</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]] | <span title="collections.abc.Callable">Callable</span>[..., <span title="collections.abc.AsyncGenerator">AsyncGenerator</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]] | <span title="collections.abc.Callable">Callable</span>[..., <span title="contextlib.AbstractContextManager">AbstractContextManager</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]] | <span title="collections.abc.Callable">Callable</span>[..., <span title="contextlib.AbstractAsyncContextManager">AbstractAsyncContextManager</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]] | <span title="collections.abc.Callable">Callable</span>[..., <span title="collections.abc.Awaitable">Awaitable</span>[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]] | <span title="collections.abc.Callable">Callable</span>[..., <span title="depin._core.bindings.BindingCollector.bind[T]">T</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3206,6 +3445,25 @@ A callable is evaluated inside <code>Container.freeze()</code>.</p>
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>check</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="depin._core.bindings.BindingCollector.bind[T]">T</span>], <span title="object">object</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Callable verifying the produced value, exposed by
+<code>FrozenContainer.checks</code> and run by <code>FrozenContainer.health</code>.
+It receives the value and is healthy unless it raises or
+returns <code>False</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -3262,6 +3520,7 @@ A callable is evaluated inside <code>Container.freeze()</code>.</p>
     <span class="n">value</span><span class="p">:</span> <span class="n">T</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">T</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -3327,6 +3586,25 @@ plain values that have no factory.</p>
               <div class="doc-md-description">
                 <p>Condition deciding whether this binding enters the plan.
 A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>check</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="depin._core.bindings.BindingCollector.value[T]">T</span>], <span title="object">object</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Callable verifying the produced value, exposed by
+<code>FrozenContainer.checks</code> and run by <code>FrozenContainer.health</code>.
+It receives the value and is healthy unless it raises or
+returns <code>False</code>.</p>
               </div>
             </td>
             <td>
