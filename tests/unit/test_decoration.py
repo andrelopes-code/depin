@@ -509,9 +509,8 @@ def test_a_decorator_sharing_its_binding_condition_disappears_with_it() -> None:
 
 
 def test_decorating_an_underlying_layer_is_rejected() -> None:
-    """`Underlying` names an inner layer of a decoration chain the fold produces; it is
-    never a key a user-supplied parameter can be annotated with, so a decorator targeting
-    one directly always fails to find its designated parameter before the fold ever runs.
+    """`Underlying` names an inner layer of a decoration chain the fold produces, constructed
+    to inspect a graph rather than to register one, so `decorate` refuses it outright.
     """
 
     class Store: ...
@@ -520,5 +519,5 @@ def test_decorating_an_underlying_layer_is_rejected() -> None:
         def __init__(self, inner: Store) -> None: ...
 
     container = Container().bind(Store).decorate(Underlying(Store, 0), Loud)
-    with pytest.raises(InvalidProviderError, match='declares no parameter for'):
+    with pytest.raises(InvalidProviderError, match='constructed to inspect a graph'):
         _ = container.freeze()

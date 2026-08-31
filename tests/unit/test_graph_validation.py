@@ -12,6 +12,7 @@ from depin._core.graph import build_plan
 from depin._core.markers import Named, Token, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope
+from depin._core.spec import Underlying
 from depin.errors import (
     AsyncInSyncContextError,
     CaptiveDependencyError,
@@ -821,6 +822,47 @@ def test_decorating_a_key_that_is_not_a_provider_key_is_rejected() -> None:
 
     container = Container().bind(Store).decorate(3, Loud)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
     with pytest.raises(InvalidProviderError, match='as a provider key'):
+        _ = container.freeze()
+
+
+def test_aliasing_an_underlying_layer_is_rejected() -> None:
+    """Registering an alias under a decoration's own inner key used to be a silent discard:
+    `_check_duplicates` ran before the fold, so the alias and the undecorated binding never
+    collided, and `_index` kept whichever spec the fold produced last. Rejecting `Underlying`
+    as a registration key closes that hole outright.
+    """
+
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    container = Container().bind(Store).decorate(Store, Loud).alias(Underlying(Store, 0), to=Store)
+    with pytest.raises(InvalidProviderError, match='constructed to inspect a graph'):
+        _ = container.freeze()
+
+
+def test_a_collection_element_that_is_an_underlying_layer_is_rejected() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    container = Container().bind(Store).decorate(Store, Loud).collect(Underlying(Store, 0), [])
+    with pytest.raises(InvalidProviderError, match='constructed to inspect a graph'):
+        _ = container.freeze()
+
+
+def test_a_collection_member_that_is_an_underlying_layer_is_rejected() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    class Handler: ...
+
+    container = Container().bind(Store).decorate(Store, Loud).collect(Handler, [Underlying(Store, 0)])
+    with pytest.raises(InvalidProviderError, match='constructed to inspect a graph'):
         _ = container.freeze()
 
 

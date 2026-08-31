@@ -396,6 +396,15 @@ def unwrap_container_type(annotation: object) -> ProviderKey | None:
 
 
 def as_provider_key(value: object) -> ProviderKey:
+    """Narrow ``value`` to a key usable to register a binding.
+
+    Raises:
+        InvalidProviderError: ``value`` is not a provider key, or is an
+            `Underlying` — a key `is_provider_key` admits for inspecting a
+            graph, but which names no binding a caller can register.
+    """
+    if isinstance(value, Underlying):
+        raise invalid_key_error(value)
     if is_provider_key(value):
         return value
     raise invalid_key_error(value)
