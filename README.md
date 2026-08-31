@@ -35,7 +35,12 @@ Type-first dependency injection for Python 3.12+.
 ```bash
 uv add pydepin                # core
 uv add 'pydepin[fastapi]'     # with the FastAPI integration
+uv add 'pydepin[pytest]'      # with the tested pytest floor enforced
 ```
+
+The `depin.ext.pytest` fixtures are registered on the `pytest11` entry point
+by the distribution, so plain `pydepin` already provides them; the `pytest`
+extra only states the pytest version the plugin is tested against.
 
 Requires Python 3.12+. The distribution is `pydepin`; the import package is
 `depin`.
@@ -175,9 +180,10 @@ Full walkthrough: [FastAPI guide](https://andrelopes-code.github.io/depin/guide/
 - **Nested scopes inherit.** A `SCOPED` instance resolved in an outer scope is
   reused inside a nested scope, not rebuilt. Open sibling scopes for independent
   instances.
-- **Overrides do not evict caches.** A singleton resolved before the `override`
-  block is already built, and the override does not replace it. Override before
-  the first resolution, or build a fresh container per test.
+- **A consumer built before the override keeps its old value.** `override()`
+  replaces the key immediately, even for a singleton already built — but a
+  consumer resolved earlier keeps the instance it was given. Call `reset()` to
+  evict it, or use the `depin.ext.pytest` fixtures, which call `reset()` for you.
 - **`@di.inject` uses default-position markers.** An injected parameter carries
   an `injected(...)` default, so it must follow non-default parameters or be
   keyword-only (a normal Python rule). Unlike provider constructors, which

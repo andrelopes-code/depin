@@ -17,6 +17,11 @@ from depin._core.scope import Scope
 from depin._core.spec import ProviderShape, fmt_key
 from depin.errors import MissingProviderError
 
+# Hypothesis-driven property module; its slowest cases run over two seconds,
+# and the mutation gate's --timeout=2 exists to catch a hung mutant, which
+# fifteen seconds still does.
+pytestmark = pytest.mark.timeout(15)
+
 
 class Config:
     pass

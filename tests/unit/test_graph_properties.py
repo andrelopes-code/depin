@@ -14,6 +14,11 @@ from depin._core.graph import INACTIVE_NOTE
 from depin._core.spec import ResolutionPlan, Underlying, fmt_key
 from depin.errors import CaptiveDependencyError, CircularDependencyError, DepinError
 
+# Hypothesis-driven property module; its slowest cases run over two seconds,
+# and the mutation gate's --timeout=2 exists to catch a hung mutant, which
+# fifteen seconds still does.
+pytestmark = pytest.mark.timeout(15)
+
 
 @dataclass(frozen=True, slots=True)
 class GraphCase:

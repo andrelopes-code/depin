@@ -1182,6 +1182,9 @@ fastapi = [
     { name = "fastapi" },
     { name = "starlette" },
 ]
+pytest = [
+    { name = "pytest" },
+]
 
 [package.dev-dependencies]
 bench = [
@@ -1191,6 +1194,7 @@ bench = [
 ]
 dev = [
     { name = "basedpyright" },
+    { name = "coverage" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "hypothesis" },
@@ -1220,9 +1224,10 @@ threads = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.133" },
+    { name = "pytest", marker = "extra == 'pytest'", specifier = ">=9.0.3" },
     { name = "starlette", marker = "extra == 'fastapi'", specifier = ">=1.1" },
 ]
-provides-extras = ["fastapi"]
+provides-extras = ["fastapi", "pytest"]
 
 [package.metadata.requires-dev]
 bench = [
@@ -1232,6 +1237,7 @@ bench = [
 ]
 dev = [
     { name = "basedpyright", specifier = ">=1.39.10" },
+    { name = "coverage", extras = ["toml"], specifier = ">=7.10" },
     { name = "fastapi", specifier = ">=0.133" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "hypothesis", specifier = ">=6.138,<6.156" },

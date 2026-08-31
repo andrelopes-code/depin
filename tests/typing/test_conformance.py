@@ -390,3 +390,13 @@ async def test_the_async_integration_contract_keeps_its_types() -> None:
     async with Host(di).ascope() as frame:
         assert_type(frame, ScopeFrame)
         assert_type(await hosted_container().aresolve(Config), Config)
+
+
+def test_reset_returns_none() -> None:
+    di = Container().bind(Config).freeze()
+    assert_type(di.reset(), None)
+
+
+async def test_areset_returns_none() -> None:
+    di = Container().bind(Config).freeze()
+    assert_type(await di.areset(), None)

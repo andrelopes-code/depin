@@ -127,3 +127,27 @@ def test_override_resolves_a_key_that_was_never_bound() -> None:
         assert frozen[Marker] is sentinel
     with pytest.raises(MissingProviderError):
         _ = frozen[Marker]
+
+
+def test_reset_makes_an_override_reach_a_consumer_built_before_the_block() -> None:
+    class Clock:
+        def now(self) -> str:
+            return 'real'
+
+    class FakeClock:
+        def now(self) -> str:
+            return 'fake'
+
+    class Report:
+        def __init__(self, clock: Clock) -> None:
+            self.clock = clock
+
+    frozen = Container().bind(Clock, scope=Scope.SINGLETON).bind(Report, scope=Scope.SINGLETON).freeze()
+    report = frozen[Report]
+    assert report.clock.now() == 'real'
+    with frozen.override(Clock, FakeClock()):
+        assert report.clock.now() == 'real'
+
+    frozen.reset()
+    with frozen.override(Clock, FakeClock()):
+        assert frozen[Report].clock.now() == 'fake'

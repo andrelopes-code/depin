@@ -125,6 +125,28 @@ class _Leader:
         return self.flight is not None and self.flight.finished
 
 
+def _run_teardowns_sync(records: tuple[Teardown, ...]) -> None:
+    errors: list[Exception] = []
+    for record in records:
+        try:
+            teardown.run_sync(record)
+        except Exception as exc:
+            errors.append(exc)
+    if errors:
+        raise ExceptionGroup('depin teardown errors', errors)
+
+
+async def _run_teardowns_async(records: tuple[Teardown, ...]) -> None:
+    errors: list[Exception] = []
+    for record in records:
+        try:
+            await teardown.run_async(record)
+        except Exception as exc:
+            errors.append(exc)
+    if errors:
+        raise ExceptionGroup('depin teardown errors', errors)
+
+
 class ScopeFrame:
     """The per-scope store yielded by `FrozenContainer.scope()`.
 
@@ -211,17 +233,11 @@ class ScopeFrame:
         Raises:
             ExceptionGroup: One or more teardowns failed. Every failure is
                 reported; none is allowed to hide another.
-            TeardownError: An async provider left a teardown here, which needs
-                an event loop to run.
+            TeardownError: An async provider left a teardown here, reported
+                inside the raised `ExceptionGroup` rather than bare; drain it
+                with `drain_async()` instead.
         """
-        errors: list[Exception] = []
-        for record in self._take_teardowns():
-            try:
-                teardown.run_sync(record)
-            except Exception as exc:
-                errors.append(exc)
-        if errors:
-            raise ExceptionGroup('depin teardown errors', errors)
+        _run_teardowns_sync(self._take_teardowns())
 
     async def drain_async(self) -> None:
         """Run every pending teardown, newest first, inside an event loop.
@@ -229,19 +245,75 @@ class ScopeFrame:
         Raises:
             ExceptionGroup: One or more teardowns failed.
         """
-        errors: list[Exception] = []
-        for record in self._take_teardowns():
-            try:
-                await teardown.run_async(record)
-            except Exception as exc:
-                errors.append(exc)
-        if errors:
-            raise ExceptionGroup('depin teardown errors', errors)
+        await _run_teardowns_async(self._take_teardowns())
+
+    def drop_sync(self) -> None:
+        """Drain every pending teardown, newest first, and drop the cache, without an event loop.
+
+        The counterpart to `drain_sync()`: where that leaves the cache
+        populated with whatever it just drained, this drops it too, so a key
+        resolved afterwards is rebuilt rather than handed the drained value.
+
+        Do not call this while another thread or task may be resolving through
+        this frame: the cache is dropped without coordinating with an in-flight
+        construction, so a resolution racing with the drop can be handed a
+        value whose teardown already ran. `FrozenContainer.reset()` is this
+        operation on the root frame and carries the same hazard.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed. Every failure is
+                reported, and the cache is dropped either way.
+            TeardownError: An async provider left a teardown here, reported
+                inside the raised `ExceptionGroup` rather than bare; drain it
+                with `drop_async()` instead.
+        """
+        _run_teardowns_sync(self._take_all())
+
+    async def drop_async(self) -> None:
+        """Drain every pending teardown and drop the cache, inside an event loop.
+
+        The counterpart to `drop_sync()`, for a frame holding an async
+        provider's teardown, and carrying the same hazard: do not call it while
+        another thread or task may be resolving through this frame, because the
+        cache is dropped without coordinating with an in-flight construction.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed. Every failure is
+                reported, and the cache is dropped either way.
+        """
+        await _run_teardowns_async(self._take_all())
 
     def _take_teardowns(self) -> tuple[Teardown, ...]:
         with self._mutex:
             records = tuple(reversed(self._teardowns))
             self._teardowns.clear()
+        return records
+
+    def _take_all(self) -> tuple[Teardown, ...]:
+        """Take every pending teardown and drop the cache, as one atomic step.
+
+        The teardown list and the cache must move together under one lock. Two
+        lock regions instead of one would open a gap: a construction finishing
+        in that gap could register its teardown after the first region already
+        ran, surviving unrun — left in the teardown list for some later,
+        unrelated drop to sweep up — while the second region wipes its
+        just-published value from the cache regardless. The result is a cache
+        with no trace of the value and a teardown nothing is about to run.
+
+        This property is guarded by construction — one `with self._mutex:`
+        below, not two — rather than by a test: no test can distinguish one
+        lock region from two without instrumenting the gap between them, which
+        is not available through the public API. A test that tried to catch a
+        regression here by racing real threads caught it in roughly four runs
+        out of five and cost seconds per run, which does not clear the
+        `[tool.mutmut]` gate's two-second-per-test budget; see the `Carried
+        from Step 5` entry in `specs/2026-08-28-roadmap-1.0-design.md` for the
+        fault-injection mechanism Step 6 owns building instead.
+        """
+        with self._mutex:
+            records = tuple(reversed(self._teardowns))
+            self._teardowns.clear()
+            self._cache.clear()
         return records
 
     def claim_cached(self, key: object) -> tuple[object, _Flight | _Leader | None]:
