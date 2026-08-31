@@ -77,6 +77,23 @@ class Underlying:
     the same key sees ``Underlying(key, 1)``. Construct one to inspect a
     decorated binding — `FrozenContainer.explain` and `DependencyGraph.find`
     accept it — not to register anything.
+
+    Example:
+        ```pycon
+        >>> from depin import Container, ProviderShape, Underlying
+        >>> class Store:
+        ...     def get(self) -> str:
+        ...         return 'plain'
+        >>> class Loud:
+        ...     def __init__(self, inner: Store) -> None:
+        ...         self.inner = inner
+        ...     def get(self) -> str:
+        ...         return self.inner.get().upper()
+        >>> di = Container().bind(Store).decorate(Store, Loud).freeze()
+        >>> di.graph().node(Underlying(Store, 0)).shape is ProviderShape.CLASS
+        True
+
+        ```
     """
 
     key: 'ProviderKey'

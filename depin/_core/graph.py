@@ -10,6 +10,7 @@ from collections.abc import Iterable
 from types import ModuleType
 from typing import Final
 
+from depin._core import decoration
 from depin._core.markers import get_provides
 from depin._core.providers import ASYNC_SHAPES, build_specs
 from depin._core.scope import Scope
@@ -29,20 +30,29 @@ INACTIVE_NOTE: Final[str] = '; a conditional binding for this key is registered 
 def build_plan(records: Iterable[BindRecord]) -> ResolutionPlan:
     """Validate the bindings and return the plan the frozen container resolves from.
 
+    Duplicates are checked against the keys the user wrote, before the
+    decoration fold moves any of them, so `DuplicateProviderError` still names
+    the binding itself rather than its undecorated position. Everything after
+    the fold sees ordinary nodes.
+
     Raises:
         DuplicateProviderError: Two bindings share a key and tag.
-        MissingProviderError: A required dependency has no provider.
+        MissingProviderError: A required dependency has no provider, or a
+            decorator names a key that nothing binds.
         CircularDependencyError: The graph contains a cycle.
         CaptiveDependencyError: A singleton depends on a scoped provider.
         InvalidProviderError: A binding lacks the type information to infer a key,
-            or carries a condition that is neither a bool nor a callable.
-        InvalidScopeError: A lifecycle provider is bound as transient.
+            carries a condition that is neither a bool nor a callable, or decorates
+            a `Container.scope_value` binding.
+        InvalidScopeError: A lifecycle provider is bound as transient, or a
+            lifecycle decorator wraps a transient binding.
     """
     specs = build_specs(records)
     _check_duplicates(specs.providers)
-    by_key = _index(specs.providers)
-    _check_missing(specs.providers, by_key, specs.inactive)
-    order = _toposort(specs.providers, by_key)
+    providers = decoration.apply(specs.providers, specs.decorations)
+    by_key = _index(providers)
+    _check_missing(providers, by_key, specs.inactive)
+    order = _toposort(providers, by_key)
     _check_captive(order, by_key)
     resolved = tuple(_with_async_flags(order, by_key))
     return ResolutionPlan(order=resolved, by_key=_index(resolved), inactive=specs.inactive)

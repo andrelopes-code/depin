@@ -386,7 +386,7 @@ class BindingCollector:
             ...         return self.inner.get().upper()
             >>> di = Container().bind(Store).decorate(Store, Loud).freeze()
             >>> di[Store].get()
-            'plain'
+            'PLAIN'
 
             ```
         """
