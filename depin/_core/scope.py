@@ -284,10 +284,23 @@ class ScopeFrame:
     def _take_all(self) -> tuple[Teardown, ...]:
         """Take every pending teardown and drop the cache, as one atomic step.
 
-        The two must move together: a teardown taken while the value it
-        belongs to is still cached would run against a value the frame goes on
-        serving, and a value dropped while its teardown is left behind leaks
-        the resource with nothing that remembers it.
+        The teardown list and the cache must move together under one lock. Two
+        lock regions instead of one would open a gap: a construction finishing
+        in that gap could register its teardown after the first region already
+        ran, surviving unrun — left in the teardown list for some later,
+        unrelated drop to sweep up — while the second region wipes its
+        just-published value from the cache regardless. The result is a cache
+        with no trace of the value and a teardown nothing is about to run.
+
+        This property is guarded by construction — one `with self._mutex:`
+        below, not two — rather than by a test: no test can distinguish one
+        lock region from two without instrumenting the gap between them, which
+        is not available through the public API. A test that tried to catch a
+        regression here by racing real threads caught it in roughly four runs
+        out of five and cost seconds per run, which does not clear the
+        `[tool.mutmut]` gate's two-second-per-test budget; see the `Carried
+        from Step 5` entry in `specs/2026-08-28-roadmap-1.0-design.md` for the
+        fault-injection mechanism Step 6 owns building instead.
         """
         with self._mutex:
             records = tuple(reversed(self._teardowns))
