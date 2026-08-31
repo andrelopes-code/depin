@@ -35,10 +35,7 @@ def test_a_protocol_key_resolves_through_subscript() -> None:
     class Store(Protocol):
         def get(self) -> str: ...
 
-    # `Store` is a Protocol; mypy treats any type[Protocol] argument as
-    # non-instantiable, a separate known limitation from the one this test
-    # guards against — provides() only stores the key, it never instantiates it.
-    @provides(Store)  # type: ignore[type-abstract]
+    @provides(Store)
     class MemStore:
         def get(self) -> str:
             return 'v'

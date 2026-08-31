@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import TypeGuard, final, override
 
-from depin.errors import DepinError
+from depin.errors import DepinError, InvalidProviderError
 
 
 @final
@@ -132,11 +132,23 @@ def injected[T](key: type[T] | Token[T], *, tag: str | None = None) -> T:
 _PROVIDES_ATTR = '__depin_provides__'
 
 
+def _reject_non_class(value: object, /) -> None:
+    """Raise unless ``value`` is a class.
+
+    Takes ``object`` rather than ``type[object]`` so the check still runs for an
+    untyped caller that breaks the promise the annotation makes to a type checker.
+    """
+    if not isinstance(value, type):
+        raise InvalidProviderError(
+            f'cannot use {value!r} as a @provides target: expected a class, a Protocol, or an abstract base class'
+        )
+
+
 @final
-class _ProvidesDecorator[A]:
+class _ProvidesDecorator:
     __slots__ = ('_abstract',)
 
-    def __init__(self, abstract: type[A]) -> None:
+    def __init__(self, abstract: type[object]) -> None:
         self._abstract = abstract
 
     def __call__[C](self, cls: type[C]) -> type[C]:
@@ -144,13 +156,24 @@ class _ProvidesDecorator[A]:
         return cls
 
 
-def provides[A](abstract: type[A]) -> _ProvidesDecorator[A]:
+def provides(abstract: type[object]) -> _ProvidesDecorator:
     """Tag a class with the abstract type it implements.
 
     Decorating ``@provides(Abstract)`` records ``Abstract`` as the class's provider
     key, so `Container.bind()` registers the concrete class under the
     abstract type without an explicit ``provides=`` argument. Useful for binding an
     implementation against a `typing.Protocol` or base class.
+
+    The decorated class is returned unchanged and keeps its own type, so nothing
+    downstream of the decorator sees a different class.
+
+    Args:
+        abstract: The key to register the decorated class under. Any class,
+            including a ``Protocol`` and an abstract base class.
+
+    Raises:
+        InvalidProviderError: ``abstract`` is not a class, so it could never
+            serve as the provider key the decorator promises to record.
 
     Example:
         ```pycon
@@ -168,6 +191,7 @@ def provides[A](abstract: type[A]) -> _ProvidesDecorator[A]:
 
         ```
     """
+    _reject_non_class(abstract)
     return _ProvidesDecorator(abstract)
 
 

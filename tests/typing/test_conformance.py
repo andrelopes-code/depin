@@ -135,7 +135,7 @@ def test_a_protocol_key_keeps_its_type_through_subscript() -> None:
     class Store(Protocol):
         def get(self) -> str: ...
 
-    @provides(Store)  # type: ignore[type-abstract]  # mypy rejects type[Protocol] for a type[A] parameter
+    @provides(Store)
     class MemStore:
         def get(self) -> str:
             return 'v'

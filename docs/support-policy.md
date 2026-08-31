@@ -51,23 +51,3 @@ Astral's `ty` runs in CI over the same code, advisorily: its job is allowed to
 fail without blocking a merge. `ty` is pre-1.0 on `0.0.x` versioning, and its
 own documentation warns that diagnostics can change between any two releases,
 so it is not yet part of the support commitment above.
-
-### Known limitation: `provides` and `type[T]`
-
-`@provides(SomeProtocol)`, and equally `@provides(SomeABC)`, makes mypy report an
-error at the decorator line, in the caller's own file, under mypy's default
-settings. For `@provides(Clock)` in `examples/testing/main.py`, the message is:
-
-`error: Only concrete class can be given where "type[Clock]" is expected  [type-abstract]`
-
-`basedpyright` does not report it.
-
-The cause is mypy's treatment of the parameter type, not a defect in the
-decorator: mypy raises `type-abstract` whenever a formal parameter is exactly
-`type[T]` with `T` a type variable, regardless of what is passed for it, and
-substitutes the concrete class actually passed into the message. The
-workaround is a narrow suppression at the call site, `# type: ignore[type-abstract]`.
-The repository uses exactly that suppression in `examples/testing/main.py`.
-
-The shape of `provides` is under review, because resolving the mismatch means
-changing a public signature.

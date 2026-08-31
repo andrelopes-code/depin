@@ -12,7 +12,7 @@ class Clock(Protocol):
     def now(self) -> str: ...
 
 
-@provides(Clock)  # type: ignore[type-abstract]  # mypy treats any type[Protocol] or type[ABC] as non-instantiable; provides() only stores it
+@provides(Clock)
 class SystemClock:
     """Bound under `Clock` because of the decorator — no ``provides=`` needed."""
 
