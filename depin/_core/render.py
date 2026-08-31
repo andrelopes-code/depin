@@ -21,7 +21,12 @@ def render_tree(
     tag: str | None,
     inactive: frozenset[Ident],
 ) -> str:
-    """The resolution tree below ``(key, tag)``, or the missing-provider line for it."""
+    """The resolution tree below ``(key, tag)``, or the missing-provider line for it.
+
+    ``inactive`` is the plan's set of keys a condition kept out; it decides whether the
+    missing-provider line, when one is produced, carries the note that the key is registered
+    but inactive rather than unbound outright.
+    """
     root = graph.find(key, tag=tag)
     if root is None:
         return _render_absent(graph, key, tag, inactive)
