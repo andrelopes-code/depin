@@ -1093,6 +1093,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/pytest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pytest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1474,6 +1502,9 @@ implements:</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">CONTRACT_VERSION</span> <span class="o">&gt;=</span> <span class="n">ContractVersion</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 <span class="go">True</span>
 </code></pre></div>
+<p>It covers the four operations above and nothing else: an ordinary
+<code>FrozenContainer</code> method is versioned by the depin release that introduced it,
+not by this number.</p>
 <p>The minor number rises when an operation is added and every existing one
 keeps its meaning; the major number rises when an operation changes meaning
 or is removed. An integration that needs an operation added in <code>1.2</code> guards

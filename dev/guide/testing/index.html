@@ -541,6 +541,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-pytest-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The pytest plugin
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#replacing-bindings-instead-of-overriding-them" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1049,6 +1060,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/pytest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pytest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1098,6 +1137,17 @@
     <span class="md-ellipsis">
       
         A pytest fixture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-pytest-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The pytest plugin
       
     </span>
   </a>
@@ -1179,11 +1229,38 @@ including deep in the graph, as a dependency of something else:</p>
 <li>Overrides nest, innermost wins, and a key that was never bound at all can be
   overridden — useful for a dependency you only stub.</li>
 </ul>
-<div class="admonition warning">
-<p class="admonition-title">Values built before the override are not replaced</p>
-<p>A singleton resolved before the <code>with</code> block is already cached, and the
-override does not evict it. Override before the first resolution, or build a
-fresh container per test.</p>
+<div class="admonition note">
+<p class="admonition-title">What survives an override</p>
+<p><code>override()</code> replaces the key immediately, even for a singleton already
+built. What survives is a <em>consumer</em> — a value built before the block
+keeps the instance it was constructed with, because a provider's arguments
+are resolved once, at construction time:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Clock</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Report</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">di</span><span class="o">.</span><span class="n">override</span><span class="p">(</span><span class="n">Clock</span><span class="p">,</span> <span class="n">FrozenClock</span><span class="p">()):</span>
+<span class="gp">... </span>    <span class="n">di</span><span class="p">[</span><span class="n">Clock</span><span class="p">]</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+<span class="gp">... </span>    <span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
+<span class="go">'2026-01-01'</span>
+<span class="go">'at real'</span>
+</code></pre></div>
+<p><code>reset()</code> drops every built singleton's cache, so the next resolution of
+<code>Report</code> rebuilds it and picks up the override that is active at that
+point:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">di</span><span class="o">.</span><span class="n">override</span><span class="p">(</span><span class="n">Clock</span><span class="p">,</span> <span class="n">FrozenClock</span><span class="p">()):</span>
+<span class="gp">... </span>    <span class="n">di</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+<span class="gp">... </span>    <span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
+<span class="go">'at 2026-01-01'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
+<span class="go">'at real'</span>
+</code></pre></div>
+<p>The <code>depin.ext.pytest</code> fixtures below call <code>reset()</code> on both edges of the
+block, so a test never has to reason about which <em>singletons in the root
+cache</em> were built first. A scoped value already cached in an open
+<code>depin_scope</code> frame is outside that cache: neither edge evicts it, so it
+keeps the dependency it was built with for as long as the scope stays
+open.</p>
 </div>
 <h2 id="a-pytest-fixture">A pytest fixture<a class="headerlink" href="#a-pytest-fixture" title="Permanent link">&para;</a></h2>
 <p>Freezing is cheap and gives every test an isolated cache:</p>
@@ -1204,6 +1281,60 @@ fresh container per test.</p>
         <span class="k">assert</span> <span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span> <span class="o">==</span> <span class="s1">'at 2026-01-01'</span>
 </code></pre></div>
 <p>For an async graph use <code>aclose()</code> in the teardown half of the fixture.</p>
+<h2 id="the-pytest-plugin">The pytest plugin<a class="headerlink" href="#the-pytest-plugin" title="Permanent link">&para;</a></h2>
+<p><code>depin.ext.pytest</code> is registered on the <code>pytest11</code> entry point by the
+distribution, so installing <code>pydepin</code> at all makes its fixtures available in
+any suite with no <code>conftest.py</code> import. The <code>pytest</code> extra adds nothing to
+that: it only states the pytest floor the plugin is tested against.</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>add<span class="w"> </span>pydepin<span class="w">                </span><span class="c1"># the fixtures are already available</span>
+uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[pytest]'</span><span class="w">      </span><span class="c1"># and the tested pytest floor is enforced</span>
+</code></pre></div>
+<p>The plugin defines <code>depin_container</code> itself, but only to raise: a suite that
+never hands it a container gets a <code>ContainerNotBoundError</code> naming the fixture
+to define. Add one to your own <code>conftest.py</code>; every other fixture builds on
+whatever it returns:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">FrozenContainer</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">myapp.wiring</span><span class="w"> </span><span class="kn">import</span> <span class="n">build</span>
+
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">depin_container</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">FrozenContainer</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">build</span><span class="p">()</span>
+</code></pre></div>
+<p><code>depin_override</code> is <code>depin_container</code>'s <code>override()</code> with the fix from the
+note above already applied — it calls <code>reset()</code> before entering the block and
+again on exit:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">test_report_uses_the_fake_clock</span><span class="p">(</span><span class="n">depin_container</span><span class="p">,</span> <span class="n">depin_override</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="c1"># Report is a singleton and is already built here, before the override.</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">depin_container</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span>
+
+    <span class="k">with</span> <span class="n">depin_override</span><span class="p">(</span><span class="n">Clock</span><span class="p">,</span> <span class="n">FrozenClock</span><span class="p">())</span> <span class="k">as</span> <span class="n">di</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span> <span class="o">==</span> <span class="s1">'at 2026-01-01'</span>
+
+    <span class="c1"># Report is a singleton in the root cache, so reset() on exit rebuilds it</span>
+    <span class="c1"># against the real Clock the next time it is resolved.</span>
+    <span class="k">assert</span> <span class="n">depin_container</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span> <span class="o">==</span> <span class="s1">'at real'</span>
+</code></pre></div>
+<p>Use <code>depin_aoverride</code> — the same shape, built on <code>areset()</code> — when a
+singleton on the overridden path is constructed by an async provider;
+<code>reset()</code> raises for that case rather than leaving it half torn down.</p>
+<p><code>depin_scope</code> opens one synchronous scope around the test and yields its
+<code>ScopeFrame</code>, so a <code>Container.scope_value</code> key can be seeded before anything
+resolves through it:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">test_job_sees_the_seeded_value</span><span class="p">(</span><span class="n">depin_container</span><span class="p">,</span> <span class="n">depin_scope</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">depin_scope</span><span class="o">.</span><span class="n">provide</span><span class="p">(</span><span class="n">job</span><span class="p">,</span> <span class="s1">'reindex'</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">depin_container</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">job</span><span class="p">)</span> <span class="o">==</span> <span class="s1">'reindex'</span>
+</code></pre></div>
+<p><code>depin_ascope</code> is its async counterpart, built on <code>Host.ascope()</code>.</p>
+<p>One test may request <code>depin_scope</code> and <code>depin_override</code> together. Both edges
+of the override block reach the root cache only, so a scoped value already
+built inside the open scope is untouched and keeps the dependency it was
+constructed with.</p>
+<p><code>examples/eviction/</code> in the repository runs the same eviction without pytest,
+as a plain module.</p>
 <h2 id="replacing-bindings-instead-of-overriding-them">Replacing bindings instead of overriding them<a class="headerlink" href="#replacing-bindings-instead-of-overriding-them" title="Permanent link">&para;</a></h2>
 <p>When a whole subsystem differs in tests — an in-memory store instead of a
 database — swap the registry rather than each provider:</p>

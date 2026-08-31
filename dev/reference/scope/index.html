@@ -907,6 +907,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.drop_sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drop_sync
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.drop_async" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drop_async
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.ScopeFrame.claim_cached" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1143,6 +1165,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pytest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pytest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1248,6 +1298,28 @@
     <span class="md-ellipsis">
       
         drain_async
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.drop_sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drop_sync
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.drop_async" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drop_async
       
     </span>
   </a>
@@ -1630,8 +1702,9 @@ reported; none is allowed to hide another.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>An async provider left a teardown here, which needs
-an event loop to run.</p>
+                <p>An async provider left a teardown here, reported
+inside the raised <code>ExceptionGroup</code> rather than bare; drain it
+with <code>drain_async()</code> instead.</p>
               </div>
             </td>
           </tr>
@@ -1679,6 +1752,122 @@ an event loop to run.</p>
             <td>
               <div class="doc-md-description">
                 <p>One or more teardowns failed.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.ScopeFrame.drop_sync" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">drop_sync</span>
+
+
+<a href="#depin.ScopeFrame.drop_sync" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">drop_sync</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Drain every pending teardown, newest first, and drop the cache, without an event loop.</p>
+<p>The counterpart to <code>drain_sync()</code>: where that leaves the cache
+populated with whatever it just drained, this drops it too, so a key
+resolved afterwards is rebuilt rather than handed the drained value.</p>
+<p>Do not call this while another thread or task may be resolving through
+this frame: the cache is dropped without coordinating with an in-flight
+construction, so a resolution racing with the drop can be handed a
+value whose teardown already ran. <code>FrozenContainer.reset()</code> is this
+operation on the root frame and carries the same hazard.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One or more teardowns failed. Every failure is
+reported, and the cache is dropped either way.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TeardownError">TeardownError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An async provider left a teardown here, reported
+inside the raised <code>ExceptionGroup</code> rather than bare; drain it
+with <code>drop_async()</code> instead.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.ScopeFrame.drop_async" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">drop_async</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+<a href="#depin.ScopeFrame.drop_async" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">drop_async</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Drain every pending teardown and drop the cache, inside an event loop.</p>
+<p>The counterpart to <code>drop_sync()</code>, for a frame holding an async
+provider's teardown, and carrying the same hazard: do not call it while
+another thread or task may be resolving through this frame, because the
+cache is dropped without coordinating with an in-flight construction.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One or more teardowns failed. Every failure is
+reported, and the cache is dropped either way.</p>
               </div>
             </td>
           </tr>

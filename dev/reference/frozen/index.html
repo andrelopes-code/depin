@@ -890,6 +890,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.reset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.areset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        areset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.FrozenContainer.warmup" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1198,6 +1220,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pytest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pytest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1314,6 +1364,28 @@
     <span class="md-ellipsis">
       
         aclose
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.reset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.FrozenContainer.areset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        areset
       
     </span>
   </a>
@@ -1931,7 +2003,8 @@ Failures are collected into an <code>ExceptionGroup</code>.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A singleton is an async provider; use <code>aclose()</code>.</p>
+                <p>A singleton is an async provider, reported inside
+the raised <code>ExceptionGroup</code> rather than bare; use <code>aclose()</code>.</p>
               </div>
             </td>
           </tr>
@@ -1982,6 +2055,135 @@ Failures are collected into an <code>ExceptionGroup</code>.</p>
 <p>The async counterpart to <code>close()</code>, and the one to call when any
 singleton is an async provider. Drains the root scope in reverse order of
 construction, collecting failures into an <code>ExceptionGroup</code>.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.FrozenContainer.reset" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">reset</span>
+
+
+<a href="#depin.FrozenContainer.reset" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">reset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Tear down every built singleton and drop the cache, so the next resolution rebuilds.</p>
+<p>The difference from <code>close()</code> is what happens afterwards: <code>close()</code>
+drains the singletons and leaves them cached, while <code>reset()</code> drops
+them, so the container is usable again and builds fresh values on
+demand. Scoped and transient providers are untouched — a scoped value
+belongs to its scope, and a transient one is never cached.</p>
+<p>Primarily a testing seam: it is what makes an <code>override()</code> reach a
+consumer that was already built, and it is what the <code>depin.ext.pytest</code>
+fixtures use. Do not call it while another thread or task may be
+resolving through this container — it drops the cache without
+coordinating with an in-flight construction, so one racing with a
+resolution can hand a caller a value whose teardown already ran.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TeardownError">TeardownError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A singleton is an async provider, reported inside
+the raised <code>ExceptionGroup</code> rather than bare; use <code>areset()</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One or more teardowns failed. Every failure is
+reported, and the cache is dropped either way.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Clock</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Clock</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">first</span> <span class="o">=</span> <span class="n">di</span><span class="p">[</span><span class="n">Clock</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">Clock</span><span class="p">]</span> <span class="ow">is</span> <span class="n">first</span>
+<span class="go">False</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.FrozenContainer.areset" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">areset</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+<a href="#depin.FrozenContainer.areset" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">areset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Tear down every built singleton and drop the cache; the counterpart to <code>reset()</code>.</p>
+<p>The one to call when any singleton is an async provider. Otherwise
+identical, including the same caveat about calling it while another
+thread or task may be resolving through this container.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One or more teardowns failed. Every failure is
+reported, and the cache is dropped either way.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
