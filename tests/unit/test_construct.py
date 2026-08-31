@@ -150,5 +150,5 @@ def test_an_alias_spec_with_no_resolved_target_names_the_provider() -> None:
         needs_async=False,
         params=(),
     )
-    with pytest.raises(InvalidProviderError, match='Store'):
+    with pytest.raises(InvalidProviderError, match='resolved no target binding'):
         _ = sync(spec, {}, _no_teardown, _no_frame)
