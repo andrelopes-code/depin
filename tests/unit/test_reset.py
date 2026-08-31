@@ -116,16 +116,28 @@ async def test_reset_on_an_async_singleton_raises_teardown_error_and_areset_drai
 def test_a_value_cached_in_an_active_scope_survives_reset() -> None:
     events: list[str] = []
 
-    def make() -> Generator[str]:
-        yield 'scoped-value'
+    class Widget: ...
+
+    def make() -> Generator[Widget]:
+        yield Widget()
         events.append('teardown')
 
-    frozen = Container().bind(make, scope=Scope.SCOPED, provides=str).freeze()
+    frozen = Container().bind(make, scope=Scope.SCOPED, provides=Widget).freeze()
     with frozen.scope():
-        value = frozen[str]
+        value = frozen[Widget]
         frozen.reset()
-        assert frozen[str] is value
+        assert frozen[Widget] is value
         assert events == []
+
+
+def test_reset_still_drops_a_root_singleton_while_a_scope_is_open() -> None:
+    class Widget: ...
+
+    frozen = Container().bind(Widget, scope=Scope.SINGLETON).freeze()
+    first = frozen[Widget]
+    with frozen.scope():
+        frozen.reset()
+        assert frozen[Widget] is not first
 
 
 @pytest.mark.asyncio

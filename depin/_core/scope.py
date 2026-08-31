@@ -125,6 +125,28 @@ class _Leader:
         return self.flight is not None and self.flight.finished
 
 
+def _run_teardowns_sync(records: tuple[Teardown, ...]) -> None:
+    errors: list[Exception] = []
+    for record in records:
+        try:
+            teardown.run_sync(record)
+        except Exception as exc:
+            errors.append(exc)
+    if errors:
+        raise ExceptionGroup('depin teardown errors', errors)
+
+
+async def _run_teardowns_async(records: tuple[Teardown, ...]) -> None:
+    errors: list[Exception] = []
+    for record in records:
+        try:
+            await teardown.run_async(record)
+        except Exception as exc:
+            errors.append(exc)
+    if errors:
+        raise ExceptionGroup('depin teardown errors', errors)
+
+
 class ScopeFrame:
     """The per-scope store yielded by `FrozenContainer.scope()`.
 
@@ -211,17 +233,11 @@ class ScopeFrame:
         Raises:
             ExceptionGroup: One or more teardowns failed. Every failure is
                 reported; none is allowed to hide another.
-            TeardownError: An async provider left a teardown here, which needs
-                an event loop to run.
+            TeardownError: An async provider left a teardown here, reported
+                inside the raised `ExceptionGroup` rather than bare; drain it
+                with `drain_async()` instead.
         """
-        errors: list[Exception] = []
-        for record in self._take_teardowns():
-            try:
-                teardown.run_sync(record)
-            except Exception as exc:
-                errors.append(exc)
-        if errors:
-            raise ExceptionGroup('depin teardown errors', errors)
+        _run_teardowns_sync(self._take_teardowns())
 
     async def drain_async(self) -> None:
         """Run every pending teardown, newest first, inside an event loop.
@@ -229,14 +245,35 @@ class ScopeFrame:
         Raises:
             ExceptionGroup: One or more teardowns failed.
         """
-        errors: list[Exception] = []
-        for record in self._take_teardowns():
-            try:
-                await teardown.run_async(record)
-            except Exception as exc:
-                errors.append(exc)
-        if errors:
-            raise ExceptionGroup('depin teardown errors', errors)
+        await _run_teardowns_async(self._take_teardowns())
+
+    def drop_sync(self) -> None:
+        """Drain every pending teardown, newest first, and drop the cache, without an event loop.
+
+        The counterpart to `drain_sync()`: where that leaves the cache
+        populated with whatever it just drained, this drops it too, so a key
+        resolved afterwards is rebuilt rather than handed the drained value.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed. Every failure is
+                reported, and the cache is dropped either way.
+            TeardownError: An async provider left a teardown here, reported
+                inside the raised `ExceptionGroup` rather than bare; drain it
+                with `drop_async()` instead.
+        """
+        _run_teardowns_sync(self._take_all())
+
+    async def drop_async(self) -> None:
+        """Drain every pending teardown and drop the cache, inside an event loop.
+
+        The counterpart to `drop_sync()`, for a frame holding an async
+        provider's teardown.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed. Every failure is
+                reported, and the cache is dropped either way.
+        """
+        await _run_teardowns_async(self._take_all())
 
     def _take_teardowns(self) -> tuple[Teardown, ...]:
         with self._mutex:
@@ -244,7 +281,7 @@ class ScopeFrame:
             self._teardowns.clear()
         return records
 
-    def take_all(self) -> tuple[Teardown, ...]:
+    def _take_all(self) -> tuple[Teardown, ...]:
         """Take every pending teardown and drop the cache, as one atomic step.
 
         The two must move together: a teardown taken while the value it
@@ -380,25 +417,3 @@ def push_frame() -> Generator[ScopeFrame]:
         yield frame
     finally:
         _active.reset(token)
-
-
-def drop_sync(frame: ScopeFrame) -> None:
-    errors: list[Exception] = []
-    for record in frame.take_all():
-        try:
-            teardown.run_sync(record)
-        except Exception as exc:
-            errors.append(exc)
-    if errors:
-        raise ExceptionGroup('depin teardown errors', errors)
-
-
-async def drop_async(frame: ScopeFrame) -> None:
-    errors: list[Exception] = []
-    for record in frame.take_all():
-        try:
-            await teardown.run_async(record)
-        except Exception as exc:
-            errors.append(exc)
-    if errors:
-        raise ExceptionGroup('depin teardown errors', errors)

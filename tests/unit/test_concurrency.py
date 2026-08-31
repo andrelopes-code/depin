@@ -1,6 +1,9 @@
 """Single-flight construction across concurrent tasks and across event loops."""
 
 import asyncio
+import sys
+import threading
+from collections.abc import Generator
 
 import pytest
 
@@ -172,3 +175,73 @@ def test_a_failed_build_leaves_the_key_resolvable_on_the_next_loop() -> None:
     root.finish_flight((Flaky, None), flight)
     assert asyncio.run(resolve()).ok
     assert attempts == 2
+
+
+def _race_reset_against_construction() -> tuple[bool, list[str]]:
+    """One trial: resolve a generator singleton and reset() the container concurrently.
+
+    Returns whether the widget ended up cached, and what teardown events ran.
+    A fresh `Container` per call, so each trial starts from nothing built.
+    """
+    events: list[str] = []
+
+    class Widget: ...
+
+    def make() -> Generator[Widget]:
+        widget = Widget()
+        yield widget
+        events.append('teardown')
+
+    frozen = Container().bind(make, scope=Scope.SINGLETON, provides=Widget).freeze()
+    start = threading.Barrier(2)
+
+    def build() -> None:
+        start.wait()
+        frozen.resolve(Widget)
+
+    def reset() -> None:
+        start.wait()
+        frozen.reset()
+
+    builder = threading.Thread(target=build)
+    resetter = threading.Thread(target=reset)
+    builder.start()
+    resetter.start()
+    builder.join()
+    resetter.join()
+
+    frame = object.__getattribute__(frozen, '_root')
+    cache = object.__getattribute__(frame, '_cache')
+    return (Widget, None) in cache, events
+
+
+def test_reset_does_not_orphan_a_teardown_registered_during_the_drop() -> None:
+    """Pins the atomicity `ScopeFrame._take_all` exists for.
+
+    The teardown list and the cache must move together under one lock. If
+    dropping the cache and taking the teardowns were two separate critical
+    sections instead, a construction finishing in the gap between them could
+    register its teardown after the first section already ran — surviving,
+    unrun, left in the teardown list for some unrelated later drop to sweep
+    up — while the second section wipes its just-published value from the
+    cache regardless. That leaves a cache with no trace of the value and a
+    teardown with no drop that is going to run it around the time it should.
+
+    Raced ten thousand times with the switch interval driven down, so the
+    invariant is exercised under real interleaving rather than checked once;
+    a single lucky ordering proves nothing either way. This is a genuine race
+    against OS thread scheduling, not a deterministic reproduction — a
+    regression here is caught with high probability per run rather than
+    certainty on any single run (see the fix report for a deterministic proof
+    against a temporarily instrumented build).
+    """
+    original_interval = sys.getswitchinterval()
+    sys.setswitchinterval(1e-7)
+    try:
+        for _ in range(10000):
+            cached, events = _race_reset_against_construction()
+            assert cached or events == ['teardown'], (
+                'the widget vanished from the cache without its teardown ever running'
+            )
+    finally:
+        sys.setswitchinterval(original_interval)
