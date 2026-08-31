@@ -4,7 +4,7 @@
 
 **Goal:** Make a `T | None` parameter resolve to `None` when unbound instead of failing at `freeze()`, make `list[Handler]` resolve every member of a declared collection, and close the chain divergence the roadmap carries from Step 2 — for the 0.9.0 milestone.
 
-**Architecture:** No new module. Optionality is one flag carried from the annotation through `AnnotatedMeta` into `ParamSpec`, honoured at three sites: `_any_unsatisfied`, `_collect_missing`, and parameter resolution. A collection is a `Scope.TRANSIENT` node of the new shape `ProviderShape.COLLECTION`, registered under the key `list[element]`, whose parameters are its members — the same construction that made an alias compose in cycle 1, widened from one parameter to N. Because `list[Handler]` is statically already a `ProviderKey` and `resolve` already infers `list[Handler]` from it, no public signature changes; only the runtime gate `is_provider_key` widens, and narrowly.
+**Architecture:** No new module. Optionality is one flag carried from the annotation through `AnnotatedMeta` into `ParamSpec`, honoured at three sites: `_any_unsatisfied`, `_collect_missing`, and parameter resolution. A collection is a `Scope.TRANSIENT` node of the new shape `ProviderShape.COLLECTION`, registered under the key `list[element]`, whose parameters are its members — the same construction that made an alias compose in cycle 1, widened from one parameter to N. Because `list[Handler]` written at a call site is statically already a `ProviderKey` and `resolve` already infers `list[Handler]` from it, no signature changes. Two things do widen: the runtime gate `is_provider_key`, narrowly, and the `ProviderKey` alias by one `GenericAlias` member, because building the key from a runtime value is a mypy `valid-type` error in the `list[element]` form and must go through `GenericAlias(list, (element,))`.
 
 **Tech Stack:** Python 3.12–3.14, free-threaded CPython 3.13t/3.14t, pytest, Hypothesis, mutmut 3.7, pytest-benchmark, mkdocs-material with mkdocstrings, uv.
 
@@ -43,7 +43,7 @@ Every task inherits these requirements from `AGENTS.md`, the approved roadmap, a
 | Path | Responsibility | Task |
 | --- | --- | --- |
 | `depin/_core/introspect.py` | `AnnotatedMeta.optional`; union normalisation. | 1 |
-| `depin/_core/spec.py` | `ParamSpec.optional`; then the collection data model and the `fmt_key` branch. | 1, 4 |
+| `depin/_core/spec.py` | `ParamSpec.optional`; then the `ProviderKey` widening, the collection data model, and the `fmt_key` branch. | 1, 4 |
 | `depin/_core/providers.py` | `optional` on extracted parameters; the union message; the collection branch. | 1, 4 |
 | `depin/_core/graph.py` | `_any_unsatisfied` honours `optional`; `_collect_missing` honours it and traverses bound-defaulted parameters. | 1, 3 |
 | `tests/unit/test_introspect.py` | Union normalisation at the metadata level. | 1 |
@@ -703,7 +703,7 @@ git commit -m "fix: report one chain from freeze and explain"
 
 **Interfaces:**
 
-- Produces: `ProviderShape.COLLECTION`, `CollectionBinding`, `is_collection_binding`, `collection_key`, `collection_param` in `depin._core.spec`.
+- Produces: `ProviderShape.COLLECTION`, `CollectionBinding`, `is_collection_binding`, `collection_key`, `collection_param` in `depin._core.spec`, and widens `ProviderKey` by a `GenericAlias` member.
 - Produces: `is_collection_key`, `as_collection_members` in `depin._core.typeguards`.
 - Produces: `BindingCollector.collect(element, members, *, tag=None) -> Self`.
 
@@ -887,6 +887,24 @@ and to the class docstring's `Attributes:` block, after the `ALIAS:` entry:
             own lifetime, and every resolution returns a new list over them.
 ```
 
+Then widen the key alias in the same module, so a key built at runtime has a
+type. Replace the `ProviderKey` declaration with:
+
+```python
+type ProviderKey = type[object] | Token[object] | str | GenericAlias
+"""What a provider can be bound and resolved under: a class, a `Token`, a name, or a `list[...]` of one."""
+```
+
+The `GenericAlias` member exists because `collection_key` below builds its key
+from a runtime value, and every construction that type-checks there produces a
+`GenericAlias`. It widens what may be *passed*; `is_provider_key` stays the
+validation and still admits only `list[X]` over a key, so `explain(dict[str,
+int])` type-checks and then raises `MissingProviderError` for an invalid key
+type, exactly as any other unusable value does. Adding a member to a union is
+compatible with every consumer already written against the alias, which is the
+widening Step 2's spec anticipated when it promoted `ProviderKey` to the public
+surface.
+
 Then, below `is_alias_binding`, add:
 
 ```python
@@ -917,15 +935,21 @@ def is_collection_binding(value: object) -> TypeGuard[CollectionBinding]:
 
 
 def collection_key(element: ProviderKey) -> ProviderKey:
-    """The key a collection over ``element`` is registered under."""
-    return list[element]
+    """The key a collection over ``element`` is registered under.
+
+    Built through `types.GenericAlias` rather than written as ``list[element]``:
+    subscripting a runtime value is `Variable "element" is not valid as a type`
+    under mypy. The result is the same object a consumer writes by hand — equal
+    to ``list[Element]``, hashing as it, and of the same type.
+    """
+    return GenericAlias(list, (element,))
 
 
 def collection_param(index: int) -> str:
     return f'{COLLECTION_PARAM_PREFIX}{index}'
 ```
 
-`list[element]` accepts a `Token` or a string as its argument as readily as a class, and the result hashes and compares by its argument, so it serves as a dictionary key for every kind of element.
+`GenericAlias` accepts a `Token` or a string as its argument as readily as a class, and the result hashes and compares by its argument, so it serves as a dictionary key for every kind of element.
 
 - [ ] **Step 4: Render a generic alias by qualified name**
 
@@ -941,7 +965,7 @@ def fmt_key(key: object) -> str:
     return repr(key)
 ```
 
-Add `from types import GenericAlias` and `from typing import get_args, get_origin` to the module, keeping the imports sorted.
+`GenericAlias` is imported by the previous step; add `from typing import get_args, get_origin` to the module, keeping the imports sorted.
 
 The branch is gated on `GenericAlias` rather than on `get_origin` being non-`None` so that a union never takes it: `Cache | Logger` must keep printing as itself in the message Task 1 added, and its origin is `types.UnionType`, which is a class.
 

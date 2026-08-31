@@ -45,13 +45,33 @@ rather than in a diagnostics release.
 
 ## Measurements
 
-Three questions were measured rather than assumed, against mypy at default
+Four questions were measured rather than assumed, against mypy at default
 settings and `basedpyright --strict`.
 
-**A parameterised generic is already a valid `ProviderKey` statically.**
-`list[Handler]` in expression position has the static type
+**A parameterised generic written at a call site is already a valid
+`ProviderKey`.** `list[Handler]` in expression position has the static type
 `type[list[Handler]]`, which is assignable to the `type[object]` member of the
-existing alias. `ProviderKey` needs no widening.
+existing alias. Nothing a consumer writes needs the alias to change.
+
+**Building that key from a runtime value does need the alias to change.**
+`list[element]`, where `element` is a parameter rather than a literal type, is
+`error: Variable "element" is not valid as a type [valid-type]` under mypy. The
+construction that works is `types.GenericAlias(list, (element,))`, which
+produces an object equal to, and hashing as, `list[Handler]` — same type, same
+equality, same hash. Its static type is `GenericAlias`, so `ProviderKey` gains
+one union member:
+
+```python
+type ProviderKey = type[object] | Token[object] | str | GenericAlias
+```
+
+This is the widening Step 2's spec anticipated when it promoted `ProviderKey`
+to the public surface: adding a member to a union is compatible with every
+consumer already written against it. It widens what may be *passed*;
+`is_provider_key` remains the validation, and it still admits only `list[X]`
+over a key. `explain(dict[str, int])` therefore type-checks and raises
+`MissingProviderError` for an invalid key type, which is the same treatment any
+other unusable value gets.
 
 **`resolve` needs no new overload.** `resolve[T](key: type[T] | Token[T]) -> T`
 already infers `list[Handler]` from `resolve(list[Handler])`. So do
@@ -68,12 +88,13 @@ equal to each other, which cycle 3 owns.
 
 ## Public surface
 
-No signature changes. Three additions.
+No signature changes. Three additions and one widening.
 
 | Symbol | Role |
 | --- | --- |
 | `BindingCollector.collect` | Declares a collection and its members. |
 | `ProviderShape.COLLECTION` | The shape of a collection node. |
+| `ProviderKey` | Gains a `GenericAlias` member, so a key built at runtime has a type. |
 | `GraphEdge.optional`, `GraphEdge.has_default` | What a consumer needs to tell why an edge is unsatisfied. |
 
 ```python
@@ -159,7 +180,10 @@ ProviderSpec(
 )
 ```
 
-`collection_key(element)` is `list[element]`. `collection_param(index)` is
+`collection_key(element)` is `GenericAlias(list, (element,))`, which is the
+`list[element]` a consumer writes by hand — equal to it, hashing as it, and of
+the same type — built in the one form that type-checks from a runtime value.
+`collection_param(index)` is
 `f'member_{index}'`; the names must be distinct because they are dictionary keys
 in the resolved arguments, and they are what `explain()` prints and what `dot()`
 and `mermaid()` write on each edge.
@@ -270,7 +294,7 @@ No new module. Both features land where each concern already lives.
 
 | Module | Change |
 | --- | --- |
-| `_core/spec.py` | `ParamSpec.optional`; `ProviderShape.COLLECTION`; `CollectionBinding`, `is_collection_binding`, `collection_key`, `collection_param`; the `fmt_key` branch. |
+| `_core/spec.py` | `ParamSpec.optional`; `ProviderShape.COLLECTION`; the `ProviderKey` widening; `CollectionBinding`, `is_collection_binding`, `collection_key`, `collection_param`; the `fmt_key` branch. |
 | `_core/introspect.py` | `AnnotatedMeta.optional` and the union normalisation. |
 | `_core/providers.py` | The collection branch of `_record_to_spec`; `optional` on extracted parameters; the union message in `as_provider_key`. |
 | `_core/bindings.py` | `BindingCollector.collect`. |
