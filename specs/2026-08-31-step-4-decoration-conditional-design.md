@@ -157,15 +157,15 @@ A `decorate` call appends a `BindRecord` whose source is a marker:
 @dataclass(frozen=True, slots=True)
 class DecorateBinding:
     key: ProviderKey
-    target_tag: str | None
     wrapper: object
 ```
 
 `DecorateBinding` carries its own key for the reason `AliasBinding` does:
 `BindRecord.provides` admits only a class, while a decorated key may equally be
-a `Token`, a string, or a parameterised generic. The decorator's tag is the
-decorated binding's tag, so it rides on `target_tag` rather than on
-`BindRecord.tag` — a decorator has no identity of its own to tag.
+a `Token`, a string, or a parameterised generic. It carries no second tag,
+unlike `AliasBinding`: a decorator has no identity of its own, so the one tag it
+has is the decorated binding's, and it rides on `BindRecord.tag` where every
+other tag rides.
 
 `build_specs` does not turn a decorate record into a `ProviderSpec`. It produces
 a `DecorationSpec` instead, because the spec's key depends on how many other
@@ -280,9 +280,11 @@ return annotation contributes nothing and is simply not named in the note below.
 
 The last row is the one addition to an existing message. It is produced by
 `graph.format_missing`, which both `freeze()` and `explain()` already share, so
-the note appears identically in the error and in the diagnostic. `explain()`
-reads it from `ResolutionPlan.inactive`, carried onto `DependencyGraph`, so the
-two cannot drift.
+the note appears identically in the error and in the diagnostic.
+`FrozenContainer.explain()` reads the set off `ResolutionPlan.inactive` and
+hands it to `render_tree`, rather than `DependencyGraph` carrying it: the graph
+view describes nodes, and an inactive binding is precisely a node that does not
+exist.
 
 ## Key rendering
 
@@ -316,13 +318,15 @@ One new module. Everything else lands where the concern already lives.
 | `_core/providers.py` | Record partitioning by condition; `DecorationSpec` construction; the declared-key reader for the inactive note; `_classes_within` recurses into an `Underlying`. |
 | `_core/decoration.py` | **New.** Folds decorations over the provider specs. |
 | `_core/graph.py` | `build_plan` applies the fold and carries `inactive`; `format_missing` takes the note. |
-| `_core/diagnostics.py` | `DependencyGraph` carries `inactive` for `explain()`. |
-| `_core/render.py` | `_render_absent` passes the note through. |
+| `_core/render.py` | `render_tree` and `_render_absent` take the inactive set and pass the note through. |
+| `_core/frozen.py` | `explain()` hands `ResolutionPlan.inactive` to `render_tree`. |
 | `_core/container.py` | `freeze()`'s `Raises:`; the `Container` docstring lists `decorate()`. |
 | `depin/__init__.py` | Exports `Underlying`. |
 
-`construct.py`, `frozen.py`, `scope.py`, `teardown.py`, `injection.py`,
-`overrides.py`, `introspect.py`, and `markers.py` are unchanged.
+`construct.py`, `diagnostics.py`, `scope.py`, `teardown.py`, `injection.py`,
+`overrides.py`, `introspect.py`, and `markers.py` are unchanged. `frozen.py`
+changes by one argument, on the `explain()` line alone; no resolution path is
+touched.
 
 ## Verification
 
@@ -386,5 +390,5 @@ One new module. Everything else lands where the concern already lives.
 | Decorating by predicate over many keys | `decorate(matching(...))` needs a matching language and makes the plan depend on registration order in a way `freeze()` cannot report simply. One key per call keeps every decoration nameable in an error. |
 | `include(source, when=...)` | Plain Python already expresses it, and combining an outer condition with a record's own would need a precedence rule for no new capability. |
 | A predicate taking arguments | A zero-argument callable closes over whatever it needs. Passing the container would let a predicate observe a half-built plan. |
-| Reporting inactive bindings as public data | `DependencyGraph` carries them only to keep `explain()` and `freeze()` phrased alike. A public accessor is surface with no identified consumer; the note is what a user acts on. |
+| Reporting inactive bindings as public data | The plan carries them only to keep `explain()` and `freeze()` phrased alike. A public accessor is surface with no identified consumer; the note is what a user acts on. |
 | Narrowing `MissingProviderError` to a dedicated inactive error | The failure is the same one — a parameter has no provider. A second exception type would split an `except` that should stay one. |
