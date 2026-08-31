@@ -217,8 +217,8 @@ def _checked(rec: BindRecord) -> object | None:
     if check is None or callable(check):
         return check
     raise InvalidProviderError(
-        f'cannot use {check!r} as a health check: a check is a callable that receives the value '
-        'the provider produced, and is healthy unless it raises or returns False.'
+        f'cannot use {check!r} as a health check for {rec.source!r}: a check is a callable that '
+        'receives the value the provider produced, and is healthy unless it raises or returns False.'
     )
 
 
