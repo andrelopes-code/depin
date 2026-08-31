@@ -205,7 +205,9 @@ def test_a_cycle_does_not_stop_the_search_for_a_sibling_missing_edge() -> None:
         ),
     )
     graph = DependencyGraph((node_a, node_b))
-    assert render_tree(graph, Missing, None, frozenset()) == format_missing(Missing, (A, B), B, 'missing')
+    assert render_tree(graph, Missing, None, frozenset()) == format_missing(
+        Missing, (A, B), B, 'missing', inactive=False
+    )
 
 
 def test_an_unrelated_missing_edge_does_not_stop_the_search_for_the_real_one() -> None:
@@ -220,7 +222,9 @@ def test_an_unrelated_missing_edge_does_not_stop_the_search_for_the_real_one() -
     make_outer.__annotations__ = {'other_dep': other, 'missing_dep': missing, 'return': outer}
 
     graph = build_graph(build_plan(Container().bind(make_outer).records()))
-    assert render_tree(graph, missing, None, frozenset()) == format_missing(missing, (outer,), outer, 'missing_dep')
+    assert render_tree(graph, missing, None, frozenset()) == format_missing(
+        missing, (outer,), outer, 'missing_dep', inactive=False
+    )
 
 
 def test_the_absent_message_uses_the_requested_tag() -> None:

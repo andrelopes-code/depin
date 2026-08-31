@@ -76,7 +76,7 @@ def _check_duplicates(specs: Iterable[ProviderSpec]) -> None:
         seen.add(ident)
 
 
-def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index, inactive: frozenset[Ident] = frozenset()) -> None:
+def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index, inactive: frozenset[Ident]) -> None:
     all_specs = tuple(specs)
     if not _any_unsatisfied(all_specs, by_key):
         return
@@ -150,7 +150,7 @@ def format_missing(
     owner: ProviderKey,
     param_name: str,
     *,
-    inactive: bool = False,
+    inactive: bool,
 ) -> str:
     """The message `build_plan` raises for an unsatisfied parameter.
 
