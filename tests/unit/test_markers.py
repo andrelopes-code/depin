@@ -136,16 +136,6 @@ def test_inject_marker_is_frozen() -> None:
         setattr(marker, field, 'mutated')
 
 
-def test_provides_accepts_a_string_key() -> None:
-    """A string is a provider key too, so `provides` now accepts one like any other key."""
-
-    class MemStore: ...
-
-    decorator = provides('Store')  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
-    assert decorator(MemStore) is MemStore
-    assert get_provides(MemStore) == 'Store'
-
-
 def test_provides_returns_the_decorated_class_unchanged() -> None:
     class Store: ...
 
@@ -166,6 +156,7 @@ def test_provides_accepts_a_parameterised_generic() -> None:
     assert get_provides(SqlRepo) == Repo[User]
 
 
-def test_provides_still_rejects_a_non_key() -> None:
+@pytest.mark.parametrize('target', [42, 'Store', Token[str]('db.url')])
+def test_provides_rejects_a_non_class_target(target: object) -> None:
     with pytest.raises(InvalidProviderError, match='expected a class'):
-        _ = provides(42)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        _ = provides(target)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]

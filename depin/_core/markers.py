@@ -143,9 +143,9 @@ def _reject_invalid_key(value: object, /) -> None:
     """
     # Deferred: depin._core.typeguards imports Token from this module, so a
     # module-level import here would be circular.
-    from depin._core.typeguards import is_provider_key
+    from depin._core.typeguards import is_canonical_generic, is_generic_key
 
-    if not is_provider_key(value):
+    if not (isinstance(value, type) or (is_generic_key(value) and is_canonical_generic(value))):
         raise InvalidProviderError(
             f'cannot use {value!r} as a @provides target: expected a class, a Protocol, '
             'an abstract base class, or a parameterised generic such as Repo[User]'
@@ -177,11 +177,13 @@ def provides(abstract: type[object]) -> _ProvidesDecorator:
 
     Args:
         abstract: The key to register the decorated class under. Any class,
-            including a ``Protocol`` and an abstract base class.
+            including a ``Protocol`` and an abstract base class, or a
+            parameterised generic such as ``Repo[User]``.
 
     Raises:
-        InvalidProviderError: ``abstract`` is not a class, so it could never
-            serve as the provider key the decorator promises to record.
+        InvalidProviderError: ``abstract`` is neither a class nor a
+            parameterised generic, so it could never serve as the provider
+            key the decorator promises to record.
 
     Example:
         ```pycon
