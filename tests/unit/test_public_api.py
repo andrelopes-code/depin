@@ -15,6 +15,9 @@ EXPECTED_EXPORTS = (
     'FrozenContainer',
     'GraphEdge',
     'GraphNode',
+    'HealthCheck',
+    'HealthReport',
+    'HealthResult',
     'Named',
     'ProviderKey',
     'ProviderShape',
@@ -25,6 +28,7 @@ EXPECTED_EXPORTS = (
     'Tag',
     'Token',
     'Underlying',
+    'WarmupReport',
     'injected',
     'provides',
 )
