@@ -5,7 +5,7 @@ from typing import Annotated, Optional
 import pytest
 
 from depin import Container, Named, Scope, Tag, Token
-from depin.errors import InvalidProviderError
+from depin.errors import InvalidProviderError, MissingProviderError
 
 
 class Cache:
@@ -126,3 +126,21 @@ async def test_an_unbound_optional_resolves_to_none_in_an_async_provider() -> No
     di = Container().bind(make, provides=Service).bind(Wrapper).freeze()
     resolved = await di.aresolve(Wrapper)
     assert resolved.cache is None
+
+
+def test_an_unbound_optional_is_not_reported_beside_a_genuinely_missing_provider() -> None:
+    class Missing: ...
+
+    class Absent: ...
+
+    class Service:
+        def __init__(self, required: Missing, cache: Absent | None) -> None:
+            del required, cache
+
+    with pytest.raises(MissingProviderError) as raised:
+        _ = Container().bind(Service).freeze()
+
+    message = str(raised.value)
+    assert 'Missing' in message
+    assert 'Absent' not in message
+    assert 'missing providers' not in message
