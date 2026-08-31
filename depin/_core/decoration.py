@@ -27,18 +27,24 @@ from depin.errors import InvalidProviderError, InvalidScopeError, MissingProvide
 def apply(
     providers: tuple[ProviderSpec, ...],
     decorations: tuple[DecorationSpec, ...],
+    inactive: frozenset[Ident],
 ) -> tuple[ProviderSpec, ...]:
     """Return the specs with every decorated binding replaced by its chain.
 
+    ``inactive`` is the identities `Container.freeze()` dropped because their
+    condition did not hold, used only to tell that case apart from a key that
+    was never bound at all.
+
     Raises:
-        MissingProviderError: A decorator names a key that nothing binds.
+        MissingProviderError: A decorator names a key that nothing binds, or
+            that a condition dropped from the plan.
         InvalidProviderError: The decorated binding is a `Container.scope_value`.
         InvalidScopeError: A lifecycle decorator wraps a transient binding.
     """
     if not decorations:
         return providers
     grouped = _group(decorations)
-    _check_targets(grouped, {(spec.key, spec.tag): spec for spec in providers})
+    _check_targets(grouped, {(spec.key, spec.tag): spec for spec in providers}, inactive)
     out: list[ProviderSpec] = []
     for spec in providers:
         layers = grouped.get((spec.key, spec.tag))
@@ -57,11 +63,21 @@ def _group(decorations: Iterable[DecorationSpec]) -> dict[Ident, list[Decoration
     return grouped
 
 
-def _check_targets(grouped: dict[Ident, list[DecorationSpec]], index: dict[Ident, ProviderSpec]) -> None:
+def _check_targets(
+    grouped: dict[Ident, list[DecorationSpec]],
+    index: dict[Ident, ProviderSpec],
+    inactive: frozenset[Ident],
+) -> None:
     for ident, layers in grouped.items():
         key, tag = ident
         spec = index.get(ident)
         if spec is None:
+            if ident in inactive:
+                raise MissingProviderError(
+                    f'cannot decorate {fmt_key(key)} (tag={tag!r}): its binding is registered under a '
+                    'condition that did not hold, so nothing was bound for it in this configuration. '
+                    'Give the decorator the same condition as the binding it wraps.'
+                )
             raise MissingProviderError(
                 f'cannot decorate {fmt_key(key)} (tag={tag!r}): no binding is registered for it. A '
                 'decorator wraps an existing binding, so bind the key, drop the decorator, or give '

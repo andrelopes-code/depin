@@ -49,7 +49,7 @@ def build_plan(records: Iterable[BindRecord]) -> ResolutionPlan:
     """
     specs = build_specs(records)
     _check_duplicates(specs.providers)
-    providers = decoration.apply(specs.providers, specs.decorations)
+    providers = decoration.apply(specs.providers, specs.decorations, specs.inactive)
     by_key = _index(providers)
     _check_missing(providers, by_key, specs.inactive)
     order = _toposort(providers, by_key)
