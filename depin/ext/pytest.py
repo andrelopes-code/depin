@@ -26,8 +26,13 @@ _CONTAINER_NOT_DEFINED = (
 )
 
 
-class _OverrideFactory(Protocol):
-    """The callable `depin_override` returns."""
+class OverrideFactory(Protocol):
+    """The callable `depin_override` returns.
+
+    Named so a helper that takes `depin_override` as a parameter has something
+    to annotate it with; the plugin exports no fixture importable this way,
+    only this type.
+    """
 
     def __call__[T](
         self,
@@ -38,8 +43,8 @@ class _OverrideFactory(Protocol):
     ) -> contextlib.AbstractContextManager[FrozenContainer]: ...
 
 
-class _AsyncOverrideFactory(Protocol):
-    """The callable `depin_aoverride` returns."""
+class AsyncOverrideFactory(Protocol):
+    """The callable `depin_aoverride` returns; the async counterpart to `OverrideFactory`."""
 
     def __call__[T](
         self,
@@ -67,7 +72,7 @@ def depin_container() -> FrozenContainer:
 
 
 @pytest.fixture
-def depin_override(depin_container: FrozenContainer) -> _OverrideFactory:
+def depin_override(depin_container: FrozenContainer) -> OverrideFactory:
     """Factory for a context manager that overrides a provider and evicts cached consumers.
 
     Calls `FrozenContainer.reset()` before entering `FrozenContainer.override()`,
@@ -79,12 +84,36 @@ def depin_override(depin_container: FrozenContainer) -> _OverrideFactory:
         A callable ``(key, replacement, *, tag=None)`` whose result is a
         context manager yielding `depin_container`.
 
+    Raises:
+        MissingProviderError: ``key`` is not a valid provider key type.
+        ExceptionGroup: A teardown drained by `reset()` failed, or a singleton
+            being evicted is an async provider — use `depin_aoverride` instead.
+
     Example:
-        ```python
-        def test_uses_fake_clock(depin_container, depin_override):
-            real_report = depin_container[Report]
-            with depin_override(Clock, FakeClock()) as di:
-                assert di[Report].rendered_at == 'fake'
+        What the factory automates, spelled out with the plain `override()` /
+        `reset()` calls it wraps:
+
+        ```pycon
+        >>> from depin import Container
+        >>> class Clock:
+        ...     def now(self) -> str:
+        ...         return 'real'
+        >>> class FakeClock:
+        ...     def now(self) -> str:
+        ...         return 'fake'
+        >>> class Report:
+        ...     def __init__(self, clock: Clock) -> None:
+        ...         self.clock = clock
+        >>> di = Container().bind(Clock).bind(Report).freeze()
+        >>> real_report = di[Report]
+        >>> di.reset()
+        >>> with di.override(Clock, FakeClock()):
+        ...     di[Report].clock.now()
+        'fake'
+        >>> di.reset()
+        >>> di[Report].clock.now()
+        'real'
+
         ```
     """
 
@@ -106,7 +135,7 @@ def depin_override(depin_container: FrozenContainer) -> _OverrideFactory:
 
 
 @pytest.fixture
-def depin_aoverride(depin_container: FrozenContainer) -> _AsyncOverrideFactory:
+def depin_aoverride(depin_container: FrozenContainer) -> AsyncOverrideFactory:
     """The async counterpart to `depin_override`, using `FrozenContainer.areset()`.
 
     Needed instead of `depin_override` whenever a singleton on the path being
@@ -116,6 +145,10 @@ def depin_aoverride(depin_container: FrozenContainer) -> _AsyncOverrideFactory:
     Returns:
         A callable ``(key, replacement, *, tag=None)`` whose result is an
         async context manager yielding `depin_container`.
+
+    Raises:
+        MissingProviderError: ``key`` is not a valid provider key type.
+        ExceptionGroup: A teardown drained by `areset()` failed.
     """
 
     @contextlib.asynccontextmanager
@@ -141,6 +174,11 @@ def depin_scope(depin_container: FrozenContainer) -> Generator[ScopeFrame]:
 
     Yields the `ScopeFrame`, so the test can seed a `Container.scope_value`
     key with `ScopeFrame.provide` before anything resolves through it.
+
+    Raises:
+        TeardownError: An async provider left a teardown in this sync scope;
+            use `depin_ascope` instead.
+        ExceptionGroup: One or more teardowns failed when the scope closed.
     """
     with Host(depin_container).scope() as frame:
         yield frame
@@ -148,6 +186,10 @@ def depin_scope(depin_container: FrozenContainer) -> Generator[ScopeFrame]:
 
 @pytest.fixture
 async def depin_ascope(depin_container: FrozenContainer) -> AsyncGenerator[ScopeFrame]:
-    """The async counterpart to `depin_scope`, using `Host.ascope()`."""
+    """The async counterpart to `depin_scope`, using `Host.ascope()`.
+
+    Raises:
+        ExceptionGroup: One or more teardowns failed when the scope closed.
+    """
     async with Host(depin_container).ascope() as frame:
         yield frame
