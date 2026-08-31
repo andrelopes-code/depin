@@ -372,7 +372,7 @@ def test_bind_infers_the_check_parameter_for_a_plain_factory() -> None:
     assert_type(Container().bind(make_pool, check=ping), Container)
 
 
-def check_the_integration_contract() -> None:
+def test_the_integration_contract_keeps_its_types() -> None:
     di = Container().bind(Config).freeze()
     host = Host(di)
     assert_type(host.container, FrozenContainer)
@@ -385,7 +385,7 @@ def check_the_integration_contract() -> None:
     assert_type(optional_hosted_container(), FrozenContainer | None)
 
 
-async def check_the_integration_contract_async() -> None:
+async def test_the_async_integration_contract_keeps_its_types() -> None:
     di = Container().bind(Config).freeze()
     async with Host(di).ascope() as frame:
         assert_type(frame, ScopeFrame)
