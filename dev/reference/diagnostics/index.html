@@ -868,6 +868,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#depin.Condition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Condition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.Underlying" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Underlying
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#depin.DependencyGraph" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1065,6 +1087,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#depin.Condition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Condition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.Underlying" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Underlying
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#depin.DependencyGraph" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1214,7 +1258,11 @@
 
 <a href="#depin.ProviderKey" class="headerlink" title="Permanent link">&para;</a></h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nc">ProviderKey</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">GenericAlias</span>
+    <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span>
+    <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span>
+    <span class="o">|</span> <span class="nb">str</span>
+    <span class="o">|</span> <span class="n">GenericAlias</span>
+    <span class="o">|</span> <span class="n">Underlying</span>
 <span class="p">)</span>
 </code></pre></div>
 
@@ -1228,6 +1276,107 @@ expression position — <code>Repo[User]</code>, <code>Reader[User]</code> — h
 produces, such as <code>list[Handler]</code>. A deprecated <code>typing</code> alias
 (<code>typing.List[X]</code>) is a key at neither level: <code>Container.freeze()</code> rejects it
 and names the canonical spelling to write instead.</p>
+<p>An <code>Underlying</code> is the fifth: the identity <code>Container.decorate</code> moves a
+decorated binding's inner form to, so the wrapper can occupy the public key.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-type_alias">
+
+
+
+<h2 id="depin.Condition" class="doc doc-heading">
+            <span class="doc doc-object-name doc-type_alias-name">Condition</span>
+
+
+<a href="#depin.Condition" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nc">Condition</span> <span class="o">=</span> <span class="nb">bool</span> <span class="o">|</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">bool</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>What <code>when=</code> accepts on a registration.</p>
+<p>A <code>bool</code> is read where it is written. A callable is called once per
+<code>Container.freeze()</code>, with no arguments, and its result is read for truth — so a
+predicate over configuration or the environment is evaluated when the graph is
+built, not when a value is resolved.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="depin.Underlying" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">Underlying</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#depin.Underlying" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>The key a decorated binding's inner form is registered under.</p>
+<p><code>Container.decorate</code> leaves the wrapper on the public key and moves what it
+wraps here, so both are ordinary nodes of the validated graph: the wrapper
+reaches its inner form over a real edge, and the inner form keeps the
+lifetime, the cache entry, and the teardown it had undecorated.</p>
+<p><code>applied</code> counts the decorators already applied below the public key, so
+the registered binding is <code>Underlying(key, 0)</code> and a second decorator over
+the same key sees <code>Underlying(key, 1)</code>. Construct one to inspect a
+decorated binding — <code>FrozenContainer.explain</code> and <code>DependencyGraph.find</code>
+accept it — not to register anything.</p>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">ProviderShape</span><span class="p">,</span> <span class="n">Underlying</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Store</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'plain'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Loud</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inner</span><span class="p">:</span> <span class="n">Store</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">inner</span> <span class="o">=</span> <span class="n">inner</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inner</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Store</span><span class="p">)</span><span class="o">.</span><span class="n">decorate</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="n">Loud</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">graph</span><span class="p">()</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">Underlying</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">shape</span> <span class="ow">is</span> <span class="n">ProviderShape</span><span class="o">.</span><span class="n">CLASS</span>
+<span class="go">True</span>
+</code></pre></div>
+</details>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
     </div>
 
 </div>

@@ -535,6 +535,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#decoration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decoration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conditional-bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conditional bindings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#where-to-freeze" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1082,6 +1104,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#decoration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decoration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conditional-bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conditional bindings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#where-to-freeze" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1262,6 +1306,119 @@ are all rejected by <code>freeze()</code>.</p>
 <p>depin does not verify that the target satisfies the alias key. A <code>Protocol</code> that
 is not <code>runtime_checkable</code> cannot be checked at runtime, and a structural alias
 between two unrelated classes is a legitimate thing to write.</p>
+<h2 id="decoration">Decoration<a class="headerlink" href="#decoration" title="Permanent link">&para;</a></h2>
+<p><code>decorate(key, wrapper)</code> wraps a binding that already exists. Every consumer of
+<code>key</code> receives what <code>wrapper</code> returns; the binding that was registered keeps
+its own lifetime, cache entry, and teardown, reachable at <code>Underlying(key, 0)</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Store</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'row'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Cached</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inner</span><span class="p">:</span> <span class="n">Store</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">inner</span> <span class="o">=</span> <span class="n">inner</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">hits</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">...</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">hits</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inner</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Store</span><span class="p">)</span><span class="o">.</span><span class="n">decorate</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="n">Cached</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+<span class="go">'row'</span>
+</code></pre></div>
+<p><code>wrapper</code> declares exactly one parameter whose key and tag are the decorated
+ones — <code>inner</code> above — which receives the undecorated value. Any further
+parameter is an ordinary dependency, resolved from the graph like any other:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Prefix</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">text</span> <span class="o">=</span> <span class="s1">'&gt;&gt; '</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Verbose</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inner</span><span class="p">:</span> <span class="n">Store</span><span class="p">,</span> <span class="n">prefix</span><span class="p">:</span> <span class="n">Prefix</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">inner</span> <span class="o">=</span> <span class="n">inner</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">prefix</span> <span class="o">=</span> <span class="n">prefix</span>
+<span class="gp">...</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">.</span><span class="n">text</span><span class="si">}{</span><span class="bp">self</span><span class="o">.</span><span class="n">inner</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="si">}</span><span class="s1">'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Prefix</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Store</span><span class="p">)</span><span class="o">.</span><span class="n">decorate</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="n">Verbose</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+<span class="go">'&gt;&gt; row'</span>
+</code></pre></div>
+<p>Two decorators over one key both apply, the last registered wrapping the
+first:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Upper</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inner</span><span class="p">:</span> <span class="n">Store</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">inner</span> <span class="o">=</span> <span class="n">inner</span>
+<span class="gp">...</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inner</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Bracket</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inner</span><span class="p">:</span> <span class="n">Store</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">inner</span> <span class="o">=</span> <span class="n">inner</span>
+<span class="gp">...</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="sa">f</span><span class="s1">'[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">inner</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="si">}</span><span class="s1">]'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Store</span><span class="p">)</span><span class="o">.</span><span class="n">decorate</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="n">Upper</span><span class="p">)</span><span class="o">.</span><span class="n">decorate</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="n">Bracket</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+<span class="go">'[ROW]'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">di</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">Store</span><span class="p">))</span>
+<span class="go">Store  [singleton, class]</span>
+<span class="go">  inner: Store (decorated x1)  [singleton, class]</span>
+<span class="go">    inner: Store (undecorated)  [singleton, class]</span>
+</code></pre></div>
+<p><code>explain()</code> reads outward to inward: the outermost wrapper on the public key,
+each further wrapper under <code>Store (decorated x</code><em>n</em><code>)</code>, and the registered
+binding itself under <code>Store (undecorated)</code>. A decorator is a real node, so it
+participates in validation like any other: an unbound key, a cycle through the
+wrapper's own dependencies, and an async wrapper over a sync binding are all
+checked the way an ordinary provider's would be.</p>
+<p>A <code>scope_value</code> binding cannot be decorated. A value supplied by whoever opens
+the scope is read from the active frame before the plan is consulted, so a
+parameter would receive the undecorated value while <code>resolve()</code> returned the
+decorated one; <code>freeze()</code> rejects the decorator with <code>InvalidProviderError</code>
+rather than leave it half-working.</p>
+<h2 id="conditional-bindings">Conditional bindings<a class="headerlink" href="#conditional-bindings" title="Permanent link">&para;</a></h2>
+<p><code>when=</code> keeps a binding out of the plan unless a condition holds. It is
+accepted by <code>bind</code>, <code>value</code>, <code>scope_value</code>, <code>alias</code>, <code>collect</code>, <code>decorate</code>, and
+the <code>singleton</code> / <code>scoped</code> / <code>transient</code> decorators.</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Store</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Postgres</span><span class="p">(</span><span class="n">Store</span><span class="p">):</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Memory</span><span class="p">(</span><span class="n">Store</span><span class="p">):</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">production</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="p">(</span>
+<span class="gp">... </span>    <span class="n">Container</span><span class="p">()</span>
+<span class="gp">... </span>    <span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Postgres</span><span class="p">,</span> <span class="n">provides</span><span class="o">=</span><span class="n">Store</span><span class="p">,</span> <span class="n">when</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">production</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Memory</span><span class="p">,</span> <span class="n">provides</span><span class="o">=</span><span class="n">Store</span><span class="p">,</span> <span class="n">when</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="ow">not</span> <span class="n">production</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">isinstance</span><span class="p">(</span><span class="n">di</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">Store</span><span class="p">),</span> <span class="n">Memory</span><span class="p">)</span>
+<span class="go">True</span>
+</code></pre></div>
+<p>A <code>bool</code> is read at the call that appends the record. A callable is called
+once inside <code>freeze()</code>, with no arguments, and again on every later freeze of
+the same builder — a container is a builder, and two freezes may legitimately
+differ. Either way, the condition is settled before anything else is
+validated: an inactive binding contributes no node, appears in no plan, and is
+never introspected for its shape or its parameters. Two bindings for one key,
+with exactly one condition active, is the deployment switch shown above; two
+active at once still raises <code>DuplicateProviderError</code>.</p>
+<p>A parameter that requires an inactive binding is unsatisfied, exactly as an
+unbound key is — it escapes only through a default or a <code>T | None</code>
+annotation:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Cache</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Service</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cache</span><span class="p">:</span> <span class="n">Cache</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="n">cache</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Cache</span><span class="p">,</span> <span class="n">when</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">Service</span><span class="p">]</span><span class="o">.</span><span class="n">cache</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</code></pre></div>
+<p><code>MissingProviderError</code> and <code>explain()</code> both name the cause: a key only an
+inactive binding declares gets <code>registered but inactive</code> appended after the
+chain, instead of being reported as unbound outright.</p>
+<p>A decorator over an inactive binding needs the same condition. Decorating a
+key that no active binding occupies raises <code>MissingProviderError</code>, because the
+decoration has nothing to wrap; give <code>decorate(..., when=...)</code> the identical
+predicate so the wrapper disappears along with what it wraps.</p>
 <h2 id="where-to-freeze">Where to freeze<a class="headerlink" href="#where-to-freeze" title="Permanent link">&para;</a></h2>
 <p>Freeze once, at the composition root — the entry point that knows the whole
 application. Everything below it receives what it needs and never touches a

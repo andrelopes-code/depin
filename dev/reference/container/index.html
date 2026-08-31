@@ -784,6 +784,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.Container.decorate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        decorate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.Container.singleton" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -915,6 +926,17 @@
     <span class="md-ellipsis">
       
         collect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Registry.decorate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        decorate
       
     </span>
   </a>
@@ -1326,6 +1348,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.Container.decorate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        decorate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.Container.singleton" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1457,6 +1490,17 @@
     <span class="md-ellipsis">
       
         collect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Registry.decorate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        decorate
       
     </span>
   </a>
@@ -1632,8 +1676,8 @@
 
         <p>Mutable builder for a dependency graph.</p>
 <p>Collect bindings with <code>bind()</code>, <code>value()</code>, <code>scope_value()</code>, <code>alias()</code>,
-<code>collect()</code>, and the <code>singleton()</code> / <code>scoped()</code> / <code>transient()</code> decorators, then call <code>freeze()</code>
-to validate the graph and obtain an immutable <code>FrozenContainer</code>. A
+<code>collect()</code>, <code>decorate()</code>, and the <code>singleton()</code> / <code>scoped()</code> / <code>transient()</code> decorators, then call
+<code>freeze()</code> to validate the graph and obtain an immutable <code>FrozenContainer</code>. A
 <code>Container</code> performs no resolution itself; nothing is constructed until you
 resolve from the frozen view. Registration order does not matter — providers
 are matched by key and ordered at <code>freeze()</code> time.</p>
@@ -1720,6 +1764,7 @@ containers, anything satisfying <code>Bindings</code>. Equivalent to calling
     <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
     <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -1813,6 +1858,23 @@ a matching <code>tag</code> or <code>Annotated[..., Tag(...)]</code>.</p>
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -1864,7 +1926,12 @@ a matching <code>tag</code> or <code>Annotated[..., Tag(...)]</code>.</p>
 
 
 <a href="#depin.Container.value" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">value</span><span class="p">(</span><span class="n">token</span><span class="p">:</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="n">value</span><span class="p">:</span> <span class="n">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">value</span><span class="p">(</span>
+    <span class="n">token</span><span class="p">:</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">],</span>
+    <span class="n">value</span><span class="p">:</span> <span class="n">T</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -1873,6 +1940,70 @@ a matching <code>tag</code> or <code>Annotated[..., Tag(...)]</code>.</p>
 <p>The value is registered as a singleton and returned as-is on resolution —
 no construction, no parameter wiring. Use this for configuration and other
 plain values that have no factory.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>token</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Token (depin._core.markers.Token)" href="../markers/#depin.Token">Token</a>[<span title="depin._core.bindings.BindingCollector.value[T]">T</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The key to register the value under.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>value</code>
+            </td>
+            <td>
+                  <code><span title="depin._core.bindings.BindingCollector.value[T]">T</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The value returned on resolution.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 <details class="example" open>
@@ -1898,7 +2029,10 @@ plain values that have no factory.</p>
 
 <a href="#depin.Container.scope_value" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">scope_value</span><span class="p">(</span>
-    <span class="n">key</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -1912,6 +2046,38 @@ middleware, a CLI entry point, a test fixture. The binding is
 <code>OutsideScopeError</code>, and resolving inside a scope that never received the
 value raises <code>MissingProviderError</code>. This is how the FastAPI integration
 exposes the per-request <code>Request</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 <details class="example" open>
@@ -1950,6 +2116,7 @@ exposes the per-request <code>Request</code>.</p>
     <span class="n">to</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">to_tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -2050,6 +2217,23 @@ resolution or of an <code>Annotated[..., Tag(...)]</code> parameter.</p>
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -2109,6 +2293,7 @@ resolution or of an <code>Annotated[..., Tag(...)]</code> parameter.</p>
     <span class="n">members</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ProviderKey</span><span class="p">],</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -2195,6 +2380,23 @@ annotation: <code>get_type_hints</code> treats the string inside
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -2247,6 +2449,168 @@ annotation: <code>get_type_hints</code> treats the string inside
 <div class="doc doc-object doc-function">
 
 
+<h3 id="depin.Container.decorate" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">decorate</span>
+
+
+<a href="#depin.Container.decorate" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">decorate</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span>
+    <span class="n">wrapper</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">object</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Wrap an existing binding without changing its registration.</p>
+<p>Every consumer of <code>key</code> receives what <code>wrapper</code> returns, including
+consumers deep in the graph. The binding that was registered keeps its
+lifetime, its cache entry, and its teardown: it is built once, in the
+position it would have occupied undecorated, and the wrapper is built
+after it and torn down before it.</p>
+<p><code>wrapper</code> declares one parameter whose key and tag are the decorated
+ones — that parameter receives the value being wrapped — and any number
+of further parameters, which are ordinary dependencies resolved from the
+graph. The wrapper takes no scope of its own: it runs at the lifetime of
+the binding it wraps.</p>
+<p>Decorators stack. Two calls over one key apply in registration order, so
+the last registered is the outermost.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>key</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The binding to wrap. A class, a <code>Token</code>, a string, or a
+parameterised generic.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>wrapper</code>
+            </td>
+            <td>
+                  <code><span title="type">type</span>[<span title="object">object</span>] | <span title="collections.abc.Callable">Callable</span>[..., <span title="object">object</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A class or factory producing the decorated value. Any
+provider shape is accepted, async ones included; an async
+wrapper makes the key resolvable only through
+<code>FrozenContainer.aresolve</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tag</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The decorated binding's tag, when it has one.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this decorator enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.Self">Self</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>self</code>, for chaining.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Store</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'plain'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Loud</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inner</span><span class="p">:</span> <span class="n">Store</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">inner</span> <span class="o">=</span> <span class="n">inner</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inner</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Store</span><span class="p">)</span><span class="o">.</span><span class="n">decorate</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="n">Loud</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+<span class="go">'PLAIN'</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h3 id="depin.Container.singleton" class="doc doc-heading">
             <span class="doc doc-object-name doc-function-name">singleton</span>
 
@@ -2256,12 +2620,45 @@ annotation: <code>get_type_hints</code> treats the string inside
     <span class="o">*</span><span class="p">,</span>
     <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScopeDecorator</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Decorator form of <code>bind(..., scope=Scope.SINGLETON)</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 <details class="example" open>
@@ -2293,12 +2690,45 @@ annotation: <code>get_type_hints</code> treats the string inside
     <span class="o">*</span><span class="p">,</span>
     <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScopeDecorator</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Decorator form of <code>bind(..., scope=Scope.SCOPED)</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -2317,12 +2747,45 @@ annotation: <code>get_type_hints</code> treats the string inside
     <span class="o">*</span><span class="p">,</span>
     <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScopeDecorator</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Decorator form of <code>bind(..., scope=Scope.TRANSIENT)</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -2405,7 +2868,9 @@ singleton depends on a scoped provider it would capture for life, and
 every factory exposes enough type information to infer its key and
 parameters. The frozen container also pre-computes which providers need
 async resolution, so <code>FrozenContainer.resolve()</code> can reject async
-providers up front instead of blocking an event loop.</p>
+providers up front instead of blocking an event loop. Every binding's
+<code>when</code> condition is evaluated here as well; a binding whose condition
+does not hold contributes no node and is not validated at all.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -2423,7 +2888,9 @@ providers up front instead of blocking an event loop.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A required dependency has no provider.</p>
+                <p>A required dependency has no provider, a
+decorator names a key nothing binds, or a parameter requires a
+key that only an inactive binding declares.</p>
               </div>
             </td>
           </tr>
@@ -2469,8 +2936,12 @@ or a collection lists the same member twice.</p>
 default, a binding is neither a class nor a callable, an
 alias names a key or a target that is not a class, a <code>Token</code>,
 a string, or a <code>list[X]</code>, a collection names an element or a
-member that is not one of those either, or a parameter is
-annotated with a union that names two or more providers.</p>
+member that is not one of those either, a parameter is
+annotated with a union that names two or more providers, a
+decorator declares no parameter for the key it decorates (or
+declares two or more), the decorated binding is a
+<code>scope_value</code>, or a <code>when</code> value is neither a <code>bool</code> nor a
+callable.</p>
               </div>
             </td>
           </tr>
@@ -2481,7 +2952,7 @@ annotated with a union that names two or more providers.</p>
             <td>
               <div class="doc-md-description">
                 <p>A generator or context-manager provider is bound
-as transient.</p>
+as transient, or such a decorator wraps a transient binding.</p>
               </div>
             </td>
           </tr>
@@ -2624,6 +3095,7 @@ named registries keeps the first non-empty name.</p>
     <span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span> <span class="o">=</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span>
     <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -2717,6 +3189,23 @@ a matching <code>tag</code> or <code>Annotated[..., Tag(...)]</code>.</p>
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -2768,7 +3257,12 @@ a matching <code>tag</code> or <code>Annotated[..., Tag(...)]</code>.</p>
 
 
 <a href="#depin.Registry.value" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">value</span><span class="p">(</span><span class="n">token</span><span class="p">:</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="n">value</span><span class="p">:</span> <span class="n">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">value</span><span class="p">(</span>
+    <span class="n">token</span><span class="p">:</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">],</span>
+    <span class="n">value</span><span class="p">:</span> <span class="n">T</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2777,6 +3271,70 @@ a matching <code>tag</code> or <code>Annotated[..., Tag(...)]</code>.</p>
 <p>The value is registered as a singleton and returned as-is on resolution —
 no construction, no parameter wiring. Use this for configuration and other
 plain values that have no factory.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>token</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Token (depin._core.markers.Token)" href="../markers/#depin.Token">Token</a>[<span title="depin._core.bindings.BindingCollector.value[T]">T</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The key to register the value under.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>value</code>
+            </td>
+            <td>
+                  <code><span title="depin._core.bindings.BindingCollector.value[T]">T</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The value returned on resolution.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 <details class="example" open>
@@ -2802,7 +3360,10 @@ plain values that have no factory.</p>
 
 <a href="#depin.Registry.scope_value" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">scope_value</span><span class="p">(</span>
-    <span class="n">key</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -2816,6 +3377,38 @@ middleware, a CLI entry point, a test fixture. The binding is
 <code>OutsideScopeError</code>, and resolving inside a scope that never received the
 value raises <code>MissingProviderError</code>. This is how the FastAPI integration
 exposes the per-request <code>Request</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 <details class="example" open>
@@ -2854,6 +3447,7 @@ exposes the per-request <code>Request</code>.</p>
     <span class="n">to</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">to_tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -2954,6 +3548,23 @@ resolution or of an <code>Annotated[..., Tag(...)]</code> parameter.</p>
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -3013,6 +3624,7 @@ resolution or of an <code>Annotated[..., Tag(...)]</code> parameter.</p>
     <span class="n">members</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ProviderKey</span><span class="p">],</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
 </code></pre></div>
 
@@ -3099,6 +3711,23 @@ annotation: <code>get_type_hints</code> treats the string inside
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -3151,6 +3780,168 @@ annotation: <code>get_type_hints</code> treats the string inside
 <div class="doc doc-object doc-function">
 
 
+<h3 id="depin.Registry.decorate" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">decorate</span>
+
+
+<a href="#depin.Registry.decorate" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">decorate</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span>
+    <span class="n">wrapper</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">object</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Wrap an existing binding without changing its registration.</p>
+<p>Every consumer of <code>key</code> receives what <code>wrapper</code> returns, including
+consumers deep in the graph. The binding that was registered keeps its
+lifetime, its cache entry, and its teardown: it is built once, in the
+position it would have occupied undecorated, and the wrapper is built
+after it and torn down before it.</p>
+<p><code>wrapper</code> declares one parameter whose key and tag are the decorated
+ones — that parameter receives the value being wrapped — and any number
+of further parameters, which are ordinary dependencies resolved from the
+graph. The wrapper takes no scope of its own: it runs at the lifetime of
+the binding it wraps.</p>
+<p>Decorators stack. Two calls over one key apply in registration order, so
+the last registered is the outermost.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>key</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The binding to wrap. A class, a <code>Token</code>, a string, or a
+parameterised generic.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>wrapper</code>
+            </td>
+            <td>
+                  <code><span title="type">type</span>[<span title="object">object</span>] | <span title="collections.abc.Callable">Callable</span>[..., <span title="object">object</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A class or factory producing the decorated value. Any
+provider shape is accepted, async ones included; an async
+wrapper makes the key resolvable only through
+<code>FrozenContainer.aresolve</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tag</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The decorated binding's tag, when it has one.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this decorator enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.Self">Self</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>self</code>, for chaining.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Store</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'plain'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Loud</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inner</span><span class="p">:</span> <span class="n">Store</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">inner</span> <span class="o">=</span> <span class="n">inner</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inner</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Store</span><span class="p">)</span><span class="o">.</span><span class="n">decorate</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="n">Loud</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+<span class="go">'PLAIN'</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h3 id="depin.Registry.singleton" class="doc doc-heading">
             <span class="doc doc-object-name doc-function-name">singleton</span>
 
@@ -3160,12 +3951,45 @@ annotation: <code>get_type_hints</code> treats the string inside
     <span class="o">*</span><span class="p">,</span>
     <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScopeDecorator</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Decorator form of <code>bind(..., scope=Scope.SINGLETON)</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 <details class="example" open>
@@ -3197,12 +4021,45 @@ annotation: <code>get_type_hints</code> treats the string inside
     <span class="o">*</span><span class="p">,</span>
     <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScopeDecorator</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Decorator form of <code>bind(..., scope=Scope.SCOPED)</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -3221,12 +4078,45 @@ annotation: <code>get_type_hints</code> treats the string inside
     <span class="o">*</span><span class="p">,</span>
     <span class="n">provides</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Condition</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScopeDecorator</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Decorator form of <code>bind(..., scope=Scope.TRANSIENT)</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>when</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Condition (depin._core.spec.Condition)" href="../diagnostics/#depin.Condition">Condition</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Condition deciding whether this binding enters the plan.
+A callable is evaluated inside <code>Container.freeze()</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
