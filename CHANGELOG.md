@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0](https://github.com/andrelopes-code/depin/compare/v0.11.0...v0.12.0) (2026-08-31)
+
+
+### Features
+
+* warm up singletons and run declared health checks ([4c02999](https://github.com/andrelopes-code/depin/commit/4c02999e8b6161355ce0301026553f74932a97c6))
+
 ## [0.11.0](https://github.com/andrelopes-code/depin/compare/v0.10.0...v0.11.0) (2026-08-31)
 
 
