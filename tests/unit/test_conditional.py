@@ -218,8 +218,6 @@ def test_explain_and_freeze_report_an_inactive_key_alike() -> None:
     frozen = Container().bind(Cache, when=False).bind(DefaultedConsumer).freeze()
     explain_text = frozen.explain(Cache)
 
-    print(freeze_text)
-    print(explain_text)
     assert 'registered but inactive' in freeze_text
     assert freeze_text == explain_text
 
