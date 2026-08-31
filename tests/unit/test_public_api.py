@@ -70,3 +70,7 @@ def test_version_falls_back_when_the_distribution_is_not_installed(monkeypatch: 
 
 def test_provider_shape_is_exported_with_the_alias_member() -> None:
     assert depin.ProviderShape.ALIAS.value == 'alias'
+
+
+def test_provider_shape_is_exported_with_the_collection_member() -> None:
+    assert depin.ProviderShape.COLLECTION.value == 'collection'

@@ -173,3 +173,19 @@ def test_alias_keeps_the_builder_type_and_the_resolved_type() -> None:
     di = builder.freeze()
     assert_type(di.resolve(Store), Store)
     assert_type(di[Store], Store)
+
+
+def test_a_collection_key_keeps_its_element_type() -> None:
+    class Handler(Protocol):
+        def run(self) -> str: ...
+
+    class Email:
+        def run(self) -> str:
+            return 'email'
+
+    builder = Container().bind(Email)
+    assert_type(builder.collect(Handler, [Email]), Container)
+    di = builder.freeze()
+    assert_type(di.resolve(list[Handler]), list[Handler])
+    assert_type(di[list[Handler]], list[Handler])
+    assert_type(injected(list[Handler]), list[Handler])

@@ -129,3 +129,31 @@ def test_a_node_is_hashable_and_structural() -> None:
     assert first == second
     assert hash(first) == hash(second)
     assert isinstance(first, GraphNode)
+
+
+def test_an_unbound_optional_edge_reports_why_it_is_unsatisfied() -> None:
+    class Cache: ...
+
+    class Service:
+        def __init__(self, cache: Cache | None) -> None:
+            del cache
+
+    edge = Container().bind(Service).freeze().graph().node(Service).dependencies[0]
+    assert not edge.satisfied
+    assert edge.optional
+    assert not edge.has_default
+
+
+def test_an_unbound_defaulted_edge_reports_why_it_is_unsatisfied() -> None:
+    class Cache: ...
+
+    fallback = Cache()
+
+    class Service:
+        def __init__(self, cache: Cache = fallback) -> None:
+            del cache
+
+    edge = Container().bind(Service).freeze().graph().node(Service).dependencies[0]
+    assert not edge.satisfied
+    assert not edge.optional
+    assert edge.has_default

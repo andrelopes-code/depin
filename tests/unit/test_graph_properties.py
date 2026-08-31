@@ -2,6 +2,7 @@
 
 import inspect
 from dataclasses import dataclass
+from types import GenericAlias
 
 import pytest
 from hypothesis import example, given, settings
@@ -21,6 +22,8 @@ class GraphCase:
     registered: tuple[bool, ...]
     duplicates: frozenset[int]
     aliases: frozenset[int] = frozenset()
+    optionals: frozenset[tuple[int, int]] = frozenset()
+    collections: frozenset[int] = frozenset()
 
 
 def _set_dynamic_attribute(target: object, name: str, value: object) -> None:
@@ -34,6 +37,23 @@ def _frozen_plan(container: FrozenContainer) -> ResolutionPlan:
     raise AssertionError('FrozenContainer did not retain a ResolutionPlan')
 
 
+def _bind_consumer(container: Container, name: str, key: object) -> None:
+    """Bind a fresh singleton depending on `key`, so a generated alias or collection sits on a real path."""
+    parameters = [
+        inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD),
+        inspect.Parameter('value', inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=key),
+    ]
+
+    def initialize(self: object, **values: object) -> None:
+        return None
+
+    _set_dynamic_attribute(initialize, '__annotations__', {'value': key})
+    _set_dynamic_attribute(initialize, '__signature__', inspect.Signature(parameters))
+    consumer = type(name, (), {})
+    _set_dynamic_attribute(consumer, '__init__', initialize)
+    _ = container.bind(consumer)
+
+
 def _materialize(case: GraphCase) -> Container:
     nodes = tuple(type(f'GraphNode{index}', (), {}) for index in range(case.size))
     for owner, node in enumerate(nodes):
@@ -41,10 +61,11 @@ def _materialize(case: GraphCase) -> Container:
         annotations: dict[str, object] = {}
         for dependency in sorted(dependency for edge_owner, dependency in case.edges if edge_owner == owner):
             name = f'dependency_{dependency}'
-            parameters.append(
-                inspect.Parameter(name, inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=nodes[dependency])
+            annotation: object = (
+                nodes[dependency] | None if (owner, dependency) in case.optionals else nodes[dependency]
             )
-            annotations[name] = nodes[dependency]
+            parameters.append(inspect.Parameter(name, inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=annotation))
+            annotations[name] = annotation
 
         def initialize(self: object, **values: object) -> None:
             return None
@@ -62,6 +83,13 @@ def _materialize(case: GraphCase) -> Container:
     for index in case.aliases:
         alias_key = type(f'GraphAlias{index}', (), {})
         _ = container.alias(alias_key, to=nodes[index])
+        _bind_consumer(container, f'GraphAliasConsumer{index}', alias_key)
+    for index in case.collections:
+        if not case.registered[index]:
+            continue
+        element = type(f'GraphCollectionElement{index}', (), {})
+        _ = container.collect(element, [nodes[index]])
+        _bind_consumer(container, f'GraphCollectionConsumer{index}', GenericAlias(list, (element,)))
     return container
 
 
@@ -79,10 +107,13 @@ def _freeze_result(case: GraphCase) -> str:
     else:
         plan = _frozen_plan(frozen)
         positions = {(spec.key, spec.tag): index for index, spec in enumerate(plan.order)}
+        # An optional parameter left unbound has no entry in `positions`: nothing provides it,
+        # so it constrains no ordering.
         ordered = all(
             positions[(parameter.key, parameter.tag)] < positions[(spec.key, spec.tag)]
             for spec in plan.order
             for parameter in spec.params
+            if (parameter.key, parameter.tag) in positions
         )
         return 'ordered' if ordered else 'out-of-order'
 
@@ -96,27 +127,53 @@ def _graphs(draw: st.DrawFn) -> GraphCase:
     registered_nodes = tuple(index for index, is_registered in enumerate(registered) if is_registered)
     duplicates = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
     aliases = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
-    return GraphCase(size, frozenset(edges), scopes, registered, frozenset(duplicates), frozenset(aliases))
+    optionals = draw(st.sets(st.sampled_from(tuple(edges)))) if edges else frozenset[tuple[int, int]]()
+    collections = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
+    return GraphCase(
+        size,
+        frozenset(edges),
+        scopes,
+        registered,
+        frozenset(duplicates),
+        frozenset(aliases),
+        frozenset(optionals),
+        frozenset(collections),
+    )
+
+
+def _reaches_scoped(dependencies: tuple[tuple[int, ...], ...], scopes: tuple[Scope, ...], start: int) -> bool:
+    visited = {start}
+    pending = [start]
+    while pending:
+        owner = pending.pop()
+        for dependency in dependencies[owner]:
+            if dependency in visited:
+                continue
+            if scopes[dependency] is Scope.SCOPED:
+                return True
+            visited.add(dependency)
+            pending.append(dependency)
+    return False
 
 
 def _has_singleton_to_scoped_path(case: GraphCase) -> bool:
+    """Whether some singleton in the materialized graph transitively captures a scoped provider.
+
+    Beyond `case.edges`, `_materialize` adds a singleton consumer for every generated
+    alias and collection, each reaching straight into `nodes[index]`. Those synthetic
+    roots are folded in here as `virtual_roots`, so the filter still matches what gets
+    built.
+    """
     dependencies = tuple(
         tuple(dependency for owner, dependency in case.edges if owner == node) for node in range(case.size)
     )
     for root, scope in enumerate(case.scopes):
-        if scope is not Scope.SINGLETON:
-            continue
-        visited = {root}
-        pending = [root]
-        while pending:
-            owner = pending.pop()
-            for dependency in dependencies[owner]:
-                if dependency in visited:
-                    continue
-                if case.scopes[dependency] is Scope.SCOPED:
-                    return True
-                visited.add(dependency)
-                pending.append(dependency)
+        if scope is Scope.SINGLETON and _reaches_scoped(dependencies, case.scopes, root):
+            return True
+    virtual_roots = set(case.aliases) | {index for index in case.collections if case.registered[index]}
+    for index in virtual_roots:
+        if case.scopes[index] is Scope.SCOPED or _reaches_scoped(dependencies, case.scopes, index):
+            return True
     return False
 
 

@@ -151,7 +151,7 @@ def test_a_cycle_in_a_manually_built_graph_does_not_loop_the_missing_search() ->
         scope=Scope.SINGLETON,
         shape=ProviderShape.CLASS,
         needs_async=False,
-        dependencies=(GraphEdge(parameter='b', key=B, tag=None, satisfied=True),),
+        dependencies=(GraphEdge(parameter='b', key=B, tag=None, satisfied=True, optional=False, has_default=False),),
     )
     node_b = GraphNode(
         key=B,
@@ -159,7 +159,7 @@ def test_a_cycle_in_a_manually_built_graph_does_not_loop_the_missing_search() ->
         scope=Scope.SINGLETON,
         shape=ProviderShape.CLASS,
         needs_async=False,
-        dependencies=(GraphEdge(parameter='a', key=A, tag=None, satisfied=True),),
+        dependencies=(GraphEdge(parameter='a', key=A, tag=None, satisfied=True, optional=False, has_default=False),),
     )
     graph = DependencyGraph((node_a, node_b))
     assert render_tree(graph, Missing, None) == f'no provider for {fmt_key(Missing)} (tag=None)'
@@ -189,7 +189,7 @@ def test_a_cycle_does_not_stop_the_search_for_a_sibling_missing_edge() -> None:
         scope=Scope.SINGLETON,
         shape=ProviderShape.CLASS,
         needs_async=False,
-        dependencies=(GraphEdge(parameter='b', key=B, tag=None, satisfied=True),),
+        dependencies=(GraphEdge(parameter='b', key=B, tag=None, satisfied=True, optional=False, has_default=False),),
     )
     node_b = GraphNode(
         key=B,
@@ -198,8 +198,8 @@ def test_a_cycle_does_not_stop_the_search_for_a_sibling_missing_edge() -> None:
         shape=ProviderShape.CLASS,
         needs_async=False,
         dependencies=(
-            GraphEdge(parameter='a', key=A, tag=None, satisfied=True),
-            GraphEdge(parameter='missing', key=Missing, tag=None, satisfied=True),
+            GraphEdge(parameter='a', key=A, tag=None, satisfied=True, optional=False, has_default=False),
+            GraphEdge(parameter='missing', key=Missing, tag=None, satisfied=True, optional=False, has_default=False),
         ),
     )
     graph = DependencyGraph((node_a, node_b))
@@ -711,3 +711,42 @@ def test_the_exports_carry_the_alias_edge() -> None:
     assert '[label="target"]' in di.graph().dot()
     assert '-->|target|' in di.graph().mermaid()
     assert 'transient, alias' in di.graph().mermaid()
+
+
+def test_explain_marks_an_unbound_optional() -> None:
+    class Cache: ...
+
+    class Service:
+        def __init__(self, cache: Cache | None) -> None:
+            del cache
+
+    prefix = 'test_explain_marks_an_unbound_optional.<locals>.'
+    tree = Container().bind(Service).freeze().explain(Service).replace(prefix, '')
+    assert tree == 'Service  [singleton, class]\n  cache: Cache  (unbound, optional)'
+
+
+def test_explain_renders_a_collection_and_its_members() -> None:
+    class Handler: ...
+
+    class First: ...
+
+    class Second: ...
+
+    di = Container().bind(First).bind(Second).collect(Handler, [First, Second]).freeze()
+    prefix = 'test_explain_renders_a_collection_and_its_members.<locals>.'
+    assert di.explain(list[Handler]).replace(prefix, '') == (
+        'list[Handler]  [transient, collection]\n'
+        '  member_0: First  [singleton, class]\n'
+        '  member_1: Second  [singleton, class]'
+    )
+
+
+def test_the_exports_carry_the_collection_edges() -> None:
+    class Handler: ...
+
+    class First: ...
+
+    di = Container().bind(First).collect(Handler, [First]).freeze()
+    assert '[label="member_0"]' in di.graph().dot()
+    assert '-->|member_0|' in di.graph().mermaid()
+    assert 'transient, collection' in di.graph().mermaid()

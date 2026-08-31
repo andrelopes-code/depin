@@ -1,6 +1,6 @@
 """Text renderings of a `DependencyGraph`: a resolution tree, Graphviz, and Mermaid."""
 
-from depin._core.diagnostics import DependencyGraph, GraphNode
+from depin._core.diagnostics import DependencyGraph, GraphEdge, GraphNode
 from depin._core.graph import format_missing, suggest_candidates
 from depin._core.spec import Ident, ProviderKey, fmt_key
 
@@ -25,12 +25,13 @@ def render_tree(graph: DependencyGraph, key: ProviderKey, tag: str | None) -> st
     expanded: set[Ident] = set()
     # Explicit stack rather than recursion: a chain of a thousand providers is a
     # supported graph, and CPython's recursion limit is well below that.
-    stack: list[tuple[int, str, GraphNode | ProviderKey]] = [(0, '', root)]
+    stack: list[tuple[int, str, GraphNode | GraphEdge]] = [(0, '', root)]
     while stack:
         depth, label, target = stack.pop()
         indent = '  ' * depth
         if not isinstance(target, GraphNode):
-            lines.append(f'{indent}{label}{fmt_key(target)}  (unbound, default)')
+            reason = 'default' if target.has_default else 'optional'
+            lines.append(f'{indent}{label}{fmt_key(target.key)}  (unbound, {reason})')
             continue
         annotations = f'[{", ".join(annotation_parts(target))}]'
         ident = (target.key, target.tag)
@@ -41,7 +42,7 @@ def render_tree(graph: DependencyGraph, key: ProviderKey, tag: str | None) -> st
         lines.append(f'{indent}{label}{fmt_key(target.key)}  {annotations}')
         for edge in reversed(target.dependencies):
             child = graph.find(edge.key, tag=edge.tag)
-            stack.append((depth + 1, f'{edge.parameter}: ', edge.key if child is None else child))
+            stack.append((depth + 1, f'{edge.parameter}: ', edge if child is None else child))
     return '\n'.join(lines)
 
 
