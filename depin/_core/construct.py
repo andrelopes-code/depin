@@ -25,7 +25,7 @@ from depin._core.typeguards import (
     as_sync_context_manager,
     as_sync_iterator,
 )
-from depin.errors import AsyncInSyncContextError
+from depin.errors import AsyncInSyncContextError, InvalidProviderError
 
 type OnTeardown = Callable[[Teardown], None]
 type ReadFrame = Callable[[ProviderSpec], object]
@@ -68,6 +68,10 @@ def sync(
             # `needs_async` flag is set, long before construction. Kept so the
             # match stays exhaustive over ProviderShape if a shape is added.
             raise AsyncInSyncContextError(f'{fmt_key(key)} is an async provider; resolve it with aresolve()')
+        case ProviderShape.ALIAS:
+            # Unreachable through the public API: nothing yet binds a
+            # ProviderShape.ALIAS spec. Kept so the match stays exhaustive.
+            raise InvalidProviderError(f'{fmt_key(key)} is an alias, which construct.sync does not resolve yet')
 
 
 async def asynchronous(
