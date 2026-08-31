@@ -1,9 +1,12 @@
 """Public marker types and decorators for keys, tags, and injection."""
 
 from dataclasses import dataclass
-from typing import TypeGuard, final, override
+from typing import TYPE_CHECKING, TypeGuard, final, override
 
 from depin.errors import DepinError, InvalidProviderError
+
+if TYPE_CHECKING:
+    from depin._core.spec import ProviderKey
 
 
 @final
@@ -132,15 +135,20 @@ def injected[T](key: type[T] | Token[T], *, tag: str | None = None) -> T:
 _PROVIDES_ATTR = '__depin_provides__'
 
 
-def _reject_non_class(value: object, /) -> None:
-    """Raise unless ``value`` is a class.
+def _reject_invalid_key(value: object, /) -> None:
+    """Raise unless ``value`` can serve as a provider key.
 
-    Takes ``object`` rather than ``type[object]`` so the check still runs for an
-    untyped caller that breaks the promise the annotation makes to a type checker.
+    Takes ``object`` rather than the annotated type so the check still runs for
+    an untyped caller that breaks the promise the annotation makes to a checker.
     """
-    if not isinstance(value, type):
+    # Deferred: depin._core.typeguards imports Token from this module, so a
+    # module-level import here would be circular.
+    from depin._core.typeguards import is_provider_key
+
+    if not is_provider_key(value):
         raise InvalidProviderError(
-            f'cannot use {value!r} as a @provides target: expected a class, a Protocol, or an abstract base class'
+            f'cannot use {value!r} as a @provides target: expected a class, a Protocol, '
+            'an abstract base class, or a parameterised generic such as Repo[User]'
         )
 
 
@@ -191,9 +199,9 @@ def provides(abstract: type[object]) -> _ProvidesDecorator:
 
         ```
     """
-    _reject_non_class(abstract)
+    _reject_invalid_key(abstract)
     return _ProvidesDecorator(abstract)
 
 
-def get_provides(cls: type) -> type | None:
+def get_provides(cls: type) -> 'ProviderKey | None':
     return getattr(cls, _PROVIDES_ATTR, None)
