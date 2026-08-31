@@ -18,7 +18,7 @@ from types import GenericAlias
 from typing import TypeGuard, get_args, get_origin
 
 from depin._core.markers import Token
-from depin._core.spec import ALIAS_PARAM, ProviderKey, fmt_key
+from depin._core.spec import ALIAS_PARAM, ParamSpec, ProviderKey, fmt_key
 from depin.errors import InvalidProviderError
 
 
@@ -122,7 +122,7 @@ def as_alias_target(kwargs: dict[str, object], key: object) -> object:
     raise InvalidProviderError(f'alias for {fmt_key(key)} resolved no target binding')
 
 
-def as_collection_members(kwargs: dict[str, object], names: tuple[str, ...], key: object) -> list[object]:
+def as_collection_members(kwargs: dict[str, object], params: tuple[ParamSpec, ...], key: object) -> list[object]:
     """The resolved members of a collection, in declaration order.
 
     Unreachable through the public API for the same reason `as_alias_target` is:
@@ -130,7 +130,7 @@ def as_collection_members(kwargs: dict[str, object], names: tuple[str, ...], key
     `MissingProviderError` before construction when one cannot be satisfied. The
     check keeps a defect inside the `DepinError` hierarchy.
     """
-    missing = tuple(name for name in names if name not in kwargs)
+    missing = tuple(param.name for param in params if param.name not in kwargs)
     if missing:
         raise InvalidProviderError(f'collection for {fmt_key(key)} resolved no value for {", ".join(missing)}')
-    return [kwargs[name] for name in names]
+    return [kwargs[param.name] for param in params]

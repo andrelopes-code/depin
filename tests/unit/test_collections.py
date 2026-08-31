@@ -154,3 +154,26 @@ def test_a_member_listed_twice_in_one_collection_is_rejected() -> None:
     builder = Container().bind(EmailHandler).collect(Handler, [EmailHandler, EmailHandler])
     with pytest.raises(DuplicateProviderError, match='EmailHandler'):
         _ = builder.freeze()
+
+
+def test_only_a_list_generic_is_accepted_as_a_collection_key() -> None:
+    class User: ...
+
+    class Repo[T]: ...
+
+    di = _both().freeze()
+
+    with pytest.raises(MissingProviderError, match='not a valid key type'):
+        di.resolve(dict[str, int])
+    with pytest.raises(MissingProviderError, match='not a valid key type'):
+        di.resolve(Repo[User])
+    with pytest.raises(MissingProviderError, match='not a valid key type'):
+        di.resolve(set[Handler])
+    with pytest.raises(MissingProviderError, match='not a valid key type'):
+        di.explain(dict[str, int])
+    with pytest.raises(MissingProviderError, match='not a valid key type'):
+        di.explain(Repo[User])
+    with pytest.raises(MissingProviderError, match='not a valid key type'):
+        di.explain(set[Handler])
+
+    assert [h.run() for h in di.resolve(list[Handler])] == ['email', 'sms']

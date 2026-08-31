@@ -218,7 +218,10 @@ def as_provider_key(value: object) -> ProviderKey:
             'dependency, but a union of two or more providers names no single key. Annotate '
             'the parameter with the one you want, or select it with Annotated[..., Tag(...)].'
         )
-    raise InvalidProviderError(f'cannot use {value!r} as a provider key: a key must be a class, a Token, or a string')
+    raise InvalidProviderError(
+        f'cannot use {value!r} as a provider key: a key must be a class, a Token, a string, or a list[X] '
+        '(built with list[...], not typing.List)'
+    )
 
 
 def _extract_params(source: object, shape: ProviderShape, localns: dict[str, object]) -> tuple[ParamSpec, ...]:

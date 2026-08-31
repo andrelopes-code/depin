@@ -73,7 +73,7 @@ def sync(
         case ProviderShape.ALIAS:
             return as_alias_target(kwargs, key)
         case ProviderShape.COLLECTION:
-            return as_collection_members(kwargs, tuple(param.name for param in spec.params), key)
+            return as_collection_members(kwargs, spec.params, key)
 
 
 async def asynchronous(

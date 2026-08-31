@@ -8,7 +8,7 @@ import pytest
 from depin._core.construct import asynchronous, sync
 from depin._core.container import Container
 from depin._core.scope import Scope
-from depin._core.spec import ProviderShape, ProviderSpec
+from depin._core.spec import ParamSpec, ProviderShape, ProviderSpec
 from depin.errors import AsyncInSyncContextError, InvalidProviderError
 
 
@@ -151,4 +151,20 @@ def test_an_alias_spec_with_no_resolved_target_names_the_provider() -> None:
         params=(),
     )
     with pytest.raises(InvalidProviderError, match='resolved no target binding'):
+        _ = sync(spec, {}, _no_teardown, _no_frame)
+
+
+def test_a_collection_spec_with_no_resolved_members_names_the_provider() -> None:
+    class Handler: ...
+
+    spec = ProviderSpec(
+        key=list[Handler],
+        tag=None,
+        source=None,
+        scope=Scope.TRANSIENT,
+        shape=ProviderShape.COLLECTION,
+        needs_async=False,
+        params=(ParamSpec(name='member_0', key=Handler, tag=None, has_default=False, default=None),),
+    )
+    with pytest.raises(InvalidProviderError, match='resolved no value for'):
         _ = sync(spec, {}, _no_teardown, _no_frame)

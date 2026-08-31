@@ -272,7 +272,7 @@ def test_as_provider_key_accepts_classes_strings_and_tokens(key: object) -> None
 
 
 def test_as_provider_key_rejects_anything_else() -> None:
-    with pytest.raises(InvalidProviderError, match='a key must be a class, a Token, or a string'):
+    with pytest.raises(InvalidProviderError, match='a key must be a class, a Token, a string, or a list\\[X\\]'):
         _ = as_provider_key(42)
 
 
