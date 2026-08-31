@@ -180,7 +180,7 @@ def test_health_raises_async_in_sync_context_for_an_async_check() -> None:
         _ = di.health()
 
 
-def test_health_prints_the_refusal_message_naming_every_pending_key() -> None:
+def test_health_refusal_message_names_every_pending_key() -> None:
     class First: ...
 
     class Second: ...
@@ -198,7 +198,6 @@ def test_health_prints_the_refusal_message_naming_every_pending_key() -> None:
     di = Container().bind(build_first, check=noop_first).bind(build_second, check=noop_second).freeze()
     with pytest.raises(AsyncInSyncContextError) as excinfo:
         _ = di.health()
-    print(excinfo.value)
     message = str(excinfo.value)
     assert 'First' in message
     assert 'Second' in message
@@ -269,6 +268,19 @@ async def test_a_raising_async_check_is_unhealthy_with_the_exception_on_the_resu
     (result,) = report.results
     assert result.healthy is False
     assert result.error is error
+
+
+async def test_ahealth_propagates_a_resolution_error_instead_of_reporting_it() -> None:
+    class Unreachable:
+        def __init__(self) -> None:
+            raise RuntimeError('no route to host')
+
+    def unreachable_check(value: object) -> bool:
+        return True
+
+    di = Container().bind(Unreachable, check=unreachable_check).freeze()
+    with pytest.raises(RuntimeError, match='no route to host'):
+        _ = await di.ahealth()
 
 
 def test_a_sync_check_returning_an_awaitable_raises_invalid_provider_error() -> None:

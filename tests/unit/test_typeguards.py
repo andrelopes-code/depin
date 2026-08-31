@@ -2,8 +2,11 @@ import typing
 from collections.abc import Sequence
 from typing import Protocol
 
+import pytest
+
 from depin._core.spec import Underlying
-from depin._core.typeguards import is_canonical_generic, is_provider_key
+from depin._core.typeguards import as_check, is_canonical_generic, is_provider_key
+from depin.errors import InvalidProviderError
 
 
 def test_the_canonical_generic_spellings_are_accepted() -> None:
@@ -34,3 +37,10 @@ def test_an_underlying_key_is_a_provider_key() -> None:
     class Store: ...
 
     assert is_provider_key(Underlying(Store, 0))
+
+
+def test_as_check_raises_for_a_non_callable_check() -> None:
+    class Store: ...
+
+    with pytest.raises(InvalidProviderError, match='is not callable'):
+        _ = as_check(42, Store)

@@ -146,3 +146,30 @@ async def test_awarmup_constructs_an_async_singleton() -> None:
     di = Container().bind(service).freeze()
     report = await di.awarmup()
     assert [node.key for node in report.constructed] == [Service]
+
+
+async def test_a_second_awarmup_reports_everything_cached() -> None:
+    class Service: ...
+
+    async def service() -> Service:
+        return Service()
+
+    di = Container().bind(service).freeze()
+    _ = await di.awarmup()
+    report = await di.awarmup()
+    assert report.constructed == ()
+    assert [node.key for node in report.cached] == [Service]
+
+
+def test_warmup_honours_an_active_override() -> None:
+    class Config:
+        value = 'real'
+
+    class FakeConfig(Config):
+        value = 'fake'
+
+    di = Container().bind(Config).freeze()
+    with di.override(Config, FakeConfig()):
+        report = di.warmup()
+        assert di[Config].value == 'fake'
+    assert [node.key for node in report.constructed] == [Config]
