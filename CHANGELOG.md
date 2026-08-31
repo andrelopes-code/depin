@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0](https://github.com/andrelopes-code/depin/compare/v0.12.2...v0.13.0) (2026-08-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* a parameter whose key has a registered provider now resolves to that provider rather than to a value seeded into the scope frame under the same key, and a tagged parameter no longer accepts a value seeded under the bare key. A seeded key that nothing else provides still fills its parameter, unchanged.
+
+### Features
+
+* publish a versioned public integration contract ([cf36c6d](https://github.com/andrelopes-code/depin/commit/cf36c6d9daf1188697cce3c418f2a1b51442d6aa))
+
 ## [0.12.2](https://github.com/andrelopes-code/depin/compare/v0.12.1...v0.12.2) (2026-08-31)
 
 
