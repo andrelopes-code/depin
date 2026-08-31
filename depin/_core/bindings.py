@@ -11,6 +11,7 @@ from depin._core.spec import (
     Bindings,
     CollectionBinding,
     Condition,
+    DecorateBinding,
     FrameBinding,
     ProviderKey,
     ValueBinding,
@@ -325,6 +326,75 @@ class BindingCollector:
         self._records.append(
             BindRecord(
                 source=CollectionBinding(element=element, members=tuple(members)),
+                scope=Scope.TRANSIENT,
+                provides=None,
+                tag=tag,
+                condition=when,
+            )
+        )
+        return self
+
+    def decorate(
+        self,
+        key: ProviderKey,
+        wrapper: type[object] | Callable[..., object],
+        *,
+        tag: str | None = None,
+        when: Condition | None = None,
+    ) -> Self:
+        """Wrap an existing binding without changing its registration.
+
+        Every consumer of ``key`` receives what ``wrapper`` returns, including
+        consumers deep in the graph. The binding that was registered keeps its
+        lifetime, its cache entry, and its teardown: it is built once, in the
+        position it would have occupied undecorated, and the wrapper is built
+        after it and torn down before it.
+
+        ``wrapper`` declares one parameter whose key and tag are the decorated
+        ones — that parameter receives the value being wrapped — and any number
+        of further parameters, which are ordinary dependencies resolved from the
+        graph. The wrapper takes no scope of its own: it runs at the lifetime of
+        the binding it wraps.
+
+        Decorators stack. Two calls over one key apply in registration order, so
+        the last registered is the outermost.
+
+        Args:
+            key: The binding to wrap. A class, a `Token`, a string, or a
+                parameterised generic.
+            wrapper: A class or factory producing the decorated value. Any
+                provider shape is accepted, async ones included; an async
+                wrapper makes the key resolvable only through
+                `FrozenContainer.aresolve`.
+            tag: The decorated binding's tag, when it has one.
+            when: Condition deciding whether this decorator enters the plan.
+                A callable is evaluated inside `Container.freeze()`.
+
+        Returns:
+            ``self``, for chaining.
+
+        Example:
+            ```pycon
+            >>> from depin import Container
+            >>> class Store:
+            ...     def get(self) -> str:
+            ...         return 'plain'
+            >>> class Loud:
+            ...     def __init__(self, inner: Store) -> None:
+            ...         self.inner = inner
+            ...     def get(self) -> str:
+            ...         return self.inner.get().upper()
+            >>> di = Container().bind(Store).decorate(Store, Loud).freeze()
+            >>> di[Store].get()
+            'plain'
+
+            ```
+        """
+        # The scope recorded here is never read: `depin._core.decoration` gives every wrapper node
+        # the scope of the binding it wraps.
+        self._records.append(
+            BindRecord(
+                source=DecorateBinding(key=key, wrapper=wrapper),
                 scope=Scope.TRANSIENT,
                 provides=None,
                 tag=tag,

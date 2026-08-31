@@ -184,6 +184,24 @@ def is_collection_binding(value: object) -> TypeGuard[CollectionBinding]:
     return isinstance(value, CollectionBinding)
 
 
+@dataclass(frozen=True, slots=True)
+class DecorateBinding:
+    """Marker source for `Container.decorate(key, wrapper)`.
+
+    The binding carries its own key because `BindRecord.provides` admits only a
+    class, while a decorated key may equally be a `Token`, a string, or a
+    parameterised generic. It carries no tag of its own: a decorator has no
+    identity to tag, so the tag on `BindRecord` is the decorated binding's.
+    """
+
+    key: ProviderKey
+    wrapper: object
+
+
+def is_decorate_binding(value: object) -> TypeGuard[DecorateBinding]:
+    return isinstance(value, DecorateBinding)
+
+
 def collection_key(element: ProviderKey) -> ProviderKey:
     """The key a collection over ``element`` is registered under.
 
@@ -240,6 +258,23 @@ class ProviderSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class DecorationSpec:
+    """One wrapper over one binding, before it is given a key of its own.
+
+    `depin._core.decoration` decides the key: it depends on how many decorators
+    target the same binding, which no single record knows. ``inner`` names the
+    parameter that receives the value being wrapped.
+    """
+
+    key: ProviderKey
+    tag: str | None
+    source: object
+    shape: ProviderShape
+    params: tuple[ParamSpec, ...]
+    inner: str
+
+
+@dataclass(frozen=True, slots=True)
 class SpecSet:
     """What `build_specs` reads out of a set of records.
 
@@ -250,6 +285,7 @@ class SpecSet:
     """
 
     providers: tuple[ProviderSpec, ...]
+    decorations: tuple[DecorationSpec, ...]
     inactive: frozenset[Ident]
 
 

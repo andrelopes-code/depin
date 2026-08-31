@@ -11,17 +11,21 @@ from depin._core.spec import (
     ALIAS_PARAM,
     BindRecord,
     CollectionBinding,
+    DecorateBinding,
+    DecorationSpec,
     Ident,
     ParamSpec,
     ProviderKey,
     ProviderShape,
     ProviderSpec,
     SpecSet,
+    Underlying,
     collection_key,
     collection_param,
     fmt_key,
     is_alias_binding,
     is_collection_binding,
+    is_decorate_binding,
     is_frame_binding,
     is_value_binding,
 )
@@ -73,8 +77,17 @@ def build_specs(records: Iterable[BindRecord]) -> SpecSet:
     """
     active, inactive = _partition(records)
     localns = _registered_classes(active)
+    providers: list[ProviderSpec] = []
+    decorations: list[DecorationSpec] = []
+    for rec in active:
+        source = rec.source
+        if is_decorate_binding(source):
+            decorations.append(_decoration_spec(rec, source, localns))
+        else:
+            providers.append(_record_to_spec(rec, localns))
     return SpecSet(
-        providers=tuple(_record_to_spec(rec, localns) for rec in active),
+        providers=tuple(providers),
+        decorations=tuple(decorations),
         inactive=frozenset(_inactive_idents(inactive, localns)),
     )
 
@@ -126,6 +139,8 @@ def _declared_key(rec: BindRecord, localns: dict[str, object]) -> ProviderKey | 
     is simply not named in the note.
     """
     source = rec.source
+    if is_decorate_binding(source):
+        return None
     if is_value_binding(source):
         return source.token
     if is_frame_binding(source):
@@ -173,12 +188,16 @@ def _classes_reachable_from(rec: BindRecord) -> tuple[type[object], ...]:
         candidates += (source.key, source.target)
     elif is_collection_binding(source):
         candidates += (source.element, *source.members)
+    elif is_decorate_binding(source):
+        candidates += (source.key, source.wrapper)
     return tuple(cls for candidate in candidates for cls in _classes_within(candidate))
 
 
 def _classes_within(value: object) -> tuple[type[object], ...]:
     if isinstance(value, type):
         return (value,)
+    if isinstance(value, Underlying):
+        return _classes_within(value.key)
     if is_parameterised_generic(value):
         return tuple(cls for argument in get_args(value) for cls in _classes_within(argument))
     return ()
@@ -270,6 +289,43 @@ def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec
         needs_async=False,
         params=_extract_params(source, shape, localns),
     )
+
+
+def _decoration_spec(rec: BindRecord, binding: DecorateBinding, localns: dict[str, object]) -> DecorationSpec:
+    key = as_provider_key(binding.key)
+    shape = detect_shape(binding.wrapper)
+    params = _extract_params(binding.wrapper, shape, localns)
+    return DecorationSpec(
+        key=key,
+        tag=rec.tag,
+        source=binding.wrapper,
+        shape=shape,
+        params=params,
+        inner=_inner_param(params, key, rec.tag, binding.wrapper),
+    )
+
+
+def _inner_param(params: tuple[ParamSpec, ...], key: ProviderKey, tag: str | None, wrapper: object) -> str:
+    """The parameter of a decorator that receives the value it wraps.
+
+    Identified by key and tag rather than by position, so a decorator reads like
+    any other provider: the parameter annotated with what it decorates is the one
+    that gets it.
+    """
+    matches = tuple(param.name for param in params if (param.key, param.tag) == (key, tag))
+    if len(matches) > 1:
+        raise InvalidProviderError(
+            f'the decorator {wrapper!r} declares {len(matches)} parameters for {fmt_key(key)} '
+            f'(tag={tag!r}): {", ".join(matches)}. Exactly one parameter receives the value being '
+            'wrapped, and depin cannot tell which of these it is.'
+        )
+    if not matches:
+        raise InvalidProviderError(
+            f'the decorator {wrapper!r} declares no parameter for {fmt_key(key)} (tag={tag!r}): a '
+            'decorator receives the value it wraps through a parameter annotated with the key it '
+            'decorates. Annotate one parameter with it.'
+        )
+    return matches[0]
 
 
 def _reject_repeated_members(collection: CollectionBinding) -> None:
