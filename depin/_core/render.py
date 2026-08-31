@@ -19,7 +19,7 @@ def render_tree(
     graph: DependencyGraph,
     key: ProviderKey,
     tag: str | None,
-    inactive: frozenset[Ident] = frozenset(),
+    inactive: frozenset[Ident],
 ) -> str:
     """The resolution tree below ``(key, tag)``, or the missing-provider line for it."""
     root = graph.find(key, tag=tag)
