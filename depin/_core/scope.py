@@ -254,6 +254,12 @@ class ScopeFrame:
         populated with whatever it just drained, this drops it too, so a key
         resolved afterwards is rebuilt rather than handed the drained value.
 
+        Do not call this while another thread or task may be resolving through
+        this frame: the cache is dropped without coordinating with an in-flight
+        construction, so a resolution racing with the drop can be handed a
+        value whose teardown already ran. `FrozenContainer.reset()` is this
+        operation on the root frame and carries the same hazard.
+
         Raises:
             ExceptionGroup: One or more teardowns failed. Every failure is
                 reported, and the cache is dropped either way.
@@ -267,7 +273,9 @@ class ScopeFrame:
         """Drain every pending teardown and drop the cache, inside an event loop.
 
         The counterpart to `drop_sync()`, for a frame holding an async
-        provider's teardown.
+        provider's teardown, and carrying the same hazard: do not call it while
+        another thread or task may be resolving through this frame, because the
+        cache is dropped without coordinating with an in-flight construction.
 
         Raises:
             ExceptionGroup: One or more teardowns failed. Every failure is

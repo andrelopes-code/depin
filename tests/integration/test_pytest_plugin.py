@@ -113,6 +113,45 @@ def test_override_evicts_and_restores(pytester: pytest.Pytester, test_body: str,
     result.assert_outcomes(passed=1)
 
 
+_SCOPED_REPORT_CONFTEST = """\
+import pytest
+
+from depin import Container, FrozenContainer, Scope
+
+from shapes import Report, SystemClock
+
+
+@pytest.fixture
+def depin_container() -> FrozenContainer:
+    return Container().bind(SystemClock).bind(Report, scope=Scope.SCOPED).freeze()
+"""
+
+
+@pytest.mark.parametrize('subprocess', _MODES)
+def test_override_leaves_a_value_cached_in_an_open_scope_alone(pytester: pytest.Pytester, subprocess: bool) -> None:
+    pytester.makepyfile(shapes=_CLOCK_REPORT_SHAPES)
+    pytester.makeconftest(_SCOPED_REPORT_CONFTEST)
+    pytester.makepyfile("""
+        from shapes import Clock, FakeClock, Report
+
+
+        def test_it(depin_container, depin_scope, depin_override) -> None:
+            # Scoped: cached in the frame depin_scope opened, not in the root.
+            built = depin_container[Report]
+            assert built.render() == 'report at real'
+
+            with depin_override(Clock, FakeClock()) as di:
+                # reset() reaches the root cache only, so the value already in
+                # the open scope keeps the Clock it was built with.
+                assert di[Report] is built
+                assert di[Report].render() == 'report at real'
+    """)
+
+    result = _run(pytester, subprocess=subprocess)
+
+    result.assert_outcomes(passed=1)
+
+
 def test_override_forwards_tag_to_only_the_tagged_binding(pytester: pytest.Pytester) -> None:
     pytester.makepyfile(
         shapes="""

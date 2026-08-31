@@ -77,8 +77,11 @@ def depin_override(depin_container: FrozenContainer) -> OverrideFactory:
 
     Calls `FrozenContainer.reset()` before entering `FrozenContainer.override()`,
     so a singleton already built before the block is rebuilt inside it and sees
-    the replacement, then calls `reset()` again on exit, so the block leaves no
-    trace: the real graph is back and nothing built inside it survives.
+    the replacement, then calls `reset()` again on exit, so the real graph is
+    back and no singleton built inside the block survives. Both calls reach the
+    singletons in the root cache only: a scoped value already cached in an open
+    `depin_scope` frame is untouched and keeps the dependency it was built
+    with.
 
     Returns:
         A callable ``(key, replacement, *, tag=None)`` whose result is a
@@ -105,7 +108,7 @@ def depin_override(depin_container: FrozenContainer) -> OverrideFactory:
         ...     def __init__(self, clock: Clock) -> None:
         ...         self.clock = clock
         >>> di = Container().bind(Clock).bind(Report).freeze()
-        >>> real_report = di[Report]
+        >>> _ = di[Report]
         >>> di.reset()
         >>> with di.override(Clock, FakeClock()):
         ...     di[Report].clock.now()
@@ -176,8 +179,9 @@ def depin_scope(depin_container: FrozenContainer) -> Generator[ScopeFrame]:
     key with `ScopeFrame.provide` before anything resolves through it.
 
     Raises:
-        TeardownError: An async provider left a teardown in this sync scope;
-            use `depin_ascope` instead.
+        TeardownError: An async provider left a teardown in this sync scope,
+            reported inside the raised `ExceptionGroup` rather than bare; use
+            `depin_ascope` instead.
         ExceptionGroup: One or more teardowns failed when the scope closed.
     """
     with Host(depin_container).scope() as frame:
