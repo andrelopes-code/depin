@@ -1,9 +1,12 @@
 """Public marker types and decorators for keys, tags, and injection."""
 
 from dataclasses import dataclass
-from typing import TypeGuard, final, override
+from typing import TYPE_CHECKING, TypeGuard, final, override
 
 from depin.errors import DepinError, InvalidProviderError
+
+if TYPE_CHECKING:
+    from depin._core.spec import ProviderKey
 
 
 @final
@@ -132,16 +135,29 @@ def injected[T](key: type[T] | Token[T], *, tag: str | None = None) -> T:
 _PROVIDES_ATTR = '__depin_provides__'
 
 
-def _reject_non_class(value: object, /) -> None:
-    """Raise unless ``value`` is a class.
+def _reject_invalid_key(value: object, /) -> None:
+    """Raise unless ``value`` can serve as the key ``provides`` records.
 
-    Takes ``object`` rather than ``type[object]`` so the check still runs for an
-    untyped caller that breaks the promise the annotation makes to a type checker.
+    Narrower than a provider key in general: a string and a `Token` are keys
+    everywhere else, but neither is something a class decorator records.
+    Everything a key may never be is reported by the same code `freeze()` uses,
+    so the two positions never disagree about why a value was refused.
+
+    Takes ``object`` rather than the annotated type so the check still runs for
+    an untyped caller that breaks the promise the annotation makes to a checker.
     """
-    if not isinstance(value, type):
-        raise InvalidProviderError(
-            f'cannot use {value!r} as a @provides target: expected a class, a Protocol, or an abstract base class'
-        )
+    # Deferred: depin._core.typeguards imports Token from this module, so a
+    # module-level import here would be circular.
+    from depin._core.typeguards import invalid_key_error, is_generic_key, is_parameterised_generic, is_union
+
+    if isinstance(value, type) or is_generic_key(value):
+        return
+    if is_parameterised_generic(value) or is_union(value):
+        raise invalid_key_error(value)
+    raise InvalidProviderError(
+        f'cannot use {value!r} as a @provides target: expected a class, a Protocol, '
+        'an abstract base class, or a parameterised generic such as Repo[User]'
+    )
 
 
 @final
@@ -169,11 +185,17 @@ def provides(abstract: type[object]) -> _ProvidesDecorator:
 
     Args:
         abstract: The key to register the decorated class under. Any class,
-            including a ``Protocol`` and an abstract base class.
+            including a ``Protocol`` and an abstract base class, or a
+            parameterised generic such as ``Repo[User]``, spelled by
+            subscripting its own origin rather than a deprecated ``typing``
+            alias.
 
     Raises:
-        InvalidProviderError: ``abstract`` is not a class, so it could never
-            serve as the provider key the decorator promises to record.
+        InvalidProviderError: ``abstract`` is neither a class nor a
+            parameterised generic depin can key by, so it could never serve as
+            the provider key the decorator promises to record. A deprecated
+            ``typing`` alias, a union, and a generic whose arguments are not
+            themselves keys each report why in their own terms.
 
     Example:
         ```pycon
@@ -191,9 +213,9 @@ def provides(abstract: type[object]) -> _ProvidesDecorator:
 
         ```
     """
-    _reject_non_class(abstract)
+    _reject_invalid_key(abstract)
     return _ProvidesDecorator(abstract)
 
 
-def get_provides(cls: type) -> type | None:
+def get_provides(cls: type) -> 'ProviderKey | None':
     return getattr(cls, _PROVIDES_ATTR, None)

@@ -3,7 +3,7 @@
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
-from types import GenericAlias
+from types import GenericAlias, UnionType
 from typing import Final, Protocol, TypeGuard, get_args, get_origin, runtime_checkable
 
 from depin._core.markers import Token
@@ -63,7 +63,16 @@ class ProviderShape(Enum):
 
 
 type ProviderKey = type[object] | Token[object] | str | GenericAlias
-"""What a provider can be bound and resolved under: a class, a `Token`, a name, or a `list[...]` of one."""
+"""What a provider can be bound and resolved under: a class, a `Token`, a name, or a parameterised generic.
+
+The parameterised case needs no member of its own. A generic written in
+expression position — ``Repo[User]``, ``Reader[User]`` — has the static type
+``type[Repo[User]]``, which ``type[object]`` already covers; the
+`types.GenericAlias` member covers the runtime object a builtin or ABC origin
+produces, such as ``list[Handler]``. A deprecated ``typing`` alias
+(``typing.List[X]``) is a key at neither level: `Container.freeze()` rejects it
+and names the canonical spelling to write instead.
+"""
 
 type Ident = tuple[ProviderKey, str | None]
 """A provider's identity: its key paired with its tag. Private to `_core`."""
@@ -231,10 +240,20 @@ class Bindings(Protocol):
 def fmt_key(key: object) -> str:
     if isinstance(key, type):
         return key.__qualname__
-    if isinstance(key, GenericAlias):
-        arguments = ', '.join(fmt_key(argument) for argument in get_args(key))
-        return f'{fmt_key(get_origin(key))}[{arguments}]'
+    origin = get_origin(key)
+    if isinstance(origin, type) and origin is not UnionType:
+        return fmt_parameterised(origin, get_args(key))
     return repr(key)
+
+
+def fmt_parameterised(origin: type[object], arguments: tuple[object, ...]) -> str:
+    """Spell a parameterised key as ``Origin[A, B]``, each part through `fmt_key`.
+
+    Shared with the message a deprecated `typing` alias is rejected with, so the
+    canonical form the user is told to write is spelled by the same code that
+    will render it once they do.
+    """
+    return f'{fmt_key(origin)}[{", ".join(fmt_key(argument) for argument in arguments)}]'
 
 
 def fmt_chain(keys: Iterable[object]) -> str:

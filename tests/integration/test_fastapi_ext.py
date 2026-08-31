@@ -144,6 +144,34 @@ async def test_a_route_resolves_a_collection_of_handlers() -> None:
 
 
 @pytest.mark.asyncio
+async def test_a_route_resolves_a_generic_key() -> None:
+    class User:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+    class Repo[T]:
+        def __init__(self, rows: list[T]) -> None:
+            self.rows = rows
+
+    def user_repo() -> Repo[User]:
+        return Repo([User('ana'), User('bia')])
+
+    frozen = Container().bind(user_repo).freeze()
+
+    app = FastAPI()
+    app.add_middleware(RequestScope, container=frozen)
+
+    @app.get('/users')
+    async def _users(repo: Inject[Repo[User]]) -> dict[str, list[str]]:  # pyright: ignore[reportUnusedFunction]
+        return {'names': [user.name for user in repo.rows]}
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        r = await client.get('/users')
+    assert r.json() == {'names': ['ana', 'bia']}
+
+
+@pytest.mark.asyncio
 async def test_a_request_scoped_route_resolves_an_unbound_optional_to_none() -> None:
     class Cache:
         def get(self) -> str:

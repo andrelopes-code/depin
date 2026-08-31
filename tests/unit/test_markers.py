@@ -1,4 +1,6 @@
 import dataclasses
+import typing
+from collections.abc import Callable
 
 import pytest
 
@@ -136,11 +138,6 @@ def test_inject_marker_is_frozen() -> None:
         setattr(marker, field, 'mutated')
 
 
-def test_provides_rejects_a_non_class_target() -> None:
-    with pytest.raises(InvalidProviderError, match='expected a class'):
-        _ = provides('Store')  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
-
-
 def test_provides_returns_the_decorated_class_unchanged() -> None:
     class Store: ...
 
@@ -148,3 +145,35 @@ def test_provides_returns_the_decorated_class_unchanged() -> None:
 
     assert provides(Store)(MemStore) is MemStore
     assert get_provides(MemStore) is Store
+
+
+def test_provides_accepts_a_parameterised_generic() -> None:
+    class User: ...
+
+    class Repo[T]: ...
+
+    @provides(Repo[User])
+    class SqlRepo: ...
+
+    assert get_provides(SqlRepo) == Repo[User]
+
+
+@pytest.mark.parametrize('target', [42, 'Store', Token[str]('db.url')])
+def test_provides_rejects_a_non_class_target(target: object) -> None:
+    with pytest.raises(InvalidProviderError, match='expected a class'):
+        _ = provides(target)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+
+
+@pytest.mark.parametrize(
+    ('target', 'fragment'),
+    [
+        (typing.List[int], 'deprecated typing alias'),  # noqa: UP006
+        (Callable[[int], str], 'is not itself a provider key'),
+        (int | None, 'and this is not one'),
+        (int | str, 'names no single key'),
+    ],
+)
+def test_provides_explains_a_key_shaped_target_in_its_own_terms(target: object, fragment: str) -> None:
+    """A value that looks like a key but is not one gets the message freeze() would give, not 'expected a class'."""
+    with pytest.raises(InvalidProviderError, match=fragment):
+        _ = provides(target)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]

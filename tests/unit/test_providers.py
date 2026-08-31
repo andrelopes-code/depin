@@ -1,10 +1,13 @@
 """Spec building: how a binding record becomes a provider key, shape and parameters."""
 
-from collections.abc import AsyncGenerator, Generator, Iterator
-from typing import Annotated
+import re
+from collections.abc import AsyncGenerator, Callable, Generator, Iterator
+from contextlib import contextmanager
+from typing import Annotated, Literal
 
 import pytest
 
+from depin._core.graph import build_plan
 from depin._core.introspect import AnnotatedMeta
 from depin._core.markers import Tag, Token, provides
 from depin._core.providers import as_provider_key, build_specs, param_key_from_meta, unwrap_container_type
@@ -245,6 +248,59 @@ def test_async_generator_factory_key_unwraps_the_yield_type() -> None:
     assert spec.shape is ProviderShape.ASYNC_GENERATOR
 
 
+def test_an_async_factory_is_keyed_by_its_whole_return_annotation() -> None:
+    class Handler: ...
+
+    async def make() -> list[Handler]:
+        return []
+
+    plan = build_plan(Registry().bind(make).records())
+    assert [spec.key for spec in plan.order] == [list[Handler]]
+
+
+def test_an_async_factory_returning_a_generic_keeps_its_parameter() -> None:
+    class User: ...
+
+    class Repo[T]: ...
+
+    async def make() -> Repo[User]:
+        return Repo()
+
+    plan = build_plan(Registry().bind(make).records())
+    assert [spec.key for spec in plan.order] == [Repo[User]]
+
+
+def test_a_generator_factory_still_unwraps_its_container() -> None:
+    class Conn: ...
+
+    def connect() -> Generator[Conn]:
+        yield Conn()
+
+    plan = build_plan(Registry().bind(connect).records())
+    assert [spec.key for spec in plan.order] == [Conn]
+
+
+def test_a_context_manager_factory_still_unwraps_its_container() -> None:
+    class Conn: ...
+
+    @contextmanager
+    def connect() -> Generator[Conn]:
+        yield Conn()
+
+    plan = build_plan(Registry().bind(connect).records())
+    assert [spec.key for spec in plan.order] == [Conn]
+
+
+def test_an_async_generator_factory_still_unwraps_its_container() -> None:
+    class Conn: ...
+
+    async def connect() -> AsyncGenerator[Conn]:
+        yield Conn()
+
+    plan = build_plan(Registry().bind(connect).records())
+    assert [spec.key for spec in plan.order] == [Conn]
+
+
 def test_forward_references_between_bound_classes_resolve_for_key_and_parameters() -> None:
     class Consumer:
         def __init__(self, dependency: 'Dependency') -> None: ...
@@ -266,14 +322,92 @@ def test_forward_reference_return_annotation_resolves_against_bound_classes() ->
     assert spec.key is Produced
 
 
+def test_forward_reference_resolves_a_class_registered_only_as_an_alias_key() -> None:
+    class Store: ...
+
+    def make(dep: 'Store') -> int:
+        del dep
+        return 0
+
+    r = Registry().alias(Store, to=int).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Store
+
+
+def test_forward_reference_resolves_a_class_registered_only_as_an_alias_target() -> None:
+    class Impl: ...
+
+    def make(dep: 'Impl') -> int:
+        del dep
+        return 0
+
+    r = Registry().alias('legacy', to=Impl).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Impl
+
+
+def test_forward_reference_resolves_a_class_registered_only_as_a_scope_value_key() -> None:
+    class Principal: ...
+
+    def make(dep: 'Principal') -> int:
+        del dep
+        return 0
+
+    r = Registry().scope_value(Principal).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Principal
+
+
+def test_forward_reference_resolves_a_class_registered_only_as_a_collection_element() -> None:
+    class Handler: ...
+
+    def make(dep: 'Handler') -> int:
+        del dep
+        return 0
+
+    r = Registry().collect(Handler, []).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Handler
+
+
+def test_forward_reference_resolves_a_class_registered_only_as_a_collection_member() -> None:
+    class Impl: ...
+
+    def make(dep: 'Impl') -> int:
+        del dep
+        return 0
+
+    r = Registry().collect('handlers', [Impl]).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Impl
+
+
 @pytest.mark.parametrize('key', [int, 'legacy', Token[int]('k')])
 def test_as_provider_key_accepts_classes_strings_and_tokens(key: object) -> None:
     assert as_provider_key(key) == key
 
 
 def test_as_provider_key_rejects_anything_else() -> None:
-    with pytest.raises(InvalidProviderError, match='a key must be a class, a Token, a string, or a list\\[X\\]'):
+    with pytest.raises(
+        InvalidProviderError, match='a key must be a class, a Token, a string, or a parameterised generic'
+    ):
         _ = as_provider_key(42)
+
+
+def test_as_provider_key_catch_all_message_names_what_is_accepted() -> None:
+    """Pins the message a reader gets for a key whose origin is not a class at all."""
+    with pytest.raises(InvalidProviderError, match='parameterised generic built by subscripting its origin'):
+        _ = as_provider_key(Literal['a'])
+
+
+@pytest.mark.parametrize(
+    ('value', 'offender'),
+    [(Callable[[int], str], "[<class 'int'>]"), (tuple[int, ...], 'Ellipsis')],
+)
+def test_as_provider_key_names_the_argument_that_is_not_a_key(value: object, offender: str) -> None:
+    """A `Callable` and a variadic `tuple` are rejected by the argument rule, which names the argument."""
+    with pytest.raises(InvalidProviderError, match=re.escape(f'its argument {offender} is not itself a provider key')):
+        _ = as_provider_key(value)
 
 
 def test_as_provider_key_rejects_an_optional_union_outside_parameter_position() -> None:
@@ -345,3 +479,53 @@ def test_an_unresolvable_annotation_is_reported_as_such() -> None:
     with pytest.raises(InvalidProviderError, match='could not be resolved') as exc:
         _ = build_specs(r.records())
     assert 'so depin can resolve the forward reference.' in str(exc.value)
+
+
+def test_an_unsubscripted_container_annotation_keys_by_the_bare_class() -> None:
+    """A container annotation with nothing to unwrap falls through to the annotation itself."""
+
+    def gen() -> Iterator:  # type: ignore[type-arg]  # pyright: ignore[reportMissingTypeArgument]
+        yield object()
+
+    r = Registry().bind(gen, scope=Scope.SINGLETON)  # pyright: ignore[reportUnknownArgumentType]
+    (spec,) = build_specs(r.records())
+    assert spec.key is Iterator
+
+
+def test_an_unresolvable_return_annotation_is_reported_as_such() -> None:
+    """The advice must not tell a factory that already has a return annotation to add one."""
+
+    def make() -> 'NeverDefined':  # type: ignore[name-defined]  # noqa: F821  # pyright: ignore[reportUndefinedVariable]
+        raise NotImplementedError
+
+    r = Registry().bind(make, scope=Scope.SINGLETON)  # pyright: ignore[reportUnknownArgumentType]
+    with pytest.raises(InvalidProviderError, match='it declares a return annotation'):
+        _ = build_specs(r.records())
+
+
+def test_a_class_named_only_by_an_explicit_provides_resolves_a_forward_reference() -> None:
+    class Impl: ...
+
+    class Other: ...
+
+    def make(dep: 'Impl') -> int:
+        del dep
+        return 0
+
+    r = Registry().bind(Other, provides=Impl).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Impl
+
+
+def test_a_class_named_only_inside_a_generic_key_resolves_a_forward_reference() -> None:
+    class Impl: ...
+
+    class Box[T]: ...
+
+    def make(dep: 'Impl') -> int:
+        del dep
+        return 0
+
+    r = Registry().alias(Box[Impl], to='boxes').bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Impl

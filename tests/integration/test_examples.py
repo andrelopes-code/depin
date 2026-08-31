@@ -10,6 +10,9 @@ from examples.collections.main import Dispatcher, EmailHandler, Handler, SmsHand
 from examples.collections.main import build as build_collections
 from examples.fastapi_app.main import build_container, create_app
 from examples.fastapi_app.registries import Database
+from examples.generic_keys.main import Order, ReportService, User
+from examples.generic_keys.main import Repo as GenericRepo
+from examples.generic_keys.main import build as build_generic_keys
 from examples.graph_diagnostics.main import Repo, Settings
 from examples.graph_diagnostics.main import build as build_diagnostics
 from examples.minimal_sync.main import Database as MinimalDatabase
@@ -91,6 +94,18 @@ def test_collections_example_gathers_every_handler_in_declaration_order() -> Non
     assert handlers == [di[EmailHandler], di[SmsHandler], di[WebhookHandler]]
     assert di[Dispatcher].handlers == handlers
     assert di.graph().node(list[Handler]).shape is ProviderShape.COLLECTION
+
+
+def test_generic_keys_example_resolves_each_parameterisation_to_its_own_repo() -> None:
+    di = build_generic_keys()
+    user_repo = di.resolve(GenericRepo[User])
+    order_repo = di.resolve(GenericRepo[Order])
+
+    assert [user.name for user in user_repo.rows] == ['ana', 'bia']
+    assert [order.reference for order in order_repo.rows] == ['#1001']
+    assert di[ReportService].users is user_repo
+    assert di[ReportService].orders is order_repo
+    assert di.explain(GenericRepo[User]) == 'Repo[User]  [singleton, function]'
 
 
 def test_graph_diagnostics_example_explains_and_exports_its_graph() -> None:

@@ -88,3 +88,64 @@ A given `(element, tag)` pair can only be declared with one `collect` call:
 calling it twice for the same element and tag also raises
 `DuplicateProviderError`, so a collection cannot be assembled by contributions
 from separately-shipped registries.
+
+## Generic keys
+
+A parameterised generic — `Repo[User]`, a generic `Protocol`, `dict[str, int]` — is a
+provider key like any other, distinguished from every other key by equality. The bare
+class and a parameterisation are different keys, so binding both is legal and means two
+providers:
+
+```pycon
+>>> class User: ...
+>>> class Order: ...
+>>> class Repo[T]:
+...     def __init__(self, rows: list[str]) -> None:
+...         self.rows = rows
+>>> def user_repo() -> Repo[User]:
+...     return Repo(['ana'])
+>>> def order_repo() -> Repo[Order]:
+...     return Repo(['#1'])
+>>> di = Container().bind(user_repo).bind(order_repo).freeze()
+>>> di.resolve(Repo[User]).rows
+['ana']
+>>> di.resolve(Repo[Order]).rows
+['#1']
+
+```
+
+A generic key works as a parameter annotation the same way any other key does:
+
+```pycon
+>>> class UserService:
+...     def __init__(self, repo: Repo[User]) -> None:
+...         self.repo = repo
+>>> di = Container().bind(user_repo).bind(order_repo).bind(UserService).freeze()
+>>> di[UserService].repo.rows
+['ana']
+
+```
+
+`explain()` renders the parameterisation, the way it prints everywhere else, rather
+than falling back to `repr`:
+
+```pycon
+>>> print(di.explain(Repo[User]))
+Repo[User]  [singleton, function]
+
+```
+
+Matching is by equality, never by assignability: `Repo[User]` does not satisfy a
+parameter annotated `Repo[object]`, even though `User` is a subclass of `object`.
+
+A deprecated `typing` alias is rejected at `freeze()`, naming the canonical spelling to
+write instead:
+
+```pycon
+>>> import typing
+>>> Container().alias(typing.List[User], to=User).freeze()  # noqa: UP006
+Traceback (most recent call last):
+    ...
+depin.errors.InvalidProviderError: cannot use typing.List[__main__.User] as a provider key: it is the deprecated typing alias for list[User], and a different object at runtime, so the two would be two keys that print alike. Write list[User] instead, subscripting builtins.list itself.
+
+```

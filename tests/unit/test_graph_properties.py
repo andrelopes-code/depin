@@ -24,6 +24,54 @@ class GraphCase:
     aliases: frozenset[int] = frozenset()
     optionals: frozenset[tuple[int, int]] = frozenset()
     collections: frozenset[int] = frozenset()
+    generics: frozenset[int] = frozenset()
+
+
+class _GenericMarker0: ...
+
+
+class _GenericMarker1: ...
+
+
+class _GenericMarker2: ...
+
+
+class _GenericMarker3: ...
+
+
+class _GenericMarker4: ...
+
+
+class _GenericMarker5: ...
+
+
+class _GenericMarker6: ...
+
+
+class _GenericMarker7: ...
+
+
+class _GenericContainer[T]:
+    """Wraps a node's key in a parameterised generic, declared once for `GraphCase.generics`.
+
+    `_materialize` builds each node's own class at runtime with `type(...)`, and
+    subscripting a generic origin with a runtime-only type fails mypy's static
+    check of the subscript ("Variable is not valid as a type"). Subscripting this
+    container with one of the fixed, statically-known markers below sidesteps
+    that: the resulting key is an ordinary canonical generic, just like `Repo[User]`.
+    """
+
+
+_GENERIC_KEYS: tuple[type[object], ...] = (
+    _GenericContainer[_GenericMarker0],
+    _GenericContainer[_GenericMarker1],
+    _GenericContainer[_GenericMarker2],
+    _GenericContainer[_GenericMarker3],
+    _GenericContainer[_GenericMarker4],
+    _GenericContainer[_GenericMarker5],
+    _GenericContainer[_GenericMarker6],
+    _GenericContainer[_GenericMarker7],
+)
 
 
 def _set_dynamic_attribute(target: object, name: str, value: object) -> None:
@@ -56,14 +104,17 @@ def _bind_consumer(container: Container, name: str, key: object) -> None:
 
 def _materialize(case: GraphCase) -> Container:
     nodes = tuple(type(f'GraphNode{index}', (), {}) for index in range(case.size))
+    # A node in `case.generics` is registered and referenced by a parameterised
+    # generic key instead of its own class — see `_GenericContainer`.
+    keys: tuple[type[object], ...] = tuple(
+        _GENERIC_KEYS[index] if index in case.generics else node for index, node in enumerate(nodes)
+    )
     for owner, node in enumerate(nodes):
         parameters = [inspect.Parameter('self', inspect.Parameter.POSITIONAL_OR_KEYWORD)]
         annotations: dict[str, object] = {}
         for dependency in sorted(dependency for edge_owner, dependency in case.edges if edge_owner == owner):
             name = f'dependency_{dependency}'
-            annotation: object = (
-                nodes[dependency] | None if (owner, dependency) in case.optionals else nodes[dependency]
-            )
+            annotation: object = keys[dependency] | None if (owner, dependency) in case.optionals else keys[dependency]
             parameters.append(inspect.Parameter(name, inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=annotation))
             annotations[name] = annotation
 
@@ -77,16 +128,17 @@ def _materialize(case: GraphCase) -> Container:
     container = Container()
     for index, node in enumerate(nodes):
         if case.registered[index]:
-            _ = container.bind(node, scope=case.scopes[index])
+            provides = keys[index] if index in case.generics else None
+            _ = container.bind(node, scope=case.scopes[index], provides=provides)
             if index in case.duplicates:
-                _ = container.bind(node, scope=case.scopes[index])
+                _ = container.bind(node, scope=case.scopes[index], provides=provides)
     for index in case.aliases:
         alias_key = type(f'GraphAlias{index}', (), {})
-        _ = container.alias(alias_key, to=nodes[index])
+        _ = container.alias(alias_key, to=keys[index])
         _bind_consumer(container, f'GraphAliasConsumer{index}', alias_key)
     for index in case.collections:
         element = type(f'GraphCollectionElement{index}', (), {})
-        _ = container.collect(element, [nodes[index]])
+        _ = container.collect(element, [keys[index]])
         _bind_consumer(container, f'GraphCollectionConsumer{index}', GenericAlias(list, (element,)))
     return container
 
@@ -130,6 +182,7 @@ def _graphs(draw: st.DrawFn) -> GraphCase:
     aliases = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
     optionals = draw(st.sets(st.sampled_from(tuple(edges)))) if edges else frozenset[tuple[int, int]]()
     collections = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
+    generics = draw(st.sets(st.sampled_from(registered_nodes))) if registered_nodes else frozenset[int]()
     return GraphCase(
         size,
         frozenset(edges),
@@ -139,6 +192,7 @@ def _graphs(draw: st.DrawFn) -> GraphCase:
         frozenset(aliases),
         frozenset(optionals),
         frozenset(collections),
+        frozenset(generics),
     )
 
 
