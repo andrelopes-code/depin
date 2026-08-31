@@ -256,3 +256,36 @@ def test_a_host_in_another_thread_does_not_leak_into_this_one() -> None:
 
     assert results == [True, True]
     assert optional_hosted_container() is None
+
+
+def test_a_nested_scope_of_another_container_reuses_the_outer_frames_cache() -> None:
+    """The frame stack is process-wide, shared by every container.
+
+    A second container's scope opened inside the first's becomes a child of the
+    first's frame, and `ScopeFrame.claim_cached` walks the parent chain keyed on
+    `(key, tag)` alone, so a key already cached in the enclosing scope is what
+    the inner one resolves. This is why the guide tells an integration not to
+    nest two containers' scopes.
+    """
+
+    class Label:
+        def __init__(self, text: str) -> None:
+            self.text = text
+
+    def outer_label() -> Label:
+        return Label('outer')
+
+    def inner_label() -> Label:
+        return Label('inner')
+
+    di_outer = Container().bind(outer_label, provides=Label, scope=Scope.SCOPED).freeze()
+    di_inner = Container().bind(inner_label, provides=Label, scope=Scope.SCOPED).freeze()
+
+    with Host(di_outer).scope():
+        assert hosted_container().resolve(Label).text == 'outer'
+        with Host(di_inner).scope():
+            assert hosted_container() is di_inner
+            assert hosted_container().resolve(Label).text == 'outer'
+
+    with Host(di_inner).scope():
+        assert hosted_container().resolve(Label).text == 'inner'
