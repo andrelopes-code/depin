@@ -8,6 +8,9 @@ never retyped by hand.
 - [Scope](scope.md) — provider lifetimes and the scope frame.
 - [Markers](markers.md) — `Token`, `Named`, `Tag`, `injected`, `provides`.
 - [Errors](errors.md) — the exception hierarchy, all rooted at `DepinError`.
+- [Graph diagnostics](diagnostics.md) — the data behind `graph()` and `explain()`.
+- [Warmup and health](operations.md) — the data behind `warmup()`, `checks()`, and `health()`.
+- [Integration contract](hosting.md) — `Host` and the ambient container.
 - [FastAPI](fastapi.md) — the optional ASGI integration.
 
 Looking for prose instead? Start with the [guide](../guide/index.md).

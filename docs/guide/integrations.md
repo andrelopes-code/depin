@@ -1,9 +1,10 @@
 # Writing an integration
 
 `depin.ext.fastapi` is not special: it is written entirely against the same
-seam any third-party integration uses, `depin.Host` and the functions
-alongside it in `depin/_core/hosting.py`. This page states that contract, then
-builds one integration — a job runner — against it end to end.
+seam any third-party integration uses — `Host`, `hosted_container`,
+`optional_hosted_container`, `ContractVersion`, and `CONTRACT_VERSION`, all
+re-exported from `depin`. This page states that contract, then builds one
+integration — a job runner — against it end to end.
 
 ## What an integration does
 
@@ -93,6 +94,18 @@ The full picture — one container, run twice from a `JobRunner` that owns the
 `python -m examples.integration.main` and pinned by
 `tests/integration/test_examples.py`.
 
+Two guarantees `scope()` makes are worth calling out by name, because both are
+things an integration author relies on without necessarily testing for them.
+The container is published before the scope opens and stays published until
+the scope's own teardowns have finished draining — only then is the
+publication undone — so a generator provider that reaches
+`hosted_container()` from its teardown half still finds the container there.
+And the publication is scoped to the current `contextvars.Context`: two
+concurrent requests, or two concurrent tasks, never see each other's
+container, and two `Host`s active in the same process nest rather than
+collide — the innermost `hosted_container()` wins, and exiting its scope
+restores whichever container the enclosing one had published.
+
 ## Hosts whose lifecycle is a pair of hooks
 
 `Host.scope()` returns an ordinary context-manager object; a `with` statement
@@ -102,19 +115,27 @@ hook and an `after` hook instead of a block — Flask's `before_request` /
 the two and calls `__enter__` / `__exit__` itself:
 
 ```pycon
->>> from depin import FrozenContainer
+>>> from contextlib import AbstractContextManager
+>>> from types import TracebackType
+>>> from depin import FrozenContainer, ScopeFrame
 >>> class JobHost:
 ...     def __init__(self, container: FrozenContainer) -> None:
 ...         self._host = Host(container)
-...         self._cm = None
+...         self._cm: AbstractContextManager[ScopeFrame] | None = None
 ...
 ...     def before(self) -> None:
 ...         self._cm = self._host.scope()
 ...         frame = self._cm.__enter__()
 ...         frame.provide(Job, Job('reindex'))
 ...
-...     def after(self, exc_type=None, exc=None, tb=None) -> None:
-...         self._cm.__exit__(exc_type, exc, tb)
+...     def after(
+...         self,
+...         exc_type: type[BaseException] | None = None,
+...         exc: BaseException | None = None,
+...         tb: TracebackType | None = None,
+...     ) -> None:
+...         if self._cm is not None:
+...             self._cm.__exit__(exc_type, exc, tb)
 >>> jh = JobHost(di)
 >>> jh.before()
 >>> hosted_container() is di
@@ -203,12 +224,12 @@ rather than repeating the contract's generic wording:
 >>> def resolve_job() -> Workspace:
 ...     container = optional_hosted_container()
 ...     if container is None:
-...         raise ContainerNotBoundError('resolve_job() called outside JobRunner.run(); wrap the call in JobRunner.run().')
+...         raise ContainerNotBoundError('resolve_job() called outside JobRunner.run(); call it from run().')
 ...     return container.resolve(Workspace)
 >>> resolve_job()
 Traceback (most recent call last):
     ...
-depin.errors.ContainerNotBoundError: resolve_job() called outside JobRunner.run(); wrap the call in JobRunner.run().
+depin.errors.ContainerNotBoundError: resolve_job() called outside JobRunner.run(); call it from run().
 
 ```
 

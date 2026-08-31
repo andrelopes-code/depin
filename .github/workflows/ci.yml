@@ -271,6 +271,11 @@ jobs:
       # refreshed, so neither of the other two jobs would notice a framework
       # release that breaks an integration. A break here is depin's to fix,
       # not upstream's, which is why this job gates rather than advising.
+      # `--upgrade` also lifts the default dev group — pytest, coverage, ruff,
+      # pydantic — not only the integration extras, and unlike `prerelease`'s
+      # `continue-on-error`, that breadth is deliberate: a dev-tool release
+      # that breaks the suite is exactly as much depin's to fix as a framework
+      # one, so this job gates on both rather than advising on either.
       - name: Sync at the latest released versions
         run: uv sync --upgrade --all-extras
 
