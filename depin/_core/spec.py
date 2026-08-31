@@ -63,7 +63,16 @@ class ProviderShape(Enum):
 
 
 type ProviderKey = type[object] | Token[object] | str | GenericAlias
-"""What a provider can be bound and resolved under: a class, a `Token`, a name, or a `list[...]` of one."""
+"""What a provider can be bound and resolved under: a class, a `Token`, a name, or a parameterised generic.
+
+The parameterised case needs no member of its own. A generic written in
+expression position — ``Repo[User]``, ``Reader[User]`` — has the static type
+``type[Repo[User]]``, which ``type[object]`` already covers; the
+`types.GenericAlias` member covers the runtime object a builtin or ABC origin
+produces, such as ``list[Handler]``. A deprecated ``typing`` alias
+(``typing.List[X]``) is a key at neither level: `Container.freeze()` rejects it
+and names the canonical spelling to write instead.
+"""
 
 type Ident = tuple[ProviderKey, str | None]
 """A provider's identity: its key paired with its tag. Private to `_core`."""
@@ -240,9 +249,9 @@ def fmt_key(key: object) -> str:
 def fmt_parameterised(origin: type[object], arguments: tuple[object, ...]) -> str:
     """Spell a parameterised key as ``Origin[A, B]``, each part through `fmt_key`.
 
-    Shared with the message `as_provider_key` raises for a deprecated `typing`
-    alias, so the canonical form it tells the user to write is spelled by the
-    same code that will render it once they do.
+    Shared with the message a deprecated `typing` alias is rejected with, so the
+    canonical form the user is told to write is spelled by the same code that
+    will render it once they do.
     """
     return f'{fmt_key(origin)}[{", ".join(fmt_key(argument) for argument in arguments)}]'
 

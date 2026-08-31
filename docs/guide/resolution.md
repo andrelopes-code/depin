@@ -146,6 +146,6 @@ write instead:
 >>> Container().alias(typing.List[User], to=User).freeze()  # noqa: UP006
 Traceback (most recent call last):
     ...
-depin.errors.InvalidProviderError: cannot use typing.List[__main__.User] as a provider key: it is the deprecated typing alias for list[User], and a different object at runtime, so the two would be two keys that print alike. Write list[User] instead.
+depin.errors.InvalidProviderError: cannot use typing.List[__main__.User] as a provider key: it is the deprecated typing alias for list[User], and a different object at runtime, so the two would be two keys that print alike. Write list[User] instead, subscripting builtins.list itself.
 
 ```

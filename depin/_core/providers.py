@@ -2,8 +2,7 @@
 
 import inspect
 from collections.abc import Iterable
-from types import NoneType, UnionType
-from typing import Union, get_args, get_origin, get_type_hints
+from typing import get_args, get_origin, get_type_hints
 
 from depin._core.introspect import AnnotatedMeta, detect_shape, extract_annotated_meta, is_object_token
 from depin._core.markers import get_provides
@@ -19,13 +18,18 @@ from depin._core.spec import (
     collection_key,
     collection_param,
     fmt_key,
-    fmt_parameterised,
     is_alias_binding,
     is_collection_binding,
     is_frame_binding,
     is_value_binding,
 )
-from depin._core.typeguards import as_class, as_factory, is_canonical_generic, is_generic_key
+from depin._core.typeguards import (
+    as_class,
+    as_factory,
+    invalid_key_error,
+    is_parameterised_generic,
+    is_provider_key,
+)
 from depin.errors import DuplicateProviderError, InvalidProviderError, InvalidScopeError
 
 LIFECYCLE_SHAPES = frozenset(
@@ -69,28 +73,35 @@ def _registered_classes(records: Iterable[BindRecord]) -> dict[str, object]:
     """Namespace of every class reachable from a record, in whatever role it plays, so a forward reference resolves."""
     out: dict[str, object] = {}
     for rec in records:
-        for cls in _classes_reachable_from(rec.source):
+        for cls in _classes_reachable_from(rec):
             out[cls.__name__] = cls
     return out
 
 
-def _classes_reachable_from(source: object) -> tuple[type[object], ...]:
-    """Every class a record's source names, whether as itself, a marker key, target, element, or member.
+def _classes_reachable_from(rec: BindRecord) -> tuple[type[object], ...]:
+    """Every class a record names, in whatever role: source, `provides=`, marker key, target, element, or member.
 
-    A `Token`, a string, or a parameterised generic has no `__name__` to key the
-    namespace by, so only classes are collected.
+    A `Token` and a string have no `__name__` to key the namespace by, so
+    neither contributes. A parameterised generic contributes the classes inside
+    it, so a class named only as `Repo[User]`'s argument still enters.
     """
-    if isinstance(source, type):
-        return (source,)
+    source = rec.source
+    candidates: tuple[object, ...] = (source, rec.provides)
     if is_frame_binding(source):
-        candidates: tuple[object, ...] = (source.key,)
+        candidates += (source.key,)
     elif is_alias_binding(source):
-        candidates = (source.key, source.target)
+        candidates += (source.key, source.target)
     elif is_collection_binding(source):
-        candidates = (source.element, *source.members)
-    else:
-        candidates = ()
-    return tuple(candidate for candidate in candidates if isinstance(candidate, type))
+        candidates += (source.element, *source.members)
+    return tuple(cls for candidate in candidates for cls in _classes_within(candidate))
+
+
+def _classes_within(value: object) -> tuple[type[object], ...]:
+    if isinstance(value, type):
+        return (value,)
+    if is_parameterised_generic(value):
+        return tuple(cls for argument in get_args(value) for cls in _classes_within(argument))
+    return ()
 
 
 def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec:
@@ -199,21 +210,39 @@ def _resolve_key(
     localns: dict[str, object],
 ) -> ProviderKey:
     if explicit is not None:
-        return explicit
+        return as_provider_key(explicit)
     if isinstance(source, type):
         attr = get_provides(source)
         return attr if attr is not None else source
     hints = _safe_type_hints(source, localns)
     ret = hints.get('return')
     if ret is None:
-        raise InvalidProviderError(
-            f'cannot infer the provider key for {source!r}: add a return type annotation, or pass provides=...'
-        )
+        raise _uninferrable_key_error(source)
     if shape in _UNWRAP_SHAPES:
         unwrapped = unwrap_container_type(ret)
         if unwrapped is not None:
             return unwrapped
     return as_provider_key(ret)
+
+
+def _uninferrable_key_error(source: object) -> InvalidProviderError:
+    """Why a factory's key could not be read off its return annotation.
+
+    A factory that declares no return annotation and one whose annotations name
+    something unresolvable both reach `_resolve_key` with no hints, and the
+    advice differs: the first needs an annotation, the second needs the name it
+    already wrote to be resolvable.
+    """
+    if 'return' in inspect.get_annotations(as_factory(source, source)):
+        return InvalidProviderError(
+            f'cannot infer the provider key for {source!r}: it declares a return annotation, but an '
+            'annotation on it could not be resolved. Import the name at module level, or register '
+            'the class in any role, so depin can resolve the forward reference — or pass '
+            'provides=... to name the key directly.'
+        )
+    return InvalidProviderError(
+        f'cannot infer the provider key for {source!r}: add a return type annotation, or pass provides=...'
+    )
 
 
 def unwrap_container_type(annotation: object) -> ProviderKey | None:
@@ -227,40 +256,9 @@ def unwrap_container_type(annotation: object) -> ProviderKey | None:
 
 
 def as_provider_key(value: object) -> ProviderKey:
-    if isinstance(value, type | str):
+    if is_provider_key(value):
         return value
-    if is_object_token(value):
-        return value
-    if is_generic_key(value):
-        if is_canonical_generic(value):
-            return value
-        origin = get_origin(value)
-        if isinstance(origin, type):
-            raise InvalidProviderError(
-                f'cannot use {value} as a provider key: it is the deprecated typing alias for '
-                f'{fmt_parameterised(origin, get_args(value))}, and a different object at runtime, '
-                f'so the two would be two keys that print alike. Write '
-                f'{fmt_parameterised(origin, get_args(value))} instead.'
-            )
-    if get_origin(value) in (UnionType, Union):
-        members = tuple(arg for arg in get_args(value) if arg is not NoneType)
-        if len(members) == 1:
-            raise InvalidProviderError(
-                f'cannot use {value} as a provider key: depin reads `T | None` as an optional '
-                f"dependency only on a provider's parameter, and this is not one. Use "
-                f'{fmt_key(members[0])} directly.'
-            )
-        raise InvalidProviderError(
-            f'cannot use {value} as a provider key: depin reads `T | None` as an optional '
-            'dependency, but a union of two or more providers names no single key wherever it is used — '
-            'as a parameter annotation, an alias target, or a collection element. Write the one key you '
-            'mean instead, or, for a parameter, disambiguate with Annotated[..., Tag(...)].'
-        )
-    raise InvalidProviderError(
-        f'cannot use {value!r} as a provider key: a key must be a class, a Token, a string, or a '
-        'parameterised generic built by subscripting its origin, such as list[X] or Repo[X] '
-        '(not the deprecated typing.List[X] form).'
-    )
+    raise invalid_key_error(value)
 
 
 def _extract_params(source: object, shape: ProviderShape, localns: dict[str, object]) -> tuple[ParamSpec, ...]:

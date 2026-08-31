@@ -742,7 +742,7 @@ def test_a_key_whose_origin_is_not_a_class_is_rejected() -> None:
 def test_a_key_with_an_argument_that_is_not_itself_a_key_is_rejected() -> None:
     class Target: ...
 
-    with pytest.raises(InvalidProviderError, match='a key must be a class'):
+    with pytest.raises(InvalidProviderError, match=r'its argument Ellipsis is not itself a provider key'):
         _ = Container().alias(tuple[int, ...], to=Target).freeze()
 
 

@@ -14,11 +14,11 @@ element type to ``Unknown``, and the guard is what restates it as ``object``.
 
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
-from types import GenericAlias, UnionType
-from typing import Generic, TypeGuard, get_args, get_origin
+from types import GenericAlias, NoneType, UnionType
+from typing import Generic, TypeGuard, Union, get_args, get_origin
 
 from depin._core.markers import Token
-from depin._core.spec import ALIAS_PARAM, ParamSpec, ProviderKey, fmt_key
+from depin._core.spec import ALIAS_PARAM, ParamSpec, ProviderKey, fmt_key, fmt_parameterised
 from depin.errors import InvalidProviderError
 
 
@@ -26,20 +26,48 @@ def is_provider_key(value: object) -> TypeGuard[ProviderKey]:
     return isinstance(value, type | str | Token) or is_generic_key(value)
 
 
+def generic_origin(value: object) -> type[object] | None:
+    """The class ``value`` parameterises, or ``None`` when it parameterises no class.
+
+    A union is excluded by name: `types.UnionType` is a class, so it would
+    otherwise pass, and optionality is a parameter-position feature rather than
+    a key.
+    """
+    origin = get_origin(value)
+    if isinstance(origin, type) and origin is not UnionType:
+        return origin
+    return None
+
+
+def is_parameterised_generic(value: object) -> bool:
+    """Whether ``value`` subscripts a class with at least one argument.
+
+    Shape only: it says nothing about how the parameterisation is spelled, nor
+    about what it is parameterised with. `is_generic_key` adds both.
+    """
+    return generic_origin(value) is not None and bool(get_args(value))
+
+
 def is_generic_key(value: object) -> TypeGuard[ProviderKey]:
     """Whether ``value`` is a parameterised generic usable as a provider key.
 
-    The origin must be a class and every argument must itself be a key. A union
-    is excluded by name: `types.UnionType` is a class, so it would otherwise
-    pass, and optionality is a parameter-position feature rather than a key.
-    `Callable[[int], str]` and `tuple[X, ...]` fall out of the argument rule,
+    The parameterisation must be canonically spelled, and every argument must
+    itself be a provider key. That second rule recurses back through
+    `is_provider_key`, so canonicity holds at every level of nesting:
+    `list[typing.List[X]]` is rejected as surely as `typing.List[X]` is.
+    `Callable[[int], str]` and `tuple[X, ...]` fall out of the same rule,
     carrying a list and an `Ellipsis` respectively, with no special case.
     """
-    origin = get_origin(value)
-    if not isinstance(origin, type) or origin is UnionType:
-        return False
-    arguments = get_args(value)
-    return bool(arguments) and all(is_provider_key(argument) for argument in arguments)
+    return (
+        is_parameterised_generic(value)
+        and is_canonical_generic(value)
+        and all(is_provider_key(argument) for argument in get_args(value))
+    )
+
+
+def is_union(value: object) -> bool:
+    """Whether ``value`` is a union, in either spelling: ``X | Y`` or ``typing.Union[X, Y]``."""
+    return get_origin(value) in (UnionType, Union)
 
 
 def is_canonical_generic(value: object) -> bool:
@@ -55,6 +83,73 @@ def is_canonical_generic(value: object) -> bool:
     if not isinstance(origin, type):
         return False
     return isinstance(value, GenericAlias) or issubclass(origin, Generic)
+
+
+def invalid_key_error(value: object) -> InvalidProviderError:
+    """The error explaining why ``value`` cannot serve as a provider key.
+
+    Shared by `as_provider_key` and the guard behind `provides`, so a value
+    rejected in either position is explained the same way. Only ever called for
+    a value `is_provider_key` rejects.
+    """
+    deprecated = _deprecated_alias_error_within(value)
+    if deprecated is not None:
+        return deprecated
+    if is_parameterised_generic(value):
+        rejected = ', '.join(repr(argument) for argument in get_args(value) if not is_provider_key(argument))
+        return InvalidProviderError(
+            f'cannot use {value} as a provider key: its argument {rejected} is not itself a provider '
+            'key, and every argument of a parameterised key must be one. That is why '
+            'Callable[[int], str] and tuple[X, ...] are never keys.'
+        )
+    if is_union(value):
+        return _invalid_union_error(value)
+    return InvalidProviderError(
+        f'cannot use {value!r} as a provider key: a key must be a class, a Token, a string, or a '
+        'parameterised generic built by subscripting its origin, such as list[X] or Repo[X] '
+        '(not the deprecated typing.List[X] form).'
+    )
+
+
+def _deprecated_alias_error_within(value: object) -> InvalidProviderError | None:
+    """The error for the outermost deprecated `typing` alias in ``value``, ``value`` itself included.
+
+    Searched at every depth because canonicity is required at every depth:
+    `list[typing.List[X]]` is as unusable as `typing.List[X]`, and naming the
+    inner spelling is the only advice a caller can act on.
+    """
+    origin = generic_origin(value)
+    if origin is None:
+        return None
+    if not is_canonical_generic(value):
+        canonical = fmt_parameterised(origin, get_args(value))
+        return InvalidProviderError(
+            f'cannot use {value} as a provider key: it is the deprecated typing alias for '
+            f'{canonical}, and a different object at runtime, so the two would be two keys that '
+            f'print alike. Write {canonical} instead, subscripting '
+            f'{origin.__module__}.{origin.__qualname__} itself.'
+        )
+    for argument in get_args(value):
+        found = _deprecated_alias_error_within(argument)
+        if found is not None:
+            return found
+    return None
+
+
+def _invalid_union_error(value: object) -> InvalidProviderError:
+    members = tuple(argument for argument in get_args(value) if argument is not NoneType)
+    if len(members) == 1:
+        return InvalidProviderError(
+            f'cannot use {value} as a provider key: depin reads `T | None` as an optional '
+            f"dependency only on a provider's parameter, and this is not one. Use "
+            f'{fmt_key(members[0])} directly.'
+        )
+    return InvalidProviderError(
+        f'cannot use {value} as a provider key: depin reads `T | None` as an optional '
+        'dependency, but a union of two or more providers names no single key wherever it is used — '
+        'as a parameter annotation, an alias target, or a collection element. Write the one key you '
+        'mean instead, or, for a parameter, disambiguate with Annotated[..., Tag(...)].'
+    )
 
 
 def as_class(source: object, key: object) -> type[object]:

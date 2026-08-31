@@ -186,7 +186,18 @@ and measured with `uv run coverage run -m pytest -q` followed by
   container type (`def make() -> Iterator:`) would take it — but no test
   constructs that case. This is a genuine, narrow coverage gap this cycle
   introduces as a side effect of the async-unwrap fix, not a pre-existing one
-  carried at a new line number.
+  carried at a new line number. The concrete reproducing case is
+
+  ```python
+  def gen() -> collections.abc.Iterator:
+      yield object()
+  ```
+
+  an unsubscripted container annotation, which `unwrap_container_type` reads
+  no argument out of and which is therefore keyed by the bare `Iterator`
+  class. Closed by the fix wave recorded below, which pins exactly that
+  behaviour in
+  `tests/unit/test_providers.py::test_an_unsubscripted_container_annotation_keys_by_the_bare_class`.
 
 - **`depin/_core/providers.py`, branch `238->245`.** New this cycle. `238`
   is `if isinstance(origin, type):` inside `as_provider_key`'s
@@ -202,22 +213,29 @@ and measured with `uv run coverage run -m pytest -q` followed by
   `is_generic_key`'s invariant — expected, and left as-is per the design's
   own rationale for keeping the guard readable." New at this line, but not a
   surprise: the same code, and the same acknowledged trade-off, existed since
-  Task 1's commit within this cycle.
+  Task 1's commit within this cycle. Removed by the fix wave recorded below:
+  `as_provider_key` no longer re-narrows the origin, so the branch does not
+  exist to be uncovered.
 
 - **`depin/_core/typeguards.py`, line 56.** New this cycle; `is_canonical_generic`
   did not exist at `ec65dcb` at all (confirmed: `git show
   ec65dcb:depin/_core/typeguards.py` has no such function). Line 56 is
   `return False` inside `is_canonical_generic`, taken when `get_origin(value)`
-  is not a class. `is_canonical_generic`'s only call site
-  (`as_provider_key`) reaches it only after `is_generic_key(value)` has
-  already confirmed a class origin, so this internal guard's `False` branch
-  is unreachable through that path — the same shape of defensive,
-  provably-dead guard as `providers.py`'s `238->245` above, on a predicate
-  that also has to be correct when called directly (as
+  is not a class. `is_canonical_generic` has two call sites, not one:
+  `as_provider_key` in `providers.py`, and `_reject_invalid_key` in
+  `markers.py`, which cycle 3 gave it. Both reach it only after
+  `is_generic_key(value)` has returned `True` — in `markers.py` the two are
+  joined by `and`, so `is_generic_key` short-circuits and
+  `is_canonical_generic` is never evaluated for a value with a non-class
+  origin — and `is_generic_key` returns `False` unless the origin is a class.
+  The guard's `False` branch is therefore unreachable through both paths — the
+  same shape of defensive, provably-dead guard as `providers.py`'s `238->245`
+  above, on a predicate that also has to be correct when called directly (as
   `tests/unit/test_typeguards.py` does, always with a class-origin value in
   both directions of its own two tests). Neither existing test calls it with
   a non-class-origin value such as `Literal['a']`, so the branch is
-  unexercised.
+  unexercised. Closed by the fix wave recorded below, which adds that direct
+  assertion.
 
 None of the three new gaps threatens the 95% floor (98.46% total, twice
 measured) or the acceptance criterion that a generic key resolve, validate,
@@ -417,11 +435,14 @@ canonical-form check's cost on the freeze path is visible directly:
 | 100 | 3,704.5032 us | 7,206.2926 us | 1.95x |
 | 1000 | 38,931.9519 us | 89,126.0626 us | 2.29x |
 
-The ratio is roughly constant (and grows only mildly with size), consistent
-with the canonical-form check adding a fixed `get_origin`/`isinstance` cost
-per provider rather than a cost that scales with the graph as a whole; a key
-with no origin — every plain-key provider in the baseline case — skips the
-check entirely, per the design's own description of the common path.
+The ratio is not constant: it climbs from 1.88x to 1.95x to 2.29x across the
+three sizes. The two cases differ in more than the canonical-form check —
+the generic-key graph also carries a different key object per node, which
+hashes, compares, and renders differently from a bare class — so the ratio
+bounds the total cost of keying a graph by generic keys rather than isolating
+the canonical-form check's share of it. A single-host run of three sizes does
+not separate those contributions, and no attempt is made here to attribute
+the climb to one of them.
 
 Every other case has a directly comparable figure in
 `specs/evidence/2026-08-31-step-3-optional-collections.md`; none shows an
@@ -457,6 +478,105 @@ The CI `mutation` job (`.github/workflows/mutation.yml`, path filter
 this gate. It is left to run in CI rather than reproduced locally, and no
 score is recorded here in its place.
 
+## Fix wave: canonical generic keys on every path
+
+A whole-branch review found three paths where a deprecated `typing` alias still
+became a key, or was refused with the wrong message, and four documentation
+claims that had gone stale. One commit, `fix: enforce canonical generic keys on
+every path`, closes all of them. What changed, and what it fixed:
+
+- Canonicity moved inside `is_provider_key`. `typeguards.py` now carries three
+  predicates instead of two: `is_parameterised_generic` (shape only),
+  `is_canonical_generic` (unchanged), and `is_generic_key`, which requires both
+  and recurses through `is_provider_key` for every argument. Canonicity is
+  therefore enforced at every nesting level and at every call site, rather than
+  being a separate predicate one call site remembered to consult.
+- `_resolve_key` routes an explicit `provides=` through `as_provider_key`. It
+  had returned the value unchanged, so `provides=42`, `provides=typing.List[X]`,
+  `provides=X | None`, `provides=Callable[[int], str]`, and
+  `provides=tuple[X, ...]` all froze.
+- `list[typing.List[X]]` and `Repo[typing.List[X]]` are rejected. Both were
+  accepted, and `list[typing.List[X]]` alongside `list[list[X]]` produced two
+  nodes that print `list[list[User]]`.
+- `FrozenContainer.resolve`, `explain`, and `override` refuse a deprecated
+  alias at their key gate. With `list[X]` bound, `resolve(typing.List[X])` had
+  raised `MissingProviderError: no provider for list[User]`, naming as missing
+  a key that is present. `frozen.py` is unmodified: the three gates call
+  `is_provider_key`, so fixing the predicate fixed all three.
+- `as_provider_key` collapsed to `is_provider_key` plus one message builder,
+  which removed the dead `isinstance(origin, type)` re-narrowing that branch
+  `238->245` measured.
+
+Messages reworded, each with the case that reaches it:
+
+| Message | Reached by |
+| --- | --- |
+| the deprecated-alias message, now naming the origin module-qualified (`Write Sequence[User] instead, subscripting collections.abc.Sequence itself`) | `typing.Sequence[User]` as a key, at any depth; `fmt_key` drops the module, so the old advice was not directly typable for an ABC origin |
+| the argument-rule message, now naming the argument (`its argument Ellipsis is not itself a provider key`) | `tuple[X, ...]` and `Callable[[int], str]`, which previously fell through to the catch-all |
+| the deprecated-alias, argument-rule, and both union messages, from `@provides` | `@provides(typing.List[X])`, `@provides(Callable[[int], str])`, `@provides(X \| None)`, `@provides(X \| Y)` — all four previously got "expected a class, a Protocol, an abstract base class, or a parameterised generic such as `Repo[User]`", which for the first two told the reader to write what they had written. `@provides(42)`, `@provides('Store')`, and `@provides(Token(...))` keep that message |
+| `cannot infer the provider key for <fn>: it declares a return annotation, but an annotation on it could not be resolved` | a factory whose return annotation names something unresolvable; `_safe_type_hints` returns `{}` on `NameError`, so it had been told to add an annotation it already had |
+
+`_classes_reachable_from` now reads the whole `BindRecord` — source, `provides`,
+frame key, alias key and target, collection element and members — and recurses
+into a generic key's arguments, so a class reachable only through `provides=`,
+or only as `Repo[User]`'s argument, enters the forward-reference namespace.
+
+Gate sequence, re-run on the fix commit's tree:
+
+```console
+$ uv run ruff format
+136 files left unchanged
+EXIT=0
+
+$ uv run ruff check
+All checks passed!
+EXIT=0
+
+$ uv run basedpyright
+0 errors, 0 warnings, 0 notes
+EXIT=0
+
+$ uv run mypy
+Success: no issues found in 86 source files
+EXIT=0
+
+$ uv run pytest
+656 passed, 6 skipped in 12.63s
+EXIT=0
+
+$ uv run --group docs mkdocs build --strict
+INFO    -  Documentation built in 2.44 seconds
+EXIT=0
+```
+
+Coverage, re-measured:
+
+```console
+$ uv run pytest --cov=depin --cov-report=term-missing -q
+...
+depin/_core/markers.py          59      0      6      0   100%
+depin/_core/providers.py       131      1     64      1    99%   254
+depin/_core/spec.py             96      0      4      0   100%
+depin/_core/typeguards.py       99      0     38      0   100%
+...
+TOTAL                         1546      8    512     17    99%
+Required test coverage of 95.0% reached. Total coverage: 98.79%
+656 passed, 6 skipped
+EXIT=0
+```
+
+98.79%, up from 98.46%. All three gaps this cycle had introduced are gone:
+`typeguards.py` is at 100% line and branch coverage, `providers.py`'s
+`238->245` no longer exists, and `214->216` is covered. `providers.py:254` is
+the pre-existing `return None` in `unwrap_container_type` already attributed
+above. `depin/` still carries exactly three suppressions — two in `frozen.py`,
+one in `markers.py` — and the fix commit adds none.
+
+Benchmarks were not re-run for this commit. The changed code is the freeze-path
+key check and the message builders it raises through; no resolution, scope,
+injection, or async hot path is touched, and the CI benchmark job measures base
+against head.
+
 ## Scope note
 
 This record covers Steps 1, 2, 4, and 5 of the Task 7 brief. Step 3, the
@@ -466,3 +586,10 @@ responsibility and are not part of this record. Everything else in this
 document was measured locally, on a clean working tree, against
 `de38834117ef602cfee26acf122b68694f828eae` — the commit this file's own
 commit is built on — and this file is the only path its own commit adds.
+
+The "Fix wave" section above is later than the rest and was measured on its own
+commit, `fix: enforce canonical generic keys on every path`, which is the one
+place in this document where a figure supersedes an earlier one. Where the two
+disagree — the coverage total, and the three gaps this cycle had introduced —
+the fix wave's figures are the current ones, and the earlier ones are kept as
+the record of what the review found.

@@ -22,3 +22,8 @@ def test_the_deprecated_typing_aliases_are_not_canonical() -> None:
 
     for key in (typing.List[User], typing.Dict[str, int], typing.Sequence[User]):  # noqa: UP006
         assert not is_canonical_generic(key), key
+
+
+def test_a_non_class_origin_is_not_canonical() -> None:
+    """Called directly: `Literal['a']` never reaches the predicate through `is_generic_key`, which rejects it first."""
+    assert not is_canonical_generic(typing.Literal['a'])

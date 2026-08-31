@@ -1,5 +1,6 @@
 """Spec building: how a binding record becomes a provider key, shape and parameters."""
 
+import re
 from collections.abc import AsyncGenerator, Callable, Generator, Iterator
 from contextlib import contextmanager
 from typing import Annotated, Literal
@@ -393,10 +394,19 @@ def test_as_provider_key_rejects_anything_else() -> None:
         _ = as_provider_key(42)
 
 
-@pytest.mark.parametrize('value', [Callable[[int], str], tuple[int, ...], Literal['a']])
-def test_as_provider_key_catch_all_message_names_what_is_accepted(value: object) -> None:
-    """Pins the message a reader gets for a `Callable`, a variadic `tuple`, or a `Literal` key."""
+def test_as_provider_key_catch_all_message_names_what_is_accepted() -> None:
+    """Pins the message a reader gets for a key whose origin is not a class at all."""
     with pytest.raises(InvalidProviderError, match='parameterised generic built by subscripting its origin'):
+        _ = as_provider_key(Literal['a'])
+
+
+@pytest.mark.parametrize(
+    ('value', 'offender'),
+    [(Callable[[int], str], "[<class 'int'>]"), (tuple[int, ...], 'Ellipsis')],
+)
+def test_as_provider_key_names_the_argument_that_is_not_a_key(value: object, offender: str) -> None:
+    """A `Callable` and a variadic `tuple` are rejected by the argument rule, which names the argument."""
+    with pytest.raises(InvalidProviderError, match=re.escape(f'its argument {offender} is not itself a provider key')):
         _ = as_provider_key(value)
 
 
@@ -469,3 +479,53 @@ def test_an_unresolvable_annotation_is_reported_as_such() -> None:
     with pytest.raises(InvalidProviderError, match='could not be resolved') as exc:
         _ = build_specs(r.records())
     assert 'so depin can resolve the forward reference.' in str(exc.value)
+
+
+def test_an_unsubscripted_container_annotation_keys_by_the_bare_class() -> None:
+    """A container annotation with nothing to unwrap falls through to the annotation itself."""
+
+    def gen() -> Iterator:  # type: ignore[type-arg]  # pyright: ignore[reportMissingTypeArgument]
+        yield object()
+
+    r = Registry().bind(gen, scope=Scope.SINGLETON)  # pyright: ignore[reportUnknownArgumentType]
+    (spec,) = build_specs(r.records())
+    assert spec.key is Iterator
+
+
+def test_an_unresolvable_return_annotation_is_reported_as_such() -> None:
+    """The advice must not tell a factory that already has a return annotation to add one."""
+
+    def make() -> 'NeverDefined':  # type: ignore[name-defined]  # noqa: F821  # pyright: ignore[reportUndefinedVariable]
+        raise NotImplementedError
+
+    r = Registry().bind(make, scope=Scope.SINGLETON)  # pyright: ignore[reportUnknownArgumentType]
+    with pytest.raises(InvalidProviderError, match='it declares a return annotation'):
+        _ = build_specs(r.records())
+
+
+def test_a_class_named_only_by_an_explicit_provides_resolves_a_forward_reference() -> None:
+    class Impl: ...
+
+    class Other: ...
+
+    def make(dep: 'Impl') -> int:
+        del dep
+        return 0
+
+    r = Registry().bind(Other, provides=Impl).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Impl
+
+
+def test_a_class_named_only_inside_a_generic_key_resolves_a_forward_reference() -> None:
+    class Impl: ...
+
+    class Box[T]: ...
+
+    def make(dep: 'Impl') -> int:
+        del dep
+        return 0
+
+    r = Registry().alias(Box[Impl], to='boxes').bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()) if spec.source is make)
+    assert spec.params[0].key is Impl

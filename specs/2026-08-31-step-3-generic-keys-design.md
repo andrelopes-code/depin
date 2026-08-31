@@ -98,12 +98,12 @@ argument to be itself a provider key excludes both. `Literal['a']` has a non-cla
 
 ## Public surface
 
-No new symbol, no signature change. Three widenings.
+No new symbol, no signature change. Two widenings and one docstring correction.
 
 | Symbol | Change |
 | --- | --- |
-| `is_provider_key` | Admits any parameterised generic whose origin is a class other than `types.UnionType`, and whose every argument is itself a provider key. Replaces cycle 2's `list[X]`-only gate. |
-| `ProviderKey` | Its `GenericAlias` member widens to cover `typing`'s alias form as well, so a key written `Repo[User]` has a type. |
+| `is_provider_key` | Admits any canonically spelled parameterised generic whose origin is a class other than `types.UnionType`, and whose every argument is itself a provider key. Replaces cycle 2's `list[X]`-only gate. |
+| `ProviderKey` | Unchanged. `Repo[User]` in expression position has the static type `type[Repo[User]]`, which the existing `type[object]` member already absorbs, and the `GenericAlias` member already covers the runtime object a builtin or ABC origin produces. Only its docstring needed correcting, which is what this cycle does. |
 | `provides` | Accepts a parameterised generic, so `@provides(Repo[User])` works. |
 
 `ProviderKey` is a union, and adding to a union is compatible with every consumer already
@@ -122,10 +122,13 @@ when it added `GenericAlias`.
 | A generic key is an ordinary node | Duplicates, missing dependencies, cycles, captive validation, async propagation, aliases, and collections all apply unchanged, because none of them inspects the shape of a key. |
 | `Repo[User]` does not satisfy `Repo[object]` | depin matches keys by equality, never by assignability. Stated as a limitation, not a bug — see Out of scope. |
 
-The canonical-form check happens in `as_provider_key`, which every key already passes
-through: a provider's inferred key, an explicit `provides=`, a parameter's annotation, an alias
-key and target, and a collection's element and members. A key with no origin skips it
-entirely, so the common path is one `get_origin` call.
+The canonical-form check is part of `is_provider_key` rather than a separate predicate a call
+site consults. `as_provider_key` is the registration path every key already passes through — a
+provider's inferred key, an explicit `provides=`, a parameter's annotation, an alias key and
+target, and a collection's element and members — and it is one use of that predicate;
+`FrozenContainer`'s `resolve`, `explain`, and `override` gates are three more, so a deprecated
+alias is refused at the boundary rather than reported as a missing key. A key with no origin
+skips the check entirely, so the common path is one `get_origin` call.
 
 ## The defect this cycle fixes
 
@@ -160,7 +163,11 @@ collection element or member never enters it. A provider naming that class as a 
 reference then fails at `freeze()` with "bind the class so depin can resolve the forward
 reference" — advice that is wrong for a `Protocol`, because binding it would register a bogus
 provider rather than resolve anything. This cycle widens the namespace to include every class
-reachable from a record, whatever role it plays in it, and corrects the advice.
+reachable from a record, whatever role it plays in it: its source, an explicit `provides=`, a
+marker's key, target, element and members, and the classes inside a generic key's arguments.
+It corrects the advice, and it distinguishes a factory that declares no return annotation from
+one whose annotation is present but names something unresolvable — the two need opposite
+advice, and `get_type_hints` returning nothing on `NameError` had collapsed them into one.
 
 **The union message reached from a non-parameter position.** Cycle 2 split
 `as_provider_key`'s union message in two and fixed the single-member branch for callers outside
@@ -174,10 +181,10 @@ No exception type is added.
 
 | Call | Behaviour |
 | --- | --- |
-| A key whose origin is not a class (`Literal`, `typing.Optional`) | `InvalidProviderError`, naming the value and what a key may be. |
-| A deprecated `typing` alias (`typing.List[X]`) | `InvalidProviderError`, spelling out the canonical form to write instead. |
+| A key whose origin is not a class (`Literal['a']`) | `InvalidProviderError`, naming the value and what a key may be. |
+| A deprecated `typing` alias (`typing.List[X]`), at any depth (`list[typing.List[X]]`) | `InvalidProviderError`, naming the alias it found and the canonical form to write instead, module-qualified so the reader can type it. |
 | A key with an argument that is not itself a key (`Callable[[int], str]`, `tuple[X, ...]`) | `InvalidProviderError`, naming the offending argument. |
-| `X \| None` or `X \| Y` as a key | The two union messages, each true of the position it was reached from. |
+| `X \| None`, `typing.Optional[X]`, or `X \| Y` as a key | The two union messages, each true of the position it was reached from. `typing.Optional[X]` is `Union[X, None]` and so takes the single-member branch, not the non-class-origin one. |
 | `@provides(Repo[User])` | Accepted. |
 | `@provides(42)` | `InvalidProviderError`, as now. |
 
@@ -197,8 +204,8 @@ No new module.
 
 | Module | Change |
 | --- | --- |
-| `_core/typeguards.py` | `is_provider_key` widens; `is_collection_key` becomes a use of the general predicate. |
-| `_core/spec.py` | `ProviderKey`'s alias member widens; `fmt_key`'s gate widens, sharing one formatter with the canonical-form message. `collection_key` is unchanged — its origin is always the builtin `list`, for which `types.GenericAlias` is canonical. |
+| `_core/typeguards.py` | `is_provider_key` widens; `is_collection_key` becomes a use of the general predicate. The shape test, the canonical-form test, and the key test are three separate predicates, and the key test composes all three, so canonicity is part of what a key is rather than an extra check one call site remembers to make. The message every rejected key is explained by lives here too. |
+| `_core/spec.py` | `ProviderKey`'s docstring is corrected to describe the parameterised case its existing members already cover; `fmt_key`'s gate widens, sharing one formatter with the canonical-form message. `collection_key` is unchanged — its origin is always the builtin `list`, for which `types.GenericAlias` is canonical. |
 | `_core/providers.py` | The canonical-form check in `as_provider_key`; `ASYNC_FUNCTION` leaves `_UNWRAP_SHAPES`; `_registered_classes` widens; the second union message is corrected. |
 | `_core/markers.py` | `provides` accepts a parameterised generic. |
 
