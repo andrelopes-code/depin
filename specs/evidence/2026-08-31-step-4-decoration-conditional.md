@@ -4,6 +4,9 @@ Date: 2026-08-31
 
 Baseline commit (`main`): `0ff6e1d2e21ec739a016071fa49f2587f849fe08` (0.10.0)
 Measured implementation commit (this branch): `d91827627bc6b1f641781f063ab133681306bc9f`
+Measured final-review commit (this branch): `6bd59dabcab9eacef979dd367a6b63dbb0b4dfac` — see
+"Final whole-branch review" and the "Scope note" below for what this second
+commit changes about the numbers that follow.
 
 This document covers Steps 1, 2, 4, 5, 6, and 7 of the Task 9 brief. Step 3
 (the mutation gate) is out of scope for this pass; see "Mutation gate" below
@@ -27,7 +30,7 @@ commit, not before it.
 
 ```console
 $ uv run ruff format
-145 files left unchanged
+146 files left unchanged
 EXIT=0
 
 $ uv run ruff check
@@ -43,11 +46,11 @@ Success: no issues found in 93 source files
 EXIT=0
 
 $ uv run pytest
-742 passed, 6 skipped in 15.70s
+746 passed, 6 skipped in 14.83s
 EXIT=0
 
 $ uv run --group docs mkdocs build --strict
-INFO    -  Documentation built in 2.81 seconds
+INFO    -  Documentation built in 2.74 seconds
 EXIT=0
 ```
 
@@ -75,20 +78,20 @@ depin/_core/injection.py        39      0     16      1    98%   59->58
 depin/_core/introspect.py       70      1     36      3    96%   43, 71->69, 74->69
 depin/_core/markers.py          59      0      6      0   100%
 depin/_core/overrides.py        23      0      4      0   100%
-depin/_core/providers.py       198      1    104      1    99%   394
+depin/_core/providers.py       200      1    106      1    99%   394
 depin/_core/registry.py          8      0      0      0   100%
 depin/_core/render.py          113      0     56      0   100%
 depin/_core/scope.py           233      3     74      3    98%   69, 88->87, 107-109, 113->exit
 depin/_core/spec.py            129      0      6      0   100%
 depin/_core/teardown.py         45      0     14      2    97%   53->exit, 77->exit
-depin/_core/typeguards.py       99      0     38      0   100%
+depin/_core/typeguards.py      101      0     40      0   100%
 depin/errors.py                 11      0      0      0   100%
 depin/ext/__init__.py            0      0      0      0   100%
 depin/ext/fastapi.py            33      0      6      0   100%
 ------------------------------------------------------------------------
-TOTAL                         1704      9    578     18    99%
+TOTAL                         1708      9    582     18    99%
 Required test coverage of 95.0% reached. Total coverage: 98.82%
-742 passed, 6 skipped in 35.11s
+746 passed, 6 skipped in 35.73s
 EXIT=0
 ```
 
@@ -98,14 +101,23 @@ The command was run a second time, unmodified, specifically to observe
 ```console
 $ uv run pytest --cov=depin --cov-report=term-missing
 ...
-depin/_core/scope.py           233      3     74      3    98%   69, 88->87, 107-109, 113->exit
+depin/_core/scope.py           233      2     74      2    99%   88->87, 107-109, 113->exit
 ...
-Required test coverage of 95.0% reached. Total coverage: 98.82%
-742 passed, 6 skipped in 34.92s
+Required test coverage of 95.0% reached. Total coverage: 98.91%
+746 passed, 6 skipped in 34.55s
 EXIT=0
 ```
 
-Total coverage 98.82% in both runs, above the 95% floor. This is higher than
+Unlike the two identical runs recorded in the prior evidence, this pair lands
+on opposite sides of the coin: the first run misses `scope.py:69`, the second
+covers it, which is exactly the roughly-one-in-two behaviour the third bullet
+below already predicts, not evidence the line's coverage changed — `scope.py`
+is untouched by this wave, as it was by the cycle. `providers.py` (198→200
+statements, 104→106 branches) and `typeguards.py` (99→101 statements, 38→40
+branches) both grow by the `Underlying`-rejection branch this wave adds; both
+stay fully covered in every run, and `providers.py`'s sole miss is still the
+same pre-existing `line 394` attributed below. Total coverage is 98.82% on
+the first run and 98.91% on the second, both above the 95% floor and above
 the 98.60% the controller measured before Task 9's two tests landed:
 `depin/_core/decoration.py` was already at 100%, and the two lines those
 tests cover — `providers.py:164-165` and `providers.py:202` — no longer
@@ -115,7 +127,8 @@ appear in `Missing` above.
 cycle changed, one of them new: `bindings.py`, `container.py`,
 `decoration.py` (new), `frozen.py`, `graph.py`, `providers.py`, `render.py`,
 `spec.py`, and `typeguards.py`. `depin/__init__.py` also changes, to
-re-export `decorate` and `Underlying`. Of the nine `_core` modules,
+re-export `decorate`, `Underlying`, and, since the final review below,
+`Condition`. Of the nine `_core` modules,
 `bindings.py`, `container.py`, `decoration.py`, `graph.py`, `render.py`,
 `spec.py`, and `typeguards.py` are at 100% line and branch coverage.
 `frozen.py` and `providers.py` carry uncovered lines; `construct.py`,
@@ -424,4 +437,63 @@ score is recorded here in its place.
 This record covers Steps 1, 2, 4, 5, 6, and 7 of the Task 9 brief. Step 3,
 the mutation gate, is deferred to the CI `mutation` job for the reasons given
 above. Everything else in this document was measured locally, on a clean
-working tree, against `d91827627bc6b1f641781f063ab133681306bc9f`.
+working tree, against `d91827627bc6b1f641781f063ab133681306bc9f`, except the
+"Gate sequence" and "Coverage" sections above, which were re-measured against
+`6bd59dabcab9eacef979dd367a6b63dbb0b4dfac` after the final review below;
+"Design measurements", "Teardown event sequences", "The metamorphic
+property's measured bite", "Hypothesis statistics", "Benchmarks", and
+"Mutation gate" report on tests and code the final review left unchanged, and
+are not re-measured.
+
+## Final whole-branch review
+
+A final whole-branch review of Steps 1 through 7 ran after this record's
+first version landed at `591bf12`, on the PR the branch already had open, and
+raised six findings. All six were applied as one wave, in six commits between
+`b8f9c56` and `6bd59da`:
+
+- `Condition` was not re-exported from `depin/__init__.py`, so the published
+  signature of `when=` named a symbol `from depin import Condition` could not
+  import. Exported it, documented it in `docs/reference/diagnostics.md`
+  beside `ProviderKey`, and brought the design spec's `decorate()` signature
+  block and public-surface table in line.
+- `as_provider_key` admitted `Underlying` like any other key, which let
+  `alias(Underlying(Store, 0), to=Store)` freeze successfully and silently
+  drop the alias — `_check_duplicates` runs before the fold moves the
+  registered binding to that identity, so the two never collided. Rejected
+  `Underlying` in `as_provider_key`, naming the undecorated key to write
+  instead; `is_provider_key` still admits it for `explain()` and
+  `graph().find()`. Added coverage for the alias and collection paths in
+  `tests/unit/test_graph_validation.py`.
+- `_check_missing` and `format_missing` in `depin/_core/graph.py` each kept a
+  default for their `inactive` argument despite exactly one call site apiece,
+  both already passing it explicitly — the same inconsistency `b401616`
+  closed for `render_tree`. Removed both defaults and updated the two direct
+  test call sites in `tests/unit/test_graph_render.py`.
+- `render_tree`'s docstring still described only `(key, tag)`. Added one
+  sentence for `inactive`.
+- `test_explain_and_freeze_report_an_inactive_key_alike` asserted the note
+  was present in `explain()` and the key was present in the `freeze()` error,
+  but never compared the two renderings. Rewrote it to capture both strings
+  from one graph and assert they are the same line — the two consumer
+  classes involved are distinct objects given the same `__qualname__`, so
+  `fmt_key` renders them identically. `docs/guide/composition.md` also said
+  the note "reads ... in the chain"; corrected to "appended after the
+  chain", matching where `format_missing` places it.
+- This document's numbers were stale after the above: the test count, and
+  `providers.py`/`typeguards.py`'s statement and branch counts in the
+  Coverage section. Re-measured and updated in place; see the header above
+  for the commit the new numbers are measured at.
+
+The suppression count (re-verified by the same `grep` command, same three
+lines, same files) and the untouched-module list (re-verified by the same
+`git diff --stat`, still empty) were checked against the final-review commit
+and found unchanged, so neither section is restated. The design measurements
+describe properties of the design itself, not a per-commit figure, and none
+of the six fixes changes a decoration or conditional-activation behaviour
+those measurements describe. Benchmarks were not re-run for this wave, for
+the same reason the mutation gate was not: this record already leaves the
+mutation gate to the CI `mutation` job rather than a local run, and the
+benchmark job compares base and head on one CI runner rather than a local,
+single-host measurement, so neither is reproduced here for a six-fix, no
+hot-path wave on top of the cycle those CI jobs already cover.
