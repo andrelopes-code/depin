@@ -349,8 +349,9 @@ class FrozenContainer:
         Each line names the parameter that requires the node, the node's key,
         its scope and provider shape, `async` when the node needs asynchronous
         resolution, and its tag when it has one. A subtree already shown is
-        marked rather than repeated. A parameter with a default that nothing
-        provides is marked ``(unbound, default)``.
+        marked rather than repeated. A parameter that nothing provides is marked
+        ``(unbound, default)`` when it carries a default, or ``(unbound, optional)``
+        when it does not but admits `None`.
 
         A key no binding provides returns the line `MissingProviderError`
         carries for it, including the resolution chain when some provider

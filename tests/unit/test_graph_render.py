@@ -569,6 +569,28 @@ def test_a_bound_and_defaulted_intermediate_does_not_shorten_the_chain() -> None
     assert render_tree(graph, missing, None) == str(raised.value)
 
 
+def test_an_optional_only_dependency_reports_the_no_chain_wording() -> None:
+    """A key only an optional parameter admits must not borrow the required wording.
+
+    The other side of `_chain_through_a_bound_and_defaulted_intermediate`'s
+    regression: `_collect_missing` excuses an optional parameter from `freeze()`'s
+    missing-provider check, so `freeze()` succeeds here. `_deepest_requirement`
+    must excuse the same edge, or `explain()` reports a chain `freeze()` never raises.
+    """
+    missing = type('Missing', (), {})
+    owner = type('Owner', (), {})
+
+    def make_owner(dep: object) -> object:
+        del dep
+        return owner()
+
+    make_owner.__annotations__ = {'dep': missing | None, 'return': owner}
+
+    graph = build_graph(build_plan(Container().bind(make_owner).records()))
+
+    assert render_tree(graph, missing, None) == f'no provider for {fmt_key(missing)} (tag=None)'
+
+
 def test_dot_declares_every_node_and_edge_in_plan_order() -> None:
     assert build().dot() == (
         'digraph depin {\n'
@@ -723,6 +745,22 @@ def test_explain_marks_an_unbound_optional() -> None:
     prefix = 'test_explain_marks_an_unbound_optional.<locals>.'
     tree = Container().bind(Service).freeze().explain(Service).replace(prefix, '')
     assert tree == 'Service  [singleton, class]\n  cache: Cache  (unbound, optional)'
+
+
+def test_an_unbound_optional_with_a_default_still_renders_as_default() -> None:
+    """A parameter that is both optional and defaulted pins `has_default` as the deciding branch."""
+
+    class Cache: ...
+
+    default_cache = Cache()
+
+    class Service:
+        def __init__(self, cache: Cache | None = default_cache) -> None:
+            del cache
+
+    prefix = 'test_an_unbound_optional_with_a_default_still_renders_as_default.<locals>.'
+    tree = Container().bind(Service).freeze().explain(Service).replace(prefix, '')
+    assert tree == 'Service  [singleton, class]\n  cache: Cache  (unbound, default)'
 
 
 def test_explain_renders_a_collection_and_its_members() -> None:

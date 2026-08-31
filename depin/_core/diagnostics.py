@@ -23,12 +23,15 @@ class GraphEdge:
         ```pycon
         >>> from depin import Container
         >>> class Config: ...
+        >>> class Cache: ...
         >>> class Service:
-        ...     def __init__(self, config: Config) -> None: ...
+        ...     def __init__(self, config: Config, cache: Cache | None) -> None: ...
         >>> di = Container().bind(Config).bind(Service).freeze()
-        >>> edge = di.graph().node(Service).dependencies[0]
-        >>> edge.parameter, edge.satisfied
+        >>> bound, unbound = di.graph().node(Service).dependencies
+        >>> bound.parameter, bound.satisfied
         ('config', True)
+        >>> unbound.parameter, unbound.satisfied, unbound.optional, unbound.has_default
+        ('cache', False, True, False)
 
         ```
     """

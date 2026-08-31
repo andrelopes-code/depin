@@ -65,7 +65,9 @@ def _deepest_requirement(
 
     Walks `graph.nodes`, the topological order; `depin._core.graph._collect_missing`
     walks specs in declaration order instead. The two orders can differ, but the
-    two walks still agree on which chain wins: the longest chain wins outright, and
+    two walks still agree on what counts as missing — an unsatisfied edge that is
+    optional and carries no default is skipped by both, since neither would ever
+    report it — and on which chain wins: the longest chain wins outright, and
     a tie — whether between two roots or between two siblings sharing one root —
     is broken the same way by both, because each pushes a node's children in
     forward order onto a LIFO stack and compares with a strict ``>``, so the
@@ -80,6 +82,8 @@ def _deepest_requirement(
             for edge in node.dependencies:
                 child = graph.find(edge.key, tag=edge.tag)
                 if child is None:
+                    if edge.optional and not edge.has_default:
+                        continue
                     if (edge.key, edge.tag) == (key, tag) and (best is None or len(chain) > len(best[0])):
                         best = (tuple(ident[0] for ident in chain), node.key, edge.parameter)
                     continue

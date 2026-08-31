@@ -152,7 +152,7 @@ def test_a_collection_over_an_unbound_member_is_rejected() -> None:
 
 def test_a_member_listed_twice_in_one_collection_is_rejected() -> None:
     builder = Container().bind(EmailHandler).collect(Handler, [EmailHandler, EmailHandler])
-    with pytest.raises(DuplicateProviderError, match='EmailHandler'):
+    with pytest.raises(DuplicateProviderError, match=r'EmailHandler.*listed twice'):
         _ = builder.freeze()
 
 

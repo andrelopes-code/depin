@@ -85,8 +85,6 @@ def _materialize(case: GraphCase) -> Container:
         _ = container.alias(alias_key, to=nodes[index])
         _bind_consumer(container, f'GraphAliasConsumer{index}', alias_key)
     for index in case.collections:
-        if not case.registered[index]:
-            continue
         element = type(f'GraphCollectionElement{index}', (), {})
         _ = container.collect(element, [nodes[index]])
         _bind_consumer(container, f'GraphCollectionConsumer{index}', GenericAlias(list, (element,)))
@@ -107,14 +105,17 @@ def _freeze_result(case: GraphCase) -> str:
     else:
         plan = _frozen_plan(frozen)
         positions = {(spec.key, spec.tag): index for index, spec in enumerate(plan.order)}
-        # An optional parameter left unbound has no entry in `positions`: nothing provides it,
-        # so it constrains no ordering.
-        ordered = all(
-            positions[(parameter.key, parameter.tag)] < positions[(spec.key, spec.tag)]
-            for spec in plan.order
-            for parameter in spec.params
-            if (parameter.key, parameter.tag) in positions
-        )
+        ordered = True
+        for spec in plan.order:
+            for parameter in spec.params:
+                ident = (parameter.key, parameter.tag)
+                # An unbound optional or defaulted parameter has no entry in `positions`:
+                # nothing provides it, so it constrains no ordering. Any other absence is
+                # a bug the invariant must still catch, via the KeyError the lookup below raises.
+                if ident not in positions and (parameter.optional or parameter.has_default):
+                    continue
+                if positions[ident] >= positions[(spec.key, spec.tag)]:
+                    ordered = False
         return 'ordered' if ordered else 'out-of-order'
 
 
@@ -170,7 +171,7 @@ def _has_singleton_to_scoped_path(case: GraphCase) -> bool:
     for root, scope in enumerate(case.scopes):
         if scope is Scope.SINGLETON and _reaches_scoped(dependencies, case.scopes, root):
             return True
-    virtual_roots = set(case.aliases) | {index for index in case.collections if case.registered[index]}
+    virtual_roots = set(case.aliases) | set(case.collections)
     for index in virtual_roots:
         if case.scopes[index] is Scope.SCOPED or _reaches_scoped(dependencies, case.scopes, index):
             return True

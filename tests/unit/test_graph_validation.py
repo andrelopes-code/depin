@@ -702,7 +702,7 @@ def test_a_cycle_through_a_collection_is_rejected() -> None:
             del handlers
 
     builder = Container().bind(Member).collect(Handler, [Member])
-    with pytest.raises(CircularDependencyError, match='cycle detected'):
+    with pytest.raises(CircularDependencyError, match=r'cycle detected.*list\['):
         _ = builder.freeze()
 
 
@@ -728,5 +728,5 @@ def test_a_singleton_over_a_collection_with_a_scoped_member_is_captive() -> None
 
 
 def test_an_invalid_collection_element_is_rejected() -> None:
-    with pytest.raises(InvalidProviderError, match=r'not a valid key type|as a provider key'):
+    with pytest.raises(InvalidProviderError, match='as a provider key'):
         _ = Container().collect(42, []).freeze()  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
