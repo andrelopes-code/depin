@@ -876,3 +876,22 @@ def test_a_collection_with_an_async_member_is_rejected_by_resolve() -> None:
     di = Container().bind(make, provides=Backend).collect(Handler, [Backend]).freeze()
     with pytest.raises(AsyncInSyncContextError, match=r'list\['):
         _ = di.resolve(list[Handler])
+
+
+@pytest.mark.asyncio
+async def test_an_async_seeded_key_that_also_has_a_binding_resolves_to_its_binding() -> None:
+    class Clock:
+        def __init__(self, label: str = 'bound') -> None:
+            self.label = label
+
+    class Report:
+        def __init__(self, clock: Clock) -> None:
+            self.clock = clock
+
+    frozen = Container().bind(Clock).bind(Report, scope=Scope.SCOPED).freeze()
+
+    async with frozen.ascope() as frame:
+        frame.provide(Clock, Clock('seeded'))
+        report = await frozen.aresolve(Report)
+
+    assert report.clock.label == 'bound'

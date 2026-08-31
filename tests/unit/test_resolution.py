@@ -441,3 +441,45 @@ async def test_async_defaulted_dependency_does_not_skip_a_later_required_depende
     result = await frozen.aresolve(Result)
     assert result.optional is default
     assert result.number == 7
+
+
+def test_a_seeded_key_that_also_has_a_binding_resolves_to_its_binding() -> None:
+    class Clock:
+        def __init__(self, label: str = 'bound') -> None:
+            self.label = label
+
+    class Report:
+        def __init__(self, clock: Clock) -> None:
+            self.clock = clock
+
+    frozen = Container().bind(Clock).bind(Report, scope=Scope.SCOPED).freeze()
+
+    with frozen.scope() as frame:
+        frame.provide(Clock, Clock('seeded'))
+        report = frozen.resolve(Report)
+
+    assert report.clock.label == 'bound'
+    assert frozen.resolve(Clock).label == 'bound'
+
+
+def test_a_tagged_parameter_ignores_a_frame_value_seeded_under_the_bare_key() -> None:
+    class Store:
+        def __init__(self, label: str) -> None:
+            self.label = label
+
+    class Page:
+        def __init__(self, store: Annotated[Store, Tag('primary')]) -> None:
+            self.store = store
+
+    frozen = (
+        Container()
+        .bind(lambda: Store('primary'), provides=Store, tag='primary')
+        .bind(Page, scope=Scope.SCOPED)
+        .freeze()
+    )
+
+    with frozen.scope() as frame:
+        frame.provide(Store, Store('seeded'))
+        page = frozen.resolve(Page)
+
+    assert page.store.label == 'primary'
