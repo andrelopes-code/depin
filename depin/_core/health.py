@@ -103,8 +103,10 @@ def reject_async_checks(specs: Iterable[ProviderSpec]) -> None:
     if not pending:
         return
     names = ', '.join(fmt_key(key) for key in pending)
+    noun = 'check' if len(pending) == 1 else 'checks'
+    pronoun = 'it requires' if len(pending) == 1 else 'they require'
     raise AsyncInSyncContextError(
-        f'health() cannot run the checks for {names}: they require an event loop, '
+        f'health() cannot run the {noun} for {names}: {pronoun} an event loop, '
         'because the provider is async or the check is. Call ahealth() instead.'
     )
 

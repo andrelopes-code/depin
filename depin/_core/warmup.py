@@ -68,8 +68,9 @@ def reject_async_singletons(specs: Iterable[ProviderSpec]) -> None:
     if not pending:
         return
     names = ', '.join(fmt_key(key) for key in pending)
+    pronoun = 'it requires' if len(pending) == 1 else 'they require'
     raise AsyncInSyncContextError(
-        f'warmup() cannot construct {names}: they require async resolution. Call awarmup() instead.'
+        f'warmup() cannot construct {names}: {pronoun} async resolution. Call awarmup() instead.'
     )
 
 

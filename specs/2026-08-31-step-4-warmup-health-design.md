@@ -314,7 +314,7 @@ resolution or the check itself is a coroutine function — the two reasons
 | A sync check that returns an awaitable anyway | `InvalidProviderError`. `health()` has no loop to await it in, and silently discarding a coroutine is how a check passes without running. |
 | A check on a scoped binding | Runs inside an active scope like any scoped resolution; outside one it raises `OutsideScopeError`. |
 | A check on an inactive conditional binding | Absent. An inactive binding is in no plan, so it declares nothing. |
-| A check on a decorated binding | Rides with the binding it was declared on, so it verifies the undecorated value and `HealthCheck.key` is `Underlying(key, 0)`. A decorator that wants its own check declares one on itself. |
+| A check on a decorated binding | Rides with the binding it was declared on, so it verifies the undecorated value and `HealthCheck.key` is `Underlying(key, 0)`. `decorate()` takes no `check=`; a decorator cannot declare one of its own. |
 | `HealthReport.healthy` | True when every result is healthy. An empty report is healthy: nothing declared a check, so nothing failed. |
 
 ## Errors

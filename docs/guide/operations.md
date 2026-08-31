@@ -67,7 +67,7 @@ constructing anything:
 >>> di.warmup()
 Traceback (most recent call last):
     ...
-depin.errors.AsyncInSyncContextError: warmup() cannot construct Pool: they require async resolution. Call awarmup() instead.
+depin.errors.AsyncInSyncContextError: warmup() cannot construct Pool: it requires async resolution. Call awarmup() instead.
 
 ```
 
@@ -177,7 +177,7 @@ any of them, the same rule `warmup()` applies to construction:
 >>> di.health()
 Traceback (most recent call last):
     ...
-depin.errors.AsyncInSyncContextError: health() cannot run the checks for Pool: they require an event loop, because the provider is async or the check is. Call ahealth() instead.
+depin.errors.AsyncInSyncContextError: health() cannot run the check for Pool: it requires an event loop, because the provider is async or the check is. Call ahealth() instead.
 
 ```
 
@@ -257,5 +257,5 @@ True
 
 ```
 
-A decorator that wants its own check declares one on itself, the same way any
-other binding does.
+`decorate()` takes no `check=` parameter: a decorator has no check of its own,
+only the binding it wraps can declare one.
