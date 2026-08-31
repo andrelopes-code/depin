@@ -38,11 +38,43 @@ Three details worth knowing:
 - Overrides nest, innermost wins, and a key that was never bound at all can be
   overridden — useful for a dependency you only stub.
 
-!!! warning "Values built before the override are not replaced"
+!!! note "What survives an override"
 
-    A singleton resolved before the `with` block is already cached, and the
-    override does not evict it. Override before the first resolution, or build a
-    fresh container per test.
+    `override()` replaces the key immediately, even for a singleton already
+    built. What survives is a *consumer* — a value built before the block
+    keeps the instance it was constructed with, because a provider's arguments
+    are resolved once, at construction time:
+
+    ```pycon
+    >>> di = Container().bind(Clock).bind(Report).freeze()
+    >>> real_report = di[Report]
+    >>> with di.override(Clock, FrozenClock()):
+    ...     di[Clock].now()
+    ...     di[Report].render()
+    '2026-01-01'
+    'at real'
+
+    ```
+
+    `reset()` drops every built singleton's cache, so the next resolution of
+    `Report` rebuilds it and picks up the override that is active at that
+    point:
+
+    ```pycon
+    >>> di.reset()
+    >>> with di.override(Clock, FrozenClock()):
+    ...     di.reset()
+    ...     di[Report].render()
+    'at 2026-01-01'
+    >>> di.reset()
+    >>> di[Report].render()
+    'at real'
+
+    ```
+
+    The `depin.ext.pytest` fixtures below call `reset()` on both edges of the
+    block, so a test never has to reason about which consumers were built
+    first.
 
 ## A pytest fixture
 
@@ -67,6 +99,67 @@ def test_report_uses_the_clock(di):
 ```
 
 For an async graph use `aclose()` in the teardown half of the fixture.
+
+## The pytest plugin
+
+Installing the `pytest` extra registers `depin.ext.pytest` on the `pytest11`
+entry point, so its fixtures are available in any suite with no
+`conftest.py` import:
+
+```bash
+uv add pydepin --extra pytest
+```
+
+The plugin defines `depin_container` itself, but only to raise: a suite that
+never hands it a container gets a `ContainerNotBoundError` naming the fixture
+to define. Add one to your own `conftest.py`; every other fixture builds on
+whatever it returns:
+
+```python
+import pytest
+
+from depin import FrozenContainer
+
+from myapp.wiring import build
+
+
+@pytest.fixture
+def depin_container() -> FrozenContainer:
+    return build()
+```
+
+`depin_override` is `depin_container`'s `override()` with the fix from the
+note above already applied — it calls `reset()` before entering the block and
+again on exit:
+
+```python
+def test_report_uses_the_fake_clock(depin_container, depin_override) -> None:
+    # Report is a singleton and is already built here, before the override.
+    real = depin_container[Report]
+
+    with depin_override(Clock, FrozenClock()) as di:
+        assert di[Report].render() == 'at 2026-01-01'
+
+    # The block leaves no trace: reset() on exit rebuilds Report against the
+    # real Clock the next time it is resolved.
+    assert depin_container[Report].render() == 'at real'
+```
+
+Use `depin_aoverride` — the same shape, built on `areset()` — when a
+singleton on the overridden path is constructed by an async provider;
+`reset()` raises for that case rather than leaving it half torn down.
+
+`depin_scope` opens one synchronous scope around the test and yields its
+`ScopeFrame`, so a `Container.scope_value` key can be seeded before anything
+resolves through it:
+
+```python
+def test_job_sees_the_seeded_value(depin_container, depin_scope) -> None:
+    depin_scope.provide(job, 'reindex')
+    assert depin_container.resolve(job) == 'reindex'
+```
+
+`depin_ascope` is its async counterpart, built on `Host.ascope()`.
 
 ## Replacing bindings instead of overriding them
 

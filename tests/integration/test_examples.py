@@ -35,6 +35,10 @@ from examples.minimal_sync.main import Database as MinimalDatabase
 from examples.minimal_sync.main import UserRepo, build
 from examples.optional_dependencies.main import Checkout, MetricsSink
 from examples.optional_dependencies.main import build as build_optional_dependencies
+from examples.pytest_plugin.main import Clock as PytestPluginClock
+from examples.pytest_plugin.main import FakeClock as PytestPluginFakeClock
+from examples.pytest_plugin.main import Report as PytestPluginReport
+from examples.pytest_plugin.main import build as build_pytest_plugin
 from examples.scopes.main import AUDIT, Connection, UnitOfWork
 from examples.scopes.main import build as build_scopes
 from examples.testing.main import Clock, FrozenClock, Report
@@ -89,6 +93,24 @@ def test_testing_example_overrides_a_protocol_deep_in_the_graph() -> None:
         assert di[Report].render() == 'report at 2026-01-01'
 
     assert di[Report].render() == 'report at real-time'
+
+
+def test_pytest_plugin_example_evicts_a_consumer_built_before_the_override() -> None:
+    di = build_pytest_plugin()
+    real = di[PytestPluginReport]
+    assert real.render() == 'report at real-time'
+
+    with di.override(PytestPluginClock, PytestPluginFakeClock()):
+        assert di[PytestPluginClock].now() == 'fake-time'
+        # Report was built and cached above; the override alone does not
+        # touch it.
+        assert di[PytestPluginReport].render() == 'report at real-time'
+
+        di.reset()
+        assert di[PytestPluginReport].render() == 'report at fake-time'
+
+    di.reset()
+    assert di[PytestPluginReport].render() == 'report at real-time'
 
 
 def test_aliasing_example_serves_one_instance_under_both_names() -> None:

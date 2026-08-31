@@ -19,6 +19,7 @@ Every example is a runnable module and is executed by
 | [`health`](health/main.py) | `python -m examples.health.main` | `bind(..., check=...)` declaring a check, `checks()` describing it, and `health()` reporting a passing and a failing one. |
 | [`integration`](integration/main.py) | `python -m examples.integration.main` | `Host` opening one scope per unit of work, a seeded frame value, and `hosted_container()` in a handler that holds no container. |
 | [`fastapi_app`](fastapi_app/main.py) | `uvicorn examples.fastapi_app.main:create_app --factory` | Registries, an app factory, one scope per request, `aclose()` on shutdown. |
+| [`pytest_plugin`](pytest_plugin/main.py) | `python -m examples.pytest_plugin.main` | `override()` replacing a key even after it was built, a consumer resolved earlier keeping its cached instance anyway, and `reset()` evicting that consumer so it sees the override — the pattern behind `depin.ext.pytest`'s `depin_override` fixture. |
 
 Install the extras first:
 
