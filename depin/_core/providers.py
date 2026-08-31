@@ -45,13 +45,15 @@ ASYNC_SHAPES = frozenset(
     }
 )
 
+# ASYNC_FUNCTION is deliberately absent: `async def f() -> X` already means the
+# awaited value is `X`, so there is nothing to unwrap. `Generator[X]` and its
+# kin name a container around the value, which is what the other four shapes unwrap.
 _UNWRAP_SHAPES = frozenset(
     {
         ProviderShape.GENERATOR,
         ProviderShape.ASYNC_GENERATOR,
         ProviderShape.CONTEXT_MANAGER,
         ProviderShape.ASYNC_CONTEXT_MANAGER,
-        ProviderShape.ASYNC_FUNCTION,
     }
 )
 

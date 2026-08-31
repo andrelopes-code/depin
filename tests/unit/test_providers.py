@@ -1,10 +1,12 @@
 """Spec building: how a binding record becomes a provider key, shape and parameters."""
 
 from collections.abc import AsyncGenerator, Generator, Iterator
+from contextlib import contextmanager
 from typing import Annotated
 
 import pytest
 
+from depin._core.graph import build_plan
 from depin._core.introspect import AnnotatedMeta
 from depin._core.markers import Tag, Token, provides
 from depin._core.providers import as_provider_key, build_specs, param_key_from_meta, unwrap_container_type
@@ -243,6 +245,59 @@ def test_async_generator_factory_key_unwraps_the_yield_type() -> None:
     [spec] = list(build_specs(r.records()))
     assert spec.key is int
     assert spec.shape is ProviderShape.ASYNC_GENERATOR
+
+
+def test_an_async_factory_is_keyed_by_its_whole_return_annotation() -> None:
+    class Handler: ...
+
+    async def make() -> list[Handler]:
+        return []
+
+    plan = build_plan(Registry().bind(make).records())
+    assert [spec.key for spec in plan.order] == [list[Handler]]
+
+
+def test_an_async_factory_returning_a_generic_keeps_its_parameter() -> None:
+    class User: ...
+
+    class Repo[T]: ...
+
+    async def make() -> Repo[User]:
+        return Repo()
+
+    plan = build_plan(Registry().bind(make).records())
+    assert [spec.key for spec in plan.order] == [Repo[User]]
+
+
+def test_a_generator_factory_still_unwraps_its_container() -> None:
+    class Conn: ...
+
+    def connect() -> Generator[Conn]:
+        yield Conn()
+
+    plan = build_plan(Registry().bind(connect).records())
+    assert [spec.key for spec in plan.order] == [Conn]
+
+
+def test_a_context_manager_factory_still_unwraps_its_container() -> None:
+    class Conn: ...
+
+    @contextmanager
+    def connect() -> Generator[Conn]:
+        yield Conn()
+
+    plan = build_plan(Registry().bind(connect).records())
+    assert [spec.key for spec in plan.order] == [Conn]
+
+
+def test_an_async_generator_factory_still_unwraps_its_container() -> None:
+    class Conn: ...
+
+    async def connect() -> AsyncGenerator[Conn]:
+        yield Conn()
+
+    plan = build_plan(Registry().bind(connect).records())
+    assert [spec.key for spec in plan.order] == [Conn]
 
 
 def test_forward_references_between_bound_classes_resolve_for_key_and_parameters() -> None:
