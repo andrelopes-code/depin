@@ -1182,6 +1182,9 @@ fastapi = [
     { name = "fastapi" },
     { name = "starlette" },
 ]
+pytest = [
+    { name = "pytest" },
+]
 
 [package.dev-dependencies]
 bench = [
@@ -1220,9 +1223,10 @@ threads = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.133" },
+    { name = "pytest", marker = "extra == 'pytest'", specifier = ">=9.0.3" },
     { name = "starlette", marker = "extra == 'fastapi'", specifier = ">=1.1" },
 ]
-provides-extras = ["fastapi"]
+provides-extras = ["fastapi", "pytest"]
 
 [package.metadata.requires-dev]
 bench = [

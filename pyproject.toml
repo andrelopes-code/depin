@@ -36,6 +36,13 @@ dependencies = []
 
 [project.optional-dependencies]
 fastapi = ["fastapi>=0.133", "starlette>=1.1"]
+pytest = ["pytest>=9.0.3"]
+
+# Declared by the distribution rather than by the extra, because that is how
+# pytest discovers a plugin. The extra states the floor the plugin is tested
+# against; `minimum-versions` and `latest-versions` exercise both ends.
+[project.entry-points.pytest11]
+depin = "depin.ext.pytest"
 
 [project.urls]
 Homepage = "https://andrelopes-code.github.io/depin/"
