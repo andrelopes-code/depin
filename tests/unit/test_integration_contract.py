@@ -46,7 +46,12 @@ def reaches_into_core(source: str, package: str) -> tuple[str, ...]:
 
 
 def _integration_modules() -> list[Path]:
-    return sorted(path for path in Path(depin.ext.__file__).parent.glob('*.py'))
+    return sorted(path for path in Path(depin.ext.__file__).parent.rglob('*.py'))
+
+
+def test_the_scan_covers_the_fastapi_integration() -> None:
+    """Guards the scan itself: an empty or mis-rooted glob must fail loudly, not skip."""
+    assert 'fastapi.py' in {path.name for path in _integration_modules()}
 
 
 def test_the_scanner_reports_a_module_that_imports_depin_core() -> None:
@@ -80,8 +85,13 @@ def test_no_integration_reaches_into_depin_core(path: Path) -> None:
 
 @pytest.mark.parametrize('path', _integration_modules(), ids=lambda path: path.name)
 def test_no_integration_names_depin_core_at_all(path: Path) -> None:
-    """Catches an attribute walk (`depin._core.frozen`) that the import scan cannot see."""
-    assert '_core' not in path.read_text()
+    """Catches an attribute walk (`depin._core.frozen`) that the import scan cannot see.
+
+    Deliberately a literal-substring check: an integration's own prose (a
+    docstring or comment) must not name the private package either, not just
+    its import statements.
+    """
+    assert '_core' not in path.read_text(), f'{path} names depin._core'
 
 
 @pytest.mark.parametrize('path', _integration_modules(), ids=lambda path: path.name)

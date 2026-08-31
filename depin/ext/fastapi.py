@@ -27,16 +27,16 @@ class RequestScope:
     WebSockets pass through without buffering. Lifespan and other non-HTTP
     scopes are forwarded untouched, with no depin scope opened.
 
+    The container is published to the request's context for the duration of
+    the scope, so `depin.hosted_container()` reaches it from anywhere inside
+    the request.
+
     For HTTP requests it places a metadata-only `fastapi.Request` into the
     active scope frame so scoped providers can read headers, URL, cookies, and
     state. That ``Request`` carries no receive channel: reading the body through
     it raises rather than consuming the stream the route handler needs (which
     would otherwise deadlock against FastAPI's own body parsing). Treat the body
     as a typed route parameter, not a provider input.
-
-    The container is published to the request's context for the duration of
-    the scope, so `depin.hosted_container()` reaches it from anywhere inside
-    the request.
 
     Example:
         Install the middleware once, then resolve scoped providers per request::
@@ -80,9 +80,12 @@ else:
         ``# noqa: B008`` waivers at the call site.
 
         Raises:
-            ContainerNotBoundError: ``Inject[T]`` was resolved outside a
-                `RequestScope`. Install the middleware with
-                ``app.add_middleware(RequestScope, container=...)``.
+            ContainerNotBoundError: No container is hosted in this context.
+                Usually because the `RequestScope` middleware was never
+                installed with ``app.add_middleware(RequestScope,
+                container=...)``; also raised for a route reached outside any
+                active `Host` — for instance while it is being resolved from
+                an ASGI lifespan hook with no `Host.activated()` in effect.
         """
 
         def __class_getitem__(cls, key: object) -> object:
