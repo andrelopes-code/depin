@@ -98,13 +98,14 @@ that path.
 
 ## Public surface
 
-Two additions and one widening. No signature changes to existing methods beyond
-one new keyword argument.
+Three additions and one widening. No signature changes to existing methods
+beyond one new keyword argument.
 
 | Symbol | Role |
 | --- | --- |
 | `BindingCollector.decorate` | Declares a wrapper over an existing binding. |
 | `Underlying` | The key a decorated binding's inner form is registered under; a new `ProviderKey` member. |
+| `Condition` | The public alias for what `when=` accepts: a `bool`, or a zero-argument callable evaluated inside `freeze()`. |
 | `when=` on every registration method | Conditional activation. |
 
 ```python
@@ -114,7 +115,7 @@ def decorate(
     wrapper: type[object] | Callable[..., object],
     *,
     tag: str | None = None,
-    when: bool | Callable[[], bool] | None = None,
+    when: Condition | None = None,
 ) -> Self: ...
 ```
 

@@ -9,6 +9,7 @@ import depin
 
 EXPECTED_EXPORTS = (
     'Bindings',
+    'Condition',
     'Container',
     'DependencyGraph',
     'FrozenContainer',

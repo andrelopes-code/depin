@@ -30,7 +30,7 @@ from depin._core.frozen import FrozenContainer
 from depin._core.markers import Named, Tag, Token, injected, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope, ScopeFrame
-from depin._core.spec import Bindings, ProviderKey, ProviderShape, Underlying
+from depin._core.spec import Bindings, Condition, ProviderKey, ProviderShape, Underlying
 
 try:
     __version__ = version('pydepin')
@@ -41,6 +41,7 @@ except PackageNotFoundError:
 
 __all__ = (
     'Bindings',
+    'Condition',
     'Container',
     'DependencyGraph',
     'FrozenContainer',
