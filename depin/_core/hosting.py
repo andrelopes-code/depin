@@ -147,6 +147,25 @@ class Host:
         Required when any provider in the scope is async. Otherwise identical:
         the frame is yielded for seeding, teardowns run before the publication
         is undone.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed when the scope
+                closed. Every failure is included; one does not hide another.
+
+        Example:
+            ```pycon
+            >>> import asyncio
+            >>> from depin import Container, Host, Token, hosted_container
+            >>> job = Token[str]('job')
+            >>> di = Container().scope_value(job).freeze()
+            >>> async def run() -> None:
+            ...     async with Host(di).ascope() as frame:
+            ...         frame.provide(job, 'reindex')
+            ...         print(await hosted_container().aresolve(job))
+            >>> asyncio.run(run())
+            reindex
+
+            ```
         """
         with self.activated():
             async with self._container.ascope() as frame:
