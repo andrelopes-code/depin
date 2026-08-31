@@ -788,3 +788,20 @@ def test_the_exports_carry_the_collection_edges() -> None:
     assert '[label="member_0"]' in di.graph().dot()
     assert '-->|member_0|' in di.graph().mermaid()
     assert 'transient, collection' in di.graph().mermaid()
+
+
+def test_a_generic_key_renders_by_its_parameterisation_not_by_repr() -> None:
+    class User: ...
+
+    class Repo[T]: ...
+
+    def make() -> Repo[User]:
+        return Repo()
+
+    di = Container().bind(make).freeze()
+    prefix = 'test_a_generic_key_renders_by_its_parameterisation_not_by_repr.<locals>.'
+    mermaid_prefix = prefix.replace('<', '#lt;').replace('>', '#gt;')
+
+    assert di.explain(Repo[User]).replace(prefix, '') == 'Repo[User]  [singleton, function]'
+    assert '[label="Repo[User]\\nsingleton, function", shape=box]' in di.graph().dot().replace(prefix, '')
+    assert 'Repo[User]<br/>singleton, function' in di.graph().mermaid().replace(mermaid_prefix, '')

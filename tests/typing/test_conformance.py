@@ -189,3 +189,25 @@ def test_a_collection_key_keeps_its_element_type() -> None:
     assert_type(di.resolve(list[Handler]), list[Handler])
     assert_type(di[list[Handler]], list[Handler])
     assert_type(injected(list[Handler]), list[Handler])
+
+
+def test_a_generic_key_keeps_its_parameterisation() -> None:
+    class User: ...
+
+    class Repo[T]: ...
+
+    class Reader[T](Protocol):
+        def read(self) -> str: ...
+
+    def make() -> Repo[User]:
+        return Repo()
+
+    class MemReader:
+        def read(self) -> str:
+            return 'mem'
+
+    di = Container().bind(make).bind(MemReader, provides=Reader[User]).collect(Repo[User], [Repo[User]]).freeze()
+    assert_type(di.resolve(Repo[User]), Repo[User])
+    assert_type(di[Repo[User]], Repo[User])
+    assert_type(di.resolve(Reader[User]), Reader[User])
+    assert_type(di.resolve(list[Repo[User]]), list[Repo[User]])

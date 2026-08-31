@@ -3,7 +3,7 @@
 import sys
 from collections.abc import AsyncGenerator
 from types import ModuleType
-from typing import Annotated, override
+from typing import Annotated, Literal, override
 
 import pytest
 
@@ -730,3 +730,31 @@ def test_a_singleton_over_a_collection_with_a_scoped_member_is_captive() -> None
 def test_an_invalid_collection_element_is_rejected() -> None:
     with pytest.raises(InvalidProviderError, match='as a provider key'):
         _ = Container().collect(42, []).freeze()  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+
+
+def test_a_key_whose_origin_is_not_a_class_is_rejected() -> None:
+    class Target: ...
+
+    with pytest.raises(InvalidProviderError, match='a key must be a class'):
+        _ = Container().alias(Literal['a'], to=Target).freeze()  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+
+
+def test_a_key_with_an_argument_that_is_not_itself_a_key_is_rejected() -> None:
+    class Target: ...
+
+    with pytest.raises(InvalidProviderError, match='a key must be a class'):
+        _ = Container().alias(tuple[int, ...], to=Target).freeze()
+
+
+@pytest.mark.parametrize(
+    ('key', 'fragment'),
+    [
+        (int | None, 'and this is not one'),
+        (int | str, 'names no single key'),
+    ],
+)
+def test_both_union_spellings_reaching_a_key_position_are_rejected(key: object, fragment: str) -> None:
+    class Target: ...
+
+    with pytest.raises(InvalidProviderError, match=fragment):
+        _ = Container().alias(key, to=Target).freeze()  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
