@@ -291,7 +291,6 @@ def test_a_host_in_another_thread_does_not_leak_into_this_one() -> None:
 
     assert seen == [di]
     assert optional_hosted_container() is None
-
 ```
 
 - [ ] **Step 2: Observe the tests fail**
