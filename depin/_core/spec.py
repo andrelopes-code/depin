@@ -3,7 +3,8 @@
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import Final, Protocol, TypeGuard, runtime_checkable
+from types import GenericAlias
+from typing import Final, Protocol, TypeGuard, get_args, get_origin, runtime_checkable
 
 from depin._core.markers import Token
 from depin._core.scope import Scope
@@ -33,6 +34,9 @@ class ProviderShape(Enum):
         ALIAS: A second name for another binding, declared with
             `Container.alias`. Nothing is called and nothing is cached here —
             the target owns the value, its cache entry, and its teardown.
+        COLLECTION: A list of several bindings, declared with
+            `Container.collect`. Nothing is cached here — each member keeps its
+            own lifetime, and every resolution returns a new list over them.
 
     Example:
         ```pycon
@@ -55,10 +59,11 @@ class ProviderShape(Enum):
     VALUE = 'value'
     FRAME = 'frame'
     ALIAS = 'alias'
+    COLLECTION = 'collection'
 
 
-type ProviderKey = type[object] | Token[object] | str
-"""What a provider can be bound and resolved under: a class, a `Token`, or a name."""
+type ProviderKey = type[object] | Token[object] | str | GenericAlias
+"""What a provider can be bound and resolved under: a class, a `Token`, a name, or a `list[...]` of one."""
 
 type Ident = tuple[ProviderKey, str | None]
 """A provider's identity: its key paired with its tag. Private to `_core`."""
@@ -120,6 +125,47 @@ def is_alias_binding(value: object) -> TypeGuard[AliasBinding]:
     return isinstance(value, AliasBinding)
 
 
+COLLECTION_PARAM_PREFIX: Final[str] = 'member_'
+"""Prefix of the parameter names a collection node declares, one per member.
+
+The names must be distinct because they key the resolved arguments, and they are
+what `explain()` prints and what the `dot` and `mermaid` exports write on each
+edge.
+"""
+
+
+@dataclass(frozen=True, slots=True)
+class CollectionBinding:
+    """Marker source for `Container.collect(element, members)`.
+
+    The collection's own tag rides on `BindRecord.tag`. Members are ordinary
+    provider keys and stay bound under them, which is why an accidental duplicate
+    registration still raises `DuplicateProviderError`.
+    """
+
+    element: ProviderKey
+    members: tuple[ProviderKey, ...]
+
+
+def is_collection_binding(value: object) -> TypeGuard[CollectionBinding]:
+    return isinstance(value, CollectionBinding)
+
+
+def collection_key(element: ProviderKey) -> ProviderKey:
+    """The key a collection over ``element`` is registered under.
+
+    Built through `types.GenericAlias` rather than written as ``list[element]``:
+    subscripting a runtime value is `Variable "element" is not valid as a type`
+    under mypy. The result is the same object a consumer writes by hand — equal
+    to ``list[Element]``, hashing as it, and of the same type.
+    """
+    return GenericAlias(list, (element,))
+
+
+def collection_param(index: int) -> str:
+    return f'{COLLECTION_PARAM_PREFIX}{index}'
+
+
 @dataclass(frozen=True, slots=True)
 class BindRecord:
     source: object
@@ -135,6 +181,7 @@ class ParamSpec:
     tag: str | None
     has_default: bool
     default: object
+    optional: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,6 +231,9 @@ class Bindings(Protocol):
 def fmt_key(key: object) -> str:
     if isinstance(key, type):
         return key.__qualname__
+    if isinstance(key, GenericAlias):
+        arguments = ', '.join(fmt_key(argument) for argument in get_args(key))
+        return f'{fmt_key(get_origin(key))}[{arguments}]'
     return repr(key)
 
 

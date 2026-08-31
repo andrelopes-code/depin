@@ -2,7 +2,8 @@
 
 import inspect
 from collections.abc import Iterable
-from typing import get_args, get_origin, get_type_hints
+from types import NoneType, UnionType
+from typing import Union, get_args, get_origin, get_type_hints
 
 from depin._core.introspect import AnnotatedMeta, detect_shape, extract_annotated_meta, is_object_token
 from depin._core.markers import get_provides
@@ -10,16 +11,21 @@ from depin._core.scope import Scope
 from depin._core.spec import (
     ALIAS_PARAM,
     BindRecord,
+    CollectionBinding,
     ParamSpec,
     ProviderKey,
     ProviderShape,
     ProviderSpec,
+    collection_key,
+    collection_param,
+    fmt_key,
     is_alias_binding,
+    is_collection_binding,
     is_frame_binding,
     is_value_binding,
 )
-from depin._core.typeguards import as_class, as_factory
-from depin.errors import InvalidProviderError, InvalidScopeError
+from depin._core.typeguards import as_class, as_factory, is_collection_key
+from depin.errors import DuplicateProviderError, InvalidProviderError, InvalidScopeError
 
 LIFECYCLE_SHAPES = frozenset(
     {
@@ -111,6 +117,28 @@ def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec
             ),
         )
 
+    if is_collection_binding(rec.source):
+        collection = rec.source
+        _reject_repeated_members(collection)
+        return ProviderSpec(
+            key=collection_key(as_provider_key(collection.element)),
+            tag=rec.tag,
+            source=collection,
+            scope=rec.scope,
+            shape=ProviderShape.COLLECTION,
+            needs_async=False,
+            params=tuple(
+                ParamSpec(
+                    name=collection_param(index),
+                    key=as_provider_key(member),
+                    tag=None,
+                    has_default=False,
+                    default=None,
+                )
+                for index, member in enumerate(collection.members)
+            ),
+        )
+
     source = rec.source
     shape = detect_shape(source)
 
@@ -130,6 +158,17 @@ def _record_to_spec(rec: BindRecord, localns: dict[str, object]) -> ProviderSpec
         needs_async=False,
         params=_extract_params(source, shape, localns),
     )
+
+
+def _reject_repeated_members(collection: CollectionBinding) -> None:
+    seen: set[ProviderKey] = set()
+    for member in collection.members:
+        if member in seen:
+            raise DuplicateProviderError(
+                f'{fmt_key(member)} is listed twice in the collection for {fmt_key(collection.element)}: '
+                'a member resolves to one value, so listing it again only repeats that value. Remove the duplicate.'
+            )
+        seen.add(member)
 
 
 def _resolve_key(
@@ -171,7 +210,25 @@ def as_provider_key(value: object) -> ProviderKey:
         return value
     if is_object_token(value):
         return value
-    raise InvalidProviderError(f'cannot use {value!r} as a provider key: a key must be a class, a Token, or a string')
+    if is_collection_key(value):
+        return value
+    if get_origin(value) in (UnionType, Union):
+        members = tuple(arg for arg in get_args(value) if arg is not NoneType)
+        if len(members) == 1:
+            raise InvalidProviderError(
+                f'cannot use {value} as a provider key: depin reads `T | None` as an optional '
+                f"dependency only on a provider's parameter, and this is not one. Use "
+                f'{fmt_key(members[0])} directly.'
+            )
+        raise InvalidProviderError(
+            f'cannot use {value} as a provider key: depin reads `T | None` as an optional '
+            'dependency, but a union of two or more providers names no single key. Annotate '
+            'the parameter with the one you want, or select it with Annotated[..., Tag(...)].'
+        )
+    raise InvalidProviderError(
+        f'cannot use {value!r} as a provider key: a key must be a class, a Token, a string, or a list[X] '
+        '(built with list[...], not typing.List)'
+    )
 
 
 def _extract_params(source: object, shape: ProviderShape, localns: dict[str, object]) -> tuple[ParamSpec, ...]:
@@ -216,6 +273,7 @@ def _extract_params(source: object, shape: ProviderShape, localns: dict[str, obj
                 tag=meta.tag,
                 has_default=has_default,
                 default=param.default if has_default else None,
+                optional=meta.optional,
             )
         )
 

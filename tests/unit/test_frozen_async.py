@@ -849,3 +849,30 @@ def test_an_alias_to_an_async_target_is_rejected_by_resolve() -> None:
     di = Container().bind(make, provides=Backend).alias(Store, to=Backend).freeze()
     with pytest.raises(AsyncInSyncContextError, match='Store requires async resolution'):
         _ = di.resolve(Store)
+
+
+@pytest.mark.asyncio
+async def test_a_collection_with_an_async_member_resolves_under_aresolve() -> None:
+    class Handler: ...
+
+    class Backend: ...
+
+    async def make() -> Backend:
+        return Backend()
+
+    di = Container().bind(make, provides=Backend).collect(Handler, [Backend]).freeze()
+    members = await di.aresolve(list[Handler])
+    assert len(members) == 1
+
+
+def test_a_collection_with_an_async_member_is_rejected_by_resolve() -> None:
+    class Handler: ...
+
+    class Backend: ...
+
+    async def make() -> Backend:
+        return Backend()
+
+    di = Container().bind(make, provides=Backend).collect(Handler, [Backend]).freeze()
+    with pytest.raises(AsyncInSyncContextError, match=r'list\['):
+        _ = di.resolve(list[Handler])

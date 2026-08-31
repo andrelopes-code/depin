@@ -75,11 +75,12 @@ list.
 
 ## Where to go next
 
-- [Guide](guide/index.md) — lifetimes and scopes, composing bindings, testing,
-  and the FastAPI integration.
+- [Guide](guide/index.md) — lifetimes and scopes, composing bindings,
+  resolution semantics, testing, inspecting the graph, and the FastAPI
+  integration.
 - [API reference](reference/index.md) — the full public API, generated from the
   source docstrings.
 - [Examples](https://github.com/andrelopes-code/depin/tree/main/examples) —
-  four runnable programs, each executed by the test suite.
+  eight runnable programs, each executed by the test suite.
 - [Contributing](https://github.com/andrelopes-code/depin/blob/main/CONTRIBUTING.md)
   — development setup, the five gates, and the release process.

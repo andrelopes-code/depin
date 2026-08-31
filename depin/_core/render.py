@@ -1,6 +1,6 @@
 """Text renderings of a `DependencyGraph`: a resolution tree, Graphviz, and Mermaid."""
 
-from depin._core.diagnostics import DependencyGraph, GraphNode
+from depin._core.diagnostics import DependencyGraph, GraphEdge, GraphNode
 from depin._core.graph import format_missing, suggest_candidates
 from depin._core.spec import Ident, ProviderKey, fmt_key
 
@@ -25,12 +25,13 @@ def render_tree(graph: DependencyGraph, key: ProviderKey, tag: str | None) -> st
     expanded: set[Ident] = set()
     # Explicit stack rather than recursion: a chain of a thousand providers is a
     # supported graph, and CPython's recursion limit is well below that.
-    stack: list[tuple[int, str, GraphNode | ProviderKey]] = [(0, '', root)]
+    stack: list[tuple[int, str, GraphNode | GraphEdge]] = [(0, '', root)]
     while stack:
         depth, label, target = stack.pop()
         indent = '  ' * depth
         if not isinstance(target, GraphNode):
-            lines.append(f'{indent}{label}{fmt_key(target)}  (unbound, default)')
+            reason = 'default' if target.has_default else 'optional'
+            lines.append(f'{indent}{label}{fmt_key(target.key)}  (unbound, {reason})')
             continue
         annotations = f'[{", ".join(annotation_parts(target))}]'
         ident = (target.key, target.tag)
@@ -41,7 +42,7 @@ def render_tree(graph: DependencyGraph, key: ProviderKey, tag: str | None) -> st
         lines.append(f'{indent}{label}{fmt_key(target.key)}  {annotations}')
         for edge in reversed(target.dependencies):
             child = graph.find(edge.key, tag=edge.tag)
-            stack.append((depth + 1, f'{edge.parameter}: ', edge.key if child is None else child))
+            stack.append((depth + 1, f'{edge.parameter}: ', edge if child is None else child))
     return '\n'.join(lines)
 
 
@@ -63,13 +64,22 @@ def _deepest_requirement(
     """The longest chain reaching an unsatisfied parameter bound for ``(key, tag)``.
 
     Walks `graph.nodes`, the topological order; `depin._core.graph._collect_missing`
-    walks specs in declaration order instead. The two orders can differ, but the
-    two walks still agree on which chain wins: the longest chain wins outright, and
-    a tie — whether between two roots or between two siblings sharing one root —
-    is broken the same way by both, because each pushes a node's children in
-    forward order onto a LIFO stack and compares with a strict ``>``, so the
-    first chain found at a given length is the one that stands. It inherits that
-    walk's cost on a dense graph; the roadmap routes that to Step 6.
+    walks specs in declaration order instead. The two orders can differ, and the
+    two walks agree on what counts as missing only for the optional case: an
+    unbound edge that is optional and carries no default is skipped by both,
+    since neither would ever report it. They disagree on a defaulted edge —
+    `_collect_missing` skips it outright, because a default satisfies the call
+    and `freeze()` must never raise over it, while this walk still reports it,
+    because `explain()` names the chain a defaulted parameter would need if it
+    were required, and the chain-consistency tests rely on that chain being
+    reported the same way whether or not the parameter carries a default. Where
+    both walks do report a chain, they agree on which one wins: the longest
+    chain wins outright, and a tie — whether between two roots or between two
+    siblings sharing one root — is broken the same way by both, because each
+    pushes a node's children in forward order onto a LIFO stack and compares
+    with a strict ``>``, so the first chain found at a given length is the one
+    that stands. It inherits that walk's cost on a dense graph; the roadmap
+    routes that to Step 6.
     """
     best: tuple[tuple[ProviderKey, ...], ProviderKey, str] | None = None
     for root in graph.nodes:
@@ -79,6 +89,8 @@ def _deepest_requirement(
             for edge in node.dependencies:
                 child = graph.find(edge.key, tag=edge.tag)
                 if child is None:
+                    if edge.optional and not edge.has_default:
+                        continue
                     if (edge.key, edge.tag) == (key, tag) and (best is None or len(chain) > len(best[0])):
                         best = (tuple(ident[0] for ident in chain), node.key, edge.parameter)
                     continue

@@ -102,3 +102,67 @@ async def test_a_route_resolves_a_request_scoped_binding_through_an_alias() -> N
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url='http://t') as client:
         assert (await client.get('/unit')).json() == {'same': True}
+
+
+@pytest.mark.asyncio
+async def test_a_route_resolves_a_collection_of_handlers() -> None:
+    class Handler(Protocol):
+        def name(self) -> str: ...
+
+    class EmailHandler:
+        def name(self) -> str:
+            return 'email'
+
+    class SmsHandler:
+        def name(self) -> str:
+            return 'sms'
+
+    class Dispatcher:
+        def __init__(self, handlers: list[Handler]) -> None:
+            self.handlers = handlers
+
+    frozen = (
+        Container()
+        .bind(EmailHandler)
+        .bind(SmsHandler)
+        .collect(Handler, [EmailHandler, SmsHandler])
+        .bind(Dispatcher)
+        .freeze()
+    )
+
+    app = FastAPI()
+    app.add_middleware(RequestScope, container=frozen)
+
+    @app.get('/handlers')
+    async def _handlers(dispatcher: Inject[Dispatcher]) -> dict[str, list[str]]:  # pyright: ignore[reportUnusedFunction]
+        return {'names': [handler.name() for handler in dispatcher.handlers]}
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        r = await client.get('/handlers')
+    assert r.json() == {'names': ['email', 'sms']}
+
+
+@pytest.mark.asyncio
+async def test_a_request_scoped_route_resolves_an_unbound_optional_to_none() -> None:
+    class Cache:
+        def get(self) -> str:
+            return 'cached'
+
+    class Session:
+        def __init__(self, cache: Cache | None) -> None:
+            self.cache = cache
+
+    frozen = Container().bind(Session, scope=Scope.SCOPED).freeze()
+
+    app = FastAPI()
+    app.add_middleware(RequestScope, container=frozen)
+
+    @app.get('/session')
+    async def _session(session: Inject[Session]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        return {'has_cache': session.cache is not None}
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        r = await client.get('/session')
+    assert r.json() == {'has_cache': False}

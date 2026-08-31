@@ -151,7 +151,7 @@ def test_a_cycle_in_a_manually_built_graph_does_not_loop_the_missing_search() ->
         scope=Scope.SINGLETON,
         shape=ProviderShape.CLASS,
         needs_async=False,
-        dependencies=(GraphEdge(parameter='b', key=B, tag=None, satisfied=True),),
+        dependencies=(GraphEdge(parameter='b', key=B, tag=None, satisfied=True, optional=False, has_default=False),),
     )
     node_b = GraphNode(
         key=B,
@@ -159,7 +159,7 @@ def test_a_cycle_in_a_manually_built_graph_does_not_loop_the_missing_search() ->
         scope=Scope.SINGLETON,
         shape=ProviderShape.CLASS,
         needs_async=False,
-        dependencies=(GraphEdge(parameter='a', key=A, tag=None, satisfied=True),),
+        dependencies=(GraphEdge(parameter='a', key=A, tag=None, satisfied=True, optional=False, has_default=False),),
     )
     graph = DependencyGraph((node_a, node_b))
     assert render_tree(graph, Missing, None) == f'no provider for {fmt_key(Missing)} (tag=None)'
@@ -189,7 +189,7 @@ def test_a_cycle_does_not_stop_the_search_for_a_sibling_missing_edge() -> None:
         scope=Scope.SINGLETON,
         shape=ProviderShape.CLASS,
         needs_async=False,
-        dependencies=(GraphEdge(parameter='b', key=B, tag=None, satisfied=True),),
+        dependencies=(GraphEdge(parameter='b', key=B, tag=None, satisfied=True, optional=False, has_default=False),),
     )
     node_b = GraphNode(
         key=B,
@@ -198,8 +198,8 @@ def test_a_cycle_does_not_stop_the_search_for_a_sibling_missing_edge() -> None:
         shape=ProviderShape.CLASS,
         needs_async=False,
         dependencies=(
-            GraphEdge(parameter='a', key=A, tag=None, satisfied=True),
-            GraphEdge(parameter='missing', key=Missing, tag=None, satisfied=True),
+            GraphEdge(parameter='a', key=A, tag=None, satisfied=True, optional=False, has_default=False),
+            GraphEdge(parameter='missing', key=Missing, tag=None, satisfied=True, optional=False, has_default=False),
         ),
     )
     graph = DependencyGraph((node_a, node_b))
@@ -526,6 +526,71 @@ def test_a_tie_between_sibling_chains_matches_the_freeze_error() -> None:
     assert render_tree(graph, missing, None) == str(raised.value)
 
 
+def _chain_through_a_bound_and_defaulted_intermediate() -> tuple[Container, Container, type[object]]:
+    """The same chain, with the outer provider's bound parameter also carrying a default.
+
+    `_collect_missing` used to skip such a parameter for traversal as well as for
+    reporting, so the freeze error named a shorter chain than `explain()` did.
+    """
+    missing = type('Missing', (), {})
+    inner = type('Inner', (), {})
+    outer = type('Outer', (), {})
+
+    def make_inner_required(dep: object) -> object:
+        del dep
+        return inner()
+
+    def make_inner_defaulted(dep: object = None) -> object:
+        del dep
+        return inner()
+
+    def make_outer(dep: object = None) -> object:
+        del dep
+        return outer()
+
+    for factory in (make_inner_required, make_inner_defaulted):
+        factory.__annotations__ = {'dep': missing, 'return': inner}
+    make_outer.__annotations__ = {'dep': inner, 'return': outer}
+
+    required = Container().bind(make_inner_required).bind(make_outer)
+    defaulted = Container().bind(make_inner_defaulted).bind(make_outer)
+    return required, defaulted, missing
+
+
+def test_a_bound_and_defaulted_intermediate_does_not_shorten_the_chain() -> None:
+    required, defaulted, missing = _chain_through_a_bound_and_defaulted_intermediate()
+
+    with pytest.raises(MissingProviderError) as raised:
+        _ = required.freeze()
+
+    graph = build_graph(build_plan(defaulted.records()))
+
+    assert 'Outer' in str(raised.value)
+    assert render_tree(graph, missing, None) == str(raised.value)
+
+
+def test_an_optional_only_dependency_reports_the_no_chain_wording() -> None:
+    """A key only an optional parameter admits must not borrow the required wording.
+
+    The other side of `_chain_through_a_bound_and_defaulted_intermediate`'s
+    regression: `_collect_missing` excuses an optional parameter from `freeze()`'s
+    missing-provider check, so `freeze()` succeeds here. `_deepest_requirement`
+    must excuse the same edge, or `explain()` reports a chain `freeze()` never raises.
+    """
+    missing = type('Missing', (), {})
+    owner = type('Owner', (), {})
+
+    def make_owner(dep: object) -> object:
+        del dep
+        return owner()
+
+    make_owner.__annotations__ = {'dep': missing | None, 'return': owner}
+
+    graph = build_graph(build_plan(Container().bind(make_owner).records()))
+
+    assert render_tree(graph, missing, None) == f'no provider for {fmt_key(missing)} (tag=None)'
+
+
 def test_dot_declares_every_node_and_edge_in_plan_order() -> None:
     assert build().dot() == (
         'digraph depin {\n'
@@ -668,3 +733,58 @@ def test_the_exports_carry_the_alias_edge() -> None:
     assert '[label="target"]' in di.graph().dot()
     assert '-->|target|' in di.graph().mermaid()
     assert 'transient, alias' in di.graph().mermaid()
+
+
+def test_explain_marks_an_unbound_optional() -> None:
+    class Cache: ...
+
+    class Service:
+        def __init__(self, cache: Cache | None) -> None:
+            del cache
+
+    prefix = 'test_explain_marks_an_unbound_optional.<locals>.'
+    tree = Container().bind(Service).freeze().explain(Service).replace(prefix, '')
+    assert tree == 'Service  [singleton, class]\n  cache: Cache  (unbound, optional)'
+
+
+def test_an_unbound_optional_with_a_default_still_renders_as_default() -> None:
+    """A parameter that is both optional and defaulted pins `has_default` as the deciding branch."""
+
+    class Cache: ...
+
+    default_cache = Cache()
+
+    class Service:
+        def __init__(self, cache: Cache | None = default_cache) -> None:
+            del cache
+
+    prefix = 'test_an_unbound_optional_with_a_default_still_renders_as_default.<locals>.'
+    tree = Container().bind(Service).freeze().explain(Service).replace(prefix, '')
+    assert tree == 'Service  [singleton, class]\n  cache: Cache  (unbound, default)'
+
+
+def test_explain_renders_a_collection_and_its_members() -> None:
+    class Handler: ...
+
+    class First: ...
+
+    class Second: ...
+
+    di = Container().bind(First).bind(Second).collect(Handler, [First, Second]).freeze()
+    prefix = 'test_explain_renders_a_collection_and_its_members.<locals>.'
+    assert di.explain(list[Handler]).replace(prefix, '') == (
+        'list[Handler]  [transient, collection]\n'
+        '  member_0: First  [singleton, class]\n'
+        '  member_1: Second  [singleton, class]'
+    )
+
+
+def test_the_exports_carry_the_collection_edges() -> None:
+    class Handler: ...
+
+    class First: ...
+
+    di = Container().bind(First).collect(Handler, [First]).freeze()
+    assert '[label="member_0"]' in di.graph().dot()
+    assert '-->|member_0|' in di.graph().mermaid()
+    assert 'transient, collection' in di.graph().mermaid()

@@ -1,14 +1,20 @@
 # Guide
 
-Four pages, in the order most projects need them.
+Six pages, in the order most projects need them.
 
 - **[Lifetimes and scopes](lifetimes.md)** — how long a value lives, when it is
   rebuilt, and when its teardown runs. Read this first; almost every question
   about depin is really a question about lifetimes.
 - **[Composing bindings](composition.md)** — registries, containers built from
   several sources, tags, protocols, tokens, and aliases.
+- **[Resolution semantics](resolution.md)** — optional dependencies and
+  collection injection: what a `T | None` parameter and a `list[T]` parameter
+  mean, and when each resolves to `None` or to every registered provider.
 - **[Testing](testing.md)** — replacing a dependency without rebuilding the
   graph, and wiring test functions with `@inject`.
+- **[Inspecting the graph](diagnostics.md)** — the resolution tree, `dot` and
+  `mermaid` renderings, and how `freeze()` and `explain()` report the same
+  chain.
 - **[FastAPI](fastapi.md)** — the optional ASGI integration: one scope per
   request, `Inject[T]`, and shutdown.
 

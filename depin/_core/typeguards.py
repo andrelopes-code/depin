@@ -14,15 +14,30 @@ element type to ``Unknown``, and the guard is what restates it as ``object``.
 
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
-from typing import TypeGuard
+from types import GenericAlias
+from typing import TypeGuard, get_args, get_origin
 
 from depin._core.markers import Token
-from depin._core.spec import ALIAS_PARAM, ProviderKey, fmt_key
+from depin._core.spec import ALIAS_PARAM, ParamSpec, ProviderKey, fmt_key
 from depin.errors import InvalidProviderError
 
 
 def is_provider_key(value: object) -> TypeGuard[ProviderKey]:
-    return isinstance(value, type | str | Token)
+    return isinstance(value, type | str | Token) or is_collection_key(value)
+
+
+def is_collection_key(value: object) -> TypeGuard[ProviderKey]:
+    """Whether ``value`` is a ``list[X]`` over something that is itself a key.
+
+    Deliberately narrow. Widening `ProviderKey` to every parameterised generic is
+    cycle 3's deliverable; a collection needs only this one origin, and admitting
+    more now would ship the wider surface without the validation and rendering
+    that go with it.
+    """
+    if not isinstance(value, GenericAlias) or get_origin(value) is not list:
+        return False
+    arguments = get_args(value)
+    return len(arguments) == 1 and is_provider_key(arguments[0])
 
 
 def as_class(source: object, key: object) -> type[object]:
@@ -105,3 +120,17 @@ def as_alias_target(kwargs: dict[str, object], key: object) -> object:
     if ALIAS_PARAM in kwargs:
         return kwargs[ALIAS_PARAM]
     raise InvalidProviderError(f'alias for {fmt_key(key)} resolved no target binding')
+
+
+def as_collection_members(kwargs: dict[str, object], params: tuple[ParamSpec, ...], key: object) -> list[object]:
+    """The resolved members of a collection, in declaration order.
+
+    Unreachable through the public API for the same reason `as_alias_target` is:
+    every member is a required parameter, and parameter resolution raises
+    `MissingProviderError` before construction when one cannot be satisfied. The
+    check keeps a defect inside the `DepinError` hierarchy.
+    """
+    missing = tuple(param.name for param in params if param.name not in kwargs)
+    if missing:
+        raise InvalidProviderError(f'collection for {fmt_key(key)} resolved no value for {", ".join(missing)}')
+    return [kwargs[param.name] for param in params]

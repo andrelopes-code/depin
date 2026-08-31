@@ -349,8 +349,9 @@ class FrozenContainer:
         Each line names the parameter that requires the node, the node's key,
         its scope and provider shape, `async` when the node needs asynchronous
         resolution, and its tag when it has one. A subtree already shown is
-        marked rather than repeated. A parameter with a default that nothing
-        provides is marked ``(unbound, default)``.
+        marked rather than repeated. A parameter that nothing provides is marked
+        ``(unbound, default)`` when it carries a default, or ``(unbound, optional)``
+        when it does not but admits `None`.
 
         A key no binding provides returns the line `MissingProviderError`
         carries for it, including the resolution chain when some provider
@@ -546,6 +547,9 @@ class FrozenContainer:
             if dep is None:
                 if param.has_default:
                     continue
+                if param.optional:
+                    out[param.name] = None
+                    continue
                 raise MissingProviderError(f"missing provider for parameter '{param.name}' of {fmt_key(spec.key)}")
             out[param.name] = self._resolve_sync(dep)
         return out
@@ -560,6 +564,9 @@ class FrozenContainer:
             dep = self._lookup_optional(param.key, param.tag)
             if dep is None:
                 if param.has_default:
+                    continue
+                if param.optional:
+                    out[param.name] = None
                     continue
                 raise MissingProviderError(f"missing provider for parameter '{param.name}' of {fmt_key(spec.key)}")
             out[param.name] = await self._resolve_async(dep)

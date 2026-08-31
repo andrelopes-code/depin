@@ -13,20 +13,25 @@ from depin.errors import MissingProviderError
 class GraphEdge:
     """One provider parameter and the binding identity it resolves to.
 
-    ``satisfied`` is false only for a parameter that carries a default and that
-    no binding provides. `Container.freeze()` rejects every other unsatisfied
-    parameter, so a frozen graph holds no other kind.
+    ``satisfied`` is false for a parameter that no binding provides, which
+    `Container.freeze()` allows only when the parameter carries a default or
+    admits `None`. ``has_default`` and ``optional`` say which, and
+    ``has_default`` wins when both hold, because depin never replaces a value
+    the author wrote.
 
     Example:
         ```pycon
         >>> from depin import Container
         >>> class Config: ...
+        >>> class Cache: ...
         >>> class Service:
-        ...     def __init__(self, config: Config) -> None: ...
+        ...     def __init__(self, config: Config, cache: Cache | None) -> None: ...
         >>> di = Container().bind(Config).bind(Service).freeze()
-        >>> edge = di.graph().node(Service).dependencies[0]
-        >>> edge.parameter, edge.satisfied
+        >>> bound, unbound = di.graph().node(Service).dependencies
+        >>> bound.parameter, bound.satisfied
         ('config', True)
+        >>> unbound.parameter, unbound.satisfied, unbound.optional, unbound.has_default
+        ('cache', False, True, False)
 
         ```
     """
@@ -35,6 +40,8 @@ class GraphEdge:
     key: ProviderKey
     tag: str | None
     satisfied: bool
+    optional: bool
+    has_default: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +169,8 @@ def _node_for(spec: ProviderSpec, plan: ResolutionPlan) -> GraphNode:
             key=param.key,
             tag=param.tag,
             satisfied=(param.key, param.tag) in plan.by_key,
+            optional=param.optional,
+            has_default=param.has_default,
         )
         for param in spec.params
     )

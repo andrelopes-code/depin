@@ -1,6 +1,6 @@
 import contextlib
 from collections.abc import AsyncGenerator, AsyncIterator, Generator, Iterator
-from typing import Annotated
+from typing import Annotated, Optional
 
 from depin._core.introspect import detect_shape, extract_annotated_meta
 from depin._core.markers import Named, Tag, Token
@@ -95,3 +95,54 @@ def test_extract_meta_token_wins_over_named() -> None:
     meta = extract_annotated_meta(Annotated[int, tok, Named('legacy')])
     assert meta.token == tok
     assert meta.named is None
+
+
+def test_an_optional_annotation_reduces_to_its_single_key() -> None:
+    class Cache: ...
+
+    meta = extract_annotated_meta(Cache | None)
+    assert meta.base is Cache
+    assert meta.optional
+
+
+def test_the_typing_optional_spelling_reduces_the_same_way() -> None:
+    class Cache: ...
+
+    meta = extract_annotated_meta(Optional[Cache])  # noqa: UP045
+    assert meta.base is Cache
+    assert meta.optional
+
+
+def test_an_optional_annotation_keeps_its_annotated_metadata() -> None:
+    class Cache: ...
+
+    meta = extract_annotated_meta(Annotated[Cache | None, Tag('primary')])
+    assert meta.base is Cache
+    assert meta.optional
+    assert meta.tag == 'primary'
+
+
+def test_a_union_without_none_is_not_optional() -> None:
+    class Cache: ...
+
+    class Logger: ...
+
+    meta = extract_annotated_meta(Cache | Logger)
+    assert not meta.optional
+    assert meta.base == Cache | Logger
+
+
+def test_a_union_of_several_providers_and_none_is_not_reduced() -> None:
+    class Cache: ...
+
+    class Logger: ...
+
+    meta = extract_annotated_meta(Cache | Logger | None)
+    assert not meta.optional
+    assert meta.base == Cache | Logger | None
+
+
+def test_a_plain_annotation_is_not_optional() -> None:
+    class Cache: ...
+
+    assert not extract_annotated_meta(Cache).optional

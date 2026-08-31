@@ -272,8 +272,25 @@ def test_as_provider_key_accepts_classes_strings_and_tokens(key: object) -> None
 
 
 def test_as_provider_key_rejects_anything_else() -> None:
-    with pytest.raises(InvalidProviderError, match='a key must be a class, a Token, or a string'):
+    with pytest.raises(InvalidProviderError, match='a key must be a class, a Token, a string, or a list\\[X\\]'):
         _ = as_provider_key(42)
+
+
+def test_as_provider_key_rejects_an_optional_union_outside_parameter_position() -> None:
+    class Cache: ...
+
+    with pytest.raises(InvalidProviderError, match="a provider's parameter, and this is not one") as exc:
+        _ = as_provider_key(Cache | None)
+    assert f'Use {Cache.__qualname__} directly' in str(exc.value)
+
+
+def test_as_provider_key_still_rejects_a_union_of_two_or_more_providers() -> None:
+    class Cache: ...
+
+    class Logger: ...
+
+    with pytest.raises(InvalidProviderError, match='names no single key'):
+        _ = as_provider_key(Cache | Logger)
 
 
 @pytest.mark.parametrize('annotation', [int, 42])
@@ -283,7 +300,7 @@ def test_unwrap_container_type_returns_none_without_a_generic_origin(annotation:
 
 def test_param_key_from_meta_prefers_a_named_token_over_the_base_type() -> None:
     tok: Token[int] = Token[int]('k')
-    meta = AnnotatedMeta(base=int, token=None, tag=None, named=tok)
+    meta = AnnotatedMeta(base=int, token=None, tag=None, named=tok, optional=False)
     assert param_key_from_meta(meta) == tok
 
 
