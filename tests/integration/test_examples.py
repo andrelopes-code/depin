@@ -24,6 +24,9 @@ from examples.generic_keys.main import Repo as GenericRepo
 from examples.generic_keys.main import build as build_generic_keys
 from examples.graph_diagnostics.main import Repo, Settings
 from examples.graph_diagnostics.main import build as build_diagnostics
+from examples.health.main import Cache as HealthCache
+from examples.health.main import Database as HealthDatabase
+from examples.health.main import build as build_health
 from examples.minimal_sync.main import Database as MinimalDatabase
 from examples.minimal_sync.main import UserRepo, build
 from examples.optional_dependencies.main import Checkout, MetricsSink
@@ -32,6 +35,11 @@ from examples.scopes.main import AUDIT, Connection, UnitOfWork
 from examples.scopes.main import build as build_scopes
 from examples.testing.main import Clock, FrozenClock, Report
 from examples.testing.main import build as build_testing
+from examples.warmup.main import BUILT as WARMUP_BUILT
+from examples.warmup.main import Config as WarmupConfig
+from examples.warmup.main import Pool as WarmupPool
+from examples.warmup.main import Session as WarmupSession
+from examples.warmup.main import build as build_warmup
 
 
 def test_minimal_sync_example_resolves_and_tears_down() -> None:
@@ -165,6 +173,42 @@ def test_graph_diagnostics_example_explains_and_exports_its_graph() -> None:
     assert di.graph().node(Settings).scope.value == 'singleton'
     assert di.graph().mermaid().startswith('graph LR')
     assert di.graph().dot().startswith('digraph depin {')
+
+
+def test_warmup_example_builds_singletons_and_leaves_the_scoped_one_alone() -> None:
+    WARMUP_BUILT.clear()
+    di = build_warmup()
+
+    report = di.warmup()
+    assert [node.key for node in report.constructed] == [WarmupConfig, WarmupPool]
+    assert report.cached == ()
+    assert WARMUP_BUILT == ['Config', 'Pool']
+
+    # Idempotent: nothing left to build the second time.
+    second = di.warmup()
+    assert second.constructed == ()
+    assert [node.key for node in second.cached] == [WarmupConfig, WarmupPool]
+
+    # Session is scoped and warmup never touches it; it is only built once a
+    # scope opens and something resolves it.
+    assert WarmupSession not in [node.key for node in report.constructed]
+    with di.scope():
+        _ = di[WarmupSession]
+    assert WARMUP_BUILT == ['Config', 'Pool', 'Session']
+
+
+def test_health_example_reports_one_passing_and_one_failing_check() -> None:
+    di = build_health()
+
+    declared = di.checks()
+    assert [check.key for check in declared] == [HealthDatabase, HealthCache]
+
+    report = di.health()
+    assert report.healthy is False
+    assert [(result.key, result.healthy) for result in report.results] == [
+        (HealthDatabase, True),
+        (HealthCache, False),
+    ]
 
 
 @pytest.mark.asyncio

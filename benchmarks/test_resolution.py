@@ -66,6 +66,17 @@ def test_freeze_a_chain_with_every_node_decorated(benchmark: Benchmark, size: in
     _ = benchmark(container.freeze)
 
 
+def test_warmup_a_chain(benchmark: Benchmark) -> None:
+    """Constructing every singleton in one pass, against `test_freeze_a_chain`'s cost
+    for the same graph size."""
+    container, _ = build_chain(1000)
+
+    def warm() -> object:
+        return container.freeze().warmup()
+
+    _ = benchmark(warm)
+
+
 def test_resolve_a_cached_singleton(benchmark: Benchmark) -> None:
     container, leaf = build_chain(100)
     frozen = container.freeze()
