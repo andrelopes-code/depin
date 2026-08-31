@@ -4,7 +4,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from types import GenericAlias, UnionType
-from typing import Final, Protocol, TypeGuard, get_args, get_origin, runtime_checkable
+from typing import Final, Protocol, TypeGuard, final, get_args, get_origin, runtime_checkable
 
 from depin._core.markers import Token
 from depin._core.scope import Scope
@@ -62,7 +62,28 @@ class ProviderShape(Enum):
     COLLECTION = 'collection'
 
 
-type ProviderKey = type[object] | Token[object] | str | GenericAlias
+@final
+@dataclass(frozen=True, slots=True)
+class Underlying:
+    """The key a decorated binding's inner form is registered under.
+
+    `Container.decorate` leaves the wrapper on the public key and moves what it
+    wraps here, so both are ordinary nodes of the validated graph: the wrapper
+    reaches its inner form over a real edge, and the inner form keeps the
+    lifetime, the cache entry, and the teardown it had undecorated.
+
+    ``applied`` counts the decorators already applied below the public key, so
+    the registered binding is ``Underlying(key, 0)`` and a second decorator over
+    the same key sees ``Underlying(key, 1)``. Construct one to inspect a
+    decorated binding — `FrozenContainer.explain` and `DependencyGraph.find`
+    accept it — not to register anything.
+    """
+
+    key: 'ProviderKey'
+    applied: int
+
+
+type ProviderKey = type[object] | Token[object] | str | GenericAlias | Underlying
 """What a provider can be bound and resolved under: a class, a `Token`, a name, or a parameterised generic.
 
 The parameterised case needs no member of its own. A generic written in
@@ -72,6 +93,9 @@ expression position — ``Repo[User]``, ``Reader[User]`` — has the static type
 produces, such as ``list[Handler]``. A deprecated ``typing`` alias
 (``typing.List[X]``) is a key at neither level: `Container.freeze()` rejects it
 and names the canonical spelling to write instead.
+
+An `Underlying` is the fifth: the identity `Container.decorate` moves a
+decorated binding's inner form to, so the wrapper can occupy the public key.
 """
 
 type Ident = tuple[ProviderKey, str | None]
@@ -266,10 +290,22 @@ class Bindings(Protocol):
 def fmt_key(key: object) -> str:
     if isinstance(key, type):
         return key.__qualname__
+    if isinstance(key, Underlying):
+        return fmt_underlying(key)
     origin = get_origin(key)
     if isinstance(origin, type) and origin is not UnionType:
         return fmt_parameterised(origin, get_args(key))
     return repr(key)
+
+
+def fmt_underlying(key: Underlying) -> str:
+    """Spell a decoration layer as ``Store (undecorated)`` or ``Store (decorated x2)``.
+
+    The wrapped key goes through `fmt_key` itself, so a decorated `Token`,
+    string, or parameterised key renders the way it does everywhere else.
+    """
+    layer = 'undecorated' if key.applied == 0 else f'decorated x{key.applied}'
+    return f'{fmt_key(key.key)} ({layer})'
 
 
 def fmt_parameterised(origin: type[object], arguments: tuple[object, ...]) -> str:

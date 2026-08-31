@@ -23,6 +23,7 @@ EXPECTED_EXPORTS = (
     'ScopeFrame',
     'Tag',
     'Token',
+    'Underlying',
     'injected',
     'provides',
 )

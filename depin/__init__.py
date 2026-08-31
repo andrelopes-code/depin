@@ -30,7 +30,7 @@ from depin._core.frozen import FrozenContainer
 from depin._core.markers import Named, Tag, Token, injected, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope, ScopeFrame
-from depin._core.spec import Bindings, ProviderKey, ProviderShape
+from depin._core.spec import Bindings, ProviderKey, ProviderShape, Underlying
 
 try:
     __version__ = version('pydepin')
@@ -55,6 +55,7 @@ __all__ = (
     'ScopeFrame',
     'Tag',
     'Token',
+    'Underlying',
     'injected',
     'provides',
 )
