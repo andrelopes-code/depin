@@ -87,13 +87,16 @@ def _any_unsatisfied(specs: Iterable[ProviderSpec], by_key: _Index) -> bool:
 
     Exactly the condition `_collect_missing` ends up detecting, but answered in
     one pass over the specs instead of a walk from every root: a parameter is
-    unsatisfied where it stands, independently of the chains that reach it. The
-    walk then runs only to reconstruct the deepest chain for the error message.
-    `_check_missing` skips that walk whenever this returns `False`, so the two
-    must keep agreeing on what counts as missing, or a real gap goes unreported.
+    unsatisfied where it stands, independently of the chains that reach it, unless
+    a default or an optional annotation excuses it. The walk then runs only to
+    reconstruct the deepest chain for the error message. `_check_missing` skips
+    that walk whenever this returns `False`, so the two must keep agreeing on
+    what counts as missing, or a real gap goes unreported.
     """
     return any(
-        not param.has_default and (param.key, param.tag) not in by_key for spec in specs for param in spec.params
+        not param.has_default and not param.optional and (param.key, param.tag) not in by_key
+        for spec in specs
+        for param in spec.params
     )
 
 
@@ -111,7 +114,7 @@ def _collect_missing(
         spec, current_chain = stack.pop()
         chain_specs = {id(c) for c in current_chain}
         for param in spec.params:
-            if param.has_default:
+            if param.has_default or param.optional:
                 continue
             dep = by_key.get((param.key, param.tag))
             if dep is None:

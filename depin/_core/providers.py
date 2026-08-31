@@ -2,7 +2,8 @@
 
 import inspect
 from collections.abc import Iterable
-from typing import get_args, get_origin, get_type_hints
+from types import UnionType
+from typing import Union, get_args, get_origin, get_type_hints
 
 from depin._core.introspect import AnnotatedMeta, detect_shape, extract_annotated_meta, is_object_token
 from depin._core.markers import get_provides
@@ -171,6 +172,12 @@ def as_provider_key(value: object) -> ProviderKey:
         return value
     if is_object_token(value):
         return value
+    if get_origin(value) in (UnionType, Union):
+        raise InvalidProviderError(
+            f'cannot use {value} as a provider key: depin reads `T | None` as an optional '
+            'dependency, but a union of two or more providers names no single key. Annotate '
+            'the parameter with the one you want, or select it with Annotated[..., Tag(...)].'
+        )
     raise InvalidProviderError(f'cannot use {value!r} as a provider key: a key must be a class, a Token, or a string')
 
 
@@ -216,6 +223,7 @@ def _extract_params(source: object, shape: ProviderShape, localns: dict[str, obj
                 tag=meta.tag,
                 has_default=has_default,
                 default=param.default if has_default else None,
+                optional=meta.optional,
             )
         )
 

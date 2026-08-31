@@ -283,7 +283,7 @@ def test_unwrap_container_type_returns_none_without_a_generic_origin(annotation:
 
 def test_param_key_from_meta_prefers_a_named_token_over_the_base_type() -> None:
     tok: Token[int] = Token[int]('k')
-    meta = AnnotatedMeta(base=int, token=None, tag=None, named=tok)
+    meta = AnnotatedMeta(base=int, token=None, tag=None, named=tok, optional=False)
     assert param_key_from_meta(meta) == tok
 
 

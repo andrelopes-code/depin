@@ -135,6 +135,7 @@ class ParamSpec:
     tag: str | None
     has_default: bool
     default: object
+    optional: bool = False
 
 
 @dataclass(frozen=True, slots=True)
