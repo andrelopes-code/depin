@@ -1307,7 +1307,10 @@ downstream of the decorator sees a different class.</p>
             <td>
               <div class="doc-md-description">
                 <p>The key to register the decorated class under. Any class,
-including a <code>Protocol</code> and an abstract base class.</p>
+including a <code>Protocol</code> and an abstract base class, or a
+parameterised generic such as <code>Repo[User]</code>, spelled by
+subscripting its own origin rather than a deprecated <code>typing</code>
+alias.</p>
               </div>
             </td>
             <td>
@@ -1333,8 +1336,11 @@ including a <code>Protocol</code> and an abstract base class.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p><code>abstract</code> is not a class, so it could never
-serve as the provider key the decorator promises to record.</p>
+                <p><code>abstract</code> is neither a class nor a
+parameterised generic depin can key by, so it could never serve as
+the provider key the decorator promises to record. A deprecated
+<code>typing</code> alias, a union, and a generic whose arguments are not
+themselves keys each report why in their own terms.</p>
               </div>
             </td>
           </tr>

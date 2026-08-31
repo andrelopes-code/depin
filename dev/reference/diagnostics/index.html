@@ -1220,7 +1220,14 @@
 
     <div class="doc doc-contents first">
 
-        <p>What a provider can be bound and resolved under: a class, a <code>Token</code>, a name, or a <code>list[...]</code> of one.</p>
+        <p>What a provider can be bound and resolved under: a class, a <code>Token</code>, a name, or a parameterised generic.</p>
+<p>The parameterised case needs no member of its own. A generic written in
+expression position — <code>Repo[User]</code>, <code>Reader[User]</code> — has the static type
+<code>type[Repo[User]]</code>, which <code>type[object]</code> already covers; the
+<code>types.GenericAlias</code> member covers the runtime object a builtin or ABC origin
+produces, such as <code>list[Handler]</code>. A deprecated <code>typing</code> alias
+(<code>typing.List[X]</code>) is a key at neither level: <code>Container.freeze()</code> rejects it
+and names the canonical spelling to write instead.</p>
     </div>
 
 </div>

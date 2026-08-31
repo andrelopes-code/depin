@@ -512,6 +512,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#generic-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generic keys
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -970,6 +981,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#generic-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generic keys
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1056,6 +1078,49 @@ without <code>collect</code> in the picture.</p>
 calling it twice for the same element and tag also raises
 <code>DuplicateProviderError</code>, so a collection cannot be assembled by contributions
 from separately-shipped registries.</p>
+<h2 id="generic-keys">Generic keys<a class="headerlink" href="#generic-keys" title="Permanent link">&para;</a></h2>
+<p>A parameterised generic — <code>Repo[User]</code>, a generic <code>Protocol</code>, <code>dict[str, int]</code> — is a
+provider key like any other, distinguished from every other key by equality. The bare
+class and a parameterisation are different keys, so binding both is legal and means two
+providers:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Order</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Repo</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">rows</span> <span class="o">=</span> <span class="n">rows</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">user_repo</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Repo</span><span class="p">[</span><span class="n">User</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">Repo</span><span class="p">([</span><span class="s1">'ana'</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">order_repo</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Repo</span><span class="p">[</span><span class="n">Order</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">Repo</span><span class="p">([</span><span class="s1">'#1'</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">user_repo</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">order_repo</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">Repo</span><span class="p">[</span><span class="n">User</span><span class="p">])</span><span class="o">.</span><span class="n">rows</span>
+<span class="go">['ana']</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">Repo</span><span class="p">[</span><span class="n">Order</span><span class="p">])</span><span class="o">.</span><span class="n">rows</span>
+<span class="go">['#1']</span>
+</code></pre></div>
+<p>A generic key works as a parameter annotation the same way any other key does:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">UserService</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repo</span><span class="p">:</span> <span class="n">Repo</span><span class="p">[</span><span class="n">User</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">repo</span> <span class="o">=</span> <span class="n">repo</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">user_repo</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">order_repo</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">UserService</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">UserService</span><span class="p">]</span><span class="o">.</span><span class="n">repo</span><span class="o">.</span><span class="n">rows</span>
+<span class="go">['ana']</span>
+</code></pre></div>
+<p><code>explain()</code> renders the parameterisation, the way it prints everywhere else, rather
+than falling back to <code>repr</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">di</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">Repo</span><span class="p">[</span><span class="n">User</span><span class="p">]))</span>
+<span class="go">Repo[User]  [singleton, function]</span>
+</code></pre></div>
+<p>Matching is by equality, never by assignability: <code>Repo[User]</code> does not satisfy a
+parameter annotated <code>Repo[object]</code>, even though <code>User</code> is a subclass of <code>object</code>.</p>
+<p>A deprecated <code>typing</code> alias is rejected at <code>freeze()</code>, naming the canonical spelling to
+write instead:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">typing</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="n">User</span><span class="p">],</span> <span class="n">to</span><span class="o">=</span><span class="n">User</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>  <span class="c1"># noqa: UP006</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="w">    </span><span class="o">...</span>
+<span class="gr">depin.errors.InvalidProviderError</span>: <span class="n">cannot use typing.List[__main__.User] as a provider key: it is the deprecated typing alias for list[User], and a different object at runtime, so the two would be two keys that print alike. Write list[User] instead, subscripting builtins.list itself.</span>
+</code></pre></div>
 
 
 
