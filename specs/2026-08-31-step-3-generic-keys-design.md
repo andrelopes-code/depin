@@ -17,7 +17,7 @@ di.resolve(Repo[User])
 
 Cycle 2 admitted exactly one generic key, `list[X]`, because collection injection needed it and
 nothing else was ready. This cycle removes that restriction and adds the three things the wider
-surface needs: normalisation, rendering, and registration.
+surface needs: a canonical-form check, rendering, and registration.
 
 It also closes the two items the roadmap routes here, and one defect found while measuring.
 
@@ -47,15 +47,42 @@ believed.
 
 Four questions were measured rather than assumed.
 
-**Normalisation must re-subscript the origin.** `typing.List[User]` and `list[User]` are not
-equal, so a provider annotated with one and a binding registered under the other would not
-match. Rebuilding through `types.GenericAlias(origin, args)` fixes that for `list` — but
-`types.GenericAlias(Repo, (User,)) != Repo[User]` for a user-defined PEP 695 generic, and the
-same for a generic `Protocol`, even though both spell identically and differ only in hash and
-equality. Re-subscripting the origin, `origin[args]`, preserves equality and hash in every case
-measured, builtin and user-defined alike. That is the form this cycle uses, and cycle 2's
-`collection_key` is migrated onto it — it is correct today only because its origin is always
-the builtin `list`.
+**The deprecated `typing` aliases are rejected rather than normalised, because no
+canonical rebuild type-checks.** `typing.List[User]` and `list[User]` are not equal, so a
+provider annotated with one and a binding registered under the other would not match. Three
+ways to canonicalise were measured, and all three fail:
+
+- `types.GenericAlias(origin, args)` produces the right object for a builtin origin but
+  `types.GenericAlias(Repo, (User,)) != Repo[User]` for a user-defined PEP 695 generic, and the
+  same for a generic `Protocol` — they spell identically and differ only in equality and hash,
+  which is the worst possible failure mode.
+- Re-subscripting the origin, `origin[args]`, is correct at runtime for every case measured,
+  builtin and user-defined alike — but `type` declares no `__getitem__` in typeshed, so both
+  checkers reject it (`Value of type "type" is not indexable`, `"__getitem__" method not
+  defined on type "type"`). Narrowing `origin` through a `runtime_checkable` `Protocol`
+  declaring `__class_getitem__` does not help: mypy calls the branch unreachable and
+  basedpyright still rejects the subscript.
+- Calling `origin.__class_getitem__(args)` explicitly fails the same way — typeshed declares no
+  such attribute on `type`.
+
+Every route needs a suppression, and this cycle adds none. So depin does not normalise: it
+**rejects** a non-canonical spelling at `freeze()` and names the canonical one, which is
+build-time validation rather than a silent rewrite, and is what the library's thesis calls for.
+
+The discriminator is exact and needs no subscripting. A parameterised key is canonical when it
+is a `types.GenericAlias`, or when its origin is a `Generic` subclass. Measured:
+
+| Spelling | `types.GenericAlias` | origin is `Generic` | verdict |
+| --- | --- | --- | --- |
+| `list[User]`, `dict[str, int]`, `abc.Sequence[User]` | yes | no | canonical |
+| `Repo[User]`, `Reader[User]`, `Repo[Repo[User]]` | no | yes | canonical |
+| `typing.List[User]`, `typing.Dict[str, int]`, `typing.Sequence[User]` | no | no | rejected |
+
+The rejected column is exactly the deprecated aliases, which `ruff`'s `UP006` already rewrites
+and which have been superseded since 3.9 — five releases before depin's floor.
+
+This also explains why cycle 2's `collection_key` is correct as written: its origin is always
+the builtin `list`, for which `types.GenericAlias` is the canonical form.
 
 **A union's origin is a class, so unions must be excluded by name.** `X | None` has
 `get_origin` of `types.UnionType`, which is itself a class, so a rule of "the origin is a
@@ -89,16 +116,16 @@ when it added `GenericAlias`.
 | --- | --- |
 | `Repo[User]` and `Repo[Order]` are different keys | They compare and hash differently, and `by_key` is a plain dictionary. |
 | `Repo` and `Repo[User]` are different keys | The bare class and the parameterisation are unequal. Binding both is legal and means two providers. |
-| `typing.List[X]` and `list[X]` are one key | Every key is normalised on the way into a `ProviderSpec`, so both reach the same identity. |
+| A deprecated `typing` alias is rejected | `typing.List[X]` is a different object from `list[X]`, so accepting both would make two keys that render identically. `freeze()` names the canonical spelling instead. |
 | A generic `Protocol` is a key | `Reader[User]` behaves exactly as `Repo[User]` does; depin never instantiates a key. |
 | Nesting works | `Repo[Repo[User]]` normalises recursively, and `list[Repo[User]]` is an ordinary collection key. |
 | A generic key is an ordinary node | Duplicates, missing dependencies, cycles, captive validation, async propagation, aliases, and collections all apply unchanged, because none of them inspects the shape of a key. |
 | `Repo[User]` does not satisfy `Repo[object]` | depin matches keys by equality, never by assignability. Stated as a limitation, not a bug — see Out of scope. |
 
-Normalisation happens in `as_provider_key`, which every key already passes through: a
-provider's inferred key, an explicit `provides=`, a parameter's annotation, an alias key and
-target, and a collection's element and members. A key that needs no normalisation is returned
-unchanged, so the common path is one `get_origin` call.
+The canonical-form check happens in `as_provider_key`, which every key already passes
+through: a provider's inferred key, an explicit `provides=`, a parameter's annotation, an alias
+key and target, and a collection's element and members. A key with no origin skips it
+entirely, so the common path is one `get_origin` call.
 
 ## The defect this cycle fixes
 
@@ -148,6 +175,7 @@ No exception type is added.
 | Call | Behaviour |
 | --- | --- |
 | A key whose origin is not a class (`Literal`, `typing.Optional`) | `InvalidProviderError`, naming the value and what a key may be. |
+| A deprecated `typing` alias (`typing.List[X]`) | `InvalidProviderError`, spelling out the canonical form to write instead. |
 | A key with an argument that is not itself a key (`Callable[[int], str]`, `tuple[X, ...]`) | `InvalidProviderError`, naming the offending argument. |
 | `X \| None` or `X \| Y` as a key | The two union messages, each true of the position it was reached from. |
 | `@provides(Repo[User])` | Accepted. |
@@ -170,8 +198,8 @@ No new module.
 | Module | Change |
 | --- | --- |
 | `_core/typeguards.py` | `is_provider_key` widens; `is_collection_key` becomes a use of the general predicate. |
-| `_core/spec.py` | `ProviderKey`'s alias member widens; `fmt_key`'s gate widens; `collection_key` moves onto the subscript form. |
-| `_core/providers.py` | Normalisation in `as_provider_key`; `ASYNC_FUNCTION` leaves `_UNWRAP_SHAPES`; `_registered_classes` widens; the second union message is corrected. |
+| `_core/spec.py` | `ProviderKey`'s alias member widens; `fmt_key`'s gate widens, sharing one formatter with the canonical-form message. `collection_key` is unchanged — its origin is always the builtin `list`, for which `types.GenericAlias` is canonical. |
+| `_core/providers.py` | The canonical-form check in `as_provider_key`; `ASYNC_FUNCTION` leaves `_UNWRAP_SHAPES`; `_registered_classes` widens; the second union message is corrected. |
 | `_core/markers.py` | `provides` accepts a parameterised generic. |
 
 `graph.py`, `frozen.py`, `diagnostics.py`, `render.py`, `bindings.py`, `construct.py`, and
@@ -181,17 +209,18 @@ key is an ordinary node.
 ## Verification
 
 - `tests/unit/test_generic_keys.py`: `Repo[User]` against `Repo[Order]`; `Repo` against
-  `Repo[User]`; a generic `Protocol`; nesting; `typing.List[X]` and `list[X]` reaching one
-  binding; a generic key as a parameter annotation, as `provides=`, as an alias key and target,
-  and as a collection element and member; `Repo[User]` and `Repo[object]` staying distinct.
+  `Repo[User]`; a generic `Protocol`; nesting; a generic key as a parameter annotation, as
+  `provides=`, as an alias key and target, and as a collection element and member; `Repo[User]`
+  and `Repo[object]` staying distinct; and every deprecated `typing` alias spelling rejected
+  with the canonical one named.
 - `tests/unit/test_providers.py`: the async-unwrap fix, as a red-then-green pair — an async
   factory returning `list[Handler]` keyed `list[Handler]`, and one returning `Repo[User]` keyed
   `Repo[User]`; the four shapes that still unwrap, unchanged.
 - `tests/unit/test_providers.py`: the forward-reference fix for a class registered only as an
   alias key, only through `scope_value`, and only as a collection element.
 - `tests/unit/test_spec.py`: `fmt_key` over `Repo[User]`, over `Repo[Repo[User]]`, and still
-  leaving a union alone; normalisation preserving equality and hash for a builtin origin and a
-  user-defined one, which is the measurement the design rests on.
+  leaving a union alone; and the canonical-form discriminator over all nine spellings in the
+  Measurements table, which is the measurement the design rests on.
 - `tests/unit/test_graph_validation.py`: every row of the Errors table.
 - `tests/unit/test_graph_render.py`: a generic key in the tree and in both exports.
 - `tests/unit/test_graph_properties.py`: the generative model gains parameterised keys.
@@ -206,7 +235,7 @@ key is an ordinary node.
 ## Acceptance criteria
 
 - `Repo[User]` and `Repo[Order]` resolve to different providers, validated at `freeze()`.
-- `typing.List[X]` and `list[X]` are one key.
+- `typing.List[X]` is rejected at `freeze()`, naming `list[X]`.
 - An async factory with a parameterised return annotation is keyed by that annotation.
 - A class registered only as an alias key, a `scope_value`, or a collection element resolves a
   forward reference naming it.
@@ -223,4 +252,5 @@ key is an ordinary node.
 | `Callable[...]` and `Literal[...]` keys | Neither is a class to key by, and `Token` already names a callable or a value. Both are rejected by the general rule with no special case. |
 | An unparameterised `TypeVar` in a key | `Repo[T]` with `T` unbound has no runtime identity a consumer could resolve. |
 | Partial or open generic matching | Binding `Repo` and expecting `Repo[User]` to find it. That is assignability again, in a second guise. |
+| Normalising a deprecated `typing` alias into its canonical form | Measured: every canonical rebuild that works at runtime fails one or both checkers, and this cycle adds no suppression. Rejecting the spelling at `freeze()` is build-time validation rather than a silent rewrite, and names the fix. |
 | `set[X]` and `tuple[X, ...]` collections | Still cycle 2's decision, unchanged: one container type establishes the mechanism, and each extra origin is a permanent key shape at 1.0. |
