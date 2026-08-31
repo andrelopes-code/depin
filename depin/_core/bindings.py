@@ -189,7 +189,11 @@ class BindingCollector:
         and a structural alias between unrelated classes is legitimate.
 
         Args:
-            key: The new name to register. A class, a `Token`, or a string.
+            key: The new name to register. A class, a `Token`, or a string. A
+                string key is reachable only from a parameter annotated
+                ``Annotated[T, Named('...')]``; `FrozenContainer.resolve` and
+                ``frozen[key]`` do not accept one, so prefer a class or a
+                `Token` for a key resolved directly.
             to: The binding to delegate to. May itself be an alias.
             tag: Disambiguator for the alias, matching the ``tag`` of a
                 resolution or of an ``Annotated[..., Tag(...)]`` parameter.

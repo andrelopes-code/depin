@@ -1,11 +1,11 @@
 """`Container.alias`: a second name for a binding, with no second instance."""
 
 from collections.abc import Generator
-from typing import Protocol
+from typing import Annotated, Protocol
 
 import pytest
 
-from depin import Container, ProviderShape, Registry, Scope, Token
+from depin import Container, Named, ProviderShape, Registry, Scope, Token
 from depin.errors import MissingProviderError, OutsideScopeError
 
 
@@ -103,8 +103,13 @@ def test_an_alias_binds_a_token_key() -> None:
 
 
 def test_an_alias_binds_a_string_key() -> None:
-    di = Container().bind(PostgresStore).alias('store', to=PostgresStore).freeze()
+    class Consumer:
+        def __init__(self, store: Annotated[PostgresStore, Named('store')]) -> None:
+            self.store = store
+
+    di = Container().bind(PostgresStore).alias('store', to=PostgresStore).bind(Consumer).freeze()
     assert di.graph().node('store').shape is ProviderShape.ALIAS
+    assert di[Consumer].store is di[PostgresStore]
 
 
 def test_an_alias_leaves_teardown_with_the_target() -> None:

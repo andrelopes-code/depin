@@ -231,8 +231,11 @@ No exception type is added to `depin/errors.py`.
 `construct` narrows the resolved alias parameter through a guard in
 `_core/typeguards.py` rather than indexing `kwargs` directly, so a defect that
 delivered an alias spec with no resolved target raises `InvalidProviderError`
-naming the provider instead of a bare `KeyError`. Every other value in that
-module is narrowed the same way.
+naming the provider instead of a bare `KeyError`. That module is where an
+assumption at the plan/shape boundary is checked and reported as
+`InvalidProviderError` naming the provider, which is what this guard does, even
+though it tests a key's presence in a `dict` and returns `object` rather than
+narrowing a type.
 
 ## Module layout
 

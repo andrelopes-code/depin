@@ -9,8 +9,8 @@ from depin._core.spec import Bindings
 class Container(BindingCollector):
     """Mutable builder for a dependency graph.
 
-    Collect bindings with `bind()`, `value()`, `scope_value()`, and the
-    `singleton()` / `scoped()` / `transient()` decorators, then call `freeze()`
+    Collect bindings with `bind()`, `value()`, `scope_value()`, `alias()`, and
+    the `singleton()` / `scoped()` / `transient()` decorators, then call `freeze()`
     to validate the graph and obtain an immutable `FrozenContainer`. A
     ``Container`` performs no resolution itself; nothing is constructed until you
     resolve from the frozen view. Registration order does not matter — providers
@@ -60,7 +60,9 @@ class Container(BindingCollector):
             CaptiveDependencyError: A singleton depends on a scoped provider.
             InvalidProviderError: A factory lacks a return annotation (and no
                 ``provides=``), a parameter has no type annotation and no
-                default, or a binding is neither a class nor a callable.
+                default, a binding is neither a class nor a callable, or an
+                alias names a key or a target that is not a class, a `Token`, or
+                a string.
             InvalidScopeError: A generator or context-manager provider is bound
                 as transient.
 
