@@ -131,3 +131,19 @@ def test_fmt_key_leaves_a_union_alone() -> None:
     class Logger: ...
 
     assert fmt_key(Cache | Logger) == repr(Cache | Logger)
+
+
+def test_fmt_key_renders_a_user_generic_by_qualified_name() -> None:
+    class User: ...
+
+    class Repo[T]: ...
+
+    assert fmt_key(Repo[User]) == f'{fmt_key(Repo)}[{fmt_key(User)}]'
+
+
+def test_fmt_key_renders_a_nested_generic() -> None:
+    class User: ...
+
+    class Repo[T]: ...
+
+    assert fmt_key(Repo[Repo[User]]) == f'{fmt_key(Repo)}[{fmt_key(Repo)}[{fmt_key(User)}]]'

@@ -3,7 +3,7 @@
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
-from types import GenericAlias
+from types import GenericAlias, UnionType
 from typing import Final, Protocol, TypeGuard, get_args, get_origin, runtime_checkable
 
 from depin._core.markers import Token
@@ -231,10 +231,20 @@ class Bindings(Protocol):
 def fmt_key(key: object) -> str:
     if isinstance(key, type):
         return key.__qualname__
-    if isinstance(key, GenericAlias):
-        arguments = ', '.join(fmt_key(argument) for argument in get_args(key))
-        return f'{fmt_key(get_origin(key))}[{arguments}]'
+    origin = get_origin(key)
+    if isinstance(origin, type) and origin is not UnionType:
+        return fmt_parameterised(origin, get_args(key))
     return repr(key)
+
+
+def fmt_parameterised(origin: type[object], arguments: tuple[object, ...]) -> str:
+    """Spell a parameterised key as ``Origin[A, B]``, each part through `fmt_key`.
+
+    Shared with the message `as_provider_key` raises for a deprecated `typing`
+    alias, so the canonical form it tells the user to write is spelled by the
+    same code that will render it once they do.
+    """
+    return f'{fmt_key(origin)}[{", ".join(fmt_key(argument) for argument in arguments)}]'
 
 
 def fmt_chain(keys: Iterable[object]) -> str:

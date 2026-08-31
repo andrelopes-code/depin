@@ -14,8 +14,8 @@ element type to ``Unknown``, and the guard is what restates it as ``object``.
 
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
-from types import GenericAlias
-from typing import TypeGuard, get_args, get_origin
+from types import GenericAlias, UnionType
+from typing import Generic, TypeGuard, get_args, get_origin
 
 from depin._core.markers import Token
 from depin._core.spec import ALIAS_PARAM, ParamSpec, ProviderKey, fmt_key
@@ -23,21 +23,38 @@ from depin.errors import InvalidProviderError
 
 
 def is_provider_key(value: object) -> TypeGuard[ProviderKey]:
-    return isinstance(value, type | str | Token) or is_collection_key(value)
+    return isinstance(value, type | str | Token) or is_generic_key(value)
 
 
-def is_collection_key(value: object) -> TypeGuard[ProviderKey]:
-    """Whether ``value`` is a ``list[X]`` over something that is itself a key.
+def is_generic_key(value: object) -> TypeGuard[ProviderKey]:
+    """Whether ``value`` is a parameterised generic usable as a provider key.
 
-    Deliberately narrow. Widening `ProviderKey` to every parameterised generic is
-    cycle 3's deliverable; a collection needs only this one origin, and admitting
-    more now would ship the wider surface without the validation and rendering
-    that go with it.
+    The origin must be a class and every argument must itself be a key. A union
+    is excluded by name: `types.UnionType` is a class, so it would otherwise
+    pass, and optionality is a parameter-position feature rather than a key.
+    `Callable[[int], str]` and `tuple[X, ...]` fall out of the argument rule,
+    carrying a list and an `Ellipsis` respectively, with no special case.
     """
-    if not isinstance(value, GenericAlias) or get_origin(value) is not list:
+    origin = get_origin(value)
+    if not isinstance(origin, type) or origin is UnionType:
         return False
     arguments = get_args(value)
-    return len(arguments) == 1 and is_provider_key(arguments[0])
+    return bool(arguments) and all(is_provider_key(argument) for argument in arguments)
+
+
+def is_canonical_generic(value: object) -> bool:
+    """Whether a parameterised generic is spelled the way depin keys it.
+
+    A builtin or ABC origin produces a `types.GenericAlias`; a `Generic`
+    subclass produces `typing`'s own alias. Everything else with a class origin
+    is a deprecated `typing` alias — `typing.List[X]` and its kin — which is a
+    different object from `list[X]` and would become a second key that renders
+    identically to the first.
+    """
+    origin = get_origin(value)
+    if not isinstance(origin, type):
+        return False
+    return isinstance(value, GenericAlias) or issubclass(origin, Generic)
 
 
 def as_class(source: object, key: object) -> type[object]:

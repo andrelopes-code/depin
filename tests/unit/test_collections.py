@@ -156,24 +156,23 @@ def test_a_member_listed_twice_in_one_collection_is_rejected() -> None:
         _ = builder.freeze()
 
 
-def test_only_a_list_generic_is_accepted_as_a_collection_key() -> None:
+def test_only_a_list_generic_is_registered_as_a_collection_key() -> None:
+    """`collect` only ever builds a `list[Element]` key; any other generic is unbound, not rejected."""
+
     class User: ...
 
     class Repo[T]: ...
 
     di = _both().freeze()
 
-    with pytest.raises(MissingProviderError, match='not a valid key type'):
+    with pytest.raises(MissingProviderError, match='no provider for'):
         di.resolve(dict[str, int])
-    with pytest.raises(MissingProviderError, match='not a valid key type'):
+    with pytest.raises(MissingProviderError, match='no provider for'):
         di.resolve(Repo[User])
-    with pytest.raises(MissingProviderError, match='not a valid key type'):
+    with pytest.raises(MissingProviderError, match='no provider for'):
         di.resolve(set[Handler])
-    with pytest.raises(MissingProviderError, match='not a valid key type'):
-        di.explain(dict[str, int])
-    with pytest.raises(MissingProviderError, match='not a valid key type'):
-        di.explain(Repo[User])
-    with pytest.raises(MissingProviderError, match='not a valid key type'):
-        di.explain(set[Handler])
+    assert di.explain(dict[str, int]).startswith('no provider for')
+    assert di.explain(Repo[User]).startswith('no provider for')
+    assert di.explain(set[Handler]).startswith('no provider for')
 
     assert [h.run() for h in di.resolve(list[Handler])] == ['email', 'sms']

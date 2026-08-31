@@ -19,12 +19,13 @@ from depin._core.spec import (
     collection_key,
     collection_param,
     fmt_key,
+    fmt_parameterised,
     is_alias_binding,
     is_collection_binding,
     is_frame_binding,
     is_value_binding,
 )
-from depin._core.typeguards import as_class, as_factory, is_collection_key
+from depin._core.typeguards import as_class, as_factory, is_canonical_generic, is_generic_key
 from depin.errors import DuplicateProviderError, InvalidProviderError, InvalidScopeError
 
 LIFECYCLE_SHAPES = frozenset(
@@ -210,8 +211,17 @@ def as_provider_key(value: object) -> ProviderKey:
         return value
     if is_object_token(value):
         return value
-    if is_collection_key(value):
-        return value
+    if is_generic_key(value):
+        if is_canonical_generic(value):
+            return value
+        origin = get_origin(value)
+        if isinstance(origin, type):
+            raise InvalidProviderError(
+                f'cannot use {value} as a provider key: it is the deprecated typing alias for '
+                f'{fmt_parameterised(origin, get_args(value))}, and a different object at runtime, '
+                f'so the two would be two keys that print alike. Write '
+                f'{fmt_parameterised(origin, get_args(value))} instead.'
+            )
     if get_origin(value) in (UnionType, Union):
         members = tuple(arg for arg in get_args(value) if arg is not NoneType)
         if len(members) == 1:
