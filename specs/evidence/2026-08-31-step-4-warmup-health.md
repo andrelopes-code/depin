@@ -585,20 +585,131 @@ and head back-to-back on one runner, not by this local, single-host run.
 
 ## Mutation gate
 
-**Not run locally for this pass.** `[tool.mutmut] only_mutate` in
-`pyproject.toml` is `["depin/_core/*.py"]` — every module under
-`depin/_core/`, not a changed-modules subset — so a local `uv run mutmut run`
-is the full mutant matrix regardless of how small this cycle's ten-module
-diff is. Prior evidence
-(`specs/evidence/2026-08-30-step-2-diagnostics.md`,
-`specs/evidence/2026-08-31-step-3-provides-aliasing.md`,
-`specs/evidence/2026-08-31-step-4-decoration-conditional.md`) records that
-same full run taking tens of minutes and its baseline collection as fragile
-under host CPU contention. Re-running it here would not measure anything
-scoped to this cycle's ten changed modules; it would re-measure the whole
-package under exactly the conditions already documented as unreliable.
+**Failed in CI.** The `mutation` job (`.github/workflows/mutation.yml`, PR
+#46) ran `mutmut` over `depin/_core/*.py` and scored 94.3% — 2250 killed, 135
+survived, 2385 total — against a 95% floor. 45 of the 135 survivors sat in
+this cycle's two new modules, `depin/_core/warmup.py` and
+`depin/_core/health.py`:
 
-The CI `mutation` job (`.github/workflows/mutation.yml`, path filter
-`depin/_core/**`) triggers on this branch's changes and is the authority for
-this gate. It is left to run in CI rather than reproduced locally, and no
-score is recorded here in its place.
+| Function | Survivors |
+| --- | --- |
+| `health.reject_async_checks` | 17 |
+| `warmup.reject_async_singletons` | 10 |
+| `health.run_check` | 7 |
+| `health.run_check_async` | 5 |
+| `warmup.warmup_report` | 4 |
+| `health._outcome` | 1 |
+| `health.declared_checks` | 1 |
+
+The remaining 90 survivors sit in `typeguards`, `providers`, `overrides`,
+`markers`, `introspect`, `graph`, `construct`, and `render` — pre-existing on
+`main`, out of scope for this fix, and left for the roadmap.
+
+**Cause.** `reject_async_checks` and `reject_async_singletons` build a
+refusal message by choosing a noun/pronoun on the pending-key count and
+joining every pending key; every existing test asserted the message with
+`in` (substring) or `match=` (regex fragment) rather than `==` (the whole
+string), so mutating any word, the separator, or the singular/plural branch
+left the tests green. `run_check` and `run_check_async` had the same gap on
+`InvalidProviderError`'s awaitable-check message, plus untested `key=`/`tag=`
+propagation on the `except Exception` branch: every prior test used an
+untagged binding, so `tag=spec.tag` and a mutated `tag=None` produced the
+same observed result. `run_check_async`'s `is_awaitable(outcome)` guard was
+untested in the one direction that matters: an async check returning
+`False`. Inverting the guard leaves the coroutine unawaited, and an
+unawaited coroutine object is never `is False`, so the mutant reports the
+same `healthy=True` a correctly awaited `True` would — no prior test used a
+`False`-returning async check to tell the two apart. `warmup_report` had the
+same untested tag propagation on both `constructed=` and `cached=`.
+`declared_checks` was missing a tagged-binding case for the same reason.
+
+**Fix — tests only, `depin/` unchanged.** No behavioural gap was found;
+every survivor traced to a missing assertion, not a missing check. Added to
+`tests/unit/test_health.py`:
+
+- Exact (`==`) refusal-message assertions for `reject_async_checks`, one key
+  and two keys, replacing the `in`/`match=` checks; the expected text is
+  built with `fmt_key` rather than hardcoded, since a class defined inside a
+  test function carries that function in its own `__qualname__`.
+- An exact-message assertion on the `InvalidProviderError` `run_check`
+  raises for an awaitable check result.
+- `test_a_raising_check_is_unhealthy_with_the_exception_on_the_result` and
+  its async counterpart now bind under `tag='primary'` and assert
+  `result.key`/`result.tag`, closing the untested `tag=` propagation on the
+  raising branch of both `run_check` and `run_check_async`.
+- `test_ahealth_gives_the_async_check_the_resolved_value`: an async check
+  that records what it received, asserting it is the resolved `Service`
+  instance — kills the inverted `is_awaitable` guard.
+- `test_ahealth_runs_an_async_check_that_returns_false`: an async check
+  returning `False`, asserting `healthy=False` — the direction that
+  distinguishes an awaited result from an unawaited coroutine object.
+- `test_run_check_names_the_specs_own_provider_when_the_check_is_not_callable`
+  and its async counterpart: call `run_check`/`run_check_async` directly
+  over a hand-built `ProviderSpec` with a non-callable `check`, asserting the
+  exact `as_check` message — the only way to reach that branch, since
+  `Container.freeze()` already rejects a non-callable `check` before either
+  function runs.
+- `test_a_check_result_carries_its_binding_tag`,
+  `test_an_async_check_result_carries_its_binding_tag`,
+  `test_checks_reports_the_binding_tag`: a tagged binding through
+  `health()`, `ahealth()`, and `checks()`.
+
+Added to `tests/unit/test_warmup.py`:
+
+- Exact refusal-message assertions for `reject_async_singletons`, one key
+  and two keys (`test_warmup_refuses_an_async_singleton_before_constructing_anything`,
+  new `test_warmup_refusal_message_names_every_pending_singleton`), by the
+  same `fmt_key` construction.
+- `report.constructed`/`report.cached` strengthened from
+  `[node.key for node in ...]` to full `GraphNode` equality against
+  `di.graph().node(...)` in `test_warmup_constructs_every_singleton`,
+  `test_warmup_reports_an_already_built_singleton_as_cached`, and
+  `test_a_decorated_singleton_reports_both_nodes` — pins order, scope,
+  shape, and dependencies, not just the key.
+- `test_warmup_reports_the_binding_tag_on_a_constructed_node` and
+  `test_warmup_reports_the_binding_tag_on_a_cached_node`: a tagged
+  singleton, closing `warmup_report`'s untested `tag=` propagation on both
+  tuples.
+
+**Verification.** `uv run mutmut run '<pattern>'` accepts a mutant-name
+pattern positionally, as documented; both scoped patterns below ran to
+completion under mutmut 3.7.0. Mutmut's baseline collection runs the whole
+`tests/unit` suite (`pytest_add_cli_args_test_selection`), which on this
+host intermittently fails independently of these changes:
+`tests/unit/test_graph_properties.py`'s Hypothesis property tests
+occasionally exceed `pytest_add_cli_args`'s `--timeout=2` or raise
+`FlakyStrategyDefinition` under load, and
+`tests/unit/test_graph_render.py::test_the_exports_do_not_depend_on_the_hash_seed`
+spawns a subprocess that can also exceed the 2-second timeout — both
+pre-existing, unrelated to `health`/`warmup`, and consistent with this
+file's prior note that a full local mutation run is fragile under host CPU
+contention. Working around it locally only — raising the pytest timeout and
+deselecting the two flaky tests through the `PYTEST_ADDOPTS` environment
+variable, which pytest reads directly; `pyproject.toml`'s `[tool.mutmut]`
+was not edited — let both scoped runs complete:
+
+```console
+$ PYTEST_ADDOPTS="--timeout=30 --deselect=tests/unit/test_graph_properties.py --deselect=tests/unit/test_graph_render.py::test_the_exports_do_not_depend_on_the_hash_seed" uv run mutmut run 'depin._core.health.*'
+$ uv run mutmut results | grep 'depin\._core\.health\.' | grep -v 'not checked'
+(no output — every checked health.py mutant killed)
+
+$ PYTEST_ADDOPTS="--timeout=30 --deselect=tests/unit/test_graph_properties.py --deselect=tests/unit/test_graph_render.py::test_the_exports_do_not_depend_on_the_hash_seed" uv run mutmut run 'depin._core.warmup.*'
+$ uv run mutmut results | grep 'depin\._core\.warmup\.' | grep -v 'not checked'
+(no output — every checked warmup.py mutant killed)
+```
+
+Both scoped runs were repeated after each round of new tests; the first
+pass over `health.*` still left 7 survivors (`run_check`'s and
+`run_check_async`'s `as_check(spec.check, None)`, `key=None`/`tag=None`
+mutants), and the first pass over `warmup.*` still left 4
+(`warmup_report`'s `tag=None` mutants on both tuples) — both closed by the
+tag- and direct-call tests listed above, then reconfirmed at zero survivors.
+`mutants/` is `.gitignore`d and was not committed.
+
+`uv run ruff format`, `uv run ruff check`, `uv run basedpyright`,
+`uv run mypy`, and `uv run pytest` (no override, no deselect) all pass clean
+on the final tree — `832 passed, 6 skipped`, up from `821` before this fix's
+11 new tests. The CI `mutation` job remains the authority for the
+whole-package score; this fix targets exactly the two modules and the 45
+survivors CI attributed to them, and leaves the 90 pre-existing survivors in
+other modules untouched, as scoped.
