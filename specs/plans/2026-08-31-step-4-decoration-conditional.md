@@ -15,7 +15,7 @@
 Every task inherits these requirements from `AGENTS.md`, the approved roadmap, and the spec.
 
 - The core keeps zero runtime dependencies. Nothing here adds a package to `[project.dependencies]` or to any dependency group.
-- Use PEP 695 syntax. Do not introduce `TypeVar`, `typing.Any`, `typing.cast`, `# type: ignore`, or `# pyright: ignore`. `depin/` carries exactly three suppressions today — `frozen.py:116`, `frozen.py:139`, `markers.py:129` — and must carry exactly those three when this cycle ends.
+- Use PEP 695 syntax. Do not introduce `TypeVar`, `typing.Any`, `typing.cast`, `# type: ignore`, or `# pyright: ignore`. `depin/` carries exactly three suppressions today — `frozen.py:116`, `frozen.py:139`, `markers.py:132` — and must carry exactly those three when this cycle ends.
 - Every exception raised by library code inherits `DepinError`. No bare `KeyError`, `TypeError`, `ValueError`, or `assert` in `depin/`.
 - Data structures are `@dataclass(frozen=True, slots=True)`.
 - New behaviour in `depin/_core/` is developed test-first: the failing test is written and observed failing before the implementation.
@@ -2243,7 +2243,7 @@ Expected: at or above 95%. Name every uncovered line in a module this cycle chan
 - [ ] **Step 4: Confirm the suppression count is unchanged**
 
 Run: `grep -rn "type: ignore\|pyright: ignore" --include='*.py' depin`
-Expected: exactly three lines — `frozen.py:116`, `frozen.py:139`, `markers.py:129` — byte-identical to `0ff6e1d`.
+Expected: exactly three lines — `frozen.py:116`, `frozen.py:139`, `markers.py:132` — byte-identical to `0ff6e1d`.
 
 - [ ] **Step 5: Confirm what did not change**
 
