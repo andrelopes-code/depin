@@ -173,14 +173,26 @@ def as_factory(source: object, key: object) -> Callable[..., object]:
     raise InvalidProviderError(f'provider for {fmt_key(key)} is bound as a factory, but {source!r} is not callable')
 
 
-def _is_awaitable(value: object) -> TypeGuard[Awaitable[object]]:
+def is_awaitable(value: object) -> TypeGuard[Awaitable[object]]:
     return isinstance(value, Awaitable)
 
 
 def as_awaitable(value: object, key: object) -> Awaitable[object]:
-    if _is_awaitable(value):
+    if is_awaitable(value):
         return value
     raise InvalidProviderError(f'async provider for {fmt_key(key)} returned {value!r}, which is not awaitable')
+
+
+def as_check(source: object, key: object) -> Callable[[object], object]:
+    """The health check declared for a provider, as something callable.
+
+    Unreachable through the public API: `Container.freeze()` refuses a check
+    that is not callable. The narrowing keeps a defect inside the `DepinError`
+    hierarchy instead of surfacing as a `TypeError` with no provider named.
+    """
+    if callable(source):
+        return source
+    raise InvalidProviderError(f'health check for {fmt_key(key)} is not callable: {source!r}')
 
 
 def _is_sync_iterator(value: object) -> TypeGuard[Iterator[object]]:

@@ -105,6 +105,9 @@ def _chain(spec: ProviderSpec, layers: Sequence[DecorationSpec]) -> Iterable[Pro
     Every yielded spec carries ``needs_async=False``: `graph._with_async_flags`
     recomputes it for the whole plan after the fold, from each node's own shape
     and its dependencies, so a value written here is never read.
+
+    A check verifies the value the binding it was declared on produces, so it
+    stays with that binding rather than moving to the key the wrapper occupies.
     """
     key = spec.key
     tag = spec.tag
@@ -116,6 +119,7 @@ def _chain(spec: ProviderSpec, layers: Sequence[DecorationSpec]) -> Iterable[Pro
         shape=spec.shape,
         needs_async=False,
         params=spec.params,
+        check=spec.check,
     )
     outermost = len(layers) - 1
     for depth, layer in enumerate(layers):

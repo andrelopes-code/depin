@@ -87,6 +87,7 @@ class BindingCollector:
         provides: type[object] | None = None,
         tag: str | None = None,
         when: Condition | None = None,
+        check: Callable[[T], object] | None = None,
     ) -> Self:
         """Register a class or factory as a provider.
 
@@ -108,6 +109,10 @@ class BindingCollector:
                 a matching ``tag`` or ``Annotated[..., Tag(...)]``.
             when: Condition deciding whether this binding enters the plan.
                 A callable is evaluated inside `Container.freeze()`.
+            check: Callable verifying the produced value, exposed by
+                `FrozenContainer.checks` and run by `FrozenContainer.health`.
+                It receives the value and is healthy unless it raises or
+                returns ``False``.
 
         Returns:
             ``self``, for chaining.
@@ -124,10 +129,19 @@ class BindingCollector:
 
             ```
         """
-        self._records.append(BindRecord(source=source, scope=scope, provides=provides, tag=tag, condition=when))
+        self._records.append(
+            BindRecord(source=source, scope=scope, provides=provides, tag=tag, condition=when, check=check)
+        )
         return self
 
-    def value[T](self, token: Token[T], value: T, *, when: Condition | None = None) -> Self:
+    def value[T](
+        self,
+        token: Token[T],
+        value: T,
+        *,
+        when: Condition | None = None,
+        check: Callable[[T], object] | None = None,
+    ) -> Self:
         """Bind a ready-made value to a `Token`.
 
         The value is registered as a singleton and returned as-is on resolution —
@@ -139,6 +153,10 @@ class BindingCollector:
             value: The value returned on resolution.
             when: Condition deciding whether this binding enters the plan.
                 A callable is evaluated inside `Container.freeze()`.
+            check: Callable verifying the produced value, exposed by
+                `FrozenContainer.checks` and run by `FrozenContainer.health`.
+                It receives the value and is healthy unless it raises or
+                returns ``False``.
 
         Example:
             ```pycon
@@ -152,7 +170,12 @@ class BindingCollector:
         """
         self._records.append(
             BindRecord(
-                source=ValueBinding(token, value), scope=Scope.SINGLETON, provides=None, tag=None, condition=when
+                source=ValueBinding(token, value),
+                scope=Scope.SINGLETON,
+                provides=None,
+                tag=None,
+                condition=when,
+                check=check,
             )
         )
         return self

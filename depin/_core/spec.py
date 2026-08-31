@@ -251,6 +251,7 @@ class BindRecord:
     provides: type[object] | None
     tag: str | None
     condition: Condition | None = None
+    check: object | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -272,6 +273,7 @@ class ProviderSpec:
     shape: ProviderShape
     needs_async: bool
     params: tuple[ParamSpec, ...]
+    check: object | None = None
 
 
 @dataclass(frozen=True, slots=True)
