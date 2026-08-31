@@ -1,5 +1,7 @@
 """Bindings under a predicate, decided inside `freeze()`."""
 
+from collections.abc import Generator
+
 import pytest
 
 from depin import Container, Registry, Token
@@ -209,6 +211,16 @@ def test_an_inactive_factory_key_is_named_from_its_return_annotation() -> None:
 
     frozen = Container().bind(build_cache, when=False).freeze()
     assert 'registered but inactive' in frozen.explain(Cache)
+
+
+def test_an_inactive_generator_factory_key_is_read_through_its_container_type() -> None:
+    class Pool: ...
+
+    def pool() -> Generator[Pool]:
+        yield Pool()
+
+    frozen = Container().bind(pool, when=False).freeze()
+    assert 'registered but inactive' in frozen.explain(Pool)
 
 
 def test_an_inactive_alias_key_is_named() -> None:
