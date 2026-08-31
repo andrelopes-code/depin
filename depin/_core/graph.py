@@ -106,18 +106,21 @@ def _collect_missing(
     chain: tuple[ProviderSpec, ...],
     missing: dict[Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]],
 ) -> None:
-    # Iterative DFS over the dependency graph. Each entry is the current spec
-    # paired with the chain that led to it; cycles are broken by the
+    # The walk decides on whether a binding exists, not on whether the parameter
+    # also carries a default: a satisfied parameter is traversed either way, which
+    # is what keeps this walk and `render._deepest_requirement` agreeing on one
+    # chain. Iterative DFS over the dependency graph; each entry is the current
+    # spec paired with the chain that led to it, and cycles are broken by the
     # ``id(dep) in chain_specs`` check below and reported by `_toposort`.
     stack: list[tuple[ProviderSpec, tuple[ProviderSpec, ...]]] = [(root, chain)]
     while stack:
         spec, current_chain = stack.pop()
         chain_specs = {id(c) for c in current_chain}
         for param in spec.params:
-            if param.has_default or param.optional:
-                continue
             dep = by_key.get((param.key, param.tag))
             if dep is None:
+                if param.has_default or param.optional:
+                    continue
                 ident = (param.key, param.tag)
                 if ident not in missing or len(current_chain) > len(missing[ident][0]):
                     missing[ident] = (current_chain, spec, param.name)

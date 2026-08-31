@@ -526,6 +526,49 @@ def test_a_tie_between_sibling_chains_matches_the_freeze_error() -> None:
     assert render_tree(graph, missing, None) == str(raised.value)
 
 
+def _chain_through_a_bound_and_defaulted_intermediate() -> tuple[Container, Container, type[object]]:
+    """The same chain, with the outer provider's bound parameter also carrying a default.
+
+    `_collect_missing` used to skip such a parameter for traversal as well as for
+    reporting, so the freeze error named a shorter chain than `explain()` did.
+    """
+    missing = type('Missing', (), {})
+    inner = type('Inner', (), {})
+    outer = type('Outer', (), {})
+
+    def make_inner_required(dep: object) -> object:
+        del dep
+        return inner()
+
+    def make_inner_defaulted(dep: object = None) -> object:
+        del dep
+        return inner()
+
+    def make_outer(dep: object = None) -> object:
+        del dep
+        return outer()
+
+    for factory in (make_inner_required, make_inner_defaulted):
+        factory.__annotations__ = {'dep': missing, 'return': inner}
+    make_outer.__annotations__ = {'dep': inner, 'return': outer}
+
+    required = Container().bind(make_inner_required).bind(make_outer)
+    defaulted = Container().bind(make_inner_defaulted).bind(make_outer)
+    return required, defaulted, missing
+
+
+def test_a_bound_and_defaulted_intermediate_does_not_shorten_the_chain() -> None:
+    required, defaulted, missing = _chain_through_a_bound_and_defaulted_intermediate()
+
+    with pytest.raises(MissingProviderError) as raised:
+        _ = required.freeze()
+
+    graph = build_graph(build_plan(defaulted.records()))
+
+    assert 'Outer' in str(raised.value)
+    assert render_tree(graph, missing, None) == str(raised.value)
+
+
 def test_dot_declares_every_node_and_edge_in_plan_order() -> None:
     assert build().dot() == (
         'digraph depin {\n'
