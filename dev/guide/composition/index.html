@@ -524,6 +524,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#aliases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aliases
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#where-to-freeze" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1032,6 +1043,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#aliases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aliases
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#where-to-freeze" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1182,6 +1204,36 @@ bare <code>str</code> alone would look for a provider of <code>str</code>.</p>
 <span class="go">'primary'</span>
 </code></pre></div>
 <p>Inside a provider, select the tagged one with <code>Annotated[Cache, Tag('primary')]</code>.</p>
+<h2 id="aliases">Aliases<a class="headerlink" href="#aliases" title="Permanent link">&para;</a></h2>
+<p><code>provides=</code> and <code>@provides</code> register a class <em>under</em> another key. An alias goes
+the other way: it adds a second name to a binding that already exists.</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Protocol</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Store</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">PostgresStore</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'pg'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">PostgresStore</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="n">PostgresStore</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">Store</span><span class="p">)</span> <span class="ow">is</span> <span class="n">di</span><span class="p">[</span><span class="n">PostgresStore</span><span class="p">]</span>
+<span class="go">True</span>
+</code></pre></div>
+<p>Both names reach one instance. The target keeps its lifetime, its cache entry,
+and its teardown, so a singleton is still built once and closed once no matter
+which name asked for it.</p>
+<p>The alias itself is a transient indirection, and <code>explain()</code> says so:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">di</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">Store</span><span class="p">))</span>
+<span class="go">Store  [transient, alias]</span>
+<span class="go">  target: PostgresStore  [singleton, class]</span>
+</code></pre></div>
+<p><code>transient</code> describes the alias node, which caches nothing — not the target,
+which is the singleton on the line below it. Because the alias is a real node,
+it participates in validation like any other: an unbound target, a duplicate
+name, a cycle, and a singleton that reaches a scoped provider through an alias
+are all rejected by <code>freeze()</code>.</p>
+<p>depin does not verify that the target satisfies the alias key. A <code>Protocol</code> that
+is not <code>runtime_checkable</code> cannot be checked at runtime, and a structural alias
+between two unrelated classes is a legitimate thing to write.</p>
 <h2 id="where-to-freeze">Where to freeze<a class="headerlink" href="#where-to-freeze" title="Permanent link">&para;</a></h2>
 <p>Freeze once, at the composition root — the entry point that knows the whole
 application. Everything below it receives what it needs and never touches a

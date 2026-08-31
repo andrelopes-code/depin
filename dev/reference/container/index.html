@@ -734,6 +734,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.Container.alias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        alias
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.Container.singleton" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -843,6 +854,17 @@
     <span class="md-ellipsis">
       
         scope_value
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Registry.alias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        alias
       
     </span>
   </a>
@@ -1232,6 +1254,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.Container.alias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        alias
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.Container.singleton" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1341,6 +1374,17 @@
     <span class="md-ellipsis">
       
         scope_value
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.Registry.alias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        alias
       
     </span>
   </a>
@@ -1515,8 +1559,8 @@
 
 
         <p>Mutable builder for a dependency graph.</p>
-<p>Collect bindings with <code>bind()</code>, <code>value()</code>, <code>scope_value()</code>, and the
-<code>singleton()</code> / <code>scoped()</code> / <code>transient()</code> decorators, then call <code>freeze()</code>
+<p>Collect bindings with <code>bind()</code>, <code>value()</code>, <code>scope_value()</code>, <code>alias()</code>, and
+the <code>singleton()</code> / <code>scoped()</code> / <code>transient()</code> decorators, then call <code>freeze()</code>
 to validate the graph and obtain an immutable <code>FrozenContainer</code>. A
 <code>Container</code> performs no resolution itself; nothing is constructed until you
 resolve from the frozen view. Registration order does not matter — providers
@@ -1823,6 +1867,166 @@ exposes the per-request <code>Request</code>.</p>
 <div class="doc doc-object doc-function">
 
 
+<h3 id="depin.Container.alias" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">alias</span>
+
+
+<a href="#depin.Container.alias" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">alias</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">to</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">to_tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Register <code>key</code> as a second name for an existing binding.</p>
+<p>Resolving the alias resolves the target and returns its value. The target
+keeps its own lifetime, its own cache entry, and its own teardown, so a
+singleton reached through an alias is still built once and torn down
+once, and both names return the same object.</p>
+<p>The alias caches nothing itself, which is why it takes no scope. It is an
+ordinary node in the validated graph: an unbound target, a duplicate
+alias, a cycle through an alias, and a singleton that reaches a scoped
+provider through one are all rejected by <code>Container.freeze()</code>, and the
+alias appears in <code>FrozenContainer.explain()</code> and in both graph exports.</p>
+<p>depin does not check that the target satisfies the alias key. A
+<code>Protocol</code> that is not <code>runtime_checkable</code> cannot be checked at all,
+and a structural alias between unrelated classes is legitimate.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>key</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The new name to register. A class, a <code>Token</code>, or a string. A
+string key is reachable only from a parameter annotated
+<code>Annotated[T, Named('...')]</code>; <code>FrozenContainer.resolve</code> and
+<code>frozen[key]</code> do not accept one, so prefer a class or a
+<code>Token</code> for a key resolved directly.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>to</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The binding to delegate to. May itself be an alias.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tag</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Disambiguator for the alias, matching the <code>tag</code> of a
+resolution or of an <code>Annotated[..., Tag(...)]</code> parameter.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>to_tag</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The target's tag, when the target is registered under one.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.Self">Self</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>self</code>, for chaining.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Protocol</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Store</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">PostgresStore</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'pg'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">PostgresStore</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="n">PostgresStore</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">Store</span><span class="p">)</span> <span class="ow">is</span> <span class="n">di</span><span class="p">[</span><span class="n">PostgresStore</span><span class="p">]</span>
+<span class="go">True</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h3 id="depin.Container.singleton" class="doc doc-heading">
             <span class="doc doc-object-name doc-function-name">singleton</span>
 
@@ -2041,7 +2245,9 @@ providers up front instead of blocking an event loop.</p>
               <div class="doc-md-description">
                 <p>A factory lacks a return annotation (and no
 <code>provides=</code>), a parameter has no type annotation and no
-default, or a binding is neither a class nor a callable.</p>
+default, a binding is neither a class nor a callable, or an
+alias names a key or a target that is not a class, a <code>Token</code>, or
+a string.</p>
               </div>
             </td>
           </tr>
@@ -2404,6 +2610,166 @@ exposes the per-request <code>Request</code>.</p>
 <span class="gp">... </span>    <span class="n">frame</span><span class="o">.</span><span class="n">provide</span><span class="p">(</span><span class="n">Principal</span><span class="p">,</span> <span class="n">Principal</span><span class="p">(</span><span class="s1">'ana'</span><span class="p">))</span>
 <span class="gp">... </span>    <span class="n">di</span><span class="p">[</span><span class="n">Audit</span><span class="p">]</span><span class="o">.</span><span class="n">who</span><span class="o">.</span><span class="n">name</span>
 <span class="go">'ana'</span>
+</code></pre></div>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.Registry.alias" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">alias</span>
+
+
+<a href="#depin.Registry.alias" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">alias</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">to</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">to_tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Register <code>key</code> as a second name for an existing binding.</p>
+<p>Resolving the alias resolves the target and returns its value. The target
+keeps its own lifetime, its own cache entry, and its own teardown, so a
+singleton reached through an alias is still built once and torn down
+once, and both names return the same object.</p>
+<p>The alias caches nothing itself, which is why it takes no scope. It is an
+ordinary node in the validated graph: an unbound target, a duplicate
+alias, a cycle through an alias, and a singleton that reaches a scoped
+provider through one are all rejected by <code>Container.freeze()</code>, and the
+alias appears in <code>FrozenContainer.explain()</code> and in both graph exports.</p>
+<p>depin does not check that the target satisfies the alias key. A
+<code>Protocol</code> that is not <code>runtime_checkable</code> cannot be checked at all,
+and a structural alias between unrelated classes is legitimate.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>key</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The new name to register. A class, a <code>Token</code>, or a string. A
+string key is reachable only from a parameter annotated
+<code>Annotated[T, Named('...')]</code>; <code>FrozenContainer.resolve</code> and
+<code>frozen[key]</code> do not accept one, so prefer a class or a
+<code>Token</code> for a key resolved directly.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>to</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The binding to delegate to. May itself be an alias.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tag</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Disambiguator for the alias, matching the <code>tag</code> of a
+resolution or of an <code>Annotated[..., Tag(...)]</code> parameter.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>to_tag</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The target's tag, when the target is registered under one.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.Self">Self</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>self</code>, for chaining.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Protocol</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Store</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">PostgresStore</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'pg'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">PostgresStore</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="n">Store</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="n">PostgresStore</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">Store</span><span class="p">)</span> <span class="ow">is</span> <span class="n">di</span><span class="p">[</span><span class="n">PostgresStore</span><span class="p">]</span>
+<span class="go">True</span>
 </code></pre></div>
 </details>
 

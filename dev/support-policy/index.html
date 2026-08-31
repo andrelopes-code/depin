@@ -632,23 +632,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Type checkers">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#known-limitation-provides-and-typet" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Known limitation: provides and type[T]
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
     </ul>
@@ -1021,23 +1004,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Type checkers">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#known-limitation-provides-and-typet" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Known limitation: provides and type[T]
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
     </ul>
@@ -1119,20 +1085,6 @@ satisfy both.</p>
 fail without blocking a merge. <code>ty</code> is pre-1.0 on <code>0.0.x</code> versioning, and its
 own documentation warns that diagnostics can change between any two releases,
 so it is not yet part of the support commitment above.</p>
-<h3 id="known-limitation-provides-and-typet">Known limitation: <code>provides</code> and <code>type[T]</code><a class="headerlink" href="#known-limitation-provides-and-typet" title="Permanent link">&para;</a></h3>
-<p><code>@provides(SomeProtocol)</code>, and equally <code>@provides(SomeABC)</code>, makes mypy report an
-error at the decorator line, in the caller's own file, under mypy's default
-settings. For <code>@provides(Clock)</code> in <code>examples/testing/main.py</code>, the message is:</p>
-<p><code>error: Only concrete class can be given where "type[Clock]" is expected  [type-abstract]</code></p>
-<p><code>basedpyright</code> does not report it.</p>
-<p>The cause is mypy's treatment of the parameter type, not a defect in the
-decorator: mypy raises <code>type-abstract</code> whenever a formal parameter is exactly
-<code>type[T]</code> with <code>T</code> a type variable, regardless of what is passed for it, and
-substitutes the concrete class actually passed into the message. The
-workaround is a narrow suppression at the call site, <code># type: ignore[type-abstract]</code>.
-The repository uses exactly that suppression in <code>examples/testing/main.py</code>.</p>
-<p>The shape of <code>provides</code> is under review, because resolving the mismatch means
-changing a public signature.</p>
 
 
 

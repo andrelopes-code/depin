@@ -1244,7 +1244,7 @@ selects among tagged providers.</p>
 
 
 <a href="#depin.provides" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">provides</span><span class="p">(</span><span class="n">abstract</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">A</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">_ProvidesDecorator</span><span class="p">[</span><span class="n">A</span><span class="p">]</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">provides</span><span class="p">(</span><span class="n">abstract</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="nb">object</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">_ProvidesDecorator</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -1254,6 +1254,64 @@ selects among tagged providers.</p>
 key, so <code>Container.bind()</code> registers the concrete class under the
 abstract type without an explicit <code>provides=</code> argument. Useful for binding an
 implementation against a <code>typing.Protocol</code> or base class.</p>
+<p>The decorated class is returned unchanged and keeps its own type, so nothing
+downstream of the decorator sees a different class.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>abstract</code>
+            </td>
+            <td>
+                  <code><span title="type">type</span>[<span title="object">object</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The key to register the decorated class under. Any class,
+including a <code>Protocol</code> and an abstract base class.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="InvalidProviderError (depin.errors.InvalidProviderError)" href="../errors/#depin.errors.InvalidProviderError">InvalidProviderError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>abstract</code> is not a class, so it could never
+serve as the provider key the decorator promises to record.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 <details class="example" open>
