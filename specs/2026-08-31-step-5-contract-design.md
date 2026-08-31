@@ -41,16 +41,24 @@ a registered binding.
 | A parameter whose key was seeded with `frame.provide()` received the seeded value, even when a provider was registered under that key. | The registered provider wins, and `resolve(key)` and the parameter agree. |
 | A parameter carrying a tag received a frame value seeded under the bare key. | The tag is honoured; a frame value seeded under the bare key satisfies only an untagged parameter. |
 | A `scope_value` parameter read the frame directly on every resolution. | It resolves through its plan node, which reads the frame once and caches the result for the scope. |
+| An active `override()` did not reach a parameter whose key was seeded: the short-circuit ran ahead of `_lookup_optional`, which is where overrides are honoured. | The override reaches the parameter, because the parameter now goes through `_lookup_optional` like every other. |
+| A parameter in a nested scope that re-seeded a key already resolved in the enclosing scope received the re-seeded value. | It receives the enclosing scope's value, which is what `resolve(key)` already returned there. |
 | A parameter carrying a default, or admitting `None`, whose key had no binding but was seeded into the frame, received the seeded value. | It receives its default, or `None`. Declaring `Container.scope_value(key)` is what makes a seeded key a provider. |
 | Nothing in `depin` names the integration seam. | `Host`, `hosted_container`, `optional_hosted_container`, `ContractVersion`, and `CONTRACT_VERSION` are public. |
 
-The first three rows are one change: `FrozenContainer._resolve_params_sync`
+The first five rows are one change: `FrozenContainer._resolve_params_sync`
 and `_resolve_params_async` stop short-circuiting to the active frame before
-they consult the plan. A graph that seeds only keys declared with
-`scope_value` resolves to exactly the values it did at 0.12.0.
+they consult the plan. The first three are the rule itself; the fourth and
+fifth follow from routing the parameter through `_lookup_optional`, which is
+where an override is consulted and where the frame cache is read under
+`(key, tag)`. Both are improvements in the same direction as the first three:
+a parameter and `resolve(key)` agree under an override, and under a re-seed in
+a nested scope, where they previously disagreed. A graph that seeds only keys
+declared with `scope_value`, overrides no seeded key, and re-seeds no key
+across nested scopes resolves to exactly the values it did at 0.12.0.
 
-The fourth row is the one case where a graph that froze at 0.12.0 can observe
-a different value. `depin/_core/graph.py` excuses a missing provider when the
+The sixth row is the only one where a graph loses a route rather than gaining
+that agreement. `depin/_core/graph.py` excuses a missing provider when the
 parameter carries a default or admits `None`, so a graph whose only route to
 such a parameter was a frame seed under an unbound key does freeze — and the
 short-circuit was the only thing that ever filled it. That route is now

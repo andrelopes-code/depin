@@ -10,3 +10,5 @@ The seam an integration uses to host a container inside a framework. See
 ::: depin.optional_hosted_container
 
 ::: depin.ContractVersion
+
+::: depin.CONTRACT_VERSION

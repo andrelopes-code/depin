@@ -106,13 +106,26 @@ container, and two `Host`s active in the same process nest rather than
 collide — the innermost `hosted_container()` wins, and exiting its scope
 restores whichever container the enclosing one had published.
 
+That nesting is a property of the publication alone. Scopes do not nest the
+same way: the scope frame stack is process-wide and shared by every container,
+so a second `Host`'s scope opened inside a first one's becomes a child of the
+first frame, and the frame cache is keyed on the key and its tag alone. A key
+already resolved in the enclosing scope is therefore what the inner scope
+resolves, from the enclosing container's cache, and the inner container's own
+binding never runs. Do not nest two different containers' scopes — open the
+second one after the first has closed, or host one container per context.
+
 ## Hosts whose lifecycle is a pair of hooks
 
 `Host.scope()` returns an ordinary context-manager object; a `with` statement
 is only the usual way to drive it. A framework that gives a host a `before`
 hook and an `after` hook instead of a block — Flask's `before_request` /
 `teardown_request` is the canonical shape — stores the context manager between
-the two and calls `__enter__` / `__exit__` itself:
+the two and calls `__enter__` / `__exit__` itself. Hold it per unit of work,
+keyed by whatever identifier the framework already hands the hooks — a task id,
+a message id — never on the integration object: one attribute is one slot for
+the whole process, and a second unit of work arriving before the first finishes
+overwrites it.
 
 ```pycon
 >>> from contextlib import AbstractContextManager
@@ -121,30 +134,41 @@ the two and calls `__enter__` / `__exit__` itself:
 >>> class JobHost:
 ...     def __init__(self, container: FrozenContainer) -> None:
 ...         self._host = Host(container)
-...         self._cm: AbstractContextManager[ScopeFrame] | None = None
+...         self._open: dict[str, AbstractContextManager[ScopeFrame]] = {}
 ...
-...     def before(self) -> None:
-...         self._cm = self._host.scope()
-...         frame = self._cm.__enter__()
-...         frame.provide(Job, Job('reindex'))
+...     def before(self, job_id: str, name: str) -> None:
+...         opened = self._host.scope()
+...         frame = opened.__enter__()
+...         frame.provide(Job, Job(name))
+...         self._open[job_id] = opened
 ...
 ...     def after(
 ...         self,
+...         job_id: str,
 ...         exc_type: type[BaseException] | None = None,
 ...         exc: BaseException | None = None,
 ...         tb: TracebackType | None = None,
 ...     ) -> None:
-...         if self._cm is not None:
-...             self._cm.__exit__(exc_type, exc, tb)
+...         opened = self._open.pop(job_id, None)
+...         if opened is not None:
+...             opened.__exit__(exc_type, exc, tb)
 >>> jh = JobHost(di)
->>> jh.before()
+>>> jh.before('j-1', 'reindex')
 >>> hosted_container() is di
 True
 >>> handle()
 'reindex (completed=3)'
->>> jh.after()
+>>> jh.after('j-1')
 
 ```
+
+Both hooks must run in the same `contextvars.Context`. The publication is a
+`contextvars.ContextVar`, and resetting it from a different context raises a
+bare `ValueError` — `Token ... was created in a different Context` — which is
+not a `DepinError` and escapes `__exit__` untranslated. A framework that runs
+`before` and `after` on the same thread or the same task satisfies this; one
+that copies a fresh context for the `after` hook does not, and needs the whole
+unit of work driven from a single callable with a `with` statement instead.
 
 `Host.ascope()` is an async context manager, driven the same way through
 `__aenter__` / `__aexit__` for a framework whose hooks are themselves

@@ -61,8 +61,15 @@ class Host:
     through `hosted_container()`.
 
     The publication is context-local, so concurrent requests and concurrent
-    tasks never see each other's container, and two hosts in one process nest:
-    the innermost wins and the enclosing one is restored on exit.
+    tasks never see each other's container, and two hosts in one process nest
+    the published container: the innermost wins and the enclosing one is
+    restored on exit.
+
+    Scopes do not nest that way. The scope frame stack is process-wide and
+    shared by every container, so a scope opened inside another host's scope
+    becomes a child of that frame, and a key already cached there is what the
+    inner scope resolves — the inner container's own binding never runs. Two
+    different containers must not nest their scopes.
 
     Example:
         ```pycon
@@ -124,6 +131,8 @@ class Host:
         Raises:
             TeardownError: An async provider left a teardown in this sync
                 scope. Use `ascope()` instead.
+            ExceptionGroup: One or more teardowns failed when the scope
+                closed. Every failure is included; one does not hide another.
 
         Example:
             ```pycon
