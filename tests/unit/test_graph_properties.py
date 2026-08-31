@@ -279,6 +279,7 @@ def test_a_graph_without_a_singleton_to_scoped_path_is_not_captive(case: GraphCa
     assert not result.startswith('captive:'), result
 
 
+@settings(deadline=None)
 @given(case=_graphs())
 def test_every_planned_provider_appears_as_exactly_one_node(case: GraphCase) -> None:
     container = _materialize(case)
@@ -301,6 +302,7 @@ def test_every_planned_provider_appears_as_exactly_one_node(case: GraphCase) -> 
         duplicates=frozenset(),
     )
 )
+@settings(deadline=None)
 @given(case=_graphs())
 def test_every_edge_either_indexes_a_node_or_is_unsatisfied(case: GraphCase) -> None:
     container = _materialize(case)
@@ -313,6 +315,7 @@ def test_every_edge_either_indexes_a_node_or_is_unsatisfied(case: GraphCase) -> 
             assert edge.satisfied is (graph.find(edge.key, tag=edge.tag) is not None)
 
 
+@settings(deadline=None)
 @given(case=_graphs())
 def test_each_export_declares_one_entry_per_node(case: GraphCase) -> None:
     container = _materialize(case)
@@ -336,6 +339,7 @@ def test_each_export_declares_one_entry_per_node(case: GraphCase) -> None:
         duplicates=frozenset(),
     )
 )
+@settings(deadline=None)
 @given(case=_graphs())
 def test_explain_names_every_key_reachable_from_its_root(case: GraphCase) -> None:
     container = _materialize(case)

@@ -49,14 +49,21 @@ docs command printed the same upstream Material for MkDocs 2.0 advisory
 banner recorded in prior evidence files; no MkDocs diagnostic, exit 0.
 
 While gathering the coverage evidence below, two additional plain `pytest`
-runs under `--cov` surfaced an unrelated, pre-existing flake:
-`tests/unit/test_graph_properties.py::test_every_planned_provider_appears_as_exactly_one_node`
-and `test_every_edge_either_indexes_a_node_or_is_unsatisfied` occasionally
-raise `hypothesis.errors.DeadlineExceeded` under CPU contention, because
-neither carries `@settings(deadline=None)`. Checked against `main` at
-`ad33482`: both tests already lack that setting there, so the flake is not
-introduced by this cycle. It did not appear in the gate-sequence `pytest` run
-recorded above, nor in either of the two coverage runs recorded below.
+runs under `--cov` surfaced an unrelated, pre-existing flake: four tests in
+`tests/unit/test_graph_properties.py` —
+`test_every_planned_provider_appears_as_exactly_one_node`,
+`test_every_edge_either_indexes_a_node_or_is_unsatisfied`,
+`test_each_export_declares_one_entry_per_node`, and
+`test_explain_names_every_key_reachable_from_its_root` — occasionally raised
+`hypothesis.errors.DeadlineExceeded` under CPU contention, because none of the
+four carried `@settings(deadline=None)`. Checked against `main` at `ad33482`:
+all four already lacked that setting there, so the flake was not introduced by
+this cycle, though this cycle's wider generative model — optionals,
+collections, and a synthetic consumer bound per alias and per collection —
+made each example strictly more expensive and raised the odds of hitting it in
+CI. All four now carry `@settings(deadline=None)`, closing the flake. It did
+not appear in the gate-sequence `pytest` run recorded above, nor in either of
+the two coverage runs recorded below.
 
 ## Coverage
 

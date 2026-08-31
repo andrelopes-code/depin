@@ -2,7 +2,7 @@
 
 import inspect
 from collections.abc import Iterable
-from types import UnionType
+from types import NoneType, UnionType
 from typing import Union, get_args, get_origin, get_type_hints
 
 from depin._core.introspect import AnnotatedMeta, detect_shape, extract_annotated_meta, is_object_token
@@ -213,6 +213,13 @@ def as_provider_key(value: object) -> ProviderKey:
     if is_collection_key(value):
         return value
     if get_origin(value) in (UnionType, Union):
+        members = tuple(arg for arg in get_args(value) if arg is not NoneType)
+        if len(members) == 1:
+            raise InvalidProviderError(
+                f'cannot use {value} as a provider key: depin reads `T | None` as an optional '
+                f"dependency only on a provider's parameter, and this is not one. Use "
+                f'{fmt_key(members[0])} directly.'
+            )
         raise InvalidProviderError(
             f'cannot use {value} as a provider key: depin reads `T | None` as an optional '
             'dependency, but a union of two or more providers names no single key. Annotate '

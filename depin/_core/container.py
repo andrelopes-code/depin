@@ -62,9 +62,10 @@ class Container(BindingCollector):
             InvalidProviderError: A factory lacks a return annotation (and no
                 ``provides=``), a parameter has no type annotation and no
                 default, a binding is neither a class nor a callable, an
-                alias names a key or a target that is not a class, a `Token`, or
-                a string, or a parameter is annotated with a union that names
-                two or more providers.
+                alias names a key or a target that is not a class, a `Token`,
+                a string, or a `list[X]`, a collection names an element or a
+                member that is not one of those either, or a parameter is
+                annotated with a union that names two or more providers.
             InvalidScopeError: A generator or context-manager provider is bound
                 as transient.
 

@@ -263,7 +263,11 @@ class BindingCollector:
 
         Args:
             element: The key each member provides. The collection is registered
-                under a list of it.
+                under a list of it. A string element registers `list['name']`,
+                which resolves directly through `FrozenContainer.resolve` or
+                ``frozen[list['name']]``, but cannot be written as a parameter
+                annotation: `get_type_hints` treats the string inside
+                ``list[...]`` as a forward reference and fails to resolve it.
             members: The bindings to gather, in the order they should appear.
             tag: Disambiguator when several collections share an element.
 

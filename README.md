@@ -114,6 +114,10 @@ suite.
   `di.alias(Store, to=PostgresStore)`, with no second instance.
 - **Tags** when several implementations share a key:
   `di.resolve(Cache, tag='primary')`.
+- **Optional dependencies** for a parameter that may go unbound:
+  `def __init__(self, metrics: MetricsSink | None): ...`, resolved to `None`.
+- **Collections** for plugin points: `di.collect(Handler, [EmailHandler, SmsHandler])`,
+  injected as `def __init__(self, handlers: list[Handler]): ...`.
 - **Scope-supplied values**: `di.scope_value(Request)`, filled by middleware with
   `frame.provide(Request, request)`.
 - **Overrides** for tests: `with di.override(Database, FakeDB()): ...`.

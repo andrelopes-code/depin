@@ -276,6 +276,23 @@ def test_as_provider_key_rejects_anything_else() -> None:
         _ = as_provider_key(42)
 
 
+def test_as_provider_key_rejects_an_optional_union_outside_parameter_position() -> None:
+    class Cache: ...
+
+    with pytest.raises(InvalidProviderError, match="a provider's parameter, and this is not one") as exc:
+        _ = as_provider_key(Cache | None)
+    assert f'Use {Cache.__qualname__} directly' in str(exc.value)
+
+
+def test_as_provider_key_still_rejects_a_union_of_two_or_more_providers() -> None:
+    class Cache: ...
+
+    class Logger: ...
+
+    with pytest.raises(InvalidProviderError, match='names no single key'):
+        _ = as_provider_key(Cache | Logger)
+
+
 @pytest.mark.parametrize('annotation', [int, 42])
 def test_unwrap_container_type_returns_none_without_a_generic_origin(annotation: object) -> None:
     assert unwrap_container_type(annotation) is None

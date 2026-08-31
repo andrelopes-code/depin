@@ -163,7 +163,7 @@ ProviderSpec(
     key=collection_key(binding.element),
     tag=rec.tag,
     source=binding,
-    scope=Scope.TRANSIENT,
+    scope=rec.scope,
     shape=ProviderShape.COLLECTION,
     needs_async=False,
     params=tuple(
@@ -179,6 +179,10 @@ ProviderSpec(
     ),
 )
 ```
+
+`rec.scope` reads as `Scope.TRANSIENT` here: `BindingCollector.collect` always
+records the binding with that scope, and `CollectionBinding` is not exported,
+so no caller can construct one with another.
 
 `collection_key(element)` is `GenericAlias(list, (element,))`, which is the
 `list[element]` a consumer writes by hand — equal to it, hashing as it, and of

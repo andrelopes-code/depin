@@ -83,3 +83,8 @@ to `[]`, a plugin point with nothing plugged in being a real state rather than
 an error. Because a member is still bound at its own key, registering it
 twice by accident still raises `DuplicateProviderError`, exactly as it would
 without `collect` in the picture.
+
+A given `(element, tag)` pair can only be declared with one `collect` call:
+calling it twice for the same element and tag also raises
+`DuplicateProviderError`, so a collection cannot be assembled by contributions
+from separately-shipped registries.
