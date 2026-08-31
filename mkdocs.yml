@@ -60,6 +60,7 @@ nav:
       - Testing: guide/testing.md
       - Inspecting the graph: guide/diagnostics.md
       - Warmup and health: guide/operations.md
+      - Writing an integration: guide/integrations.md
       - FastAPI: guide/fastapi.md
   - Support policy: support-policy.md
   - Reference:
@@ -71,4 +72,5 @@ nav:
       - Errors: reference/errors.md
       - Graph diagnostics: reference/diagnostics.md
       - Warmup and health: reference/operations.md
+      - Integration contract: reference/hosting.md
       - FastAPI: reference/fastapi.md

@@ -441,3 +441,115 @@ async def test_async_defaulted_dependency_does_not_skip_a_later_required_depende
     result = await frozen.aresolve(Result)
     assert result.optional is default
     assert result.number == 7
+
+
+def test_a_seeded_key_that_also_has_a_binding_resolves_to_its_binding() -> None:
+    class Clock:
+        def __init__(self, label: str = 'bound') -> None:
+            self.label = label
+
+    class Report:
+        def __init__(self, clock: Clock) -> None:
+            self.clock = clock
+
+    frozen = Container().bind(Clock).bind(Report, scope=Scope.SCOPED).freeze()
+
+    with frozen.scope() as frame:
+        frame.provide(Clock, Clock('seeded'))
+        report = frozen.resolve(Report)
+
+    assert report.clock.label == 'bound'
+    assert frozen.resolve(Clock).label == 'bound'
+
+
+def test_a_tagged_parameter_ignores_a_frame_value_seeded_under_the_bare_key() -> None:
+    class Store:
+        def __init__(self, label: str) -> None:
+            self.label = label
+
+    class Page:
+        def __init__(self, store: Annotated[Store, Tag('primary')]) -> None:
+            self.store = store
+
+    frozen = (
+        Container()
+        .bind(lambda: Store('primary'), provides=Store, tag='primary')
+        .bind(Page, scope=Scope.SCOPED)
+        .freeze()
+    )
+
+    with frozen.scope() as frame:
+        frame.provide(Store, Store('seeded'))
+        page = frozen.resolve(Page)
+
+    assert page.store.label == 'primary'
+
+
+@pytest.mark.parametrize('kind', ['default', 'optional'])
+def test_a_frame_seed_fills_a_parameter_no_provider_satisfies(kind: str) -> None:
+    class Extra: ...
+
+    default_value = Extra()
+
+    class ReportWithDefault:
+        def __init__(self, extra: Extra = default_value) -> None:
+            self.extra = extra
+
+    class ReportWithOptional:
+        def __init__(self, extra: Extra | None = None) -> None:
+            self.extra = extra
+
+    seeded = Extra()
+
+    if kind == 'default':
+        unbound = Container().bind(ReportWithDefault, scope=Scope.SCOPED).freeze()
+        with unbound.scope() as frame:
+            frame.provide(Extra, seeded)
+            report_default = unbound.resolve(ReportWithDefault)
+        assert report_default.extra is seeded
+        with pytest.raises(MissingProviderError):
+            unbound.resolve(Extra)
+
+        bound = Container().scope_value(Extra).bind(ReportWithDefault, scope=Scope.SCOPED).freeze()
+        with bound.scope() as frame:
+            frame.provide(Extra, seeded)
+            report_default = bound.resolve(ReportWithDefault)
+            assert bound.resolve(Extra) is seeded
+        assert report_default.extra is seeded
+    else:
+        unbound = Container().bind(ReportWithOptional, scope=Scope.SCOPED).freeze()
+        with unbound.scope() as frame:
+            frame.provide(Extra, seeded)
+            report_optional = unbound.resolve(ReportWithOptional)
+        assert report_optional.extra is seeded
+        with pytest.raises(MissingProviderError):
+            unbound.resolve(Extra)
+
+        bound = Container().scope_value(Extra).bind(ReportWithOptional, scope=Scope.SCOPED).freeze()
+        with bound.scope() as frame:
+            frame.provide(Extra, seeded)
+            report_optional = bound.resolve(ReportWithOptional)
+            assert bound.resolve(Extra) is seeded
+        assert report_optional.extra is seeded
+
+
+def test_an_override_wins_over_a_frame_seed_for_an_unbound_key() -> None:
+    class Extra:
+        def __init__(self, label: str) -> None:
+            self.label = label
+
+    class Report:
+        def __init__(self, extra: Extra | None = None) -> None:
+            self.extra = extra
+
+    seeded = Extra('seeded')
+    overridden = Extra('overridden')
+
+    frozen = Container().bind(Report, scope=Scope.SCOPED).freeze()
+
+    with frozen.scope() as frame:
+        frame.provide(Extra, seeded)
+        with frozen.override(Extra, overridden):
+            report = frozen.resolve(Report)
+
+    assert report.extra is overridden

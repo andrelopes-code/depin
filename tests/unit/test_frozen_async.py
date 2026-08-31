@@ -13,7 +13,7 @@ from depin._core.container import Container
 from depin._core.frozen import FrozenContainer
 from depin._core.markers import Tag, Token
 from depin._core.scope import Scope, ScopeFrame
-from depin.errors import AsyncInSyncContextError, CircularDependencyError
+from depin.errors import AsyncInSyncContextError, CircularDependencyError, MissingProviderError
 
 
 async def _checkpoint() -> None:
@@ -876,3 +876,71 @@ def test_a_collection_with_an_async_member_is_rejected_by_resolve() -> None:
     di = Container().bind(make, provides=Backend).collect(Handler, [Backend]).freeze()
     with pytest.raises(AsyncInSyncContextError, match=r'list\['):
         _ = di.resolve(list[Handler])
+
+
+@pytest.mark.asyncio
+async def test_an_async_seeded_key_that_also_has_a_binding_resolves_to_its_binding() -> None:
+    class Clock:
+        def __init__(self, label: str = 'bound') -> None:
+            self.label = label
+
+    class Report:
+        def __init__(self, clock: Clock) -> None:
+            self.clock = clock
+
+    frozen = Container().bind(Clock).bind(Report, scope=Scope.SCOPED).freeze()
+
+    async with frozen.ascope() as frame:
+        frame.provide(Clock, Clock('seeded'))
+        report = await frozen.aresolve(Report)
+
+    assert report.clock.label == 'bound'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('kind', ['default', 'optional'])
+async def test_an_async_frame_seed_fills_a_parameter_no_provider_satisfies(kind: str) -> None:
+    class Extra: ...
+
+    default_value = Extra()
+
+    class ReportWithDefault:
+        def __init__(self, extra: Extra = default_value) -> None:
+            self.extra = extra
+
+    class ReportWithOptional:
+        def __init__(self, extra: Extra | None = None) -> None:
+            self.extra = extra
+
+    seeded = Extra()
+
+    if kind == 'default':
+        unbound = Container().bind(ReportWithDefault, scope=Scope.SCOPED).freeze()
+        async with unbound.ascope() as frame:
+            frame.provide(Extra, seeded)
+            report_default = await unbound.aresolve(ReportWithDefault)
+        assert report_default.extra is seeded
+        with pytest.raises(MissingProviderError):
+            await unbound.aresolve(Extra)
+
+        bound = Container().scope_value(Extra).bind(ReportWithDefault, scope=Scope.SCOPED).freeze()
+        async with bound.ascope() as frame:
+            frame.provide(Extra, seeded)
+            report_default = await bound.aresolve(ReportWithDefault)
+            assert await bound.aresolve(Extra) is seeded
+        assert report_default.extra is seeded
+    else:
+        unbound = Container().bind(ReportWithOptional, scope=Scope.SCOPED).freeze()
+        async with unbound.ascope() as frame:
+            frame.provide(Extra, seeded)
+            report_optional = await unbound.aresolve(ReportWithOptional)
+        assert report_optional.extra is seeded
+        with pytest.raises(MissingProviderError):
+            await unbound.aresolve(Extra)
+
+        bound = Container().scope_value(Extra).bind(ReportWithOptional, scope=Scope.SCOPED).freeze()
+        async with bound.ascope() as frame:
+            frame.provide(Extra, seeded)
+            report_optional = await bound.aresolve(ReportWithOptional)
+            assert await bound.aresolve(Extra) is seeded
+        assert report_optional.extra is seeded

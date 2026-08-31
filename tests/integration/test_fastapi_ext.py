@@ -7,7 +7,8 @@ from fastapi import FastAPI
 from fastapi import Request as FastAPIRequest
 from httpx import ASGITransport, AsyncClient
 
-from depin import Container, FrozenContainer, Scope
+from depin import Container, FrozenContainer, Host, Scope
+from depin.errors import ContainerNotBoundError
 from depin.ext.fastapi import Inject, RequestScope
 
 
@@ -345,3 +346,45 @@ async def test_a_readiness_route_reports_a_failing_check() -> None:
             {'key': Cache.__qualname__, 'healthy': False},
         ],
     }
+
+
+@pytest.mark.asyncio
+async def test_inject_resolves_from_an_active_host_without_a_request_scope() -> None:
+    class Config:
+        value: int = 1
+
+    frozen = Container().bind(Config).freeze()
+
+    app = FastAPI()
+
+    @app.get('/config')
+    async def _config(config: Inject[Config]) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]
+        return {'value': config.value}
+
+    transport = ASGITransport(app=app)
+    with Host(frozen).activated():
+        async with AsyncClient(transport=transport, base_url='http://t') as client:
+            r = await client.get('/config')
+    assert r.json() == {'value': 1}
+
+
+@pytest.mark.asyncio
+async def test_inject_raises_outside_any_hosted_container() -> None:
+    class Config:
+        value: int = 1
+
+    app = FastAPI()
+
+    @app.get('/config')
+    async def _config(config: Inject[Config]) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]
+        return {'value': config.value}
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        with pytest.raises(ContainerNotBoundError) as caught:
+            await client.get('/config')
+
+    assert str(caught.value) == (
+        'Inject[...] resolved outside a RequestScope; install the middleware with '
+        'app.add_middleware(RequestScope, container=...).'
+    )

@@ -10,20 +10,25 @@ from collections.abc import AsyncGenerator, Awaitable, Generator
 from typing import Protocol, assert_type
 
 from depin import (
+    CONTRACT_VERSION,
     Container,
+    ContractVersion,
     DependencyGraph,
     FrozenContainer,
     GraphEdge,
     GraphNode,
     HealthCheck,
     HealthReport,
+    Host,
     ProviderShape,
     Scope,
     ScopeFrame,
     Token,
     Underlying,
     WarmupReport,
+    hosted_container,
     injected,
+    optional_hosted_container,
     provides,
 )
 
@@ -365,3 +370,23 @@ def test_bind_infers_the_check_parameter_for_a_plain_factory() -> None:
     def ping(p: Pool) -> None: ...
 
     assert_type(Container().bind(make_pool, check=ping), Container)
+
+
+def test_the_integration_contract_keeps_its_types() -> None:
+    di = Container().bind(Config).freeze()
+    host = Host(di)
+    assert_type(host.container, FrozenContainer)
+    assert_type(CONTRACT_VERSION, ContractVersion)
+    assert_type(CONTRACT_VERSION.major, int)
+    with host.scope() as frame:
+        assert_type(frame, ScopeFrame)
+        assert_type(hosted_container(), FrozenContainer)
+        assert_type(hosted_container().resolve(Config), Config)
+    assert_type(optional_hosted_container(), FrozenContainer | None)
+
+
+async def test_the_async_integration_contract_keeps_its_types() -> None:
+    di = Container().bind(Config).freeze()
+    async with Host(di).ascope() as frame:
+        assert_type(frame, ScopeFrame)
+        assert_type(await hosted_container().aresolve(Config), Config)

@@ -173,6 +173,7 @@ and listed in `examples/README.md`.
 | `diagnostics.py` | The public graph view over a validated plan. |
 | `render.py` | The resolution tree, `dot`, and `mermaid` renderings of that view. |
 | `frozen.py` | The runtime: resolve, scope, inject, override. |
+| `hosting.py` | The public integration contract: `Host` and the ambient container. |
 | `construct.py` | Calling a provider according to its shape. |
 | `scope.py` | Lifetimes, the scope frame, and its locks. |
 | `teardown.py` | Teardown records and the drains that run them. |
@@ -184,7 +185,10 @@ and listed in `examples/README.md`.
 - Public API is re-exported from `depin/__init__.py`. Internal modules live under `depin/_core/` and are never imported directly by users.
 - `benchmarks/` is a top-level package of `pytest-benchmark` suites guarding hot paths — resolution, scope entry, injection — against regressions. It sits outside `testpaths`; see `CONTRIBUTING.md` for how to run it.
 - Immutability is the default for data structures. Use `@dataclass(frozen=True, slots=True)`.
-- No module-level mutable state. No implicit global container.
+- No module-level mutable state. No implicit global container — a container
+  published context-locally through an explicit `Host` is not one, because
+  nothing reaches it unless a `Host` published it in that context and the
+  publication is undone on exit.
 - No import-time side effects beyond registering into explicit `Registry` objects.
 
 ## Commits
@@ -200,7 +204,9 @@ and listed in `examples/README.md`.
 - Do not use `# type: ignore`, `# pyright: ignore`, `typing.cast`, or `Any` as shortcuts.
 - Do not swallow exceptions.
 - Do not add separator comments or comments that restate the code.
-- Do not introduce global containers or shared mutable state.
+- Do not introduce global containers or shared mutable state — the
+  context-local publication behind `Host` is neither, because it reaches only
+  the context a `Host` published it in and is undone on exit.
 - Do not leave `print()`, `breakpoint()`, or commented-out code in committed files.
 - Do not mix unrelated changes in a single commit.
 - Do not add framework imports to core modules.

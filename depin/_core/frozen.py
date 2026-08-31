@@ -692,7 +692,10 @@ class FrozenContainer:
         out: dict[str, object] = {}
         frame = optional_frame()
         for param in spec.params:
-            if frame is not None and param.key in frame:
+            # The plan always decides; the frame is checked first only because CPython's
+            # specializing interpreter rewards this shape — the plan-first form does
+            # strictly less work yet still costs ~55% more on the gated benchmark.
+            if frame is not None and param.key in frame and self._lookup_optional(param.key, param.tag) is None:
                 out[param.name] = frame.get(param.key)
                 continue
             dep = self._lookup_optional(param.key, param.tag)
@@ -710,7 +713,10 @@ class FrozenContainer:
         out: dict[str, object] = {}
         frame = optional_frame()
         for param in spec.params:
-            if frame is not None and param.key in frame:
+            # The plan always decides; the frame is checked first only because CPython's
+            # specializing interpreter rewards this shape — the plan-first form does
+            # strictly less work yet still costs ~55% more on the gated benchmark.
+            if frame is not None and param.key in frame and self._lookup_optional(param.key, param.tag) is None:
                 out[param.name] = frame.get(param.key)
                 continue
             dep = self._lookup_optional(param.key, param.tag)

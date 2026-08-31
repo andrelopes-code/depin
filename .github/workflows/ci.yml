@@ -253,6 +253,35 @@ jobs:
       - name: Test
         run: uv run --no-sync pytest
 
+  latest-versions:
+    name: latest released versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+
+      # `minimum-versions` holds the declared floor of every integration extra
+      # honest; this holds the other end. `checks` installs what `uv.lock`
+      # pins, which is current only as of the last time the lock was
+      # refreshed, so neither of the other two jobs would notice a framework
+      # release that breaks an integration. A break here is depin's to fix,
+      # not upstream's, which is why this job gates rather than advising.
+      # `--upgrade` also lifts the default dev group — pytest, coverage, ruff,
+      # pydantic — not only the integration extras, and unlike `prerelease`'s
+      # `continue-on-error`, that breadth is deliberate: a dev-tool release
+      # that breaks the suite is exactly as much depin's to fix as a framework
+      # one, so this job gates on both rather than advising on either.
+      - name: Sync at the latest released versions
+        run: uv sync --upgrade --all-extras
+
+      - name: Test
+        run: uv run --no-sync pytest
+
   docs:
     runs-on: ubuntu-latest
     timeout-minutes: 10

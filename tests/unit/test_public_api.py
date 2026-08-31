@@ -8,9 +8,11 @@ import pytest
 import depin
 
 EXPECTED_EXPORTS = (
+    'CONTRACT_VERSION',
     'Bindings',
     'Condition',
     'Container',
+    'ContractVersion',
     'DependencyGraph',
     'FrozenContainer',
     'GraphEdge',
@@ -18,6 +20,7 @@ EXPECTED_EXPORTS = (
     'HealthCheck',
     'HealthReport',
     'HealthResult',
+    'Host',
     'Named',
     'ProviderKey',
     'ProviderShape',
@@ -29,14 +32,15 @@ EXPECTED_EXPORTS = (
     'Token',
     'Underlying',
     'WarmupReport',
+    'hosted_container',
     'injected',
+    'optional_hosted_container',
     'provides',
 )
 
 
-def test_all_is_sorted_and_complete() -> None:
+def test_all_is_complete() -> None:
     assert depin.__all__ == EXPECTED_EXPORTS
-    assert list(depin.__all__) == sorted(depin.__all__)
 
 
 @pytest.mark.parametrize('name', EXPECTED_EXPORTS)

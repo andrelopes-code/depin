@@ -1,6 +1,6 @@
 # Guide
 
-Six pages, in the order most projects need them.
+Eight pages, in the order most projects need them.
 
 - **[Lifetimes and scopes](lifetimes.md)** — how long a value lives, when it is
   rebuilt, and when its teardown runs. Read this first; almost every question
@@ -15,6 +15,11 @@ Six pages, in the order most projects need them.
 - **[Inspecting the graph](diagnostics.md)** — the resolution tree, `dot` and
   `mermaid` renderings, and how `freeze()` and `explain()` report the same
   chain.
+- **[Warmup and health](operations.md)** — building every singleton before the
+  first request, and declaring checks `health()` runs on demand.
+- **[Writing an integration](integrations.md)** — the contract a framework
+  host is built against: `Host`, `hosted_container`, and the version that
+  governs both.
 - **[FastAPI](fastapi.md)** — the optional ASGI integration: one scope per
   request, `Inject[T]`, and shutdown.
 

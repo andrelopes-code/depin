@@ -154,6 +154,9 @@ class ScopeFrame:
         The counterpart of `Container.scope_value()`: whoever opens the scope
         supplies the value, and providers declared with ``scope_value`` read it
         back. Overwrites any value already stored under ``key`` in this frame.
+        Seed before anything resolves: a ``scope_value`` key is cached in the
+        scope on first use, so a later call here does not replace what a
+        parameter already read.
 
         Example:
             ```pycon

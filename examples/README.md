@@ -17,6 +17,7 @@ Every example is a runnable module and is executed by
 | [`graph_diagnostics`](graph_diagnostics/main.py) | `python -m examples.graph_diagnostics.main` | `explain()` for one key, and the `mermaid` export of the whole graph. |
 | [`warmup`](warmup/main.py) | `python -m examples.warmup.main` | `warmup()` building every singleton in one pass, and a scoped provider it leaves alone. |
 | [`health`](health/main.py) | `python -m examples.health.main` | `bind(..., check=...)` declaring a check, `checks()` describing it, and `health()` reporting a passing and a failing one. |
+| [`integration`](integration/main.py) | `python -m examples.integration.main` | `Host` opening one scope per unit of work, a seeded frame value, and `hosted_container()` in a handler that holds no container. |
 | [`fastapi_app`](fastapi_app/main.py) | `uvicorn examples.fastapi_app.main:create_app --factory` | Registries, an app factory, one scope per request, `aclose()` on shutdown. |
 
 Install the extras first:

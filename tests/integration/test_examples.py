@@ -3,7 +3,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from depin import ProviderShape
+from depin import ProviderShape, optional_hosted_container
 from examples.aliasing.main import Page, RedisStore
 from examples.aliasing.main import build as build_aliasing
 from examples.collections.main import Dispatcher, EmailHandler, Handler, SmsHandler, WebhookHandler
@@ -27,6 +27,10 @@ from examples.graph_diagnostics.main import build as build_diagnostics
 from examples.health.main import Cache as HealthCache
 from examples.health.main import Database as HealthDatabase
 from examples.health.main import build as build_health
+from examples.integration.main import LOG as INTEGRATION_LOG
+from examples.integration.main import JobRunner
+from examples.integration.main import Metrics as IntegrationMetrics
+from examples.integration.main import build as build_integration
 from examples.minimal_sync.main import Database as MinimalDatabase
 from examples.minimal_sync.main import UserRepo, build
 from examples.optional_dependencies.main import Checkout, MetricsSink
@@ -209,6 +213,26 @@ def test_health_example_reports_one_passing_and_one_failing_check() -> None:
         (HealthDatabase, True),
         (HealthCache, False),
     ]
+
+
+def test_integration_example_opens_one_scope_per_job() -> None:
+    INTEGRATION_LOG.clear()
+    di = build_integration()
+    runner = JobRunner(di)
+
+    assert runner.run('reindex') == 'reindex (completed=1)'
+    assert runner.run('vacuum') == 'vacuum (completed=2)'
+    assert INTEGRATION_LOG == ['open reindex', 'close reindex', 'open vacuum', 'close vacuum']
+    assert di[IntegrationMetrics].completed == 2
+    di.close()
+
+
+def test_integration_example_leaves_no_container_hosted() -> None:
+    di = build_integration()
+    _ = JobRunner(di).run('reindex')
+
+    assert optional_hosted_container() is None
+    di.close()
 
 
 @pytest.mark.asyncio

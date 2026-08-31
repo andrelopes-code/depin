@@ -15,7 +15,7 @@ an annotation that resolves a dependency into a route handler.
 import contextlib
 from collections.abc import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from depin import Container, FrozenContainer
 from depin.ext.fastapi import Inject, RequestScope
@@ -24,7 +24,7 @@ from .wiring import infra, services
 
 
 def create_app(container: FrozenContainer | None = None) -> FastAPI:
-    di = container if container is not None else Container(infra, services).freeze()
+    di = container if container is not None else Container(infra, services).scope_value(Request).freeze()
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
@@ -52,8 +52,13 @@ plain `T`; at runtime `Inject[T]` expands to `Annotated[T, Depends(...)]`, so
 FastAPI resolves it through its normal dependency plumbing. There is no
 default-value marker at the call site, and no `# noqa: B008` waiver.
 
-Resolving it outside a `RequestScope` raises `ContainerNotBoundError`, which
-means the middleware is missing.
+Resolving it raises `ContainerNotBoundError` when no container is hosted in the
+current context. A missing `RequestScope` is the usual cause, not the
+definition: `Inject[T]` reads whichever container the current context carries,
+so a container published elsewhere — by `Host.activated()` in a lifespan, for
+instance — satisfies it just as well. Reached that way no scope is open, so a
+*scoped* provider then fails with `OutsideScopeError` rather than
+`ContainerNotBoundError`.
 
 ## One scope per request
 
@@ -75,8 +80,10 @@ async def open_session(db: Database) -> AsyncGenerator[Session]:
 
 ## Reading the request
 
-For HTTP requests the middleware places a `Request` into the scope frame, so a
-scoped provider can declare it:
+For HTTP requests the middleware places a `Request` into the scope frame. A
+scoped provider reads it back because the container declares the key with
+`scope_value(Request)`, as the wiring above does; without that declaration the
+graph fails at `freeze()`:
 
 ```python
 @services.scoped()

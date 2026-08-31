@@ -3,12 +3,12 @@
 import asyncio
 import types
 from collections.abc import Callable
-from typing import Protocol
+from typing import Annotated, Protocol
 
 import pytest
 
 from benchmarks.graphs import build_chain, build_decorated_chain, build_generic_chain
-from depin import Container, FrozenContainer, Scope, WarmupReport, injected
+from depin import Container, FrozenContainer, Scope, Token, WarmupReport, injected
 
 
 class Element(Protocol): ...
@@ -196,6 +196,29 @@ def test_call_through_an_inject_wrapper(benchmark: Benchmark) -> None:
         return repo.count()
 
     _ = benchmark(handler)
+
+
+def test_open_a_request_shaped_scope(benchmark: Benchmark) -> None:
+    """A scope opened, seeded, and resolved from — the shape every integration runs per request."""
+    request = Token[str]('request')
+
+    class Session:
+        def __init__(self, incoming: Annotated[str, request]) -> None:
+            self.incoming = incoming
+
+    class Handler:
+        def __init__(self, session: Session, incoming: Annotated[str, request]) -> None:
+            self.session = session
+            self.incoming = incoming
+
+    di = Container().scope_value(request).bind(Session, scope=Scope.SCOPED).bind(Handler, scope=Scope.SCOPED).freeze()
+
+    def run() -> object:
+        with di.scope() as frame:
+            frame.provide(request, 'r-1')
+            return di.resolve(Handler)
+
+    _ = benchmark(run)
 
 
 def test_resolve_an_async_singleton(benchmark: Benchmark) -> None:
