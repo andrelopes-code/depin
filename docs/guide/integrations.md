@@ -18,10 +18,16 @@ CLI, a queue consumer.
 | Seed the framework's objects | `ScopeFrame.provide()` on the yielded frame, against a key declared with `Container.scope_value()` | Right after the scope opens, before anything resolves. |
 | Read the container back | `hosted_container()` / `optional_hosted_container()` | Anywhere downstream that carries no reference to the container. |
 
-Seeding only reaches a parameter when the key was declared with
-`Container.scope_value()`. A bare `frame.provide(key, value)` for a key with
-no such declaration stores the value in the frame, but no provider is wired to
-read it back — always pair the two.
+Pair every seeded key with `Container.scope_value()`. A key declared that way
+gets a plan node: `resolve(key)` works, the value is cached in the frame on
+first use, and an `override()` on the key is honoured. A bare
+`frame.provide(key, value)` for a key with no such declaration wires nothing —
+`resolve(key)` still raises `MissingProviderError` — and only reaches a
+parameter that carries a default or admits `None`, as a fallback for the case
+the plan has no route for at all; a required parameter with no default keeps
+raising. Relying on that fallback skips the guarantees `scope_value()` buys,
+so treat it as what happens when the pairing is missing, not as a second way
+to seed.
 
 ## A worked integration
 

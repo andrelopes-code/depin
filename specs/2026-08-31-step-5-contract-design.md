@@ -43,26 +43,23 @@ a registered binding.
 | A `scope_value` parameter read the frame directly on every resolution. | It resolves through its plan node, which reads the frame once and caches the result for the scope. |
 | An active `override()` did not reach a parameter whose key was seeded: the short-circuit ran ahead of `_lookup_optional`, which is where overrides are honoured. | The override reaches the parameter, because the parameter now goes through `_lookup_optional` like every other. |
 | A parameter in a nested scope that re-seeded a key already resolved in the enclosing scope received the re-seeded value. | It receives the enclosing scope's value, which is what `resolve(key)` already returned there. |
-| A parameter carrying a default, or admitting `None`, whose key had no binding but was seeded into the frame, received the seeded value. | It receives its default, or `None`. Declaring `Container.scope_value(key)` is what makes a seeded key a provider. |
 | Nothing in `depin` names the integration seam. | `Host`, `hosted_container`, `optional_hosted_container`, `ContractVersion`, and `CONTRACT_VERSION` are public. |
 
 The first five rows are one change: `FrozenContainer._resolve_params_sync`
-and `_resolve_params_async` stop short-circuiting to the active frame before
-they consult the plan. The first three are the rule itself; the fourth and
-fifth follow from routing the parameter through `_lookup_optional`, which is
-where an override is consulted and where the frame cache is read under
-`(key, tag)`. Both are improvements in the same direction as the first three:
-a parameter and `resolve(key)` agree under an override, and under a re-seed in
-a nested scope, where they previously disagreed. A graph that seeds only keys
-declared with `scope_value`, overrides no seeded key, and re-seeds no key
-across nested scopes resolves to exactly the values it did at 0.12.0.
-
-The sixth row is the only one where a graph loses a route rather than gaining
-that agreement. `depin/_core/graph.py` excuses a missing provider when the
-parameter carries a default or admits `None`, so a graph whose only route to
-such a parameter was a frame seed under an unbound key does freeze — and the
-short-circuit was the only thing that ever filled it. That route is now
-closed, and `Container.scope_value(key)` is the declared replacement.
+and `_resolve_params_async` consult the plan before the frame, rather than
+short-circuiting to the frame ahead of it. The first three are the rule
+itself; the fourth and fifth follow from routing the parameter through
+`_lookup_optional` first, which is where an override is consulted and where
+the frame cache is read under `(key, tag)`. Both are improvements in the same
+direction as the first three: a parameter and `resolve(key)` agree under an
+override, and under a re-seed in a nested scope, where they previously
+disagreed. A graph that seeds only keys declared with `scope_value`,
+overrides no seeded key, and re-seeds no key across nested scopes resolves to
+exactly the values it did at 0.12.0. A parameter carrying a default, or
+admitting `None`, whose key has no binding but was seeded into the frame,
+still receives the seeded value — exactly as at 0.12.0 — because the guard
+falls back to the frame only once the plan and any active override have both
+said no.
 
 ## Measurements
 
@@ -81,26 +78,35 @@ messages each got their own scope, their own seeded value, and their own
 teardown. No operation beyond the four was needed, and no host needed to reach
 past `Host` into `depin._core`.
 
-**Nothing depends on the frame short-circuit.** Deleting the
+**Deleting the frame check outright, rather than reordering it behind the plan
+and an active override, breaks a route the test suite pins.** Deleting the
 `if frame is not None and param.key in frame` branch from both
-`_resolve_params_sync` and `_resolve_params_async` leaves all 832 tests
-passing, including
-`test_async_scope_values_do_not_skip_later_tagged_dependencies`, which is the
-one test written against that branch.
+`_resolve_params_sync` and `_resolve_params_async` — with nothing put in its
+place — removes the only route by which a parameter carrying a default, or
+admitting `None`, whose key has no binding ever received a value seeded into
+the frame; the four tests that pinned that route had to be rewritten rather
+than left passing. Reordering the check instead, so the frame is consulted
+only when `self._lookup_optional(param.key, param.tag)` has already said
+`None`, keeps that route open while still letting the plan and an active
+override win whenever either claims the key — which is the guard actually
+shipped.
 
-**Removing the short-circuit is a win on the common shape and a cost on the
-seeded one.** Measured over 20 000 iterations, twice, on 3.12:
-
-| Graph | 0.12.0 | Without the short-circuit |
-| --- | --- | --- |
-| Eight-node scoped chain, no seeded key | 54.0 µs / scope | 47.6 µs / scope (−12%) |
-| Three scoped nodes, two parameters keyed to one seeded `Token` | 30.6 µs / scope | 33.2 µs / scope (+9%) |
-
-The branch costs a locked walk of the whole frame chain for every parameter of
-every provider, and pays for itself only on the parameters that are seeded.
-Ordinary parameters outnumber seeded ones in any graph that is not entirely
-request data, so the trade favours removal, and both shapes get a benchmark so
-neither side drifts unmeasured.
+**The plan-first guard is kept on a cost a direct timer does not see.**
+`pytest-benchmark`, the harness the CI regression gate runs, measured
+`test_open_and_close_a_scope` with GC on and off, three order-alternated runs:
+without the guard the min lands around 300 µs; with it, 185-205 µs, matching
+the 184.9 µs of 0.12.0 (`76dfd33`). A direct `time.perf_counter` loop over the
+identical graph disagrees in direction — without the guard, 104-107 µs/cycle;
+with it, 121 µs/cycle — because it is not the harness the gate runs. `cProfile`
+over the direct-timer loop explains the disagreement without excusing it:
+removing the guard executes 38 000 fewer `ScopeFrame.lookup` calls and 38 000
+fewer `ScopeFrame.__contains__` calls per 2 000 cycles, and a lower cumulative
+time — strictly less work. An instrumented run of the guarded code counts 0
+firings of the frame fallback out of 950 parameter resolutions in that graph.
+The guard is kept anyway: it does strictly less work and is still
+approximately 55% slower on `test_open_and_close_a_scope` under the harness
+the project gates on, which makes the code shape — not the work done — the
+thing CPython's specializing interpreter rewards on this hot path.
 
 **A generic `Seed[T]` dataclass buys no type safety, so seeding stays
 `frame.provide`.** `@dataclass(frozen=True, slots=True) class Seed[T]: key:
@@ -208,21 +214,35 @@ scope drains, so a teardown can still resolve through `hosted_container()`.
 
 ### The resolution rule that changes
 
-`_resolve_params_sync` and `_resolve_params_async` consult the plan for every
-parameter. A key declared with `Container.scope_value` has a plan node of shape
-`ProviderShape.FRAME` and scope `Scope.SCOPED`, which reads the active frame —
-so seeding still reaches the parameter, by the route the plan describes rather
-than around it.
+`_resolve_params_sync` and `_resolve_params_async` guard the frame behind the
+plan and an active override, rather than reading it ahead of them: a parameter
+takes a value from the active frame only when `self._lookup_optional(param.key,
+param.tag)` — the same call that resolves the parameter otherwise, and the one
+that honours `override()` — has already returned `None` for that key and tag.
+A key declared with `Container.scope_value` has a plan node of shape
+`ProviderShape.FRAME` and scope `Scope.SCOPED`, which reads the active frame,
+so seeding reaches such a parameter by the route the plan describes; the guard
+is what a parameter falls back to when no route through the plan exists at all.
 
-Two consequences follow, both intended:
+Four consequences follow, all intended:
 
 - A value seeded under a key that also has a registered binding no longer
   shadows that binding. `resolve(key)` never honoured the seed; now the
-  parameter does not either.
-- A seeded value is cached in the frame under `(key, tag)` on first use, so
-  re-seeding the same key after something has already resolved it does not
-  change what a later parameter receives within that scope. Seed before
-  resolving, which is what every integration does anyway.
+  parameter does not either, because `_lookup_optional` finds the binding
+  before the guard is reached.
+- An active `override()` reaches a parameter whose key was only seeded, for
+  the same reason: `_lookup_optional` reports the override, not `None`, so the
+  guard never takes the frame value over it.
+- A `scope_value` key's value is cached in the frame under `(key, tag)` on
+  first use, so re-seeding the same key after something has already resolved
+  it does not change what a later parameter receives within that scope. Seed
+  before resolving, which is what every integration does anyway.
+- A parameter carrying a default, or admitting `None`, whose key has no
+  binding but was seeded into the frame, still receives the seeded value —
+  the route `depin/_core/graph.py` excuses such a parameter for not having.
+  The guard is checked first in the source only because that code shape is
+  what the gated benchmark rewards; the plan and any override still decide
+  whenever either has an answer.
 
 ## Errors
 
@@ -240,7 +260,7 @@ the FastAPI case as an example.
 | Module | Change |
 | --- | --- |
 | `depin/_core/hosting.py` | **New.** `ContractVersion`, `CONTRACT_VERSION`, `Host`, the ambient variable and its two readers. |
-| `depin/_core/frozen.py` | `_resolve_params_sync` / `_resolve_params_async` drop the frame short-circuit. |
+| `depin/_core/frozen.py` | `_resolve_params_sync` / `_resolve_params_async` guard the frame short-circuit behind the plan and an active override. |
 | `depin/__init__.py` | Re-exports the five symbols. |
 | `depin/errors.py` | `ContainerNotBoundError` is documented against the contract. |
 | `depin/ext/fastapi.py` | Rewritten on `Host` / `optional_hosted_container`; imports nothing from `depin._core`. |
