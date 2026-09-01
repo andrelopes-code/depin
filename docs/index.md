@@ -15,11 +15,17 @@ uv add 'pydepin[fastapi]'     # with the FastAPI integration
 uv add 'pydepin[starlette]'   # with the Starlette integration
 uv add 'pydepin[litestar]'    # with the Litestar integration
 uv add 'pydepin[flask]'       # with the Flask integration
+uv add 'pydepin[click]'       # with the Click integration
+uv add 'pydepin[typer]'       # with the Typer integration
+uv add 'pydepin[taskiq]'      # with the Taskiq integration
 ```
 
-`depin.ext.asgi` and `depin.ext.wsgi` are the framework-free middlewares those
-four specialise; they import no third-party package and need no extra. See
-[writing an integration](guide/integrations.md#the-integrations-depin-ships).
+`depin.ext.asgi` and `depin.ext.wsgi` are the framework-free middlewares the
+four web extras specialise, and `depin.ext.cli` is the framework-free command
+seam Click and Typer specialise; all three import no third-party package and
+need no extra. See
+[the request and response integrations](guide/integrations.md#the-request-and-response-integrations)
+and [the command and message hosts](guide/integrations.md#the-command-and-message-hosts).
 
 The distribution is named `pydepin` on PyPI; the import package is `depin`.
 
@@ -88,6 +94,6 @@ list.
 - [API reference](reference/index.md) — the full public API, generated from the
   source docstrings.
 - [Examples](https://github.com/andrelopes-code/depin/tree/main/examples) —
-  sixteen runnable programs, each executed by the test suite.
+  seventeen runnable programs, each executed by the test suite.
 - [Contributing](https://github.com/andrelopes-code/depin/blob/main/CONTRIBUTING.md)
   — development setup, the five gates, and the release process.

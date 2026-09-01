@@ -139,8 +139,9 @@ command framework whose context can hold a resource, not only the two shipped.
 | A command that raises | The scope drains and the publication is undone; the exception propagates. Observed for `Abort`, `UsageError`, `ctx.exit()` and an arbitrary exception. |
 | Nested group and command scopes | Safe but redundant: the inner scope resolves the outer frame's cached instance. Documented, not prevented. |
 | `--help` | Opens no scope. |
-| `taskiq` `pre_execute` | Enters `Host.ascope()` on an `AsyncExitStack` held in a `ContextVar`, seeds the `TaskiqMessage`, and returns the message it was given — the receiver threads the return value onward. |
-| `taskiq` `post_execute` | Clears the `ContextVar`, then closes the stack. Teardowns run, then the publication is undone. |
+| `taskiq` `pre_execute` | Enters `Host.ascope()` on an `AsyncExitStack`, appends it to the tuple of open stacks held in a `ContextVar`, seeds the `TaskiqMessage`, and returns the message it was given — the receiver threads the return value onward. |
+| `taskiq` `post_execute` | Pops the last stack off that tuple, then closes it. Teardowns run, then the publication is undone. |
+| A message executed inside another's context | The inner `post_execute` pops only the stack its own `pre_execute` pushed, so the outer scope is still open for the rest of the outer body. |
 | Concurrent messages | Isolated. Each message's `pre_execute`, task body and `post_execute` share one asyncio Context. |
 
 ## Sync and async
@@ -172,19 +173,23 @@ each integration's own message names its own setup step.
 
 ## Declared floors
 
-- `click>=8.2` — `with_resource` predates it; 8.2 is where `Group` absorbed
-  `MultiCommand`, and it is the tidier supported floor.
+- `click>=8.1` — **corrected from `>=8.2`, which was asserted rather than
+  measured.** `depin.ext.click` touches `click.Context` and `Context.with_resource`
+  and nothing else, both of which predate 8.1, so the floor gates no feature. On
+  8.1.0 `tests/unit/test_cli.py`, `tests/integration/test_click_ext.py`, the
+  Click example tests and the `depin/ext/click.py` doctest all pass, and so does
+  Typer 0.16.0 sharing that Click, help rendering included.
 - `typer>=0.16` — **corrected from `>=0.15` after the resolver disagreed with the
   measurement.** The seam was measured working on 0.15.4, but
   `--resolution lowest-direct` never selects that release: 0.15.4 caps Click below
-  8.2, and depin declares `click>=8.2`, so the resolver picks typer **0.15.0**,
-  which declares only `click>=8.0.0` and therefore accepts a Click it cannot run.
-  On that pair `--help` raises `TypeError: Parameter.make_metavar() missing 1
-  required positional argument: 'ctx'`, because Click 8.2 gave `make_metavar()` a
-  context and Typer passes one only from 0.16. The two extras resolve together, so
-  depin's own Click floor is the Click that Typer gets. 0.16.0 is the first
-  release that works, verified against PyPI metadata and real installs rather than
-  chosen conservatively.
+  8.2, so the resolver picks typer **0.15.0**, which declares only `click>=8.0.0`
+  and therefore accepts a Click it cannot run. On typer 0.15.0 beside Click 8.2.1
+  `--help` raises `TypeError: Parameter.make_metavar() missing 1 required
+  positional argument: 'ctx'`, because Click 8.2 gave `make_metavar()` a context
+  and Typer passes one only from 0.16. The `click` extra names no ceiling, so any
+  Click a user already has is the Click Typer gets. 0.16.0 is the first release
+  that works, verified against PyPI metadata and real installs rather than chosen
+  conservatively.
 
   Still **deliberately far below `>=0.26`**, the release that vendored click: the
   protocol removes the vendoring problem, so a floor at the split would invent a
@@ -242,8 +247,14 @@ themselves through the returned frame, under a key they own.
   modules automatically.
 - **Docs.** `docs/guide/integrations.md` gains the command and message hosts;
   `docs/reference/` gains a page per new module.
-- **Examples.** One, `examples/click_app/`. Typer and Taskiq differ from it by
-  an import and a decorator.
+- **Examples.** One, `examples/click_app/`, because the shape it demonstrates —
+  open a scope for the unit of work, let the host end it — is one idea. Typer
+  keeps that structure and changes the seeding: no `click.Context` seed to
+  inherit, so a caller-owned `Token`, a `scope_value` on it, a `frame.provide`
+  in the callback and an `Annotated` parameter on the provider. Taskiq changes
+  the structure as well: a middleware registered on a broker instead of
+  `install`, no returned frame, an async scope, `scope_value(TaskiqMessage)`,
+  and `@broker.task` instead of `@click.command`.
 
 ## Acceptance criteria
 

@@ -35,11 +35,11 @@ raising. Relying on that fallback skips the guarantees `scope_value()` buys,
 so treat it as what happens when the pairing is missing, not as a second way
 to seed.
 
-## The integrations depin ships
+## The request and response integrations
 
-Three of the four framework integrations are one of two middlewares — the ASGI
-one or the WSGI one — with a single seed applied. `depin.ext.fastapi` is the
-exception: its `RequestScope` is the Starlette one re-exported, and what the
+Three of the four web framework integrations are one of two middlewares — the
+ASGI one or the WSGI one — with a single seed applied. `depin.ext.fastapi` is
+the exception: its `RequestScope` is the Starlette one re-exported, and what the
 module adds of its own is `Inject[T]`. Either way the module to import is
 chosen by the framework, and the extra is named after it:
 
@@ -112,8 +112,18 @@ option goes before anything resolves.
 `examples/click_app/` is the whole shape in one runnable program — registries, a
 CLI factory taking the container as an argument, the seeded `click.Context` and
 a tenant placed into the returned frame, and `close()` at exit. Run it with
-`python -m examples.click_app.main`. Typer and Taskiq differ from it by an
-import and a decorator.
+`python -m examples.click_app.main`. One example carries the shape because the
+shape is one idea — open a scope for the unit of work and let the host end it —
+and the other two hosts each depart from it somewhere the example cannot show.
+Typer keeps the structure and changes the seeding: there is no `typer.Context`
+seed to inherit, so the container declares `scope_value` on a key the caller
+owns and the callback places the context into the returned frame, which
+[Typer seeds nothing](#typer-seeds-nothing) sets out. Taskiq changes the
+structure too: no `install` and no returned frame, but a `MessageScope`
+registered on a broker, `scope_value(TaskiqMessage)` for the seed the middleware
+fills, an async scope in place of a synchronous one, and `@broker.task` in place
+of `@click.command` — see
+[register the Taskiq middleware last](#register-the-taskiq-middleware-last).
 
 ### Click and Typer are synchronous
 
@@ -146,10 +156,12 @@ depin.errors.AsyncInSyncContextError: Pool requires async resolution; call areso
 
 ```
 
-Reaching for `aresolve()` instead is worse, not better. It builds the provider,
-which registers an async teardown the synchronous scope cannot run, so closing
-the scope raises an `ExceptionGroup` wrapping `TeardownError` — and the pool it
-built is left open:
+Reaching for `aresolve()` instead is worse, not better, whenever the async
+provider registers a teardown — an async generator or an async context manager,
+which is what `open_pool` above is. It builds the provider, and the teardown it
+registers is one the synchronous scope cannot run, so closing the scope raises
+an `ExceptionGroup` wrapping `TeardownError` — and the pool it built is left
+open:
 
 ```pycon
 >>> async def build_a_pool() -> Pool:
@@ -164,6 +176,26 @@ TeardownError
 [False]
 
 ```
+
+An async provider that registers no teardown leaves nothing behind for the
+synchronous scope to fail on, so the same call succeeds and the scope closes
+clean:
+
+```pycon
+>>> async def make_token() -> str:
+...     return 'ready'
+>>> plain_di = Container().bind(make_token, scope=Scope.SCOPED, provides=str).freeze()
+>>> plain_host = Host(plain_di)
+>>> async def build_a_token() -> str:
+...     with plain_host.scope():
+...         return await plain_di.aresolve(str)
+>>> asyncio.run(build_a_token())
+'ready'
+
+```
+
+That is why the guidance is `ascope()` rather than a diagnostic: the harm shows
+up only for the providers that own something.
 
 An async CLI therefore drives the loop itself. The command body stays
 synchronous and does one thing — `asyncio.run` around a coroutine that opens
@@ -354,7 +386,10 @@ overwrites it. A framework whose two hooks run in the same
 `contextvars.Context` — Taskiq's do, because `pre_execute`, the task body and
 `post_execute` share one asyncio task — can hold it in a module-level
 `contextvars.ContextVar` instead, which is per unit of work for that reason and
-needs no identifier at all. `depin.ext.taskiq.MessageScope` is written that way.
+needs no identifier at all. One slot still holds one context manager, so a unit
+of work that can start another inside its own context puts a tuple of them in
+that variable and pops the last entry in the `after` hook.
+`depin.ext.taskiq.MessageScope` is written that way.
 
 ```pycon
 >>> from contextlib import AbstractContextManager

@@ -1,7 +1,7 @@
 # ASGI request scope
 
 The framework-free middleware the Starlette and Litestar integrations
-specialise. See [the integrations depin ships](../guide/integrations.md#the-integrations-depin-ships)
+specialise. See [the request and response integrations](../guide/integrations.md#the-request-and-response-integrations)
 for which module to install.
 
 ::: depin.ext.asgi.RequestScope

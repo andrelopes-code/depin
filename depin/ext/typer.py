@@ -6,14 +6,14 @@ Importing this module requires the ``typer`` extra (``pip install
 Written entirely against depin's public integration contract and the
 framework-free seam in `depin.ext.cli`: a partial application, nothing more.
 
-Alone among the framework scope integrations depin ships, this one seeds no
-value, and the reason is measurable rather than a matter of taste. Typer 0.26 dropped its
-dependency on Click and vendored a private copy of it, and from that release
-the object handed to a callback annotated `typer.Context` is an instance of
-the vendored private class, for which ``isinstance(value, typer.Context)`` is
-false. Seeding under the key `typer.Context` would therefore bind a value that
-is not an instance of its own key: depin keys on the annotation, so it would
-resolve, and every provider declaring that parameter would be handed something
+This module seeds no value into the scope it opens, and the reason is measurable
+rather than a matter of taste. Typer 0.26 dropped its dependency on Click and
+vendored a private copy of it, and from that release the object handed to a
+callback annotated `typer.Context` is an instance of the vendored private class,
+for which ``isinstance(value, typer.Context)`` is false. Seeding under the key
+`typer.Context` would therefore bind a value that is not an instance of its own
+key: depin keys on the annotation, so it would resolve, and every provider
+declaring that parameter would be handed something
 its own annotation denies. Seeding under the vendored class instead would make
 depin import a third-party private name, which is the one thing depin asks
 nobody to do to its own private package. The module ships neither.

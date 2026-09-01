@@ -28,6 +28,10 @@ Type-first dependency injection for Python 3.12+.
   the framework-free `depin.ext.asgi` and `depin.ext.wsgi` middlewares that any
   other ASGI or WSGI framework can install directly. **The core has zero runtime
   dependencies.**
+- Optional command and message integrations for Click, Typer and Taskiq: one
+  scope per CLI invocation, built on the framework-free `depin.ext.cli` seam any
+  other command framework can drive, and one scope per Taskiq message seeded
+  with the `TaskiqMessage` being executed.
 - No `# type: ignore` at call sites: `resolve()`, `frozen[key]`, `injected()`,
   and `Inject[T]` are all precisely typed under `basedpyright --strict` and
   `mypy --strict`.
@@ -40,11 +44,16 @@ uv add 'pydepin[fastapi]'     # with the FastAPI integration
 uv add 'pydepin[starlette]'   # with the Starlette integration
 uv add 'pydepin[litestar]'    # with the Litestar integration
 uv add 'pydepin[flask]'       # with the Flask integration
+uv add 'pydepin[click]'       # with the Click integration
+uv add 'pydepin[typer]'       # with the Typer integration
+uv add 'pydepin[taskiq]'      # with the Taskiq integration
 uv add 'pydepin[pytest]'      # with the tested pytest floor enforced
 ```
 
-`depin.ext.asgi` and `depin.ext.wsgi` are the framework-free middlewares those
-four specialise; they import no third-party package and need no extra.
+`depin.ext.asgi` and `depin.ext.wsgi` are the framework-free middlewares the
+four web extras specialise, and `depin.ext.cli` is the framework-free command
+seam Click and Typer specialise; all three import no third-party package and
+need no extra.
 
 The `depin.ext.pytest` fixtures are registered on the `pytest11` entry point
 by the distribution, so plain `pydepin` already provides them; the `pytest`

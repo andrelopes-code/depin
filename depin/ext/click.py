@@ -57,6 +57,9 @@ def install(ctx: Context, container: FrozenContainer) -> ScopeFrame:
     declare a `click.Context` parameter and be handed the context of the
     callback that opened the scope.
 
+    Click closes that context after the command body has run and, for a group,
+    after the group's result callback, so both are inside the scope.
+
     Args:
         ctx: The context of the command or group being invoked, taken with
             ``@click.pass_context``.

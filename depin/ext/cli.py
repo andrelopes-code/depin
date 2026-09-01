@@ -13,9 +13,9 @@ ships against are already two unrelated classes that satisfy the same protocol.
 
 A command framework's context is a *block* seam rather than a hook pair: it
 enters a context manager when asked and exits it when the command context
-closes — after the command body, and after a group's result callback. So the
-whole integration is `Host.scope()` handed to `CommandContext.with_resource`,
-and there is nothing to pair by hand.
+closes, which the framework does once it is finished with the invocation it
+opened that context for. So the whole integration is `Host.scope()` handed to
+`CommandContext.with_resource`, and there is nothing to pair by hand.
 
 `install` is generic over the context type because ``seed`` receives that
 context. A callable parameter is contravariant, so a
@@ -52,9 +52,8 @@ def install[C: CommandContext](
     Called from the callback of a command or a group. The container is
     published to the invocation's context for the duration of the scope, so
     `depin.hosted_container()` reaches it from anywhere the command calls into.
-    The scope's teardowns run when the command context closes — after the
-    command body, and after a group's result callback, including when the body
-    ends by raising — and the publication is undone after them.
+    The scope's teardowns run when the command context closes, including when
+    the command body ends by raising, and the publication is undone after them.
 
     Installing on a group and again on one of its commands is safe but
     redundant: the inner scope becomes a child of the outer frame, so a key
