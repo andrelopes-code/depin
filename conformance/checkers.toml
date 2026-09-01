@@ -1,0 +1,53 @@
+# The single place a checker version is named for this suite. `uv run python -m
+# scripts.conformance` and the `typing-consumer` CI job both read this file, so
+# a local run reproduces the gate exactly.
+#
+# The language target belongs here rather than only in CI YAML: the criterion is
+# that checker versions *and* Python language targets are recorded reproducibly.
+
+[targets]
+python = "3.12"
+os = "linux"
+
+[checkers]
+mypy = "2.3.1"
+pyright = "1.1.411"
+basedpyright = "1.39.10"
+ty = "0.0.77"
+pyrefly = "1.2.0"
+
+# mypy and basedpyright are also the Layer 1 gates run by `uv run`, so they sit
+# in the `dev` group as well. The runner asserts the versions above equal what
+# `uv.lock` resolves. A floor check would prove nothing: `dev` declares
+# `mypy>=1.18`, which every future resolution satisfies while `uv run mypy` and
+# `uvx mypy@2.3.1` drift apart.
+[lockstep]
+mypy = "mypy"
+basedpyright = "basedpyright"
+
+# There is no aggregate `all` extra; the all-extras interpreter is built by
+# naming every one of them.
+[install]
+extras = [
+    "click",
+    "fastapi",
+    "flask",
+    "litestar",
+    "pytest",
+    "starlette",
+    "taskiq",
+    "typer",
+]
+
+# The eight `depin.ext` modules that require an extra. In core-only mode the
+# runner asserts every one of them is unresolvable, which is what proves the
+# core carries no framework dependency.
+[install.framework_modules]
+click = "depin.ext.click"
+fastapi = "depin.ext.fastapi"
+flask = "depin.ext.flask"
+litestar = "depin.ext.litestar"
+pytest = "depin.ext.pytest"
+starlette = "depin.ext.starlette"
+taskiq = "depin.ext.taskiq"
+typer = "depin.ext.typer"

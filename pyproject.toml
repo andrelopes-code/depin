@@ -142,11 +142,12 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PT", "T20"]
 [tool.ruff.lint.isort]
 case-sensitive = true
 
-# print() is the point of these files: runnable examples, and the two CLI
-# scripts that report to stdout/stderr. Everywhere else, T20 stays enforced.
+# print() is the point of these files: runnable examples, and the CLI scripts
+# that report to stdout/stderr. Everywhere else, T20 stays enforced.
 [tool.ruff.lint.per-file-ignores]
 "examples/**" = ["T20"]
 "scripts/check_mutation_threshold.py" = ["T20"]
+"scripts/conformance/**" = ["T20"]
 "benchmarks/compare.py" = ["T20"]
 
 [tool.ruff.lint.flake8-bugbear]
@@ -155,7 +156,7 @@ case-sensitive = true
 extend-immutable-calls = ["depin.injected", "depin._core.markers.injected"]
 
 [tool.basedpyright]
-include = ["depin", "tests", "examples"]
+include = ["depin", "tests", "examples", "scripts"]
 exclude = ["**/__pycache__", ".venv"]
 typeCheckingMode = "strict"
 pythonVersion = "3.12"
@@ -166,7 +167,7 @@ reportMissingTypeStubs = false
 # must see the same code, or "both are clean" means nothing.
 [tool.mypy]
 python_version = "3.12"
-files = ["depin", "tests", "examples"]
+files = ["depin", "tests", "examples", "scripts"]
 strict = true
 warn_unreachable = true
 enable_error_code = ["redundant-expr", "possibly-undefined", "truthy-bool", "ignore-without-code"]
@@ -174,7 +175,7 @@ enable_error_code = ["redundant-expr", "possibly-undefined", "truthy-bool", "ign
 # Advisory only (see the `ty` job in `.github/workflows/ci.yml`); the file list
 # still mirrors `[tool.basedpyright] include` exactly, for the same reason.
 [tool.ty.src]
-include = ["depin", "tests", "examples"]
+include = ["depin", "tests", "examples", "scripts"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "depin", "docs"]

@@ -1,0 +1,20 @@
+# One table per negative fixture, keyed by the fixture's identifier — the part
+# of its filename before the first underscore. The harness requires a non-zero
+# exit and at least one diagnostic on `line` carrying the recorded rule
+# identifier.
+#
+# Rule identifiers and line numbers only. Message text is never matched: for one
+# misuse the three checkers that name a type name three different ones, and ty
+# has printed both sides of a disagreement identically.
+#
+# `mode` is optional and defaults to "core"; set it to "extras" for a fixture
+# whose misuse needs a framework installed to be reachable.
+
+[n01]
+misuse = "resolve() called with a value that is not a key"
+line = 18
+mypy = "arg-type"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "invalid-argument-type"
+pyrefly = "bad-argument-type"

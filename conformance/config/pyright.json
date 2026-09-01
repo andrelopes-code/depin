@@ -1,0 +1,11 @@
+{
+  "include": ["../corpus"],
+  "exclude": ["**/__pycache__"],
+  "typeCheckingMode": "strict",
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Linux",
+  "useLibraryCodeForTypes": false,
+  "reportMissingTypeStubs": true,
+  "venvPath": "${venv_parent}",
+  "venv": "${venv_name}"
+}

@@ -1,0 +1,8 @@
+# An unconfigured Pyrefly runs the `basic` preset, which does not report
+# `bad-argument-type` at all, so a green unconfigured run is not evidence. The
+# runner passes `--preset strict`; everything a preset cannot carry is here.
+
+python-interpreter = "${python}"
+python-version = "3.12"
+python-platform = "linux"
+project-includes = ["../corpus/**/*.py"]
