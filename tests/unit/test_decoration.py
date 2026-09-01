@@ -521,3 +521,90 @@ def test_decorating_an_underlying_layer_is_rejected() -> None:
     container = Container().bind(Store).decorate(Underlying(Store, 0), Loud)
     with pytest.raises(InvalidProviderError, match='constructed to inspect a graph'):
         _ = container.freeze()
+
+
+def test_decorating_an_unbound_key_names_the_key_and_the_remedy() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    container = Container().decorate(Store, Loud)
+    with pytest.raises(MissingProviderError) as error:
+        _ = container.freeze()
+    assert str(error.value) == (
+        'cannot decorate test_decorating_an_unbound_key_names_the_key_and_the_remedy.<locals>.Store '
+        '(tag=None): no binding is registered for it. A decorator wraps an existing binding, so bind '
+        'the key, drop the decorator, or give the decorator the same condition as the binding it wraps.'
+    )
+
+
+def test_decorating_an_inactive_binding_names_the_condition() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    container = Container().bind(Store, when=False).decorate(Store, Loud)
+    with pytest.raises(MissingProviderError) as error:
+        _ = container.freeze()
+    assert str(error.value) == (
+        'cannot decorate test_decorating_an_inactive_binding_names_the_condition.<locals>.Store '
+        '(tag=None): its binding is registered under a condition that did not hold, so nothing was '
+        'bound for it in this configuration. Give the decorator the same condition as the binding it wraps.'
+    )
+
+
+def test_decorating_a_scope_value_names_the_frame() -> None:
+    class Principal: ...
+
+    class Loud:
+        def __init__(self, inner: Principal) -> None: ...
+
+    container = Container().scope_value(Principal).decorate(Principal, Loud)
+    with pytest.raises(InvalidProviderError) as error:
+        _ = container.freeze()
+    assert str(error.value) == (
+        'cannot decorate test_decorating_a_scope_value_names_the_frame.<locals>.Principal (tag=None): '
+        'it is declared with scope_value(), and a value supplied by whoever opens the scope is read '
+        'from the active frame before the plan is consulted, so a parameter would receive the '
+        'undecorated value. Wrap the value where the scope is opened instead.'
+    )
+
+
+def test_decorating_a_transient_with_a_lifecycle_wrapper_names_the_drain() -> None:
+    class Store: ...
+
+    def loud(inner: Store) -> Generator[Store]:
+        yield inner
+
+    container = Container().bind(Store, scope=Scope.TRANSIENT).decorate(Store, loud)
+    with pytest.raises(InvalidScopeError) as error:
+        _ = container.freeze()
+    assert str(error.value) == (
+        'cannot decorate transient '
+        'test_decorating_a_transient_with_a_lifecycle_wrapper_names_the_drain.<locals>.Store '
+        f'with {loud!r}: a generator or context-manager decorator owns a teardown, and a transient '
+        'value is never cached, so nothing would drain it. Bind the key as singleton or scoped.'
+    )
+
+
+def test_the_rewritten_inner_parameter_is_required_and_not_optional() -> None:
+    """The layer below always exists, so the fold strips the default and the `| None` off `inner`."""
+
+    class Store: ...
+
+    class Loud(Store):
+        def __init__(self, inner: Store | None = None) -> None:
+            self.inner = inner
+
+    di = Container().bind(Store).decorate(Store, Loud).freeze()
+    (edge,) = di.graph().node(Store).dependencies
+    assert edge.parameter == 'inner'
+    assert edge.key == Underlying(Store, 0)
+    assert edge.satisfied is True
+    assert edge.has_default is False
+    assert edge.optional is False
+    resolved = di.resolve(Store)
+    assert isinstance(resolved, Loud)
+    assert isinstance(resolved.inner, Store)

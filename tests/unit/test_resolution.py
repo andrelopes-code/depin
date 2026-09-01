@@ -16,6 +16,11 @@ from depin._core.markers import Tag, injected, provides
 from depin._core.scope import Scope
 from depin.errors import AsyncInSyncContextError, CircularDependencyError, MissingProviderError
 
+# Several cases here drive a fresh interpreter, and importing depin under the
+# mutation gate's line tracing runs over two seconds, and the gate's --timeout=2
+# exists to catch a hung mutant, which fifteen seconds still does.
+pytestmark = pytest.mark.timeout(15)
+
 
 def test_resolving_an_unregistered_key_names_the_key() -> None:
     class Unregistered: ...
