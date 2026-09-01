@@ -26,10 +26,10 @@ here; this document decides.
 | --- | --- | --- |
 | Do the five checkers agree on `Inject[T]`? | Yes, sync and async, both install modes. | baseline C |
 | Does the Python target matter? | No. Byte-identical results at 3.12, 3.13 and 3.14 for all five. | baseline E.1 |
-| What does the full matrix cost? | ~50 s of checker time for 5 checkers × 2 install modes, cold. | baseline E.4 |
+| What does the positive corpus cost? | ~50 s of checker time for 5 checkers × 2 install modes, cold. | baseline E.4 |
 | Is wheel isolation provable portably? | Yes — run the identical commands against an empty venv and require an unresolved-import diagnostic from each. | baseline A.7 |
 | Why does Pyrefly reject `Token[int]` where a key is expected? | `Token[T]`'s parameter is phantom; the typing spec's variance-inference algorithm tests covariance first and a phantom parameter passes it. Pyrefly 1.2.0 infers invariance. Four checkers conform, Pyrefly does not. | variance A |
-| Which remedy? | **R4** — a non-generic supertype in the `Token[object]` positions. Clears Pyrefly to zero on the consumer corpus, `T` stays phantom, no new member on `Token`. | roadmap Step 6, `2816b09` |
+| Which remedy? | **R4** — a non-generic supertype in the `Token[object]` positions. Clears Pyrefly to zero on the positive consumer corpus, `T` stays phantom, no new member on `Token`. | roadmap Step 6, `2816b09` |
 | Why not R5? | Its `payload` member exists only to pin variance, its shape was dictated by `reportUnusedFunction`, and the false negative it repairs is a side effect of invariance rather than a designed constraint. | roadmap Step 6 |
 | Why is stock Pyright not a Basedpyright result? | Basedpyright 1.39.10 is built on pyright 1.1.412; the newest stock Pyright is 1.1.411. Different engine commits, different rule sets. | baseline A.1 |
 | Can an unconfigured Pyrefly be trusted? | No. Its default preset is `basic`, which does not report `bad-argument-type` at all. | baseline A.4 |
@@ -37,7 +37,7 @@ here; this document decides.
 
 ## Corrections to the inputs
 
-Three counts in the source documents do not survive checking. This design uses
+Three claims in the source documents do not survive checking. This design uses
 the corrected values.
 
 **Nine `Token[object]` annotation positions, not eight.** The roadmap and the
@@ -50,9 +50,11 @@ and the `TypeGuard` on `is_object_token`. A tenth mention, the docstring on
 **Five assignability categories, not three.** The baseline introduces its list
 as "three further categories" and then enumerates five. All five are binding.
 
-**The consumer corpus is 21 files.** The baseline's timing table says 13; that
-figure counts the positive corpus only and times the eight negative fixtures
-separately, because they are run one file at a time.
+**The baseline's timing table is labelled "13 files" where the corpus is 21.**
+The corpus size is stated correctly elsewhere in both evidence documents; only
+the timing table's label is imprecise, because it counts the positive corpus and
+times the eight negative fixtures separately. This design's corpus is larger
+again, since it adds the divergence fixtures.
 
 One further correction concerns authority rather than arithmetic. The variance
 experiment's own verdict table marks **R5** recommended and R4 an acceptable
@@ -126,10 +128,16 @@ di.resolve(42)  # type: ignore[arg-type]  # pyright: ignore[...]  # ty: ignore[i
 # → clean
 ```
 
-mypy, stock Pyright and Basedpyright are unaffected by the appended comment.
-This is what lets ty's source count fall from 32 to the handful that are
-genuinely upstream, rather than being managed as a baseline of spelling
-artefacts.
+mypy, stock Pyright and Basedpyright are unaffected by the appended comment,
+and the ty directive may sit first, last, or between the other two. One ordering
+constraint applies to the pair that already exists: **mypy requires
+`# type: ignore` to be the first comment on the line**, so the ty directive is
+appended, never prepended.
+
+The technique works. **It is not adopted**, for a reason measured after this
+probe and recorded under the source layer below: ty has its own
+`unused-ignore-comment` rule, so twenty-five hand-written directives would make
+a blocking job depend on ty continuing to emit exactly the rules they name.
 
 ## The shape of the guarantee
 
@@ -158,25 +166,73 @@ either rewriting the repository's suppressions to suit a 0.0.x tool or
 suppressing genuine upstream limitations. Both are worse than recording them.
 
 So Layer 1 gets a **register**: `conformance/expected/ty-source.txt` and
-`conformance/expected/pyrefly-source.txt`, each line a `file:rule` pair with a
-one-line classification. The job fails when a diagnostic appears that the
-register does not carry, and fails when the register carries one that no longer
-appears. The first is a regression; the second means the register should shrink.
-It is never falsely red, and it never silently accepts a new defect.
+`conformance/expected/pyrefly-source.txt`, each line a `file:rule:count` triple
+with a one-line classification. The job fails when a diagnostic appears that the
+register does not carry, when the register carries one that no longer appears,
+and when a registered count moves in either direction. The first is a
+regression; the second means the register should shrink.
+
+The count is not decoration. A `file:rule` pair alone absorbs any number of new
+diagnostics of that rule in that file, so a register built from pairs would
+silently accept the second defect of a kind it already knows about — which is
+exactly the property the register exists to deny. Line numbers would have been
+the other option and they churn on every edit; counts do not.
 
 This replaces the current `ty (advisory)` job, whose check step ends in `exit 0`
 and therefore establishes nothing. The register is what makes ty and Pyrefly
 blocking without demanding a zero the project does not control.
 
-The registers are small because the suppression spelling is repaired first. Of
-ty's 32: 25 are lines already suppressed for mypy and Pyright, and gain the ty
-spelling; one is `tests/typing/test_conformance.py:82`, removed by the oracle
-rewrite; the remaining six are two `call-top-callable`/`invalid-return-type`
-pairs from ty's gradual model of `Callable[..., object]` and four from ty
-resolving `taskiq.TaskiqResult` through pydantic's `PydanticRecursiveRef`.
-Those six enter the register with their classification. Pyrefly's three —
-two `implicit-any-lambda`, one `implicit-any-type-argument`, all in private code
-— enter theirs.
+### Why the register absorbs the suppression spelling rather than repairing it
+
+The obvious alternative is to append `# ty: ignore[<rule>]` to the twenty-five
+lines that already carry a `# type: ignore[code]  # pyright: ignore[code]` pair.
+It works — the appended comment silences ty and leaves the other three checkers
+untouched — and it would cut ty's source count from 32 to six.
+
+**It is rejected, because it recreates on a blocking gate the exact fragility
+this design rejects two sections below.** ty has its own unused-directive rule,
+and it fires:
+
+```
+$ uvx ty@0.0.77 check w.py        # a: int = f(1)  # ty: ignore[invalid-argument-type]
+w.py:5:11: warning[unused-ignore-comment] Unused `ty: ignore` directive
+exit=1
+```
+
+Under `--error all` it is an error rather than a warning, and a directive naming
+two rules fails the same way when only one of them fires. Every one of the
+twenty-five lines would have to name exactly the rule set ty currently emits,
+and any ty release that stops emitting one of them turns a blocking job red for
+a reason that is upstream's. That is the same defect as
+`tests/typing/test_conformance.py:304`, which the design moves out of the gate
+for precisely this reason.
+
+Registering the twenty-five as classified expected diagnostics costs one line
+each in a file, touches no source, and adds no checker-specific comment to a
+repository whose conventions require every suppression to be individually
+narrowest and individually explained. A mechanical sweep of twenty-five lines is
+neither.
+
+So the ty register carries roughly thirty-one entries at three classifications —
+twenty-five suppression-spelling artefacts where ty agrees with mypy and Pyright
+about invalid code and cannot read their waiver, two from ty's gradual model of
+`Callable[..., object]`, and four from ty resolving `taskiq.TaskiqResult`
+through pydantic's `PydanticRecursiveRef`. The thirty-second,
+`tests/typing/test_conformance.py:82`, is removed by the oracle rewrite rather
+than registered.
+
+Pyrefly's register carries three: two `implicit-any-lambda` and one
+`implicit-any-type-argument`, two in private modules and one in a unit test.
+The `implicit-any-type-argument` entry names `Token[T]` in
+`depin/_core/typeguards.py`, so it may disappear once that guard names
+`TokenKey` — the register is built from measurement after R4 lands, not from
+this estimate.
+
+**Both registers are measured under the exact flags the gate runs.** ty's 32 was
+counted under a bare `uvx ty check`; the gate adds `--error all`, and the
+baseline verified that flag changes nothing only on the consumer corpus. The
+source register is re-measured under the gate's own invocation before it is
+committed.
 
 ## Corpus organisation
 
@@ -196,7 +252,8 @@ conformance/
   coverage.toml                 public symbol -> fixture, or a recorded decision
   corpus/
     core/c01_container.py … c09_hosting.py
-    ext/e01_fastapi.py … e04_frameworks.py
+    ext_core/    asgi, wsgi, cli — no extra needed, checked in both modes
+    ext_extras/  the eight modules that require an extra
   negative/n01_… .py            one misuse per file, no suppressions
   divergence/d01_… .py          accepted today; per-checker expectation recorded
   config/                       one native configuration per checker, templated
@@ -213,17 +270,31 @@ The corpus is ordinary consumer code. It imports only `depin`, `depin.errors`
 and `depin.ext.*`, never `depin._core`, and the runner asserts that textually
 before it checks anything.
 
-`corpus/core/` is checked in both install modes. Four modules under `depin/ext/`
+`corpus/core/` is checked in both install modes.
+
+The ext corpus is split **by install mode, not by framework**, which is why it
+does not reuse the baseline's `e01…e04` layout. Four modules under `depin/ext/`
 import no third-party package at all — `ext/__init__`, `ext/asgi`, `ext/wsgi`
 and `ext/cli` — and those are the generic seams the framework modules
 specialise, carrying the bounded `RequestScope[ScopeT: ASGIScope, …]`,
 `RequestScope[EnvironT, StartResponseT]`, `install[C: CommandContext]` and
-`CommandContext.with_resource[T]`. They are checked in **both** modes, against a
-consumer's own structural scope and context types.
+`CommandContext.with_resource[T]`. `corpus/ext_core/` exercises them against a
+consumer's own structural scope and command-context types, and is checked in
+**both** modes.
 
-The eight modules that do require an extra are checked in all-extras mode only.
-In core-only mode the runner asserts each of those eight is *unresolvable*,
-which is what proves the core carries no framework dependency.
+The baseline's own `ext/e03_cli.py` mixed `click.Context` and `typer.Context`
+into the same file as the structural case, so it could not be checked without
+the extras — and its core-only run covered nine files, no ext file among them.
+Splitting by mode is what makes the both-modes claim executable.
+
+`corpus/ext_extras/` covers the eight modules that require an extra and is
+checked in all-extras mode only. In core-only mode the runner asserts each of
+those eight is *unresolvable*, which is what proves the core carries no
+framework dependency.
+
+There is no aggregate `all` extra. The all-extras interpreter is installed by
+naming the eight explicitly: `click`, `fastapi`, `flask`, `litestar`, `pytest`,
+`starlette`, `taskiq`, `typer`.
 
 ### The coverage map
 
@@ -240,15 +311,53 @@ reason = "a module-level int; no call site infers from it"
 ```
 
 `tests/unit/test_conformance_coverage.py` enumerates the public surface and
-fails when a name has no entry. It reads `depin.__all__` directly for the core.
-For `depin/ext/` it parses each module with `ast` rather than importing it,
-because `tests/unit/` runs on the free-threaded and pre-release jobs where no
-framework is installed — the same technique `tests/unit/test_integration_contract.py`
-already uses.
+fails when a name has no entry. It reads `depin.__all__` and `depin.errors`
+directly. For `depin/ext/` it parses each module with `ast` rather than
+importing it, because `tests/unit/` runs on the free-threaded and pre-release
+jobs where no framework is installed — the same technique
+`tests/unit/test_integration_contract.py` already uses.
 
-This is the mechanism the proposal asks for: a new public symbol cannot land
-without an explicit type-test decision, because the unit gate fails until it has
-one.
+**Three sources, not one.** The proposal asks for "every symbol re-exported from
+`depin`, every public exception surface whose typing affects control flow, and
+`depin.ext`". `depin/errors.py` carries eleven public exceptions, none of them
+in `depin.__all__`, and two of them inherit a builtin as well
+(`InvalidProviderError(DepinError, TypeError)`,
+`TeardownError(DepinError, RuntimeError)`) — which is precisely a typing fact
+that changes what a consumer's `except` clause catches. They are enumerated by
+import, since `depin.errors` needs no framework.
+
+**The `ast` scanner's contract is specified, because the naive version misses
+the most important symbol in the package.** Only `depin/ext/fastapi.py` declares
+`__all__`; the other eleven do not. And `fastapi.py` has no top-level `Inject`
+at all — its module body is `__all__` plus a single `If` node, with
+`type Inject[T] = T` in the `TYPE_CHECKING` branch and `class Inject` in the
+`else`. A scanner walking `tree.body` for `ClassDef`/`FunctionDef`/`Assign`
+finds nothing. So the contract is:
+
+- honour `__all__` when the module declares one;
+- otherwise take every non-underscore top-level `ClassDef`, `FunctionDef`,
+  `AsyncFunctionDef`, `Assign`, `AnnAssign` and `TypeAlias`;
+- **descend into `If` bodies and their `else` branches**, so a symbol declared
+  under `TYPE_CHECKING` is found;
+- treat a module-level `import X as Y` where `Y` is public as a symbol, not an
+  import — `from depin.ext.asgi import RequestScope as ASGIRequestScope` is how
+  three framework modules publish their base.
+
+`TypeAlias` matters on its own: `ext/asgi.py` declares two PEP 695 aliases at
+module level and `ext/wsgi.py` one.
+
+**Class members are out of scope, and the design says so rather than implying
+coverage.** `RequestScope.__call__`, `CommandContext.with_resource[T]` and every
+`Container` method are not top-level names, so adding `Container.foo()` passes
+this gate. The map guards the *symbol* inventory; the corpus guards the members,
+and the two are different promises. Extending the map to members would mean
+walking every class body of a package whose public classes carry the bounded
+generics the corpus already exercises directly — cost without a matching gain.
+Step 8's surface review is where member-level inventory belongs.
+
+Within that scope this is the mechanism the proposal asks for: a new public
+symbol cannot land without an explicit type-test decision, because the unit gate
+fails until it has one.
 
 ## Exact inference versus assignability
 
@@ -265,6 +374,19 @@ with the promised type, assigned the expression under test. A witness fails for
 exactly the reasons the contract cares about (`Any`, unknown, an unrelated type,
 a lost generic argument) and passes when a checker chooses a valid narrower
 representation.
+
+**A witness inside a function is named with a leading underscore.** `ruff check`
+is the second of the five gates and `F` is selected, and an annotation does not
+exempt an unused local:
+
+```
+F841 Local variable `pending` is assigned to but never used
+  --> pending: Awaitable[str] = handler('n')
+```
+
+`_pending: Awaitable[str] = handler('n')` is exempt under ruff's default
+`dummy-variable-rgx`. This is a naming rule for the whole corpus, not a note,
+because the witness is the mechanism the contract rests on.
 
 | Category | Why exact equality is dishonest | Form used |
 | --- | --- | --- |
@@ -308,7 +430,7 @@ touch `Registry` or its `|`, `Named`, `Tag`, `Bindings`, `Condition` in
 annotation position, `Host.activated()`, `close`/`aclose`,
 `awarmup`/`ahealth`, `Container(*sources)`/`include`, or `scope_value`; and of
 the twelve `depin/ext/` modules it covers `fastapi.Inject` and the two pytest
-protocols only. Nine ext modules have no typing coverage at all today.
+protocols only. Ten of the twelve have no typing coverage at all today.
 
 The two pytest protocols are covered in a way worth naming, because the corpus
 must not repeat it: the assertions are made against the declared
@@ -365,8 +487,7 @@ matching on rendered text would be brittle where it is not simply useless.
 ### The divergence register
 
 Two false negatives in the public API were found by the baseline and are
-**routed to Step 8**, because both repairs break API and Step 8 is the last
-window before the freeze:
+**routed to Step 8**, which is the last window before the freeze:
 
 - `FrozenContainer.override(Config, Other())` — accepted by all five. No change
   to `Token` reaches it: `type[T]` is covariant by construction in the spec, and
@@ -374,7 +495,9 @@ window before the freeze:
   call shape.
 - `Container.value(Token[int], 'str')` — accepted by four. Pyrefly rejects it,
   and does so precisely because it reads `T` as invariant, which is why four of
-  the eight measured remedies would have destroyed the signal.
+  the eight measured remedies would have destroyed the signal. Its repair is
+  R5, which changes no call site; it is deferred because the roadmap chose R4
+  over R5, not because it is expensive.
 
 They cannot be negative fixtures, because a fixture every checker accepts gates
 nothing. They become `conformance/divergence/`, whose contract is the inverse:
@@ -391,7 +514,7 @@ Each checker gets an explicit configuration. None may read another's.
 | Checker | Consumer config | Source config | Setting |
 | --- | --- | --- | --- |
 | mypy | CLI | `[tool.mypy]` (unchanged) | `--strict --warn-unreachable`, plus `--disallow-any-expr` in core-only mode |
-| stock Pyright | `config/pyright.json` | **new `[tool.pyright]`** | `typeCheckingMode: "strict"`, `useLibraryCodeForTypes: false`, `reportMissingTypeStubs: true` |
+| stock Pyright | `config/pyright.json` | **`config/pyright-source.json`**, passed with `-p` | `typeCheckingMode: "strict"`, `useLibraryCodeForTypes: false`, `reportMissingTypeStubs: true` |
 | Basedpyright | `config/basedpyright.json` | `[tool.basedpyright]` (unchanged) | as above plus `reportImplicitOverride`, and `reportAny`/`reportExplicitAny` on the anti-erasure pass |
 | ty | `config/ty.toml` | `[tool.ty.src]` (unchanged) | `--error all`; ty has no strict mode or preset system |
 | Pyrefly | `config/pyrefly.toml` | **new `pyrefly.toml`** | `--preset strict` |
@@ -418,11 +541,28 @@ Two guards catch the first two, which both produce a green run over an empty
 file set: the runner asserts a **non-zero checked-file count** for every checker
 that reports one, and asserts that stock Pyright's count matches mypy's.
 
-AGENTS.md forbids reintroducing `pyrightconfig.json`; it does not forbid a
-`[tool.pyright]` table, and that is where the stock-Pyright source configuration
-goes. The implementation must confirm that Basedpyright still prefers
-`[tool.basedpyright]` when both tables are present, and the plan carries that as
-a verification step rather than an assumption.
+**Stock Pyright's source configuration cannot live in `pyproject.toml`.** The
+obvious placement, a `[tool.pyright]` table beside the existing
+`[tool.basedpyright]`, breaks the repository's own commit gate:
+
+```
+$ uv run basedpyright        # pyproject.toml carrying both tables
+Pyproject file parse attempt 1 Error: Pyproject file cannot have both `pyright`
+and `basedpyright` sections. pick one
+Config file ".../pyproject.toml" could not be parsed. Verify that format is correct.
+exit=3
+```
+
+Basedpyright 1.39.10 — the pinned version — discards the whole file, losing
+`include`, `typeCheckingMode` and `reportImplicitOverride`, and degrades to its
+defaults over the working directory. Stock Pyright 1.1.411 tolerates both
+tables; only Basedpyright refuses.
+
+So the stock-Pyright source configuration is a named file,
+`conformance/config/pyright-source.json`, passed explicitly with `-p`. AGENTS.md
+bans reintroducing a root `pyrightconfig.json`, which Pyright discovers
+implicitly; a named file passed on the command line is a different object and
+does not compete with `[tool.basedpyright]` for discovery.
 
 Pyrefly has no `pyproject.toml` table, so its source configuration is a
 top-level `pyrefly.toml`.
@@ -450,8 +590,18 @@ The fourth is the decisive one, and the measurement above is why: it is a
 positive assertion about behaviour rather than an enumeration of the variables
 that could leak, so it catches a stray `.pth`, an `extraPaths` entry, a
 `conftest.py`, a `MYPYPATH`, or a working directory, regardless of how it
-arrived. The runner therefore **runs every checker from the consumer directory**
-and refuses to start if its own working directory is inside the checkout.
+arrived.
+
+Which forces the runner's shape. It is invoked from the checkout — it has to be,
+to be reachable as `uv run python -m scripts.conformance`, and in CI the
+checkout is the default working directory. So the guard cannot be on the runner
+process. Instead the runner **copies `conformance/` into a temporary directory
+outside the checkout** and runs every checker subprocess with that directory as
+its working directory, asserting for each subprocess that the checkout is not
+the working directory and not an ancestor of it. The corpus is checked where the
+baseline checked it — somewhere that has never heard of the source tree — and
+the empty-interpreter control runs the identical command lines from the identical
+directory, which is what makes it a control rather than a formality.
 
 ## The `Token` remedy: R4
 
@@ -473,14 +623,41 @@ old name would now describe the wrong thing.
 wider one would be sound but would make a consumer's `TokenKey` subclass behave
 as a key statically and not at runtime.
 
+**The same correction is due one module over, and the `Token[object]` grep does
+not find it.** `depin/_core/typeguards.py` carries the runtime guard behind the
+`ProviderKey` alias:
+
+```python
+def is_provider_key(value: object) -> TypeGuard[ProviderKey]:
+    return isinstance(value, type | str | Token | Underlying) or is_generic_key(value)
+```
+
+Once `ProviderKey` admits `TokenKey`, this guard promises `TokenKey` while
+admitting only `Token`, and it gates `FrozenContainer.explain`,
+`DependencyGraph.find` and `DependencyGraph.node`. Its `isinstance` becomes
+`type | str | TokenKey | Underlying`. The variance experiment's measured R4 diff
+touched three modules and not this one, which is why the omission survived to
+here.
+
 ### `TokenKey` is exported
 
 `TokenKey` appears inside the public `ProviderKey` alias. A consumer who
 annotates against `ProviderKey` and reads a diagnostic naming `TokenKey` must be
 able to import it, so it joins `depin.__all__` with the docstring the public API
-requires and a reference page. Its docstring states that `Token` is its only
-intended implementation; it is not an extension point, and Step 8 decides
-whether to seal it.
+requires and a reference page.
+
+Its docstring must not claim it is "not an extension point". `TokenKey` cannot
+be `@final` — `Token` inherits it — and `__eq__` and `is_token_key` both narrow
+on it, so a consumer's subclass really would compare equal to a `Token` of the
+same name and really would flow through `extract_annotated_meta` as a key. A
+docstring asserting a constraint the code does not enforce fails AGENTS.md's
+rule that every statement be verifiable.
+
+So it says the true thing instead: `Token` is the only implementation depin
+provides, subclassing is unsupported, and the runtime will treat a subclass as a
+key. Step 8 decides whether to seal it with `__init_subclass__` and whether it
+stays exported at all — and because `TokenKey` is new in 0.17.0, sealing later
+can only break code written against a type documented as unsupported.
 
 `__all__` grows from 28 to 29. That is a symbol Step 8's surface review has to
 justify, and the alternative — a public alias naming an unimportable type — is
@@ -527,17 +704,26 @@ One bad argument poisons the chain to `Unknown`, so this single defect produces
 seven strict-mode diagnostics in a five-line consumer program that runs
 correctly.
 
-The sixteen positions are widened to admit a token. The widening is **not** to
-`ProviderKey`: that alias also admits `str` and `Underlying`, and
-`as_provider_key` raises on the latter. The narrowest change that matches what
-the position actually accepts is the two-member union.
+The sixteen positions are widened to what the position actually accepts, which
+is measured rather than assumed. `provides=42` raises `InvalidProviderError`;
+`provides='some-key'` **succeeds today** and resolves the binding, because
+`as_provider_key` admits a string key. Of the five members of `ProviderKey`,
+`Underlying` is the only one it rejects.
 
-**The spelling is the R4 one, `type[object] | TokenKey | None`, and the two
-changes must land in the same commit.** Written against `Token[object]` the
-repair works under the four checkers that infer the phantom parameter covariant
-and fails under Pyrefly, which does not — it would depend on precisely the
-variance R4 exists to stop depending on. The repair is a `fix:`; it changes what
-a consumer can write.
+So the spelling is `type[object] | TokenKey | str | None`. Widening to
+`ProviderKey` itself would additionally promise `Underlying`, which raises;
+stopping at `type[object] | TokenKey | None` would keep refusing a string the
+library has always accepted, and the rule this design applies — annotate what
+the position accepts — does not admit an exception for the member nobody
+noticed.
+
+**The two changes must land in the same commit.** Written against
+`Token[object]` the repair works under the four checkers that infer the phantom
+parameter covariant and fails under Pyrefly, which does not — it would depend on
+precisely the variance R4 exists to stop depending on.
+
+The pull request carrying both is a `feat:`, not a `fix:`. It adds `TokenKey` to
+the public API, and 0.17.0 is the target; a `fix:` would cut 0.16.4.
 
 ## Version policy
 
@@ -547,6 +733,10 @@ a consumer can write.
 both CI and the local runner read it. Nothing else names a version.
 
 ```toml
+[targets]
+python = "3.12"
+os = "linux"
+
 [checkers]
 mypy = "2.3.1"
 pyright = "1.1.411"
@@ -555,12 +745,20 @@ ty = "0.0.77"
 pyrefly = "1.2.0"
 ```
 
+The language target belongs in the file, not only in CI YAML and prose: the
+proposal's criterion is that "checker versions **and Python language targets**
+are recorded reproducibly", and a local run must reproduce the gate exactly.
+
 All five are invoked through `uvx <tool>@<version>`. ty and Pyrefly stay out of
 `uv.lock` and out of every contributor's environment for the reason the existing
 CI comment gives: a 0.0.x tool with no stable API has no business there. mypy
 and Basedpyright remain in the `dev` group as well, because they are also the
 Layer 1 gates run by `uv run`; the runner asserts that the pinned conformance
-version satisfies the `dev` floor, so the two cannot drift apart silently.
+version equals the one `uv.lock` resolves, so the two cannot drift apart
+silently. Comparing against the declared floor instead would be useless: `dev`
+declares `mypy>=1.18`, so every future resolution satisfies it while `uv run
+mypy` and `uvx mypy@2.3.1` diverge — and the repository takes weekly Dependabot
+updates, so that divergence is scheduled rather than hypothetical.
 
 ### Minimum supported and current tested
 
@@ -568,6 +766,13 @@ The project has measured exactly one version of each checker. Declaring a lower
 minimum would be a support claim with no evidence behind it, which the proposal
 forbids. So the initial policy sets **minimum supported = current tested** for
 all five, and states the rule for advancing:
+
+This defers, rather than answers, the proposal's request to "evaluate testing
+both the oldest supported version and the current supported version" for the
+stable lines. Naming an older minimum today would be a support claim with
+nothing behind it; the forward job's previous-release probe is what will build
+the evidence to lower one honestly. The deferral is recorded here so a later
+reader does not mistake it for a decision that the question does not apply.
 
 - The **current tested** version advances by a pull request that shows the whole
   suite green on the new version. It is never advanced automatically.
@@ -599,7 +804,8 @@ imports nothing from `depin`. The support policy links the issue.
 
 ## CI
 
-Per pull request, six new jobs replacing the current `ty (advisory)` job.
+Per pull request, three new job definitions replacing the current
+`ty (advisory)` job. They expand through their matrices to nine job instances.
 
 | Job | Matrix | Blocking | What it does |
 | --- | --- | --- | --- |
@@ -608,9 +814,10 @@ Per pull request, six new jobs replacing the current `ty (advisory)` job.
 | `typing-source` | pyright, ty, pyrefly | yes | Full-source check: stock Pyright at zero, ty and Pyrefly against their registers |
 
 Five consumer jobs rather than one, so the PR check list names the checker that
-broke without a reviewer opening a log. Both install modes inside each job,
-because the wheel build and the venv creation dominate and splitting them would
-double that cost for no added signal.
+broke without a reviewer opening a log. That choice already pays the venv
+creation five times over, so splitting the two install modes as well would be
+the wrong economy: each job creates its three interpreters once and checks both
+modes inside them.
 
 **One Python target per pull request: 3.12.** The baseline measured
 byte-identical results at 3.12, 3.13 and 3.14 for all five checkers in both
@@ -619,9 +826,21 @@ nothing. The targets are not abandoned — `typing-forward` runs them weekly as 
 regression detector, which is the honest place for a check whose last three
 measurements were identical.
 
-The measured cost supports the shape: ~50 s of checker time for five checkers
-across two install modes, of which mypy's cold start on a small corpus is the
-largest single term, plus one wheel build and the venv creation.
+**One operating system per pull request: Linux.** The ordinary `checks` matrix
+runs Windows and macOS at the floor version, and it is the right place for
+runtime behaviour. What a checker infers from a wheel does not vary by host —
+but two things the isolation guard rests on do: path-ancestry comparison and
+`.pth` discovery in `site-packages`. `typing-forward` runs the full suite on all
+three hosts weekly, so a platform-specific break in the guard surfaces without
+tripling the per-PR cost. If it ever fires, the guard moves to the per-PR
+matrix.
+
+The baseline's ~50 s of checker time sizes this but understates it: that figure
+covers the positive corpus alone. The jobs also run the negative fixtures one
+file at a time, the divergence fixtures, the empty-interpreter control for all
+five, and two separate anti-erasure passes, on top of one wheel build and three
+interpreters per job. The shape is affordable; the number is a floor, not an
+estimate.
 
 ## Contributor experience
 
@@ -656,7 +875,7 @@ measured, and reverted; the evidence report records the command and the output.
 | `Inject[T]` loses its parameter | the all-extras mode of all five |
 | `depin/py.typed` removed from the wheel build | `typing-artifact`, and the empty-venv-shaped `Any` cascade in all five |
 | R4 reverted (`TokenKey` removed) | Pyrefly's `typing-consumer` job, with six `bad-argument-type`/`bad-return` |
-| the runner invoked from the repository root | the isolation guard, before any checking |
+| the runner made to check the corpus in place instead of the copied directory | the per-subprocess working-directory assertion, before any checking |
 | one negative fixture's misuse rewritten as valid code | the negative harness, for a missing expected rejection |
 | a new name added to `depin.__all__` | `tests/unit/test_conformance_coverage.py` |
 | a diagnostic added to a file in the ty register | `typing-source`, as an unregistered diagnostic |
@@ -709,7 +928,12 @@ versions` job, run before the pull request opens.
 Routed to **Step 8**, where the API may still change:
 
 - `FrozenContainer.override(Config, Other())` and
-  `Container.value(Token[int], 'str')` — both repairs break call shapes.
+  `Container.value(Token[int], 'str')`. `override`'s measured repair changes
+  the call shape to `override[T](key).using(replacement)`. `value`'s does not:
+  its measured repair is R5, which adds a member to `Token` and leaves every
+  call site alone. It is deferred because the roadmap took R4 over R5 at
+  `2816b09`, not because it breaks API — saying otherwise would contradict the
+  evidence this design cites.
 - Whether `TokenKey` stays exported, and whether it is sealed against
   subclassing.
 
