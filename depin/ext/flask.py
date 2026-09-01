@@ -56,8 +56,18 @@ class RequestScope(WSGIRequestScope[WSGIEnvironment, StartResponse]):
     The container is published to the request's context for the duration of
     the scope, so `depin.hosted_container()` reaches it from anywhere inside
     the request. It places a `flask.Request` built from the environment into
-    the active scope frame, so scoped providers can read headers, URL,
-    cookies, and form data without touching Flask's own context locals.
+    the active scope frame, so scoped providers can read headers, URL, and
+    cookies without touching Flask's own context locals.
+
+    That request must not be used to read the body — ``form``, ``json``,
+    ``data``, ``files``. It is built from the same environment Flask builds its
+    own request from, and the two share one ``environ['wsgi.input']`` stream.
+    Reading the body through the seed consumes that stream, and Flask's own
+    parse then finds it empty and returns 400. This is where the WSGI seed
+    differs from the ASGI ones: `depin.ext.starlette` and `depin.ext.litestar`
+    seed a request with no receive channel, so the same mistake raises instead
+    of stealing the body. Treat the body as a route concern, not a provider
+    input.
 
     Unlike the ASGI integrations, which hand the framework the class and let it
     construct the middleware, Flask is given an instance: ``app.wsgi_app`` is
@@ -93,9 +103,14 @@ class RequestScope(WSGIRequestScope[WSGIEnvironment, StartResponse]):
             closed. Every failure is included; one does not hide another.
 
     Example:
-        Install the middleware once, by wrapping the application in place::
+        Install the middleware once, by pointing the server at the wrapper::
 
             app = Flask(__name__)
+            application = RequestScope(app.wsgi_app, di)
+
+        Or rebind the application in place, which is Flask's own idiom and
+        needs the ``method-assign`` waiver described above on that one line::
+
             app.wsgi_app = RequestScope(app.wsgi_app, di)
     """
 

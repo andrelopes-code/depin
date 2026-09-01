@@ -3,24 +3,29 @@
 `depin.ext.flask.RequestScope` is the shared WSGI middleware with one seed
 applied, so what these tests exercise is the seed and the wiring: the request
 object reaches providers, the scope is per request, and it drains when the
-request ends. The last test pins the drain against a real Flask streaming
-response, so the boundary the guide warns about is anchored to the framework
-and not only to the hand-written application in ``tests/unit/test_wsgi.py``.
+request ends. Two tests pin boundaries the guide warns about against the real
+framework rather than against the hand-written application in
+``tests/unit/test_wsgi.py``: the scope draining before a streamed body is
+produced, and the seeded request stealing ``wsgi.input`` from Flask's own
+request when a provider reads the form off it.
 
 Flask's documented installation is ``app.wsgi_app = RequestScope(app.wsgi_app,
-di)``: a middleware instance, not a class, unlike the ASGI frameworks. That
-assignment cannot be written here, because Flask declares ``wsgi_app`` as a
-method and mypy rejects rebinding one (``method-assign``); a `typing.Protocol`
-naming ``wsgi_app`` as a settable attribute does not help either, since the
-method is read-only to a protocol. The suite therefore wraps ``app.wsgi_app``
-— reading it is fine — and drives the wrapper through `werkzeug.test.Client`,
-which is the class Flask's own ``app.test_client()`` derives from, so the
-responses asserted on are real Flask responses.
+di)``: a middleware instance, not a class, unlike the ASGI frameworks. Writing
+that assignment statement here would need a mypy waiver, because Flask
+declares ``wsgi_app`` as a method and mypy rejects rebinding one
+(``method-assign``); a `typing.Protocol` naming ``wsgi_app`` as a settable
+attribute does not avoid it either, since the method is read-only to a
+protocol. The suite therefore wraps ``app.wsgi_app`` — reading it is fine —
+and drives the wrapper through `werkzeug.test.Client`, which is the class
+Flask's own ``app.test_client()`` derives from. The path exercised is the same
+one either way: ``Flask.__call__`` is ``return self.wsgi_app(environ,
+start_response)``, so the responses asserted on are real Flask responses.
 """
 
 from collections.abc import Generator, Iterator
 
-from flask import Flask, Request, Response
+import pytest
+from flask import Flask, Request, Response, request
 from werkzeug.test import Client
 
 from depin import Container, FrozenContainer, Scope, hosted_container, optional_hosted_container
@@ -48,6 +53,13 @@ class HeaderProbe:
     def __init__(self, request: Request) -> None:
         self.probe = request.headers.get('x-probe', 'none')
         self.path = request.path
+
+
+class FormReader:
+    """A provider that reads the body off the seeded request, which is the mistake."""
+
+    def __init__(self, request: Request) -> None:
+        self.form = dict(request.form)
 
 
 def hosted(container: FrozenContainer, app: Flask) -> Client:
@@ -134,7 +146,7 @@ def test_a_provider_reads_headers_off_the_seeded_request() -> None:
 
     def endpoint(x: str) -> dict[str, str]:
         found = hosted_container().resolve(HeaderProbe)
-        return {'probe': found.probe, 'path': found.path}
+        return {'probe': found.probe, 'path': found.path, 'matched': x}
 
     app.add_url_rule('/probe/<x>', view_func=endpoint)
 
@@ -142,7 +154,7 @@ def test_a_provider_reads_headers_off_the_seeded_request() -> None:
 
     payload = hosted(di, app).get('/probe/abc', headers={'x-probe': 'yes'}).get_json()
 
-    assert payload == {'probe': 'yes', 'path': '/probe/abc'}
+    assert payload == {'probe': 'yes', 'path': '/probe/abc', 'matched': 'abc'}
 
 
 def test_a_streaming_flask_response_is_produced_after_the_scope_has_drained() -> None:
@@ -181,3 +193,39 @@ def test_a_streaming_flask_response_is_produced_after_the_scope_has_drained() ->
     assert response.get_data() == f'{id(served[0]):x}'.encode()
     assert hosted_inside_body == [None]
     assert torn == served
+
+
+@pytest.mark.parametrize(
+    ('probe', 'status', 'form_seen_by_the_view'),
+    [
+        pytest.param(FormReader, 400, None, id='reading the form off the seed steals the body'),
+        pytest.param(HeaderProbe, 200, {'a': '1'}, id='reading headers off the seed leaves the body'),
+    ],
+)
+def test_the_seeded_request_must_not_be_used_to_read_the_body(
+    probe: type[object],
+    status: int,
+    form_seen_by_the_view: dict[str, str] | None,
+) -> None:
+    """The seed shares one ``wsgi.input`` with the request Flask builds for the view.
+
+    Consuming that stream through the seeded request leaves Flask's own parse
+    nothing to read, and Flask answers 400 before the view runs. The header
+    case is the control: it touches no body, so the view's form arrives whole.
+    The ASGI seeds cannot be misused this way — they carry no receive channel,
+    so reading the body through them raises instead.
+    """
+    app = Flask(__name__)
+
+    def endpoint() -> dict[str, dict[str, str]]:
+        _ = hosted_container().resolve(probe)
+        return {'form': dict(request.form)}
+
+    app.add_url_rule('/form', view_func=endpoint, methods=['POST'])
+
+    di = Container().scope_value(Request).bind(probe, scope=Scope.SCOPED).freeze()
+
+    response = hosted(di, app).post('/form', data={'a': '1'})
+
+    assert response.status_code == status
+    assert response.get_json(silent=True) == ({'form': form_seen_by_the_view} if form_seen_by_the_view else None)

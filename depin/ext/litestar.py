@@ -60,11 +60,14 @@ class RequestScope(ASGIRequestScope[Scope, Receive, Send]):
     the scope, so `depin.hosted_container()` reaches it from anywhere inside
     the request.
 
-    A connection scope that is neither ``http`` nor ``websocket`` — the
-    lifespan scope above all — is forwarded untouched: no scope is opened and
-    nothing is published. A websocket is scoped and hosted exactly like an HTTP
-    request, but it is not seeded, because it has no request-body semantics and
-    `litestar.Request` is HTTP-shaped.
+    Only ``http`` and ``websocket`` connections reach it. Litestar answers the
+    lifespan scope inside ``Litestar.__call__``, above its middleware stack, so
+    unlike the Starlette integration this one is never handed one — which is
+    why the connection triple it is typed against is ``Scope``, Litestar's
+    union of the two connection scopes, and a lifespan scope would not
+    type-check as an argument to it. A websocket is scoped and hosted exactly
+    like an HTTP request, but it is not seeded, because it has no request-body
+    semantics and `litestar.Request` is HTTP-shaped.
 
     For HTTP requests it places a metadata-only `litestar.Request` into the
     active scope frame, under the key ``Request[object, object, State]``, so
