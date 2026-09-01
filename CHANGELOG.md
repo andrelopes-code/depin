@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0](https://github.com/andrelopes-code/depin/compare/v0.16.3...v0.17.0) (2026-09-01)
+
+
+### Features
+
+* accept a Token wherever a provider key is accepted ([#73](https://github.com/andrelopes-code/depin/issues/73)) ([ccb1fa0](https://github.com/andrelopes-code/depin/commit/ccb1fa018cb3fe342e967dc86bfba921b02f69dc))
+
 ## [0.16.3](https://github.com/andrelopes-code/depin/compare/v0.16.2...v0.16.3) (2026-09-01)
 
 
