@@ -13,8 +13,8 @@ callback annotated `typer.Context` is an instance of the vendored private class,
 for which ``isinstance(value, typer.Context)`` is false. Seeding under the key
 `typer.Context` would therefore bind a value that is not an instance of its own
 key: depin keys on the annotation, so it would resolve, and every provider
-declaring that parameter would be handed something
-its own annotation denies. Seeding under the vendored class instead would make
+declaring that parameter would be handed something its own annotation denies.
+Seeding under the vendored class instead would make
 depin import a third-party private name, which is the one thing depin asks
 nobody to do to its own private package. The module ships neither.
 

@@ -34,10 +34,12 @@ mechanism, and the value never reaches the code that sent the message.
 
 The variable holds a tuple of stacks rather than a single stack, because one
 message can be executed inside another's context: a task body that kicks a
-second task on a broker configured with ``await_inplace=True`` runs that message
-in its own asyncio task. ``pre_execute`` appends, ``post_execute`` pops the last
-entry and closes that, so the inner message closes its own scope and leaves the
-outer one open for the rest of the outer body.
+second task on a broker configured with ``await_inplace=True`` awaits that
+message inside the kicking body's own asyncio task, rather than in a new task
+of its own that would copy the context instead of sharing it. ``pre_execute``
+appends, ``post_execute`` pops the last entry and closes that, so the inner
+message closes its own scope and leaves the outer one open for the rest of the
+outer body.
 """
 
 from contextlib import AsyncExitStack

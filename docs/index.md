@@ -89,8 +89,8 @@ list.
 ## Where to go next
 
 - [Guide](guide/index.md) — lifetimes and scopes, composing bindings,
-  resolution semantics, testing, inspecting the graph, and the web
-  integrations.
+  resolution semantics, testing, inspecting the graph, and the web, command,
+  and message integrations.
 - [API reference](reference/index.md) — the full public API, generated from the
   source docstrings.
 - [Examples](https://github.com/andrelopes-code/depin/tree/main/examples) —

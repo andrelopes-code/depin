@@ -181,9 +181,9 @@ each integration's own message names its own setup step.
   Typer 0.16.0 sharing that Click, help rendering included.
 - `typer>=0.16` — **corrected from `>=0.15` after the resolver disagreed with the
   measurement.** The seam was measured working on 0.15.4, but
-  `--resolution lowest-direct` never selects that release: 0.15.4 caps Click below
-  8.2, so the resolver picks typer **0.15.0**, which declares only `click>=8.0.0`
-  and therefore accepts a Click it cannot run. On typer 0.15.0 beside Click 8.2.1
+  `--resolution lowest-direct` never selects that release: it resolves each
+  declared floor, so a `typer>=0.15` floor gets typer **0.15.0**, which declares
+  only `click>=8.0.0` and therefore accepts a Click it cannot run. On typer 0.15.0 beside Click 8.2.1
   `--help` raises `TypeError: Parameter.make_metavar() missing 1 required
   positional argument: 'ctx'`, because Click 8.2 gave `make_metavar()` a context
   and Typer passes one only from 0.16. The `click` extra names no ceiling, so any
