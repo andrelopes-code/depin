@@ -6,8 +6,8 @@ Importing this module requires the ``typer`` extra (``pip install
 Written entirely against depin's public integration contract and the
 framework-free seam in `depin.ext.cli`: a partial application, nothing more.
 
-Alone among the integrations depin ships, this one seeds no value, and the
-reason is measurable rather than a matter of taste. Typer 0.26 dropped its
+Alone among the framework scope integrations depin ships, this one seeds no
+value, and the reason is measurable rather than a matter of taste. Typer 0.26 dropped its
 dependency on Click and vendored a private copy of it, and from that release
 the object handed to a callback annotated `typer.Context` is an instance of
 the vendored private class, for which ``isinstance(value, typer.Context)`` is
@@ -44,11 +44,12 @@ from depin.ext.cli import install as install_command_scope
 def install(ctx: Context, container: FrozenContainer) -> ScopeFrame:
     """Open one depin scope bound to a Typer invocation.
 
-    Call it from the callback Typer runs before the command body — the
-    function registered with ``@app.callback()`` — taking the context as a
-    parameter annotated `typer.Context`. `depin.ext.cli.install` states the
-    lifetime the scope takes on, what the frame is for, and what nesting an
-    install inside another one does.
+    Call it from the first function Typer runs for an invocation, taking the
+    context as a parameter annotated `typer.Context`: the callback registered
+    with ``@app.callback()``, or the command itself when the application
+    declares no callback. `depin.ext.cli.install` states the lifetime the scope
+    takes on, what the frame is for, and what nesting an install inside another
+    one does.
 
     Nothing is placed into the fresh frame. The module docstring records the
     measurement behind that and shows how to seed the context under a key of
