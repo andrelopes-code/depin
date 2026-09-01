@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.1](https://github.com/andrelopes-code/depin/compare/v0.16.0...v0.16.1) (2026-09-01)
+
+
+### Documentation
+
+* close Step 5 and route its last findings to Step 6 ([#62](https://github.com/andrelopes-code/depin/issues/62)) ([b11c46e](https://github.com/andrelopes-code/depin/commit/b11c46ee15d9f1b14d1933e239a7be7ad6f946ae))
+
 ## [0.16.0](https://github.com/andrelopes-code/depin/compare/v0.15.0...v0.16.0) (2026-09-01)
 
 
