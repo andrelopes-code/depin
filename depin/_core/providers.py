@@ -4,8 +4,8 @@ import inspect
 from collections.abc import Iterable
 from typing import get_args, get_origin, get_type_hints
 
-from depin._core.introspect import AnnotatedMeta, detect_shape, extract_annotated_meta, is_object_token
-from depin._core.markers import get_provides
+from depin._core.introspect import AnnotatedMeta, detect_shape, extract_annotated_meta, is_token_key
+from depin._core.markers import TokenKey, get_provides
 from depin._core.scope import Scope
 from depin._core.spec import (
     ALIAS_PARAM,
@@ -364,7 +364,7 @@ def _reject_repeated_members(collection: CollectionBinding) -> None:
 
 def _resolve_key(
     source: object,
-    explicit: type[object] | None,
+    explicit: type[object] | TokenKey | str | None,
     shape: ProviderShape,
     localns: dict[str, object],
 ) -> ProviderKey:
@@ -483,7 +483,7 @@ def param_key_from_meta(meta: AnnotatedMeta) -> ProviderKey:
         return meta.token
     if isinstance(meta.named, str):
         return meta.named
-    if is_object_token(meta.named):
+    if is_token_key(meta.named):
         return meta.named
     return as_provider_key(meta.base)
 

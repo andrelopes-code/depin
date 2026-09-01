@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from types import NoneType, UnionType
 from typing import Annotated, TypeGuard, Union, get_args, get_origin
 
-from depin._core.markers import Named, Tag, Token
+from depin._core.markers import Named, Tag, TokenKey
 from depin._core.spec import ProviderShape
 from depin.errors import InvalidProviderError
 
@@ -48,26 +48,26 @@ def _wraps_async_generator(source: object) -> bool:
 @dataclass(frozen=True, slots=True)
 class AnnotatedMeta:
     base: object
-    token: Token[object] | None
+    token: TokenKey | None
     tag: str | None
-    named: 'Token[object] | str | None'
+    named: 'TokenKey | str | None'
     optional: bool
 
 
-def is_object_token(value: object) -> TypeGuard[Token[object]]:
-    """Token's T is type-only; at runtime every Token can be treated as Token[object]."""
-    return isinstance(value, Token)
+def is_token_key(value: object) -> TypeGuard[TokenKey]:
+    """A Token's T is type-only; at runtime a named key is observable only as its untyped supertype."""
+    return isinstance(value, TokenKey)
 
 
 def extract_annotated_meta(annotation: object) -> AnnotatedMeta:
     base, extras = _split_annotated(annotation)
 
-    token: Token[object] | None = None
+    token: TokenKey | None = None
     tag: str | None = None
-    named: Token[object] | str | None = None
+    named: TokenKey | str | None = None
 
     for extra in extras:
-        if is_object_token(extra):
+        if is_token_key(extra):
             if token is None:
                 token = extra
         elif isinstance(extra, Tag):

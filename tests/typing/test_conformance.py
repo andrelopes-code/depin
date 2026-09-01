@@ -6,7 +6,7 @@ so a change that breaks the import still fails the suite.
 """
 
 import contextlib
-from collections.abc import AsyncGenerator, Awaitable, Generator
+from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
 from typing import Protocol, assert_type
 
 from depin import (
@@ -20,10 +20,12 @@ from depin import (
     HealthCheck,
     HealthReport,
     Host,
+    ProviderKey,
     ProviderShape,
     Scope,
     ScopeFrame,
     Token,
+    TokenKey,
     Underlying,
     WarmupReport,
     hosted_container,
@@ -400,3 +402,35 @@ def test_reset_returns_none() -> None:
 async def test_areset_returns_none() -> None:
     di = Container().bind(Config).freeze()
     assert_type(await di.areset(), None)
+
+
+def _first_key(key: ProviderKey) -> ProviderKey:
+    return key
+
+
+def test_a_token_is_accepted_where_a_provider_key_is_expected() -> None:
+    assert_type(_first_key(port), ProviderKey)
+    key: TokenKey = port
+    assert_type(_first_key(key), ProviderKey)
+
+
+def test_a_token_is_an_alias_and_an_explain_argument() -> None:
+    other = Token[int]('other')
+    di = Container().value(port, 8080).alias(other, to=port).freeze()
+    assert_type(di.resolve(other), int)
+    assert_type(di.explain(port), str)
+
+
+def test_provides_accepts_a_token() -> None:
+    def make() -> int:
+        return 8080
+
+    assert_type(Container().bind(make, provides=port), Container)
+    assert_type(Container().singleton(provides=port)(make), Callable[[], int])
+
+
+def test_provides_accepts_a_name() -> None:
+    def make() -> int:
+        return 8080
+
+    assert_type(Container().bind(make, provides='http.port'), Container)
