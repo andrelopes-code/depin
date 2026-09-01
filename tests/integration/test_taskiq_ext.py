@@ -3,7 +3,10 @@
 `InMemoryBroker.kick` dispatches each message onto its own asyncio task, so the
 broker exercises the same hook pairing a worker process does: ``pre_execute``,
 the task body and ``post_execute`` share one task and one context, and messages
-in flight overlap.
+in flight overlap. One test constructs the broker with ``await_inplace=True``
+instead, which runs the kicked message inside the caller's own task: that is how
+two messages come to share one `contextvars.Context`, which is the re-entrant
+case.
 
 Every broker is built inside the test that uses it, with a task name of its own,
 because a task is registered on the broker instance and the middleware is
@@ -50,6 +53,10 @@ class Counter:
 
 class Resource:
     """A scoped dependency whose teardown the tests count."""
+
+
+class Nested:
+    """A second scoped dependency, so an inner message's teardown is told apart from an outer one's."""
 
 
 class MessageProbe:
@@ -278,3 +285,45 @@ async def test_three_interleaved_messages_each_close_their_own_scope() -> None:
     assert len(set(on_arrival.values())) == 3
     assert on_release == on_arrival
     assert sorted(torn) == sorted(on_arrival.values())
+
+
+async def test_a_message_executed_inside_another_leaves_the_outer_scope_intact() -> None:
+    torn: list[str] = []
+
+    def open_outer() -> Generator[Resource]:
+        yield Resource()
+        torn.append('outer')
+
+    def open_inner() -> Generator[Nested]:
+        yield Nested()
+        torn.append('inner')
+
+    di = (
+        Container()
+        .bind(open_outer, scope=Scope.SCOPED, provides=Resource)
+        .bind(open_inner, scope=Scope.SCOPED, provides=Nested)
+        .freeze()
+    )
+    broker = InMemoryBroker(await_inplace=True).with_middlewares(MessageScope(di))
+    outer_seen: list[int] = []
+    torn_when_the_inner_returned: list[list[str]] = []
+
+    @broker.task(task_name='depin.tests.taskiq.nested_inner')
+    async def inner() -> None:
+        _ = hosted_container().resolve(Nested)
+
+    @broker.task(task_name='depin.tests.taskiq.nested_outer')
+    async def outer() -> None:
+        outer_seen.append(id(hosted_container().resolve(Resource)))
+        (await outcome(await inner.kiq())).raise_for_error()
+        torn_when_the_inner_returned.append(list(torn))
+        outer_seen.append(id(hosted_container().resolve(Resource)))
+
+    await broker.startup()
+    (await outcome(await outer.kiq())).raise_for_error()
+    await broker.shutdown()
+
+    assert torn_when_the_inner_returned == [['inner']]
+    assert outer_seen[0] == outer_seen[1]
+    assert torn == ['inner', 'outer']
+    assert optional_hosted_container() is None

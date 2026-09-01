@@ -16,16 +16,28 @@ the whole design.
 It cannot survive on the middleware instance. One `MessageScope` is registered
 on a broker and every message that broker's worker handles goes through that one
 object, so three messages in flight leave the attribute holding the third
-message's stack: two scopes then never drain at all, and the first
-``post_execute`` to run closes the third message's stack from a context that is
-not the one that opened it, which fails outright with ``ValueError: Token was
-created in a different Context``. The stack lives in a module-level
-`contextvars.ContextVar` instead, because ``pre_execute``, the task body and
-``post_execute`` share one asyncio task and therefore one
-`contextvars.Context` — including when the task body is a synchronous function
-Taskiq dispatches to its executor, which is what the ``taskiq>=0.11.19`` floor
-buys. Concurrent messages are isolated by the same mechanism, and the value
-never reaches the code that sent the message.
+message's stack. The first two stacks are then unreferenced, and what was
+measured is that their teardowns still run — at whatever later moment
+refcounting finalises the orphaned generators, in whatever context the
+interpreter is in by then, rather than when the message they belong to ended.
+The first ``post_execute`` to run closes the third message's stack from a
+context that is not the one that opened it, which fails outright with
+``ValueError: Token was created in a different Context``, so that message's
+result is never saved either.
+
+The stack lives in a module-level `contextvars.ContextVar` instead, because
+``pre_execute``, the task body and ``post_execute`` share one asyncio task and
+therefore one `contextvars.Context` — including when the task body is a
+synchronous function Taskiq dispatches to its executor, which is what the
+``taskiq>=0.11.19`` floor buys. Concurrent messages are isolated by the same
+mechanism, and the value never reaches the code that sent the message.
+
+The variable holds a tuple of stacks rather than a single stack, because one
+message can be executed inside another's context: a task body that kicks a
+second task on a broker configured with ``await_inplace=True`` runs that message
+in its own asyncio task. ``pre_execute`` appends, ``post_execute`` pops the last
+entry and closes that, so the inner message closes its own scope and leaves the
+outer one open for the rest of the outer body.
 """
 
 from contextlib import AsyncExitStack
@@ -36,7 +48,7 @@ from taskiq import TaskiqMessage, TaskiqMiddleware, TaskiqResult
 
 from depin import FrozenContainer, Host
 
-_message_scope: ContextVar[AsyncExitStack | None] = ContextVar('depin_taskiq_message_scope', default=None)
+_message_scopes: ContextVar[tuple[AsyncExitStack, ...]] = ContextVar('depin_taskiq_message_scopes', default=())
 
 
 class MessageScope(TaskiqMiddleware):
@@ -119,22 +131,24 @@ class MessageScope(TaskiqMiddleware):
         async with AsyncExitStack() as stack:
             frame = await stack.enter_async_context(self._host.ascope())
             frame.provide(TaskiqMessage, message)
-            _message_scope.set(stack.pop_all())
+            _message_scopes.set((*_message_scopes.get(), stack.pop_all()))
         return message
 
     @override
     async def post_execute(self, message: TaskiqMessage, result: TaskiqResult[object]) -> None:
         """Close the message's scope, running its teardowns and undoing the publication.
 
-        Does nothing when no scope is open in this context, which is what a
-        message whose ``pre_execute`` never ran looks like.
+        Closes the innermost scope still open in this context, and does nothing
+        when none is — which is what a message whose ``pre_execute`` never ran
+        looks like.
 
         Args:
             message: The message that finished.
             result: The outcome Taskiq recorded for it, successful or failed.
         """
-        stack = _message_scope.get()
-        if stack is None:
+        open_scopes = _message_scopes.get()
+        if not open_scopes:
             return
-        _message_scope.set(None)
+        *enclosing, stack = open_scopes
+        _message_scopes.set(tuple(enclosing))
         await stack.aclose()
