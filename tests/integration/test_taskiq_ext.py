@@ -16,16 +16,24 @@ deterministic. Its deadline is there so a message whose result is never saved â€
 what a middleware that raises in ``post_execute`` produces â€” fails the test
 instead of hanging it.
 
+One body is a ``def`` rather than an ``async def``, so Taskiq runs it in the
+broker's `concurrent.futures.ThreadPoolExecutor`. That case is what pins the
+``taskiq>=0.11.19`` floor: 0.11.19 is the first release whose receiver runs a
+synchronous body under `contextvars.copy_context`, and against 0.11.18 the same
+test fails with `depin.errors.ContainerNotBoundError`.
+
 `InMemoryBroker.startup` overrides the base and never calls a middleware's
 ``startup`` or ``shutdown``, so nothing here depends on those firing.
 """
 
 import asyncio
+import threading
 from collections.abc import Generator
 
 from taskiq import AsyncTaskiqTask, InMemoryBroker, TaskiqMessage, TaskiqResult
 
-from depin import Container, FrozenContainer, Scope, hosted_container
+from depin import Container, FrozenContainer, Scope, hosted_container, optional_hosted_container
+from depin.errors import AsyncInSyncContextError
 from depin.ext.taskiq import MessageScope
 
 
@@ -53,6 +61,10 @@ class MessageProbe:
         self.args = list(message.args)
 
 
+class Slow:
+    """A scoped dependency built by an async provider, so a synchronous body cannot ask for it."""
+
+
 class TaskFailure(Exception):
     """Raised by a task body to prove the scope still drains."""
 
@@ -64,6 +76,13 @@ def message_container(torn: list[Resource]) -> FrozenContainer:
         torn.append(item)
 
     return Container().bind(Counter, scope=Scope.SCOPED).bind(make, scope=Scope.SCOPED, provides=Resource).freeze()
+
+
+def executor_container() -> FrozenContainer:
+    async def make() -> Slow:
+        return Slow()
+
+    return Container().bind(Counter, scope=Scope.SCOPED).bind(make, scope=Scope.SCOPED, provides=Slow).freeze()
 
 
 def probing_container() -> FrozenContainer:
@@ -118,13 +137,13 @@ async def test_the_scope_drains_its_teardowns_when_the_task_finishes() -> None:
 
 async def test_two_messages_get_independent_scoped_instances() -> None:
     broker = broker_for(message_container([]))
-    seen: list[int] = []
+    seen: list[Counter] = []
     ticks: list[int] = []
 
     @broker.task(task_name='depin.tests.taskiq.independent')
     async def report() -> None:
         counter = hosted_container().resolve(Counter)
-        seen.append(id(counter))
+        seen.append(counter)
         ticks.append(counter.tick())
 
     await broker.startup()
@@ -133,7 +152,7 @@ async def test_two_messages_get_independent_scoped_instances() -> None:
     await broker.shutdown()
 
     assert ticks == [1, 1]
-    assert seen[0] != seen[1]
+    assert seen[0] is not seen[1]
 
 
 async def test_the_hosted_container_is_reachable_from_the_task_body() -> None:
@@ -186,6 +205,42 @@ async def test_a_raising_task_drains_its_scope_and_surfaces_the_error() -> None:
     assert result.is_err
     assert isinstance(result.error, TaskFailure)
     assert len(torn) == 1
+
+
+async def test_a_synchronous_task_body_reaches_the_container_but_cannot_await() -> None:
+    broker = broker_for(executor_container())
+    off_the_event_loop: list[bool] = []
+    counters: list[Counter] = []
+
+    @broker.task(task_name='depin.tests.taskiq.sync_body')
+    def report() -> None:
+        off_the_event_loop.append(threading.current_thread() is not threading.main_thread())
+        counters.append(hosted_container().resolve(Counter))
+        _ = hosted_container().resolve(Slow)
+
+    await broker.startup()
+    result = await outcome(await report.kiq())
+    await broker.shutdown()
+
+    assert off_the_event_loop == [True]
+    assert len(counters) == 1
+    assert isinstance(result.error, AsyncInSyncContextError)
+
+
+async def test_post_execute_without_a_scope_open_does_nothing() -> None:
+    middleware = MessageScope(Container().freeze())
+    message = TaskiqMessage(
+        task_id='m-1',
+        task_name='depin.tests.taskiq.unpaired',
+        labels={},
+        args=[],
+        kwargs={},
+    )
+    result = TaskiqResult[object](is_err=False, return_value=None, execution_time=0.0)
+
+    await middleware.post_execute(message, result)
+
+    assert optional_hosted_container() is None
 
 
 async def test_three_interleaved_messages_each_close_their_own_scope() -> None:

@@ -23,8 +23,9 @@ created in a different Context``. The stack lives in a module-level
 `contextvars.ContextVar` instead, because ``pre_execute``, the task body and
 ``post_execute`` share one asyncio task and therefore one
 `contextvars.Context` — including when the task body is a synchronous function
-Taskiq dispatches to its executor. Concurrent messages are isolated by the same
-mechanism, and the value never reaches the code that sent the message.
+Taskiq dispatches to its executor, which is what the ``taskiq>=0.11.19`` floor
+buys. Concurrent messages are isolated by the same mechanism, and the value
+never reaches the code that sent the message.
 """
 
 from contextlib import AsyncExitStack
@@ -47,17 +48,25 @@ class MessageScope(TaskiqMiddleware):
     `taskiq.TaskiqResult` either way. Inside the scope the container is
     published to the message's context, so `depin.hosted_container()` reaches it
     from anywhere the task calls into, and the message is seeded under
-    `taskiq.TaskiqMessage`, so a provider can declare that parameter and be
-    handed the task id, name, labels and arguments of the message it is
-    resolving for. The scope's teardowns run when the message finishes, and the
-    publication is undone after them.
+    `taskiq.TaskiqMessage`. The scope's teardowns run when the message finishes,
+    and the publication is undone after them.
+
+    The seeding is half of a pair the container has to complete. A provider that
+    declares a `taskiq.TaskiqMessage` parameter — and is then handed the task id,
+    name, labels and arguments of the message it is resolving for — resolves only
+    if the container declared that key with `depin.Container.scope_value`;
+    without it `freeze()` reports `depin.errors.MissingProviderError` for
+    `taskiq.TaskiqMessage`. What the middleware supplies is the value, never the
+    binding.
 
     The scope is asynchronous, so an async task body has a place to await
     `depin.FrozenContainer.aresolve` and an async provider a place to run. A
-    synchronous task body reaches the container too — Taskiq dispatches it to an
-    executor thread carrying the message's context — but it cannot await, so it
-    is limited to `depin.FrozenContainer.resolve`, and an async provider asked
-    for there raises `depin.errors.AsyncInSyncContextError`.
+    synchronous task body reaches the container too — from ``taskiq`` 0.11.19,
+    the release whose receiver runs a ``def`` body under
+    `contextvars.copy_context`, so the executor thread carries the message's
+    context — but it cannot await, so it is limited to
+    `depin.FrozenContainer.resolve`, and an async provider asked for there raises
+    `depin.errors.AsyncInSyncContextError`.
 
     Register it **last**. Taskiq runs ``pre_execute`` in registration order and
     ``post_execute`` in reverse, so a middleware registered after this one that
@@ -80,10 +89,15 @@ class MessageScope(TaskiqMiddleware):
             closed. Every failure is included; one does not hide another.
 
     Example:
-        Register it on the broker after every other middleware, and take the
-        message in a provider like any other scoped value::
+        Declare the message as a scoped value, then register the middleware on
+        the broker after every other one::
+
+            di = Container().scope_value(TaskiqMessage).bind(Report, scope=Scope.SCOPED).freeze()
 
             broker = InMemoryBroker().with_middlewares(SimpleRetryMiddleware(), MessageScope(di))
+
+        ``Report`` then declares a ``TaskiqMessage`` parameter and is built once
+        per message, against the message being executed.
     """
 
     def __init__(self, container: FrozenContainer) -> None:
