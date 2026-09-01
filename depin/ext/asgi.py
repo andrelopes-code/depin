@@ -9,6 +9,20 @@ the module imports cleanly when no framework is installed, and a framework
 outside depin's curated set can install `RequestScope` without depin having to
 know about it.
 
+`ASGIApp` and `RequestScope` are generic over the connection triple — scope,
+receive, send — because the middleware is transparent: it reads
+``scope['type']`` and hands all three values to the application below
+untouched. Pinning them to the aliases declared here would fit only the
+frameworks whose own aliases are assignable to them *and* assignable from
+them, which is a stricter demand than it looks: a value that is merely
+forwarded sits in both a parameter and an argument position, so its type must
+match the wrapped framework's exactly. Starlette spells its scope and messages
+``MutableMapping[str, Any]``, Litestar spells them as ``TypedDict``s, and no
+single framework-free alias is compatible with both in both directions. Being
+generic, the middleware adopts whichever triple the framework beneath it
+declares and stays exactly as strict as that framework is. The aliases below
+are the triple a hand-written application uses when no framework is involved.
+
 The three awaitable members return `collections.abc.Awaitable` rather than
 being declared ``async def``. An ``async def`` member narrows the return to a
 coroutine, which would reject the servers and frameworks that hand over a
@@ -19,16 +33,21 @@ Written against depin's public integration contract — `depin.Host` — so it
 reaches nothing inside the private package.
 """
 
-from collections.abc import Awaitable, Callable, MutableMapping
+from collections.abc import Awaitable, Callable, Mapping
 from typing import Protocol
 
 from depin import FrozenContainer, Host, ProviderKey
 
-type Message = MutableMapping[str, object]
+type Message = Mapping[str, object]
 """One ASGI event, in either direction."""
 
-type ASGIScope = MutableMapping[str, object]
-"""The connection scope: ``scope['type']`` is ``'http'``, ``'websocket'`` or ``'lifespan'``."""
+type ASGIScope = Mapping[str, object]
+"""The connection scope: ``scope['type']`` is ``'http'``, ``'websocket'`` or ``'lifespan'``.
+
+Read-only, because that is the widest shape every framework's own scope type
+satisfies: a ``TypedDict`` is a `collections.abc.Mapping` but not a
+`collections.abc.MutableMapping`.
+"""
 
 
 class Receive(Protocol):
@@ -43,13 +62,13 @@ class Send(Protocol):
     def __call__(self, message: Message, /) -> Awaitable[None]: ...
 
 
-class ASGIApp(Protocol):
+class ASGIApp[ScopeT, ReceiveT, SendT](Protocol):
     """Any ASGI application or middleware: the downstream peer `RequestScope` wraps."""
 
-    def __call__(self, scope: ASGIScope, receive: Receive, send: Send, /) -> Awaitable[None]: ...
+    def __call__(self, scope: ScopeT, receive: ReceiveT, send: SendT, /) -> Awaitable[None]: ...
 
 
-class RequestScope:
+class RequestScope[ScopeT: ASGIScope, ReceiveT, SendT]:
     """ASGI middleware that opens one depin async scope around every request.
 
     Implemented directly against the ASGI protocol rather than a framework's
@@ -100,16 +119,16 @@ class RequestScope:
 
     def __init__(
         self,
-        app: ASGIApp,
+        app: ASGIApp[ScopeT, ReceiveT, SendT],
         container: FrozenContainer,
         *,
-        seed: Callable[[ASGIScope], tuple[ProviderKey, object] | None] | None = None,
+        seed: Callable[[ScopeT], tuple[ProviderKey, object] | None] | None = None,
     ) -> None:
         self._app = app
         self._host = Host(container)
         self._seed = seed
 
-    async def __call__(self, scope: ASGIScope, receive: Receive, send: Send) -> None:
+    async def __call__(self, scope: ScopeT, receive: ReceiveT, send: SendT) -> None:
         if scope['type'] not in ('http', 'websocket'):
             await self._app(scope, receive, send)
             return

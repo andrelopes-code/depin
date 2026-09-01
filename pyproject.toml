@@ -36,6 +36,8 @@ dependencies = []
 
 [project.optional-dependencies]
 fastapi = ["fastapi>=0.133", "starlette>=1.1"]
+flask = ["flask>=3.1"]
+litestar = ["litestar>=2.13"]
 pytest = ["pytest>=9.0.3"]
 starlette = ["starlette>=1.1"]
 

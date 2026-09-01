@@ -8,6 +8,20 @@ consequences follow, and both are the reason for the rule: the module imports
 cleanly when no framework is installed, and a framework outside depin's curated
 set can install `RequestScope` without depin having to know about it.
 
+`WSGIApp` and `RequestScope` are generic over the environment and the response
+starter because the middleware is transparent: it hands both to the
+application below untouched. Pinning them to the aliases declared here would
+fit only the frameworks whose own types are assignable to them *and*
+assignable from them, which is a stricter demand than it looks: a value that
+is merely forwarded sits in both a parameter and an argument position, so its
+type must match the wrapped framework's exactly. Flask writes its signatures
+against `wsgiref.types`, whose response starter takes an ``exc_info`` third
+argument and returns a ``write`` callable — neither of which the minimal
+`StartResponse` below states. Being generic, the middleware adopts whichever
+pair the framework beneath it declares and stays exactly as strict as that
+framework is. The aliases below are the pair a hand-written application uses
+when no framework is involved.
+
 Written against depin's public integration contract — `depin.Host` — so it
 reaches nothing inside the private package.
 """
@@ -27,13 +41,13 @@ class StartResponse(Protocol):
     def __call__(self, status: str, headers: list[tuple[str, str]], /) -> object: ...
 
 
-class WSGIApp(Protocol):
+class WSGIApp[EnvironT, StartResponseT](Protocol):
     """Any WSGI application or middleware: the downstream peer `RequestScope` wraps."""
 
-    def __call__(self, environ: Environ, start_response: StartResponse, /) -> Iterable[bytes]: ...
+    def __call__(self, environ: EnvironT, start_response: StartResponseT, /) -> Iterable[bytes]: ...
 
 
-class RequestScope:
+class RequestScope[EnvironT, StartResponseT]:
     """WSGI middleware that opens one depin scope around every request.
 
     Implemented directly against the WSGI protocol rather than a framework's
@@ -87,16 +101,16 @@ class RequestScope:
 
     def __init__(
         self,
-        app: WSGIApp,
+        app: WSGIApp[EnvironT, StartResponseT],
         container: FrozenContainer,
         *,
-        seed: Callable[[Environ], tuple[ProviderKey, object] | None] | None = None,
+        seed: Callable[[EnvironT], tuple[ProviderKey, object] | None] | None = None,
     ) -> None:
         self._app = app
         self._host = Host(container)
         self._seed = seed
 
-    def __call__(self, environ: Environ, start_response: StartResponse) -> Iterable[bytes]:
+    def __call__(self, environ: EnvironT, start_response: StartResponseT) -> Iterable[bytes]:
         with self._host.scope() as frame:
             if self._seed is not None:
                 seeded = self._seed(environ)

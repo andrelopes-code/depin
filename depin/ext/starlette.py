@@ -9,13 +9,13 @@ application, nothing more.
 """
 
 from starlette.requests import Request
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from depin import FrozenContainer, ProviderKey
-from depin.ext.asgi import ASGIApp, ASGIScope
 from depin.ext.asgi import RequestScope as ASGIRequestScope
 
 
-def seed_request(scope: ASGIScope) -> tuple[ProviderKey, object]:
+def seed_request(scope: Scope) -> tuple[ProviderKey, object]:
     """Build the `starlette.requests.Request` that `RequestScope` places into each HTTP frame.
 
     The request is constructed from the connection scope alone, which is what
@@ -30,7 +30,7 @@ def seed_request(scope: ASGIScope) -> tuple[ProviderKey, object]:
     return Request, Request(scope)
 
 
-class RequestScope(ASGIRequestScope):
+class RequestScope(ASGIRequestScope[Scope, Receive, Send]):
     """ASGI middleware that opens a depin async scope around every Starlette request.
 
     Implemented directly against the ASGI protocol (not Starlette's
