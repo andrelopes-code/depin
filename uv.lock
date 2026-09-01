@@ -1806,7 +1806,7 @@ threads = [
 
 [package.metadata]
 requires-dist = [
-    { name = "click", marker = "extra == 'click'", specifier = ">=8.2" },
+    { name = "click", marker = "extra == 'click'", specifier = ">=8.1" },
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.133" },
     { name = "flask", marker = "extra == 'flask'", specifier = ">=3.1" },
     { name = "litestar", marker = "extra == 'litestar'", specifier = ">=2.13" },

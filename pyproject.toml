@@ -35,7 +35,13 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-click = ["click>=8.2"]
+# `depin.ext.click` touches two names — `click.Context` and its
+# `with_resource` — and both date from 8.0, so the floor is not a feature gate.
+# It is 8.1 because that is the oldest release the suite is run against:
+# probed on 8.1.0, `tests/unit/test_cli.py`, `tests/integration/test_click_ext.py`
+# and the Click example all pass, with the declared Typer floor sharing that
+# Click.
+click = ["click>=8.1"]
 fastapi = ["fastapi>=0.133", "starlette>=1.1"]
 flask = ["flask>=3.1"]
 litestar = ["litestar>=2.13"]
@@ -50,9 +56,10 @@ starlette = ["starlette>=1.1"]
 # `ContainerNotBoundError` there.
 taskiq = ["taskiq>=0.11.19"]
 # Not floored at the 0.26 release that vendored Click — the command seam is a
-# protocol, so it spans that split. Floored at 0.16 because Click 8.2 made
-# `Parameter.make_metavar()` take a context and Typer passes one only from
-# 0.16: installing both extras gives the two of them one Click to share.
+# protocol, so it spans that split. Floored at 0.16 because the `click` extra
+# names no ceiling and the two share whatever Click is installed: Click 8.2
+# made `Parameter.make_metavar()` take a context and Typer passes one only from
+# 0.16, so Typer 0.15 beside Click 8.2.1 raises `TypeError` on `--help`.
 typer = ["typer>=0.16"]
 
 # Declared by the distribution rather than by the extra, because that is how
