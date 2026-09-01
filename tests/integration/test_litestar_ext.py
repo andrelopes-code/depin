@@ -15,7 +15,8 @@ taking ``MutableMapping[str, Any]``, and Litestar's ``__call__`` takes
 
 from collections.abc import Generator
 
-from litestar import Litestar, Request, get
+import pytest
+from litestar import Litestar, Request, get, post
 from litestar.datastructures import State
 from litestar.handlers import HTTPRouteHandler
 from litestar.middleware import DefineMiddleware
@@ -46,6 +47,20 @@ class HeaderProbe:
     def __init__(self, request: Request[object, object, State]) -> None:
         self.probe = request.headers.get('x-probe', 'none')
         self.path = request.url.path
+
+
+class BodyReader:
+    """A provider that reads the body off the seeded request, which is the mistake."""
+
+    def __init__(self, request: Request[object, object, State]) -> None:
+        self.request = request
+
+    async def read(self) -> bytes:
+        return await self.request.body()
+
+
+def hosting_a_body_reader() -> FrozenContainer:
+    return Container().scope_value(Request[object, object, State]).bind(BodyReader, scope=Scope.SCOPED).freeze()
 
 
 def hosted(container: FrozenContainer, *handlers: HTTPRouteHandler) -> AsyncTestClient[Litestar]:
@@ -132,3 +147,43 @@ async def test_a_provider_reads_headers_off_the_seeded_request() -> None:
         payload = (await client.get('/probe/abc', headers={'x-probe': 'yes'})).json()
 
     assert payload == {'probe': 'yes', 'path': '/probe/abc'}
+
+
+async def test_the_seeded_request_raises_when_nothing_has_parsed_the_body_yet() -> None:
+    """With no ``data`` parameter to trigger Litestar's own parse, the seed hits ``empty_receive``.
+
+    The `RuntimeError` carries no message, so only its type is asserted. The
+    handler's own request still yields the body: the seed reaches no receive
+    channel and so can take nothing from it.
+    """
+
+    @post('/body')
+    async def endpoint(request: Request[object, object, State]) -> dict[str, str]:
+        reader = await hosted_container().aresolve(BodyReader)
+        with pytest.raises(RuntimeError):
+            _ = await reader.read()
+        return {'handler_body': (await request.body()).decode()}
+
+    async with hosted(hosting_a_body_reader(), endpoint) as client:
+        assert (await client.post('/body', json={'a': 1})).json() == {'handler_body': '{"a":1}'}
+
+
+async def test_the_seeded_request_replays_the_body_the_handler_declared() -> None:
+    """`litestar.Request` caches the body on ``ScopeState``, which is scope-level, not per instance.
+
+    Litestar parses ``data`` before the handler runs, so by the time the
+    provider resolves, the cache the seed reads is already filled and the read
+    returns rather than raising. The handler's ``data`` is unaffected — the
+    seed replays the cache, it does not consume a stream — which is why the
+    guarantee this pins is safety, not a raise.
+    """
+
+    @post('/body')
+    async def endpoint(data: dict[str, int]) -> dict[str, object]:
+        reader = await hosted_container().aresolve(BodyReader)
+        return {'data': data, 'seen': (await reader.read()).decode()}
+
+    async with hosted(hosting_a_body_reader(), endpoint) as client:
+        payload = (await client.post('/body', json={'a': 1})).json()
+
+    assert payload == {'data': {'a': 1}, 'seen': '{"a":1}'}

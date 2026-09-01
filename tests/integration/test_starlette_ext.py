@@ -12,6 +12,7 @@ The app is reached through `httpx.ASGITransport` rather than Starlette's own
 
 from collections.abc import Generator
 
+import pytest
 from httpx import ASGITransport, AsyncClient
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -43,6 +44,16 @@ class HeaderProbe:
     def __init__(self, request: Request) -> None:
         self.probe = request.headers.get('x-probe', 'none')
         self.path = request.url.path
+
+
+class BodyReader:
+    """A provider that reads the body off the seeded request, which is the mistake."""
+
+    def __init__(self, request: Request) -> None:
+        self.request = request
+
+    async def read(self) -> bytes:
+        return await self.request.body()
 
 
 def hosted(container: FrozenContainer, *routes: Route) -> AsyncClient:
@@ -122,3 +133,32 @@ async def test_a_provider_reads_headers_off_the_seeded_request() -> None:
         payload = (await client.get('/probe/abc', headers={'x-probe': 'yes'})).json()
 
     assert payload == {'probe': 'yes', 'path': '/probe/abc'}
+
+
+@pytest.mark.parametrize(
+    'handler_reads_first',
+    [
+        pytest.param(False, id='the provider reads before the handler'),
+        pytest.param(True, id='the handler reads before the provider'),
+    ],
+)
+async def test_the_seeded_request_raises_on_a_body_read(handler_reads_first: bool) -> None:
+    """The seed has no receive channel, and `starlette.requests.Request` caches per instance.
+
+    Neither order makes the read succeed, and neither order costs the handler
+    its own body: the request Starlette builds for the route is a different
+    object with its own ``_body`` and the live receive channel.
+    """
+
+    async def endpoint(request: Request) -> JSONResponse:
+        read_first = (await request.body()).decode() if handler_reads_first else None
+        reader = await hosted_container().aresolve(BodyReader)
+        with pytest.raises(RuntimeError, match='Receive channel has not been made available'):
+            _ = await reader.read()
+        return JSONResponse({'read_first': read_first, 'handler_body': (await request.body()).decode()})
+
+    di = Container().scope_value(Request).bind(BodyReader, scope=Scope.SCOPED).freeze()
+    async with hosted(di, Route('/body', endpoint, methods=['POST'])) as client:
+        payload = (await client.post('/body', json={'a': 1})).json()
+
+    assert payload == {'read_first': '{"a":1}' if handler_reads_first else None, 'handler_body': '{"a":1}'}

@@ -63,11 +63,13 @@ class RequestScope(WSGIRequestScope[WSGIEnvironment, StartResponse]):
     ``data``, ``files``. It is built from the same environment Flask builds its
     own request from, and the two share one ``environ['wsgi.input']`` stream.
     Reading the body through the seed consumes that stream, and Flask's own
-    parse then finds it empty and returns 400. This is where the WSGI seed
-    differs from the ASGI ones: `depin.ext.starlette` and `depin.ext.litestar`
-    seed a request with no receive channel, so the same mistake raises instead
-    of stealing the body. Treat the body as a route concern, not a provider
-    input.
+    parse then finds it empty and returns 400. This is the one seed that can
+    take the body from the handler: `depin.ext.starlette` and
+    `depin.ext.litestar` seed a request with no receive channel, so neither
+    reaches the stream the route handler reads — the Starlette seed raises on
+    every body read, and the Litestar one either raises or replays the body
+    Litestar has already parsed. Treat the body as a route concern, not a
+    provider input.
 
     Unlike the ASGI integrations, which hand the framework the class and let it
     construct the middleware, Flask is given an instance: ``app.wsgi_app`` is

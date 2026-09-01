@@ -10,8 +10,8 @@ application, nothing more.
 `litestar.Request` accepts the bare connection scope: its ``receive`` and
 ``send`` parameters default to Litestar's ``empty_receive`` and
 ``empty_send``, which raise when called. The seed therefore constructs the
-request from the scope alone, exactly as the Starlette integration does, and
-the request it seeds is metadata-only for the same reason — see `RequestScope`.
+request from the scope alone, exactly as the Starlette integration does. What
+that costs is not the same on the two frameworks — see `RequestScope`.
 
 Litestar types its scope and its two channels as ``TypedDict``s rather than as
 mappings of `typing.Any`, so the triple this module hands the shared
@@ -69,13 +69,20 @@ class RequestScope(ASGIRequestScope[Scope, Receive, Send]):
     like an HTTP request, but it is not seeded, because it has no request-body
     semantics and `litestar.Request` is HTTP-shaped.
 
-    For HTTP requests it places a metadata-only `litestar.Request` into the
-    active scope frame, under the key ``Request[object, object, State]``, so
-    scoped providers can read headers, URL, cookies, and state. That
-    ``Request`` carries no receive channel: reading the body
-    through it raises rather than consuming the stream the route handler needs
-    (which would otherwise deadlock against the framework's own body parsing).
-    Treat the body as a typed route parameter, not a provider input.
+    For HTTP requests it places a `litestar.Request` into the active scope
+    frame, under the key ``Request[object, object, State]``, so scoped
+    providers can read headers, URL, cookies, and state.
+
+    Do not read the body through that request. It carries no receive channel,
+    so it can never take the body from the route handler — but unlike the
+    Starlette seed it does not reliably raise either, because
+    `litestar.Request` caches the body on ``ScopeState``, which belongs to the
+    connection scope and is therefore shared with the request Litestar builds
+    for the handler. A read before anything has parsed the body raises
+    `RuntimeError` from ``empty_receive``; a read from a handler that declares
+    a ``data`` parameter returns the body Litestar has already parsed, with no
+    error at all. Treat the body as a typed route parameter, not a provider
+    input.
 
     Args:
         app: The downstream ASGI application this middleware wraps. Litestar

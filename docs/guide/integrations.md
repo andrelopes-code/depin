@@ -64,16 +64,20 @@ it with `python -m examples.starlette_app.main`.
     and close over the values. ASGI has no such limit;
     `depin.ext.asgi.RequestScope` keeps the scope open for the whole response.
 
-!!! warning "The Flask seed must not be used to read the body"
+!!! warning "A seeded request is not for reading the body"
 
-    The seeded `flask.Request` is built from the same environment Flask builds
-    its own request from, and the two share one `environ['wsgi.input']` stream.
-    Reading the body through the seed — `form`, `json`, `data`, `files` —
-    consumes that stream, and Flask's own parse then finds it empty and returns
-    400. The ASGI seeds differ here: `depin.ext.starlette` and
-    `depin.ext.litestar` seed a request with no receive channel, so the same
-    mistake raises instead of stealing the body. Treat the body as a route
-    concern, not a provider input.
+    Every seed is built from the connection alone, and what a body read through
+    it does depends on the framework:
+
+    | Integration | A body read through the seed |
+    | --- | --- |
+    | `depin.ext.starlette` | Raises. The request has no receive channel and caches its body per instance, so no order of reads makes it succeed. |
+    | `depin.ext.litestar` | Raises when nothing has parsed the body yet, and returns the parsed body when the handler declares a `data` parameter — `litestar.Request` caches through the connection scope rather than per instance. |
+    | `depin.ext.flask` | Consumes `environ['wsgi.input']`, the same stream Flask's own request reads. Flask's parse then finds it empty and answers 400 before the view runs. |
+
+    Neither ASGI seed reaches the stream the handler reads, so neither can take
+    the body from it; the WSGI seed can. Treat the body as a route concern, not
+    a provider input.
 
 ## A worked integration
 

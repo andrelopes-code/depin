@@ -212,8 +212,9 @@ def test_the_seeded_request_must_not_be_used_to_read_the_body(
     Consuming that stream through the seeded request leaves Flask's own parse
     nothing to read, and Flask answers 400 before the view runs. The header
     case is the control: it touches no body, so the view's form arrives whole.
-    The ASGI seeds cannot be misused this way — they carry no receive channel,
-    so reading the body through them raises instead.
+    Neither ASGI seed can take the body this way — they carry no receive
+    channel, and ``tests/integration/test_starlette_ext.py`` and
+    ``tests/integration/test_litestar_ext.py`` pin what each does instead.
     """
     app = Flask(__name__)
 
