@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0](https://github.com/andrelopes-code/depin/compare/v0.15.0...v0.16.0) (2026-09-01)
+
+
+### Features
+
+* add the Click, Typer and Taskiq integrations ([#60](https://github.com/andrelopes-code/depin/issues/60)) ([c74a8c8](https://github.com/andrelopes-code/depin/commit/c74a8c84bb7a568934c1a04b64f2d932859a10b7))
+
 ## [0.15.0](https://github.com/andrelopes-code/depin/compare/v0.14.0...v0.15.0) (2026-09-01)
 
 
