@@ -9,8 +9,52 @@ if TYPE_CHECKING:
     from depin._core.spec import ProviderKey
 
 
+class TokenKey:
+    """A named provider key, without the phantom type parameter `Token` carries.
+
+    `Token` is the only intended implementation. ``TokenKey`` exists so a
+    position that holds a named key but has no type argument to name — the
+    `ProviderKey` alias, the key a `Named` marker carries, the ``provides=``
+    keyword — can be spelled without writing ``Token[object]``, whose phantom
+    parameter has no variance every type checker agrees on.
+
+    Subclassing is unsupported. Nothing prevents it — `Token` inherits from this
+    class, so it cannot be final — and a subclass will compare equal to a
+    `Token` of the same name and be accepted wherever a key is expected. That is
+    a consequence of the shape, not a promise.
+
+    Two instances are equal iff they share the same ``name``.
+
+    Example:
+        ```pycon
+        >>> from depin import Token, TokenKey
+        >>> key: TokenKey = Token[str]('db.url')
+        >>> key
+        Token('db.url')
+
+        ```
+    """
+
+    __slots__ = ('name',)
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @override
+    def __repr__(self) -> str:
+        return f'Token({self.name!r})'
+
+    @override
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, TokenKey) and self.name == other.name
+
+    @override
+    def __hash__(self) -> int:
+        return hash(('depin.Token', self.name))
+
+
 @final
-class Token[T]:
+class Token[T](TokenKey):
     """A typed, named provider key.
 
     Two ``Token`` instances are equal iff they share the same ``name``. This makes
@@ -30,22 +74,7 @@ class Token[T]:
         ```
     """
 
-    __slots__ = ('name',)
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    @override
-    def __repr__(self) -> str:
-        return f'Token({self.name!r})'
-
-    @override
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, Token) and self.name == other.name
-
-    @override
-    def __hash__(self) -> int:
-        return hash(('depin.Token', self.name))
+    __slots__ = ()
 
 
 @final
@@ -65,7 +94,7 @@ class Named:
     ``Named`` is the explicit form and the only way to reference a string key.
     """
 
-    key: 'Token[object] | str'
+    key: 'TokenKey | str'
 
 
 @final
@@ -96,7 +125,7 @@ class _InjectMarker:
     value before the wrapped function body runs.
     """
 
-    key: 'type[object] | Token[object]'
+    key: 'type[object] | TokenKey'
     tag: str | None = None
 
     def __getattr__(self, name: str) -> object:

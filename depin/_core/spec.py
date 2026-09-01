@@ -6,7 +6,7 @@ from enum import Enum
 from types import GenericAlias, UnionType
 from typing import Final, Protocol, TypeGuard, final, get_args, get_origin, runtime_checkable
 
-from depin._core.markers import Token
+from depin._core.markers import Token, TokenKey
 from depin._core.scope import Scope
 
 
@@ -100,7 +100,7 @@ class Underlying:
     applied: int
 
 
-type ProviderKey = type[object] | Token[object] | str | GenericAlias | Underlying
+type ProviderKey = type[object] | TokenKey | str | GenericAlias | Underlying
 """What a provider can be bound and resolved under: a class, a `Token`, a name, or a parameterised generic.
 
 The parameterised case needs no member of its own. A generic written in
@@ -141,7 +141,7 @@ class FrameBinding:
     middleware or other scope-setup code (for example ``fastapi.Request``).
     """
 
-    key: 'type[object] | Token[object]'
+    key: 'type[object] | TokenKey'
 
 
 def is_frame_binding(value: object) -> TypeGuard[FrameBinding]:
@@ -160,9 +160,9 @@ label and what the `dot` and `mermaid` exports write on the arrow.
 class AliasBinding:
     """Marker source for `Container.alias(key, to=...)`.
 
-    The alias carries its own key because `BindRecord.provides` admits only a
-    class, while an alias key may equally be a `Token` or a string. The alias's
-    own tag rides on `BindRecord.tag`, where every other binding's tag rides;
+    The alias carries its own key because an alias needs two — the name it adds
+    and the binding it delegates to — and a record has one `BindRecord.provides`.
+    The alias's own tag rides on `BindRecord.tag`, where every other binding's tag rides;
     ``target_tag`` selects among tagged bindings on the other end.
     """
 
@@ -205,9 +205,9 @@ def is_collection_binding(value: object) -> TypeGuard[CollectionBinding]:
 class DecorateBinding:
     """Marker source for `Container.decorate(key, wrapper)`.
 
-    The binding carries its own key because `BindRecord.provides` admits only a
-    class, while a decorated key may equally be a `Token`, a string, or a
-    parameterised generic. It carries no tag of its own: a decorator has no
+    The binding carries its own key because `BindRecord.provides` names the key a
+    registered source takes, and a decoration registers no source: its key names
+    the binding it wraps. It carries no tag of its own: a decorator has no
     identity to tag, so the tag on `BindRecord` is the decorated binding's.
     """
 
@@ -248,7 +248,7 @@ built, not when a value is resolved.
 class BindRecord:
     source: object
     scope: Scope
-    provides: type[object] | None
+    provides: type[object] | TokenKey | str | None
     tag: str | None
     condition: Condition | None = None
     check: object | None = None

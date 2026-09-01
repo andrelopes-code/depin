@@ -106,6 +106,21 @@ be declared in more than one module:
 The `Annotated[str, db_url]` on the parameter is what points at the token; the
 bare `str` alone would look for a provider of `str`.
 
+A token is a key like any other, so `provides=` takes one. That registers a
+factory under the token instead of under its return annotation, which is what
+you want when the annotation is a built-in shared by several bindings:
+
+```pycon
+>>> from depin import Container, Token
+>>> http_port = Token[int]('http.port')
+>>> def read_http_port() -> int:
+...     return 8080
+>>> di = Container().bind(read_http_port, provides=http_port).freeze()
+>>> di[http_port]
+8080
+
+```
+
 ### Tags
 
 When several implementations share one key, tag them apart:

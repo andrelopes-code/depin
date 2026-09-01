@@ -1,9 +1,11 @@
 """Container construction and composition of binding sources."""
 
+from typing import Annotated
+
 import pytest
 
 from depin._core.container import Container
-from depin._core.markers import Token
+from depin._core.markers import Named, Token
 from depin._core.registry import Registry
 from depin._core.scope import Scope
 from depin.errors import InvalidProviderError
@@ -122,3 +124,45 @@ def test_scope_value_preserves_its_tag_and_scope() -> None:
 def test_the_scope_decorators_reject_a_non_callable_target() -> None:
     with pytest.raises(InvalidProviderError, match='expected a class or a callable'):
         Container().singleton()(42)  # type: ignore[call-overload]  # pyright: ignore[reportArgumentType, reportCallIssue, reportUnusedCallResult]
+
+
+def test_bind_registers_a_factory_under_a_token_given_as_provides() -> None:
+    port = Token[int]('port')
+
+    def make() -> int:
+        return 8080
+
+    di = Container().bind(make, provides=port).freeze()
+    assert di.resolve(port) == 8080
+
+
+def test_a_scope_decorator_registers_under_a_token_given_as_provides() -> None:
+    port = Token[int]('port')
+    container = Container()
+
+    @container.singleton(provides=port)
+    def make() -> int:
+        return 8080
+
+    di = container.freeze()
+    assert di.resolve(port) == 8080
+    assert make() == 8080
+
+
+def test_freeze_rejects_a_provides_value_that_is_no_key() -> None:
+    def make() -> int:
+        return 1
+
+    with pytest.raises(InvalidProviderError, match='as a provider key'):
+        _ = Container().bind(make, provides=42).freeze()  # type: ignore[call-overload]  # pyright: ignore[reportArgumentType]
+
+
+def test_bind_registers_a_factory_under_a_name_given_as_provides() -> None:
+    def make() -> int:
+        return 8080
+
+    def consumer(port: Annotated[int, Named('http.port')]) -> str:
+        return f'port {port}'
+
+    di = Container().bind(make, provides='http.port').bind(consumer, provides=str).freeze()
+    assert di.resolve(str) == 'port 8080'

@@ -2,6 +2,8 @@
 
 ::: depin.Token
 
+::: depin.TokenKey
+
 ::: depin.Named
 
 ::: depin.Tag
