@@ -25,7 +25,7 @@ start_response)``, so the responses asserted on are real Flask responses.
 from collections.abc import Generator, Iterator
 
 import pytest
-from flask import Flask, Request, Response, request
+from flask import Flask, Request, Response, jsonify, request
 from werkzeug.test import Client
 
 from depin import Container, FrozenContainer, Scope, hosted_container, optional_hosted_container
@@ -144,9 +144,9 @@ def test_the_hosted_container_is_reachable_from_a_view() -> None:
 def test_a_provider_reads_headers_off_the_seeded_request() -> None:
     app = Flask(__name__)
 
-    def endpoint(x: str) -> dict[str, str]:
+    def endpoint(x: str) -> Response:
         found = hosted_container().resolve(HeaderProbe)
-        return {'probe': found.probe, 'path': found.path, 'matched': x}
+        return jsonify({'probe': found.probe, 'path': found.path, 'matched': x})
 
     app.add_url_rule('/probe/<x>', view_func=endpoint)
 
@@ -218,9 +218,9 @@ def test_the_seeded_request_must_not_be_used_to_read_the_body(
     """
     app = Flask(__name__)
 
-    def endpoint() -> dict[str, dict[str, str]]:
+    def endpoint() -> Response:
         _ = hosted_container().resolve(probe)
-        return {'form': dict(request.form)}
+        return jsonify({'form': dict(request.form)})
 
     app.add_url_rule('/form', view_func=endpoint, methods=['POST'])
 
