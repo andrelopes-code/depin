@@ -1185,6 +1185,9 @@ fastapi = [
 pytest = [
     { name = "pytest" },
 ]
+starlette = [
+    { name = "starlette" },
+]
 
 [package.dev-dependencies]
 bench = [
@@ -1227,8 +1230,9 @@ requires-dist = [
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.133" },
     { name = "pytest", marker = "extra == 'pytest'", specifier = ">=9.0.3" },
     { name = "starlette", marker = "extra == 'fastapi'", specifier = ">=1.1" },
+    { name = "starlette", marker = "extra == 'starlette'", specifier = ">=1.1" },
 ]
-provides-extras = ["fastapi", "pytest"]
+provides-extras = ["fastapi", "pytest", "starlette"]
 
 [package.metadata.requires-dev]
 bench = [

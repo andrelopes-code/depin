@@ -9,11 +9,17 @@ the module imports cleanly when no framework is installed, and a framework
 outside depin's curated set can install `RequestScope` without depin having to
 know about it.
 
+The three awaitable members return `collections.abc.Awaitable` rather than
+being declared ``async def``. An ``async def`` member narrows the return to a
+coroutine, which would reject the servers and frameworks that hand over a
+plain awaitable — Starlette types its own channels that way — even though the
+ASGI specification asks only for something awaitable.
+
 Written against depin's public integration contract — `depin.Host` — so it
 reaches nothing inside the private package.
 """
 
-from collections.abc import Callable, MutableMapping
+from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Protocol
 
 from depin import FrozenContainer, Host, ProviderKey
@@ -28,19 +34,19 @@ type ASGIScope = MutableMapping[str, object]
 class Receive(Protocol):
     """The channel an ASGI application awaits to read the next inbound event."""
 
-    async def __call__(self) -> Message: ...
+    def __call__(self) -> Awaitable[Message]: ...
 
 
 class Send(Protocol):
     """The channel an ASGI application awaits to write one outbound event."""
 
-    async def __call__(self, message: Message, /) -> None: ...
+    def __call__(self, message: Message, /) -> Awaitable[None]: ...
 
 
 class ASGIApp(Protocol):
     """Any ASGI application or middleware: the downstream peer `RequestScope` wraps."""
 
-    async def __call__(self, scope: ASGIScope, receive: Receive, send: Send, /) -> None: ...
+    def __call__(self, scope: ASGIScope, receive: Receive, send: Send, /) -> Awaitable[None]: ...
 
 
 class RequestScope:

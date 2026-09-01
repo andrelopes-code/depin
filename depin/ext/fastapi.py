@@ -3,62 +3,24 @@
 Importing this module requires the ``fastapi`` extra (``pip install
 'pydepin[fastapi]'``); the depin core itself has no third-party dependencies.
 
-Written entirely against depin's public integration contract — `depin.Host`
-and `depin.optional_hosted_container` — so it is also the worked example the
-"writing an integration" guide points at.
+Written entirely against depin's public integration contract —
+`depin.optional_hosted_container` — plus the Starlette middleware, so it is
+also the worked example the "writing an integration" guide points at.
 """
 
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import Request
 from fastapi.params import Depends
-from starlette.types import ASGIApp, Receive, Send
-from starlette.types import Scope as ASGIScope
 
-from depin import FrozenContainer, Host, optional_hosted_container
+from depin import optional_hosted_container
 from depin.errors import ContainerNotBoundError
 
+# `fastapi.Request` is `starlette.requests.Request` — FastAPI re-exports the
+# class rather than subclassing it — so the Starlette middleware seeds exactly
+# the key a FastAPI provider asks for, and one middleware serves both.
+from depin.ext.starlette import RequestScope
 
-class RequestScope:
-    """ASGI middleware that opens a depin async scope around every HTTP request.
-
-    Implemented directly against the ASGI protocol (not Starlette's
-    ``BaseHTTPMiddleware``) so streaming responses, server-sent events, and
-    WebSockets pass through without buffering. Lifespan and other non-HTTP
-    scopes are forwarded untouched, with no depin scope opened.
-
-    The container is published to the request's context for the duration of
-    the scope, so `depin.hosted_container()` reaches it from anywhere inside
-    the request.
-
-    For HTTP requests it places a metadata-only `fastapi.Request` into the
-    active scope frame so scoped providers can read headers, URL, cookies, and
-    state. That ``Request`` carries no receive channel: reading the body through
-    it raises rather than consuming the stream the route handler needs (which
-    would otherwise deadlock against FastAPI's own body parsing). Treat the body
-    as a typed route parameter, not a provider input.
-
-    Example:
-        Install the middleware once, then resolve scoped providers per request::
-
-            app = FastAPI()
-            app.add_middleware(RequestScope, container=di)
-    """
-
-    __slots__ = ('_app', '_host')
-
-    def __init__(self, app: ASGIApp, container: FrozenContainer) -> None:
-        self._app = app
-        self._host = Host(container)
-
-    async def __call__(self, scope: ASGIScope, receive: Receive, send: Send) -> None:
-        if scope['type'] not in ('http', 'websocket'):
-            await self._app(scope, receive, send)
-            return
-        async with self._host.ascope() as frame:
-            if scope['type'] == 'http':
-                frame.provide(Request, Request(scope))
-            await self._app(scope, receive, send)
+__all__ = ['Inject', 'RequestScope']
 
 
 if TYPE_CHECKING:
