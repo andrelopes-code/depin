@@ -13,8 +13,30 @@ from depin._core.markers import Tag, Token, provides
 from depin._core.providers import as_provider_key, build_specs, param_key_from_meta, unwrap_container_type
 from depin._core.registry import Registry
 from depin._core.scope import Scope
-from depin._core.spec import BindRecord, FrameBinding, ProviderShape, ValueBinding, fmt_key
-from depin.errors import InvalidProviderError, InvalidScopeError
+from depin._core.spec import (
+    ALIAS_PARAM,
+    AliasBinding,
+    BindRecord,
+    CollectionBinding,
+    FrameBinding,
+    ProviderShape,
+    Underlying,
+    ValueBinding,
+    collection_key,
+    fmt_key,
+)
+from depin.errors import DuplicateProviderError, InvalidProviderError, InvalidScopeError
+
+
+class UncallableCondition:
+    """The predicate shape `when=` accepts, which `callable()` nevertheless rejects.
+
+    `__call__` is declared as an annotation, so it never reaches the class object:
+    both type checkers read an instance as a zero-argument predicate, while the
+    runtime guard sees the untyped value it exists to refuse.
+    """
+
+    __call__: Callable[[], bool]
 
 
 def test_build_specs_for_simple_class() -> None:
@@ -530,5 +552,324 @@ def test_a_class_named_only_inside_a_generic_key_resolves_a_forward_reference() 
         return 0
 
     r = Registry().alias(Box[Impl], to='boxes').bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()).providers if spec.source is make)
+    assert spec.params[0].key is Impl
+
+
+def test_a_condition_that_cannot_be_called_names_what_when_accepts() -> None:
+    condition = UncallableCondition()
+    record = BindRecord(source=int, scope=Scope.SINGLETON, provides=None, tag=None, condition=condition)
+
+    with pytest.raises(InvalidProviderError) as exc:
+        _ = build_specs((record,))
+
+    assert str(exc.value) == (
+        f'cannot use {condition!r} as a binding condition: `when` takes a bool, or a callable '
+        'of no arguments returning one, which depin calls inside freeze().'
+    )
+
+
+def test_a_check_that_cannot_be_called_names_what_a_check_is() -> None:
+    class Cache: ...
+
+    record = BindRecord(source=Cache, scope=Scope.SINGLETON, provides=None, tag=None, check=42)
+
+    with pytest.raises(InvalidProviderError) as exc:
+        _ = build_specs((record,))
+
+    assert str(exc.value) == (
+        f'cannot use 42 as a health check for {Cache!r}: a check is a callable that '
+        'receives the value the provider produced, and is healthy unless it raises or returns False.'
+    )
+
+
+def test_a_transient_lifecycle_provider_names_the_two_scopes_that_work() -> None:
+    def gen() -> Iterator[int]:
+        yield 0
+
+    with pytest.raises(InvalidScopeError) as exc:
+        _ = build_specs(Registry().bind(gen, scope=Scope.TRANSIENT).records())
+
+    assert str(exc.value) == (
+        f'cannot bind {gen!r} as transient: a generator or context-manager provider '
+        'owns a teardown, and a transient value is never cached, so nothing would drain it. '
+        'Use Scope.SINGLETON or Scope.SCOPED.'
+    )
+
+
+def test_a_non_lifecycle_provider_is_accepted_as_transient() -> None:
+    """Only the two conditions together refuse a binding: a plain factory may be transient."""
+
+    def make() -> int:
+        return 0
+
+    [spec] = list(build_specs(Registry().bind(make, scope=Scope.TRANSIENT).records()).providers)
+    assert spec.scope is Scope.TRANSIENT
+    assert spec.shape is ProviderShape.FUNCTION
+
+
+def test_build_specs_leaves_every_spec_unmarked_for_async() -> None:
+    """`needs_async` belongs to the graph: every shape leaves spec building unmarked."""
+
+    class Handler: ...
+
+    class First(Handler): ...
+
+    async def make() -> int:
+        return 0
+
+    token = Token[str]('name')
+    registry = (
+        Registry()
+        .bind(First)
+        .bind(make)
+        .value(token, 'x')
+        .scope_value(Handler)
+        .alias('legacy', to=First)
+        .collect(Handler, [First])
+    )
+
+    specs = build_specs(registry.records()).providers
+
+    assert [spec.shape for spec in specs] == [
+        ProviderShape.CLASS,
+        ProviderShape.ASYNC_FUNCTION,
+        ProviderShape.VALUE,
+        ProviderShape.FRAME,
+        ProviderShape.ALIAS,
+        ProviderShape.COLLECTION,
+    ]
+    assert [spec.needs_async for spec in specs] == [False] * 6
+
+
+def test_a_factory_with_no_return_annotation_is_told_to_add_one() -> None:
+    def make() -> int:
+        return 1
+
+    del make.__annotations__['return']
+
+    with pytest.raises(InvalidProviderError) as exc:
+        _ = build_specs(Registry().bind(make).records())
+
+    assert str(exc.value) == (
+        f'cannot infer the provider key for {make!r}: add a return type annotation, or pass provides=...'
+    )
+
+
+def test_a_factory_whose_return_annotation_does_not_resolve_is_told_to_import_it() -> None:
+    def make() -> int:
+        return 1
+
+    make.__annotations__['return'] = 'NeverDefined'
+
+    with pytest.raises(InvalidProviderError) as exc:
+        _ = build_specs(Registry().bind(make).records())
+
+    assert str(exc.value) == (
+        f'cannot infer the provider key for {make!r}: it declares a return annotation, but an '
+        'annotation on it could not be resolved. Import the name at module level, or register '
+        'the class in any role, so depin can resolve the forward reference — or pass '
+        'provides=... to name the key directly.'
+    )
+
+
+def test_an_unresolvable_parameter_annotation_is_quoted_back() -> None:
+    def make(dep: int) -> int:
+        return dep
+
+    make.__annotations__['dep'] = 'NeverDefined'
+
+    with pytest.raises(InvalidProviderError) as exc:
+        _ = build_specs(Registry().bind(make, provides=int).records())
+
+    assert str(exc.value) == (
+        f"the annotation on parameter 'dep' of {make!r} could not be resolved "
+        "('NeverDefined'). Import the name at module level, or register it in any "
+        'role, so depin can resolve the forward reference.'
+    )
+
+
+def test_a_parameter_with_neither_annotation_nor_default_names_the_parameter() -> None:
+    def make(x: int) -> int:
+        return x
+
+    del make.__annotations__['x']
+
+    with pytest.raises(InvalidProviderError) as exc:
+        _ = build_specs(Registry().bind(make).records())
+
+    assert str(exc.value) == (
+        f"parameter 'x' of {make!r} has no type annotation and no default, so depin cannot tell what to inject"
+    )
+
+
+def test_a_decorator_with_two_parameters_for_its_key_lists_them_in_order() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, first: Store, second: Store) -> None: ...
+
+    with pytest.raises(InvalidProviderError) as exc:
+        _ = build_specs(Registry().bind(Store).decorate(Store, Loud).records())
+
+    assert str(exc.value) == (
+        f'the decorator {Loud!r} declares 2 parameters for {Store.__qualname__} '
+        '(tag=None): first, second. Exactly one parameter receives the value being '
+        'wrapped, and depin cannot tell which of these it is.'
+    )
+
+
+def test_a_decorator_with_no_parameter_for_its_key_says_how_to_declare_one() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self) -> None: ...
+
+    records = Registry().bind(Store, tag='primary').decorate(Store, Loud, tag='primary').records()
+    with pytest.raises(InvalidProviderError) as exc:
+        _ = build_specs(records)
+
+    assert str(exc.value) == (
+        f"the decorator {Loud!r} declares no parameter for {Store.__qualname__} (tag='primary'): a "
+        'decorator receives the value it wraps through a parameter annotated with the key it '
+        'decorates. Annotate one parameter with it.'
+    )
+
+
+def test_a_collection_that_lists_a_member_twice_names_the_duplicate() -> None:
+    class Handler: ...
+
+    class First(Handler): ...
+
+    with pytest.raises(DuplicateProviderError) as exc:
+        _ = build_specs(Registry().collect(Handler, [First, First]).records())
+
+    assert str(exc.value) == (
+        f'{First.__qualname__} is listed twice in the collection for {Handler.__qualname__}: '
+        'a member resolves to one value, so listing it again only repeats that value. Remove the duplicate.'
+    )
+
+
+def test_a_collection_accepts_two_distinct_members() -> None:
+    """The duplicate guard reads membership, not merely the count: two members are fine."""
+
+    class Handler: ...
+
+    class First(Handler): ...
+
+    class Second(Handler): ...
+
+    [spec] = list(build_specs(Registry().collect(Handler, [First, Second]).records()).providers)
+    assert isinstance(spec.source, CollectionBinding)
+    assert spec.source.members == (First, Second)
+    assert [param.key for param in spec.params] == [First, Second]
+    assert [param.has_default for param in spec.params] == [False, False]
+    assert [param.default for param in spec.params] == [None, None]
+
+
+def test_forward_reference_resolves_a_class_named_only_as_a_decorated_key() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    def make(dep: 'Store') -> int:
+        del dep
+        return 0
+
+    r = Registry().decorate(Store, Loud).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()).providers if spec.source is make)
+    assert spec.params[0].key is Store
+
+
+def test_forward_reference_resolves_a_class_named_only_as_a_decorator() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: Store) -> None: ...
+
+    def make(dep: 'Loud') -> int:
+        del dep
+        return 0
+
+    r = Registry().bind(Store).decorate(Store, Loud).bind(make, provides=int)
+    spec = next(spec for spec in build_specs(r.records()).providers if spec.source is make)
+    assert spec.params[0].key is Loud
+
+
+def test_an_inactive_binding_is_named_by_the_key_it_would_have_claimed() -> None:
+    class Principal: ...
+
+    class Logger: ...
+
+    @provides(Logger)
+    class StdLogger(Logger): ...
+
+    class Cache: ...
+
+    class Redis(Cache): ...
+
+    token = Token[int]('port')
+    registry = (
+        Registry()
+        .scope_value(Principal, when=False)
+        .bind(StdLogger, when=False)
+        .bind(Redis, provides=Cache, when=False)
+        .value(token, 1, when=False)
+    )
+
+    specs = build_specs(registry.records())
+
+    assert specs.providers == ()
+    assert specs.inactive == frozenset({(Principal, None), (Logger, None), (Cache, None), (token, None)})
+
+
+def test_an_alias_declares_one_required_parameter_for_its_target() -> None:
+    class Impl: ...
+
+    [spec] = list(build_specs(Registry().alias('legacy', to=Impl, to_tag='primary').records()).providers)
+    [param] = spec.params
+
+    assert isinstance(spec.source, AliasBinding)
+    assert (spec.source.key, spec.source.target, spec.source.target_tag) == ('legacy', Impl, 'primary')
+    assert (param.name, param.key, param.tag) == (ALIAS_PARAM, Impl, 'primary')
+    assert param.has_default is False
+    assert param.default is None
+
+
+def test_a_decorator_resolves_a_forward_reference_against_the_registered_classes() -> None:
+    class Store: ...
+
+    class Loud:
+        def __init__(self, inner: 'Store') -> None: ...
+
+    specs = build_specs(Registry().bind(Store).decorate(Store, Loud).records())
+
+    [decoration] = list(specs.decorations)
+    assert decoration.inner == 'inner'
+    assert [param.key for param in decoration.params] == [Store]
+
+
+def test_an_inactive_factory_key_resolves_a_forward_reference_to_a_registered_class() -> None:
+    class Pool: ...
+
+    def make() -> 'Pool':
+        return Pool()
+
+    registry = Registry().alias('pool', to=Pool).bind(make, when=False)
+
+    assert build_specs(registry.records()).inactive == frozenset({(Pool, None)})
+
+
+def test_forward_reference_resolves_a_class_named_only_inside_an_underlying_key() -> None:
+    """`Underlying` is a key like any other, so the class it names still enters the namespace."""
+
+    class Impl: ...
+
+    def make(dep: 'Impl') -> int:
+        del dep
+        return 0
+
+    r = Registry().alias(collection_key(Underlying(Impl, 0)), to='boxes').bind(make, provides=int)
     spec = next(spec for spec in build_specs(r.records()).providers if spec.source is make)
     assert spec.params[0].key is Impl
