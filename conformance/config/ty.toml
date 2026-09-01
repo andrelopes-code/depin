@@ -1,0 +1,10 @@
+# ty has no strict mode and no preset system. `--error all`, which the runner
+# passes, is the closest honest equivalent and is not expressible here.
+
+[environment]
+python = "${venv}"
+python-version = "3.12"
+python-platform = "linux"
+
+[terminal]
+output-format = "concise"

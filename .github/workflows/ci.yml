@@ -192,6 +192,76 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit 0
 
+  typing-artifact:
+    name: typing artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+
+      # One wheel, built once, checked by every `typing-consumer` job. Building
+      # it per checker would let five jobs disagree about what they measured.
+      - name: Build the wheel
+        run: uv build --wheel --out-dir dist
+
+      - name: Check the distribution metadata
+        run: uvx twine check dist/*.whl
+
+      # `depin/py.typed` must be in RECORD, not merely in the payload: RECORD is
+      # what an installer copies from, and a wheel whose two disagree would type
+      # check as untyped in every consumer environment.
+      - name: Assert the wheel carries the typing marker
+        run: uv run --locked python -m scripts.conformance --verify-artifact --wheel "$(ls dist/*.whl)"
+
+      - name: Upload the wheel
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: typing-wheel
+          path: dist/*.whl
+          if-no-files-found: error
+
+  typing-consumer:
+    name: typing-consumer (${{ matrix.checker }})
+    needs: typing-artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      # One job per checker, so the pull request's check list names the checker
+      # that broke without a reviewer opening a log. Each job creates its three
+      # interpreters once and checks both install modes inside them, which is
+      # why the install modes are not a second axis.
+      fail-fast: false
+      matrix:
+        checker: [mypy, pyright, basedpyright, ty, pyrefly]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # One Python target per pull request, 3.12, and one operating system,
+      # Linux. Results were measured byte-identical at 3.12, 3.13 and 3.14 for
+      # all five checkers in both install modes, and what a checker infers from
+      # a wheel does not vary by host.
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+
+      - name: Download the wheel
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: typing-wheel
+          path: dist
+
+      # The checker versions come from `conformance/checkers.toml`, which the
+      # local runner reads too, so this job and a contributor's laptop run the
+      # same five. Nothing here names a version.
+      - name: Run the conformance suite
+        run: uv run --locked python -m scripts.conformance --checker ${{ matrix.checker }} --wheel "$(ls dist/*.whl)"
+
   benchmarks:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
