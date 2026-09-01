@@ -35,11 +35,17 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
+click = ["click>=8.2"]
 fastapi = ["fastapi>=0.133", "starlette>=1.1"]
 flask = ["flask>=3.1"]
 litestar = ["litestar>=2.13"]
 pytest = ["pytest>=9.0.3"]
 starlette = ["starlette>=1.1"]
+# Not floored at the 0.26 release that vendored Click — the command seam is a
+# protocol, so it spans that split. Floored at 0.16 because Click 8.2 made
+# `Parameter.make_metavar()` take a context and Typer passes one only from
+# 0.16: installing both extras gives the two of them one Click to share.
+typer = ["typer>=0.16"]
 
 # Declared by the distribution rather than by the extra, because that is how
 # pytest discovers a plugin. The extra states the floor the plugin is tested
