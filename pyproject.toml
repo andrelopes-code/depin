@@ -41,6 +41,10 @@ flask = ["flask>=3.1"]
 litestar = ["litestar>=2.13"]
 pytest = ["pytest>=9.0.3"]
 starlette = ["starlette>=1.1"]
+# The middleware contract `MessageScope` implements — `pre_execute` /
+# `post_execute`, and the `TaskiqMessage` they carry — is identical on 0.11.0,
+# 0.11.18 and 0.12.6.
+taskiq = ["taskiq>=0.11"]
 # Not floored at the 0.26 release that vendored Click — the command seam is a
 # protocol, so it spans that split. Floored at 0.16 because Click 8.2 made
 # `Parameter.make_metavar()` take a context and Typer passes one only from
