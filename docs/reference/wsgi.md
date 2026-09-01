@@ -8,4 +8,6 @@ for which module to install.
 
 ::: depin.ext.wsgi.WSGIApp
 
+::: depin.ext.wsgi.Environ
+
 ::: depin.ext.wsgi.StartResponse

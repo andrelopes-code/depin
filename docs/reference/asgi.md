@@ -8,6 +8,10 @@ for which module to install.
 
 ::: depin.ext.asgi.ASGIApp
 
+::: depin.ext.asgi.ASGIScope
+
 ::: depin.ext.asgi.Receive
 
 ::: depin.ext.asgi.Send
+
+::: depin.ext.asgi.Message

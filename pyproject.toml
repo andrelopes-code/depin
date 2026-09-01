@@ -96,12 +96,8 @@ docs = [
     "mkdocs>=1.6,<2",
     "mkdocs-material>=9.5,<10",
     "mkdocstrings[python]>=1.0.4",
-    # mkdocstrings imports every module it renders, and `docs/reference/`
-    # carries a page per integration.
     "fastapi>=0.133",
     "starlette>=1.1",
-    "litestar>=2.13",
-    "flask>=3.1",
     "mike>=2.2.0",
 ]
 
