@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.2](https://github.com/andrelopes-code/depin/compare/v0.16.1...v0.16.2) (2026-09-01)
+
+
+### Documentation
+
+* record the mutation backlog as paid, not pending ([#64](https://github.com/andrelopes-code/depin/issues/64)) ([c593f95](https://github.com/andrelopes-code/depin/commit/c593f951003a1b66e5fd1903509887c8295904a6))
+
 ## [0.16.1](https://github.com/andrelopes-code/depin/compare/v0.16.0...v0.16.1) (2026-09-01)
 
 
