@@ -4,9 +4,8 @@ Importing this module requires the ``starlette`` extra (``pip install
 'pydepin[starlette]'``); the depin core itself has no third-party dependencies.
 
 Written entirely against depin's public integration contract and the
-framework-free middleware in `depin.ext.asgi`, so it is the worked example the
-"writing an integration" guide points at: a seed and a partial application,
-nothing more.
+framework-free middleware in `depin.ext.asgi`: a seed and a partial
+application, nothing more.
 """
 
 from starlette.requests import Request
@@ -36,12 +35,17 @@ class RequestScope(ASGIRequestScope):
 
     Implemented directly against the ASGI protocol (not Starlette's
     ``BaseHTTPMiddleware``) so streaming responses, server-sent events, and
-    WebSockets pass through without buffering. Lifespan and other non-HTTP
-    connection scopes are forwarded untouched, with no depin scope opened.
+    WebSockets pass through without buffering.
 
-    The container is published to the request's context for the duration of
+    The container is published to the connection's context for the duration of
     the scope, so `depin.hosted_container()` reaches it from anywhere inside
     the request.
+
+    A connection scope that is neither ``http`` nor ``websocket`` — the
+    lifespan scope above all — is forwarded untouched: no scope is opened and
+    nothing is published. A websocket is scoped and hosted exactly like an
+    HTTP request, but it is not seeded, because it has no request-body
+    semantics and `starlette.requests.Request` is HTTP-shaped.
 
     For HTTP requests it places a metadata-only `starlette.requests.Request`
     into the active scope frame so scoped providers can read headers, URL,
