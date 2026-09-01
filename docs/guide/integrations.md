@@ -29,6 +29,52 @@ raising. Relying on that fallback skips the guarantees `scope_value()` buys,
 so treat it as what happens when the pairing is missing, not as a second way
 to seed.
 
+## The integrations depin ships
+
+Each shipped web integration is one of two middlewares — the ASGI one or the
+WSGI one — with a single seed applied, so the module to import is chosen by the
+framework and the extra is named after it:
+
+| Framework | Module | Protocol | Install |
+| --- | --- | --- | --- |
+| FastAPI | `depin.ext.fastapi` | ASGI | `uv add 'pydepin[fastapi]'` |
+| Starlette | `depin.ext.starlette` | ASGI | `uv add 'pydepin[starlette]'` |
+| Litestar | `depin.ext.litestar` | ASGI | `uv add 'pydepin[litestar]'` |
+| Flask | `depin.ext.flask` | WSGI | `uv add 'pydepin[flask]'` |
+| Any other ASGI framework | `depin.ext.asgi` | ASGI | no extra |
+| Any other WSGI framework | `depin.ext.wsgi` | WSGI | no extra |
+
+`depin.ext.asgi` and `depin.ext.wsgi` import no third-party package, so a
+framework outside that list installs `RequestScope` with a `seed` of its own
+and needs nothing from depin beyond the contract above.
+
+`examples/starlette_app/` is the whole shape in one runnable program —
+registries, an app factory taking the container as an argument,
+`scope_value(Request)` for the seeded request, and `aclose()` on shutdown. Run
+it with `python -m examples.starlette_app.main`.
+
+!!! warning "A WSGI scope ends when the application returns"
+
+    The scope ends when the application returns, not when the response is
+    finished. WSGI hands the server an iterable that the server consumes after
+    the application has returned, and it offers no hook that outlives that
+    return, so a streaming body cannot resolve: by the time the server pulls the
+    first chunk the scope has drained and the container is no longer published.
+    Resolve everything a streaming response needs before returning the iterable,
+    and close over the values. ASGI has no such limit;
+    `depin.ext.asgi.RequestScope` keeps the scope open for the whole response.
+
+!!! warning "The Flask seed must not be used to read the body"
+
+    The seeded `flask.Request` is built from the same environment Flask builds
+    its own request from, and the two share one `environ['wsgi.input']` stream.
+    Reading the body through the seed — `form`, `json`, `data`, `files` —
+    consumes that stream, and Flask's own parse then finds it empty and returns
+    400. The ASGI seeds differ here: `depin.ext.starlette` and
+    `depin.ext.litestar` seed a request with no receive channel, so the same
+    mistake raises instead of stealing the body. Treat the body as a route
+    concern, not a provider input.
+
 ## A worked integration
 
 The host is a job runner: `run()` is its unit of work, `Job` is the object it

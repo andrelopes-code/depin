@@ -11,7 +11,12 @@ never retyped by hand.
 - [Graph diagnostics](diagnostics.md) — the data behind `graph()` and `explain()`.
 - [Warmup and health](operations.md) — the data behind `warmup()`, `checks()`, and `health()`.
 - [Integration contract](hosting.md) — `Host` and the ambient container.
-- [FastAPI](fastapi.md) — the optional ASGI integration.
+- [ASGI request scope](asgi.md) — the framework-free ASGI middleware, no extra required.
+- [WSGI request scope](wsgi.md) — the framework-free WSGI middleware, no extra required.
+- [Starlette](starlette.md) — the ASGI middleware seeded with a `starlette.requests.Request`.
+- [FastAPI](fastapi.md) — `Inject[T]`, plus the Starlette middleware under its own name.
+- [Litestar](litestar.md) — the ASGI middleware seeded with a `litestar.Request`.
+- [Flask](flask.md) — the WSGI middleware seeded with a `flask.Request`.
 - [pytest](pytest.md) — the callables the plugin's override fixtures return.
 
 Looking for prose instead? Start with the [guide](../guide/index.md).
