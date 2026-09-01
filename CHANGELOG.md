@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0](https://github.com/andrelopes-code/depin/compare/v0.14.0...v0.15.0) (2026-09-01)
+
+
+### Features
+
+* add the Starlette, Litestar and Flask integrations ([#59](https://github.com/andrelopes-code/depin/issues/59)) ([6ff597d](https://github.com/andrelopes-code/depin/commit/6ff597d4243f488017685ba7aab3fb93d4590c0a))
+
+
+### Bug Fixes
+
+* declare pytest-timeout in the threads group ([#56](https://github.com/andrelopes-code/depin/issues/56)) ([4e91736](https://github.com/andrelopes-code/depin/commit/4e917360863091485a4c1880c6f80f093b720624))
+
 ## [0.14.0](https://github.com/andrelopes-code/depin/compare/v0.13.0...v0.14.0) (2026-08-31)
 
 
