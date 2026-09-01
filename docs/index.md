@@ -12,7 +12,14 @@ runtime dependencies.
 ```bash
 uv add pydepin                # core
 uv add 'pydepin[fastapi]'     # with the FastAPI integration
+uv add 'pydepin[starlette]'   # with the Starlette integration
+uv add 'pydepin[litestar]'    # with the Litestar integration
+uv add 'pydepin[flask]'       # with the Flask integration
 ```
+
+`depin.ext.asgi` and `depin.ext.wsgi` are the framework-free middlewares those
+four specialise; they import no third-party package and need no extra. See
+[writing an integration](guide/integrations.md#the-integrations-depin-ships).
 
 The distribution is named `pydepin` on PyPI; the import package is `depin`.
 
@@ -76,11 +83,11 @@ list.
 ## Where to go next
 
 - [Guide](guide/index.md) — lifetimes and scopes, composing bindings,
-  resolution semantics, testing, inspecting the graph, and the FastAPI
-  integration.
+  resolution semantics, testing, inspecting the graph, and the web
+  integrations.
 - [API reference](reference/index.md) — the full public API, generated from the
   source docstrings.
 - [Examples](https://github.com/andrelopes-code/depin/tree/main/examples) —
-  eight runnable programs, each executed by the test suite.
+  sixteen runnable programs, each executed by the test suite.
 - [Contributing](https://github.com/andrelopes-code/depin/blob/main/CONTRIBUTING.md)
   — development setup, the five gates, and the release process.

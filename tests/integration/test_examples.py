@@ -41,6 +41,9 @@ from examples.optional_dependencies.main import Checkout, MetricsSink
 from examples.optional_dependencies.main import build as build_optional_dependencies
 from examples.scopes.main import AUDIT, Connection, UnitOfWork
 from examples.scopes.main import build as build_scopes
+from examples.starlette_app.main import build_container as build_starlette_container
+from examples.starlette_app.main import create_app as create_starlette_app
+from examples.starlette_app.registries import Database as StarletteDatabase
 from examples.testing.main import Clock, FrozenClock, Report
 from examples.testing.main import build as build_testing
 from examples.warmup.main import BUILT as WARMUP_BUILT
@@ -275,12 +278,16 @@ async def test_fastapi_example_accepts_an_injected_container() -> None:
     di = build_container()
     app = create_app(di)
     transport = ASGITransport(app=app)
+    # Mutating the singleton before the requests is what turns the assertion
+    # below into an identity check: a second `Database` would report the URL
+    # `Settings` carries, not this one.
+    (await di.aresolve(Database)).url = 'postgres://pinned'
 
     async with AsyncClient(transport=transport, base_url='http://t') as client:
         first = await client.get('/health')
         second = await client.get('/health')
 
-    assert first.json()['db'] == second.json()['db']
+    assert first.json()['db'] == second.json()['db'] == 'postgres://pinned'
     await di.aclose()
 
 
@@ -295,3 +302,43 @@ async def test_fastapi_example_closes_its_container_on_shutdown() -> None:
 
     database = await di.aresolve(Database)
     assert database.open_sessions == 0
+
+
+@pytest.mark.asyncio
+async def test_starlette_example_serves_a_request_per_scope() -> None:
+    app = create_starlette_app()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        user = await client.get('/users', params={'uid': 1}, headers={'user-agent': 'probe/1.0'})
+        health = await client.get('/health')
+
+    # `path` and `agent` were read off the request the middleware seeded into the frame.
+    assert user.json() == {
+        'id': 1,
+        'name': 'Ana',
+        'db': 'postgres://example',
+        'path': '/users',
+        'agent': 'probe/1.0',
+    }
+    # The per-request session was opened and closed again with the scope.
+    assert health.json()['open_sessions'] == 0
+
+
+@pytest.mark.asyncio
+async def test_starlette_example_accepts_an_injected_container() -> None:
+    di = build_starlette_container()
+    app = create_starlette_app(di)
+    transport = ASGITransport(app=app)
+    # Mutating the singleton before the requests is what turns the assertion
+    # below into an identity check: a second `Database` would report the URL
+    # `Settings` carries, not this one.
+    database = await di.aresolve(StarletteDatabase)
+    database.url = 'postgres://pinned'
+
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        first = await client.get('/health')
+        second = await client.get('/health')
+
+    assert first.json()['db'] == second.json()['db'] == 'postgres://pinned'
+    assert database.open_sessions == 0
+    await di.aclose()

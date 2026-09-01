@@ -73,5 +73,10 @@ nav:
       - Graph diagnostics: reference/diagnostics.md
       - Warmup and health: reference/operations.md
       - Integration contract: reference/hosting.md
+      - ASGI request scope: reference/asgi.md
+      - WSGI request scope: reference/wsgi.md
+      - Starlette: reference/starlette.md
       - FastAPI: reference/fastapi.md
+      - Litestar: reference/litestar.md
+      - Flask: reference/flask.md
       - pytest: reference/pytest.md

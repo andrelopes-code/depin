@@ -64,8 +64,11 @@ instance — satisfies it just as well. Reached that way no scope is open, so a
 
 `RequestScope` is implemented directly against the ASGI protocol rather than
 Starlette's `BaseHTTPMiddleware`, so streaming responses, server-sent events and
-WebSockets pass through unbuffered. Lifespan and other non-HTTP scopes are
-forwarded untouched, with no depin scope opened.
+WebSockets pass through unbuffered. A connection scope that is neither `http`
+nor `websocket` — the lifespan scope above all — is forwarded untouched: no
+depin scope is opened and nothing is published. A websocket is scoped and
+hosted exactly like an HTTP request, but it is not seeded, because it has no
+request-body semantics and `Request` is HTTP-shaped.
 
 Every scoped provider is therefore built once per request and torn down when the
 response finishes:

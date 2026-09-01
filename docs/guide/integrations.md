@@ -1,9 +1,15 @@
 # Writing an integration
 
-`depin.ext.fastapi` is not special: it is written entirely against the same
-seam any third-party integration uses — `Host`, `hosted_container`,
-`optional_hosted_container`, `ContractVersion`, and `CONTRACT_VERSION`, all
-re-exported from `depin`. This page states that contract, then builds one
+The integrations depin ships are not special: they are written entirely
+against the same seam any third-party integration uses — `Host`,
+`hosted_container`, `optional_hosted_container`, `ContractVersion`, and
+`CONTRACT_VERSION`, all re-exported from `depin`. `depin.ext.asgi` and
+`depin.ext.wsgi` are the two that drive it per request: each holds a `Host`,
+opens a scope around the request, and applies the seed it was constructed with
+to the frame. `depin.ext.fastapi` reads the container back with
+`optional_hosted_container()`, and `Host.activated()` on its own is called by
+no integration depin ships — `tests/unit/test_hosting.py` covers it. This page
+states the contract, lists what depin ships on it, then builds one
 integration — a job runner — against it end to end.
 
 ## What an integration does
@@ -28,6 +34,58 @@ the plan has no route for at all; a required parameter with no default keeps
 raising. Relying on that fallback skips the guarantees `scope_value()` buys,
 so treat it as what happens when the pairing is missing, not as a second way
 to seed.
+
+## The integrations depin ships
+
+Three of the four framework integrations are one of two middlewares — the ASGI
+one or the WSGI one — with a single seed applied. `depin.ext.fastapi` is the
+exception: its `RequestScope` is the Starlette one re-exported, and what the
+module adds of its own is `Inject[T]`. Either way the module to import is
+chosen by the framework, and the extra is named after it:
+
+| Framework | Module | Protocol | Install |
+| --- | --- | --- | --- |
+| FastAPI | `depin.ext.fastapi` | ASGI | `uv add 'pydepin[fastapi]'` |
+| Starlette | `depin.ext.starlette` | ASGI | `uv add 'pydepin[starlette]'` |
+| Litestar | `depin.ext.litestar` | ASGI | `uv add 'pydepin[litestar]'` |
+| Flask | `depin.ext.flask` | WSGI | `uv add 'pydepin[flask]'` |
+| Any other ASGI framework | `depin.ext.asgi` | ASGI | no extra |
+| Any other WSGI framework | `depin.ext.wsgi` | WSGI | no extra |
+
+`depin.ext.asgi` and `depin.ext.wsgi` import no third-party package, so a
+framework outside that list installs `RequestScope` with a `seed` of its own
+and needs nothing from depin beyond the contract above.
+
+`examples/starlette_app/` is the whole shape in one runnable program —
+registries, an app factory taking the container as an argument,
+`scope_value(Request)` for the seeded request, and `aclose()` on shutdown. Run
+it with `python -m examples.starlette_app.main`.
+
+!!! warning "A WSGI scope ends when the application returns"
+
+    The scope ends when the application returns, not when the response is
+    finished. WSGI hands the server an iterable that the server consumes after
+    the application has returned, and it offers no hook that outlives that
+    return, so a streaming body cannot resolve: by the time the server pulls the
+    first chunk the scope has drained and the container is no longer published.
+    Resolve everything a streaming response needs before returning the iterable,
+    and close over the values. ASGI has no such limit;
+    `depin.ext.asgi.RequestScope` keeps the scope open for the whole response.
+
+!!! warning "A seeded request is not for reading the body"
+
+    Every seed is built from the connection alone, and what a body read through
+    it does depends on the framework:
+
+    | Integration | A body read through the seed |
+    | --- | --- |
+    | `depin.ext.starlette` | Raises. The request has no receive channel and caches its body per instance, so no order of reads makes it succeed. |
+    | `depin.ext.litestar` | Raises when nothing has parsed the body yet, and returns the parsed body when the handler declares a `data` parameter — `litestar.Request` caches through the connection scope rather than per instance. |
+    | `depin.ext.flask` | Consumes `environ['wsgi.input']`, the same stream Flask's own request reads. Flask's parse then finds it empty and answers 400 before the view runs. |
+
+    Neither ASGI seed reaches the stream the handler reads, so neither can take
+    the body from it; the WSGI seed can. Treat the body as a route concern, not
+    a provider input.
 
 ## A worked integration
 
@@ -288,9 +346,9 @@ depin release directly.
 ## What not to import
 
 An integration imports from `depin` only — never from `depin._core`, which
-carries no compatibility promise across releases. `depin.ext.fastapi` is held
-to that rule by `tests/unit/test_integration_contract.py`, which fails on the
-literal substring `_core` appearing anywhere in a module under `depin/ext/`,
+carries no compatibility promise across releases. Every module depin ships under
+`depin/ext/` is held to that rule by `tests/unit/test_integration_contract.py`,
+which fails on the literal substring `_core` appearing anywhere in one of them,
 prose included. A third-party integration gets the same guarantee `depin`
 gives its own: everything a host needs — `Host`, `hosted_container`,
 `optional_hosted_container`, `ContractVersion`, `CONTRACT_VERSION` — is
