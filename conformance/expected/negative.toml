@@ -18,3 +18,49 @@ pyright = "reportArgumentType"
 basedpyright = "reportArgumentType"
 ty = "invalid-argument-type"
 pyrefly = "bad-argument-type"
+
+[n02]
+misuse = "check= given a function whose parameter is not the bound type"
+line = 30
+mypy = "arg-type"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "no-matching-overload"
+pyrefly = "no-matching-overload"
+
+[n03]
+misuse = "a parameterised key resolved at the wrong type argument"
+line = 29
+mypy = "arg-type"
+pyright = "reportAssignmentType"
+basedpyright = "reportAssignmentType"
+ty = "invalid-assignment"
+pyrefly = "bad-assignment"
+
+[n04]
+misuse = "an @inject-wrapped function called with an argument of the wrong type"
+line = 22
+mypy = "arg-type"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "invalid-argument-type"
+pyrefly = "bad-argument-type"
+
+[n05]
+misuse = "collect() given a member that is not a provider key"
+line = 23
+mypy = "list-item"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "invalid-argument-type"
+pyrefly = "bad-argument-type"
+
+[n06]
+misuse = "an Inject[T] parameter used as though it were another type"
+mode = "extras"
+line = 26
+mypy = "assignment"
+pyright = "reportAssignmentType"
+basedpyright = "reportAssignmentType"
+ty = "invalid-assignment"
+pyrefly = "bad-assignment"

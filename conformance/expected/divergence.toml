@@ -1,0 +1,33 @@
+# One table per divergence fixture, keyed by the part of its filename before the
+# first underscore. Each fixture is a known false negative in the public API,
+# routed to Step 8. A fixture every checker accepts gates nothing, so these
+# cannot live in `negative/`; what is gated here is the **verdict**.
+#
+# Each checker's value is "accept" or "reject", measured today. The harness
+# fails when a verdict changes **in either direction**: a checker that starts
+# rejecting one of these is news the project wants recorded deliberately, and a
+# checker that stops rejecting one is a regression in what the suite detects.
+#
+# Verdicts only — no line, no rule identifier. Pinning the rule a rejecting
+# checker emits would make a blocking gate depend on that checker continuing to
+# name the rule exactly as it does today, which is the fragility this suite
+# rejects elsewhere. What is promised here is that the call is caught, not how
+# it is spelled.
+#
+# `mode` is optional and defaults to "core".
+
+[d01]
+misuse = "override() given a replacement of an unrelated type"
+mypy = "accept"
+pyright = "accept"
+basedpyright = "accept"
+ty = "accept"
+pyrefly = "accept"
+
+[d02]
+misuse = "value() given a value of a type the token does not carry"
+mypy = "accept"
+pyright = "accept"
+basedpyright = "accept"
+ty = "accept"
+pyrefly = "reject"

@@ -10,7 +10,7 @@ CHECKOUT: Final = Path(__file__).resolve().parents[2]
 CONFORMANCE: Final = CHECKOUT / 'conformance'
 CHECKER_NAMES: Final = ('mypy', 'pyright', 'basedpyright', 'ty', 'pyrefly')
 MODES: Final = ('core', 'extras')
-STAGES: Final = ('control', 'positive', 'anti-erasure', 'negative')
+STAGES: Final = ('control', 'positive', 'anti-erasure', 'negative', 'divergence')
 
 
 class ConformanceError(Exception):

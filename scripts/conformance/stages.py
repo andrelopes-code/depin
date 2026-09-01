@@ -1,4 +1,4 @@
-"""The control, positive, anti-erasure and negative stages."""
+"""The control, positive, anti-erasure, negative and divergence stages."""
 
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
@@ -55,6 +55,10 @@ def core_files(workspace: Workspace) -> tuple[Path, ...]:
 
 def negative_files(workspace: Workspace) -> tuple[Path, ...]:
     return _relative((workspace.corpus / 'negative').glob('*.py'), workspace.corpus)
+
+
+def divergence_files(workspace: Workspace) -> tuple[Path, ...]:
+    return _relative((workspace.corpus / 'divergence').glob('*.py'), workspace.corpus)
 
 
 def _describe(diagnostics: Sequence[Diagnostic]) -> str:
@@ -120,6 +124,35 @@ def run_zero(
     return Result(checker.name, mode, stage, note, not failures), failures
 
 
+def expectations(workspace: Workspace, filename: str) -> dict[str, dict[str, object]]:
+    return {
+        name: table(value, f'{filename} [{name}]')
+        for name, value in load_toml(workspace.corpus / 'expected' / filename).items()
+    }
+
+
+def check_one_fixture(
+    workspace: Workspace,
+    checker: Checker,
+    pins: Pins,
+    environment: Mapping[str, str],
+    fixture: Path,
+    record: Mapping[str, object],
+) -> tuple[Path, Outcome]:
+    """Check a single fixture against the interpreter its record names.
+
+    Neither of the one-file stages is per-install-mode. Each fixture names the
+    interpreter it needs — ``mode = "extras"`` for a case only reachable with a
+    framework installed, core-only otherwise — so running it once per checker
+    covers it.
+    """
+    venv = workspace.venvs['extras' if record.get('mode') == 'extras' else 'core']
+    invocation = Invocation(
+        config=configuration(workspace, checker, venv.name), venv=venv, files=(fixture,), anti_erasure=False
+    )
+    return venv, invoke(workspace, checker, pins, invocation, environment)
+
+
 def run_negatives(
     workspace: Workspace, checker: Checker, pins: Pins, environment: Mapping[str, str]
 ) -> tuple[Result, list[Failure]]:
@@ -127,15 +160,8 @@ def run_negatives(
 
     Running the fixtures together would let an unrelated diagnostic satisfy a
     fixture by accident.
-
-    This is not a per-install-mode stage. Each fixture names the interpreter it
-    needs — ``mode = "extras"`` for a misuse only reachable with a framework
-    installed, core-only otherwise — so running it once per checker covers it.
     """
-    expected = {
-        name: table(value, f'negative.toml [{name}]')
-        for name, value in load_toml(workspace.corpus / 'expected' / 'negative.toml').items()
-    }
+    expected = expectations(workspace, 'negative.toml')
     failures: list[Failure] = []
     fixtures = negative_files(workspace)
     seen: set[str] = set()
@@ -146,11 +172,7 @@ def run_negatives(
         if record is None:
             failures.append(Failure(checker.name, '-', 'negative', f'{fixture} has no entry in expected/negative.toml'))
             continue
-        venv = workspace.venvs['extras' if record.get('mode') == 'extras' else 'core']
-        invocation = Invocation(
-            config=configuration(workspace, checker, venv.name), venv=venv, files=(fixture,), anti_erasure=False
-        )
-        outcome = invoke(workspace, checker, pins, invocation, environment)
+        venv, outcome = check_one_fixture(workspace, checker, pins, environment, fixture, record)
         line = integer(record, 'line', f'negative.toml [{name}]')
         rule = text(record, checker.name, f'negative.toml [{name}]')
         if outcome.exit_code == 0:
@@ -168,6 +190,82 @@ def run_negatives(
     if unused:
         failures.append(Failure(checker.name, '-', 'negative', f'expected/negative.toml has no fixture for {unused}'))
     return Result(checker.name, '-', 'negative', f'{len(fixtures)} fixtures', not failures), failures
+
+
+def verdict(outcome: Outcome) -> str | None:
+    """`reject` when a diagnostic was reported, `accept` on a clean zero exit.
+
+    A non-zero exit carrying no parsed diagnostic is neither: the checker
+    failed for a reason the register cannot describe, so the caller reports it
+    rather than recording a verdict it did not observe.
+    """
+    if outcome.diagnostics:
+        return 'reject'
+    return 'accept' if outcome.exit_code == 0 else None
+
+
+def run_divergence(
+    workspace: Workspace, checker: Checker, pins: Pins, environment: Mapping[str, str]
+) -> tuple[Result, list[Failure]]:
+    """The known false negatives, gated on each checker's verdict rather than on rejection.
+
+    A fixture every checker accepts gates nothing, so these cannot be negative
+    fixtures. What is gated is the verdict: the stage fails when one changes in
+    **either** direction. A checker that starts rejecting one of these is news
+    the project wants recorded deliberately; a checker that stops rejecting one
+    is a regression in what the suite detects.
+    """
+    expected = expectations(workspace, 'divergence.toml')
+    failures: list[Failure] = []
+    fixtures = divergence_files(workspace)
+    seen: set[str] = set()
+    for fixture in fixtures:
+        name = fixture.stem.split('_')[0]
+        seen.add(name)
+        record = expected.get(name)
+        if record is None:
+            failures.append(
+                Failure(checker.name, '-', 'divergence', f'{fixture} has no entry in expected/divergence.toml')
+            )
+            continue
+        recorded = text(record, checker.name, f'divergence.toml [{name}]')
+        if recorded not in ('accept', 'reject'):
+            failures.append(
+                Failure(checker.name, '-', 'divergence', f'{name}: {recorded!r} is neither "accept" nor "reject"')
+            )
+            continue
+        venv, outcome = check_one_fixture(workspace, checker, pins, environment, fixture, record)
+        observed = verdict(outcome)
+        if observed is None:
+            failures.append(
+                Failure(
+                    checker.name,
+                    venv.name,
+                    'divergence',
+                    f'{name}: exit {outcome.exit_code}, no parsed diagnostic\n{outcome.output.strip()}',
+                )
+            )
+        elif observed != recorded:
+            direction = (
+                'it now rejects a call the register records as accepted; record the new verdict deliberately'
+                if observed == 'reject'
+                else 'it no longer rejects a call the register records as rejected; the suite has lost that signal'
+            )
+            failures.append(
+                Failure(
+                    checker.name,
+                    venv.name,
+                    'divergence',
+                    f'{name}: recorded {recorded}, observed {observed} — {direction}. '
+                    f'{_describe(outcome.diagnostics) or "no diagnostic"}',
+                )
+            )
+    unused = sorted(set(expected) - seen)
+    if unused:
+        failures.append(
+            Failure(checker.name, '-', 'divergence', f'expected/divergence.toml has no fixture for {unused}')
+        )
+    return Result(checker.name, '-', 'divergence', f'{len(fixtures)} fixtures', not failures), failures
 
 
 def anti_erasure_invocation(workspace: Workspace, checker: Checker, mode: str) -> Invocation | None:
@@ -227,6 +325,10 @@ def run(pins: Pins, workspace: Workspace, selection: Selection) -> tuple[list[Re
                     failures.extend(problems)
         if 'negative' in selection.stages:
             result, problems = run_negatives(workspace, checker, pins, environment)
+            results.append(result)
+            failures.extend(problems)
+        if 'divergence' in selection.stages:
+            result, problems = run_divergence(workspace, checker, pins, environment)
             results.append(result)
             failures.extend(problems)
     return results, failures

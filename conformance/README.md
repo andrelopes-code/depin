@@ -21,11 +21,15 @@ interpreters, which does not belong in a per-commit loop.
 | Path | What it holds |
 | --- | --- |
 | `checkers.toml` | The pinned version of each checker, the language and OS targets, the eight extras, and the eight framework-requiring `depin.ext` modules |
+| `coverage.toml` | One entry per public symbol: the fixtures that exercise it, or a decision and a reason |
 | `config/` | One native configuration per checker, templated — `${venv}`, `${venv_parent}`, `${venv_name}` and `${python}` are substituted at run time, once per interpreter |
 | `corpus/core/` | Consumer code that imports only `depin` and `depin.errors`. Checked in both install modes |
 | `corpus/ext_core/` | The `depin.ext` modules that import no third-party package — `__init__`, `asgi`, `wsgi`, `cli` — against a consumer's own structural types. Checked in **both** modes |
+| `corpus/ext_extras/` | The eight `depin.ext` modules that require an extra. Checked in all-extras mode only |
 | `negative/` | One misuse per file, no suppressions, checked one file at a time |
+| `divergence/` | Known false negatives in the public API, gated on each checker's verdict rather than on rejection |
 | `expected/negative.toml` | Per fixture and per checker: the line and the rule identifier |
+| `expected/divergence.toml` | Per fixture and per checker: `accept` or `reject`, as measured today |
 
 The corpus imports only `depin`, `depin.errors` and `depin.ext.*`. It never
 imports `depin._core`, and the runner asserts that textually before it checks
@@ -141,6 +145,61 @@ both sides of one disagreement identically as
 ``Type `() -> Cache` does not match asserted type `() -> Cache` ``. A harness
 matching rendered text would be brittle where it is not simply useless.
 
+## The divergence register
+
+Two false negatives in the public API are routed to Step 8:
+`FrozenContainer.override(Config, Other())`, accepted by all five, and
+`Container.value(Token[int], 'str')`, accepted by four and rejected by Pyrefly.
+
+They cannot be negative fixtures. A fixture every checker accepts gates nothing,
+and one that four accept would fail four checkers for a state the project has
+decided to keep until the API may change again. So `divergence/` inverts the
+contract: `expected/divergence.toml` records each checker's `accept` / `reject`
+verdict as measured today, and the stage fails when a verdict moves **in either
+direction**. A checker that starts rejecting one of these is news the project
+wants to record deliberately; a checker that stops rejecting one is a regression
+in what the suite detects, and four of the eight remedies measured for the
+`Token` variance experiment would have caused exactly that.
+
+The register carries verdicts only — no line, no rule identifier. Pinning the
+rule a rejecting checker emits would make a blocking gate depend on that checker
+continuing to spell it the same way, which is the fragility this suite rejects
+elsewhere. What is promised is that the call is caught, not how it is named.
+
+## The coverage map
+
+`coverage.toml` carries one entry per public symbol, naming either the fixtures
+that exercise it or an explicit decision and a reason.
+`tests/unit/test_conformance_coverage.py` enumerates the public surface and
+fails when a name has no entry, so a new public symbol cannot land without a
+consumer-typing decision behind it. It fails the other way too: an entry naming
+a symbol that is no longer public is a failure, so the map shrinks when the
+surface does.
+
+Three sources, not one:
+
+- `depin.__all__`, imported.
+- `depin.errors`, imported — eleven exceptions, none of them in `__all__`, four
+  of which inherit a builtin as well. That second base decides what a consumer's
+  existing `except TypeError` now catches, which makes it a typing fact rather
+  than a detail.
+- `depin/ext/`, **parsed with `ast` and never imported**: that test runs on the
+  free-threaded and pre-release jobs, where no framework is installed.
+  `tests/unit/test_integration_contract.py` uses the same technique.
+
+The scanner's contract is specified, because the naive version misses the single
+most important symbol in the package. It honours `__all__` when a module
+declares one — only `fastapi.py` does; otherwise it takes every non-underscore
+top-level `ClassDef`, `FunctionDef`, `AsyncFunctionDef`, `Assign`, `AnnAssign`
+and `TypeAlias`; it descends into `If` bodies **and their `else` branches**; and
+it treats a module-level `import X as Y` with a public `Y` as a symbol rather
+than an import. Three cases force each of those clauses and each has its own
+test: `ext/fastapi.py` has no top-level `Inject` at all — its body is `__all__`
+plus one `If`, with `type Inject[T] = T` in the `TYPE_CHECKING` branch and
+`class Inject` in the `else`; `ext/asgi.py` declares two module-level PEP 695
+aliases and `ext/wsgi.py` one; and three framework modules publish their base as
+`from depin.ext.asgi import RequestScope as ASGIRequestScope`.
+
 ## How the repository's own tooling sees this directory
 
 - **Outside** `[tool.mypy] files` and `[tool.basedpyright] include`. It has to
@@ -172,7 +231,17 @@ the whole suite green on the new version.
 
 ## What this directory does not guard
 
-Class-member *inventory* is out of scope, and that is a decision rather than an
-omission. The corpus guards members by exercising them — `Container.bind`,
-`RequestScope.__call__` — but adding a method to a public class creates no
-obligation here, and nothing fails when one arrives untested.
+**Class-member inventory is out of scope, and that is a decision rather than an
+omission.** `coverage.toml` and the unit test behind it guard the *symbol*
+inventory: every name `depin.__all__`, `depin.errors` and `depin/ext/` publish
+at module level. `RequestScope.__call__`, `CommandContext.with_resource[T]` and
+every `Container` method are not top-level names, so adding `Container.foo()`
+passes that gate.
+
+The corpus guards members the other way, by exercising them — `Container.bind`,
+`FrozenContainer.resolve`, `ScopeFrame.provide` — and a member whose type drifts
+fails the positive stage. But nothing fails when a *new* member arrives
+untested. Extending the map to members would mean walking every class body of a
+package whose public classes carry the bounded generics the corpus already
+exercises directly; the two are different promises, and Step 8's surface review
+is where member-level inventory belongs.

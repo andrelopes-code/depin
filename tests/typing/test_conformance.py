@@ -3,6 +3,15 @@
 `assert_type` is a no-op at runtime; what this module buys is the diagnostic a
 checker emits when an inferred type drifts. `pytest` collects the functions too,
 so a change that breaks the import still fails the suite.
+
+Every assertion here is positive. The one negative assertion this module used to
+carry — a `check=` whose parameter did not match the binding — is
+`conformance/negative/n02_check_parameter.py`, where the expected diagnostic is
+data rather than an inline suppression. Written here it needed
+``# type: ignore[arg-type]  # pyright: ignore[reportArgumentType]``, and mypy's
+``warn_unused_ignores`` — implied by ``strict`` — turns that pair into a gate
+failure the moment either checker stops reporting the error it guards, which is
+the opposite of what a negative fixture should do.
 """
 
 import contextlib
@@ -78,10 +87,16 @@ def test_inject_preserves_an_async_signature() -> None:
     async def handler(label: str, config: Config = injected(Config)) -> str:
         return f'{label}={config.value}'
 
-    # Nested and never called: `assert_type` is checked statically, and calling
+    # A typed witness rather than `assert_type`: both `inject` overloads match
+    # an `async def`, four checkers pick the first and ty the second, and the
+    # `CoroutineType[Any, Any, str]` that follows preserves every operation
+    # `Awaitable[str]` promises. Exact equality would state a promise the
+    # library does not make.
+    #
+    # Nested and never called: the witness is checked statically, and calling
     # the wrapper here would leave an un-awaited coroutine behind.
     def call_site() -> None:
-        assert_type(handler(label='n'), Awaitable[str])
+        _pending: Awaitable[str] = handler(label='n')
 
     _ = call_site
 
@@ -294,16 +309,6 @@ def test_bind_infers_the_check_parameter_from_the_bound_type() -> None:
     def ping(db: Database) -> None: ...
 
     assert_type(Container().bind(Database, check=ping), Container)
-
-
-def test_bind_rejects_a_check_whose_parameter_does_not_match_the_binding() -> None:
-    class Database: ...
-
-    class Cache: ...
-
-    def ping(cache: Cache) -> None: ...
-
-    _ = Container().bind(Database, check=ping)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
 
 def test_bind_infers_the_check_parameter_for_a_generator_factory() -> None:

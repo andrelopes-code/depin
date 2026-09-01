@@ -1,0 +1,264 @@
+# One entry per public symbol. An entry either names the fixtures that exercise
+# it or records an explicit decision not to, with a reason.
+#
+# `tests/unit/test_conformance_coverage.py` enumerates the public surface from
+# three sources and fails when a name has no entry here, so a new public symbol
+# cannot land without a type-test decision. It also fails on an entry for a name
+# that is no longer public, so this file shrinks when the surface does.
+#
+# The three sources: `depin.__all__` and `depin.errors`, both imported, keyed by
+# their bare name and by `depin.errors.<Name>`; and `depin/ext/`, parsed with
+# `ast` and never imported — that test runs on the free-threaded and pre-release
+# jobs, where no framework is installed — keyed by `depin.ext.<module>.<Name>`.
+#
+# Fixture paths are relative to `conformance/`.
+#
+# Class members are out of scope. Adding `Container.foo()` passes this gate; the
+# corpus is what guards members, by exercising them. `conformance/README.md`
+# records that as a decision rather than leaving it a hole.
+
+[CONTRACT_VERSION]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+[Bindings]
+fixtures = ["corpus/core/c07_registration.py"]
+
+[Condition]
+fixtures = ["corpus/core/c07_registration.py"]
+
+[Container]
+fixtures = [
+    "corpus/core/c01_container.py",
+    "corpus/core/c03_providers.py",
+    "corpus/core/c07_registration.py",
+]
+
+[ContractVersion]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+[DependencyGraph]
+fixtures = ["corpus/core/c08_diagnostics.py"]
+
+[FrozenContainer]
+fixtures = ["corpus/core/c01_container.py", "corpus/core/c04_resolution.py"]
+
+[GraphEdge]
+fixtures = ["corpus/core/c08_diagnostics.py"]
+
+[GraphNode]
+fixtures = ["corpus/core/c08_diagnostics.py"]
+
+[HealthCheck]
+fixtures = ["corpus/core/c08_diagnostics.py"]
+
+[HealthReport]
+fixtures = ["corpus/core/c08_diagnostics.py"]
+
+[HealthResult]
+fixtures = ["corpus/core/c08_diagnostics.py"]
+
+[Host]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+[Named]
+fixtures = ["corpus/core/c02_keys.py"]
+
+[ProviderKey]
+fixtures = ["corpus/core/c02_keys.py", "corpus/core/c08_diagnostics.py"]
+
+[ProviderShape]
+fixtures = ["corpus/core/c08_diagnostics.py"]
+
+[Registry]
+fixtures = ["corpus/core/c07_registration.py"]
+
+[Scope]
+fixtures = ["corpus/core/c06_lifetimes.py"]
+
+[ScopeDecorator]
+fixtures = ["corpus/core/c07_registration.py"]
+
+[ScopeFrame]
+fixtures = ["corpus/core/c06_lifetimes.py", "corpus/core/c03_providers.py"]
+
+[Tag]
+fixtures = ["corpus/core/c02_keys.py"]
+
+[Token]
+fixtures = ["corpus/core/c02_keys.py"]
+
+[TokenKey]
+fixtures = ["corpus/core/c02_keys.py"]
+
+[Underlying]
+fixtures = ["corpus/core/c02_keys.py"]
+
+[WarmupReport]
+fixtures = ["corpus/core/c08_diagnostics.py"]
+
+[hosted_container]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+[injected]
+fixtures = ["corpus/core/c05_injection.py"]
+
+[optional_hosted_container]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+[provides]
+fixtures = ["corpus/core/c07_registration.py"]
+
+# `depin.errors`. None of the eleven is in `depin.__all__`, and four inherit a
+# builtin as well as `DepinError` — which decides what an `except TypeError`
+# clause a consumer already had will now catch, so it is a typing fact rather
+# than a detail.
+
+["depin.errors.DepinError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.MissingProviderError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.CircularDependencyError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.AsyncInSyncContextError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.OutsideScopeError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.DuplicateProviderError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.CaptiveDependencyError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.InvalidProviderError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.InvalidScopeError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.TeardownError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.ContainerNotBoundError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+# `depin/ext/`. The four modules that import no third-party package are checked
+# in both install modes from `corpus/ext_core/`; the eight that require an extra
+# are checked in all-extras mode from `corpus/ext_extras/`.
+
+["depin.ext.asgi.ASGIApp"]
+fixtures = ["corpus/ext_core/e01_asgi.py"]
+
+["depin.ext.asgi.ASGIScope"]
+fixtures = ["corpus/ext_core/e01_asgi.py"]
+
+["depin.ext.asgi.Message"]
+fixtures = ["corpus/ext_core/e01_asgi.py"]
+
+["depin.ext.asgi.Receive"]
+fixtures = ["corpus/ext_core/e01_asgi.py"]
+
+["depin.ext.asgi.Send"]
+fixtures = ["corpus/ext_core/e01_asgi.py"]
+
+["depin.ext.asgi.RequestScope"]
+fixtures = ["corpus/ext_core/e01_asgi.py", "corpus/ext_extras/x02_asgi_frameworks.py"]
+
+["depin.ext.wsgi.Environ"]
+fixtures = ["corpus/ext_core/e02_wsgi.py"]
+
+["depin.ext.wsgi.StartResponse"]
+fixtures = ["corpus/ext_core/e02_wsgi.py"]
+
+["depin.ext.wsgi.WSGIApp"]
+fixtures = ["corpus/ext_core/e02_wsgi.py", "corpus/ext_extras/x03_flask.py"]
+
+["depin.ext.wsgi.RequestScope"]
+fixtures = ["corpus/ext_core/e02_wsgi.py", "corpus/ext_extras/x03_flask.py"]
+
+["depin.ext.cli.CommandContext"]
+fixtures = ["corpus/ext_core/e03_cli.py", "corpus/ext_extras/x04_command_frameworks.py"]
+
+["depin.ext.cli.install"]
+fixtures = ["corpus/ext_core/e03_cli.py"]
+
+["depin.ext.fastapi.Inject"]
+fixtures = ["corpus/ext_extras/x01_fastapi.py", "negative/n06_inject_marker.py"]
+
+["depin.ext.fastapi.RequestScope"]
+fixtures = ["corpus/ext_extras/x01_fastapi.py"]
+
+["depin.ext.starlette.RequestScope"]
+fixtures = ["corpus/ext_extras/x02_asgi_frameworks.py"]
+
+["depin.ext.starlette.seed_request"]
+fixtures = ["corpus/ext_extras/x02_asgi_frameworks.py"]
+
+["depin.ext.starlette.ASGIRequestScope"]
+decision = "re-exported-alias"
+reason = "the name binds depin.ext.asgi.RequestScope so the class statement below it can name its base; the base is exercised by corpus/ext_core/e01_asgi.py and this module's subclass is checked against it in corpus/ext_extras/x02_asgi_frameworks.py"
+
+["depin.ext.litestar.RequestScope"]
+fixtures = ["corpus/ext_extras/x02_asgi_frameworks.py"]
+
+["depin.ext.litestar.seed_request"]
+fixtures = ["corpus/ext_extras/x02_asgi_frameworks.py"]
+
+["depin.ext.litestar.ASGIRequestScope"]
+decision = "re-exported-alias"
+reason = "the name binds depin.ext.asgi.RequestScope so the class statement below it can name its base; the base is exercised by corpus/ext_core/e01_asgi.py and this module's subclass is checked against it in corpus/ext_extras/x02_asgi_frameworks.py"
+
+["depin.ext.flask.RequestScope"]
+fixtures = ["corpus/ext_extras/x03_flask.py"]
+
+["depin.ext.flask.seed_request"]
+fixtures = ["corpus/ext_extras/x03_flask.py"]
+
+["depin.ext.flask.WSGIRequestScope"]
+decision = "re-exported-alias"
+reason = "the name binds depin.ext.wsgi.RequestScope so the class statement below it can name its base; the base is exercised by corpus/ext_core/e02_wsgi.py and this module's subclass is checked against it in corpus/ext_extras/x03_flask.py"
+
+["depin.ext.click.install"]
+fixtures = ["corpus/ext_extras/x04_command_frameworks.py"]
+
+["depin.ext.click.seed_context"]
+fixtures = ["corpus/ext_extras/x04_command_frameworks.py"]
+
+["depin.ext.click.install_command_scope"]
+decision = "re-exported-alias"
+reason = "the name binds depin.ext.cli.install so this module's own install can call it; the target is exercised by corpus/ext_core/e03_cli.py"
+
+["depin.ext.typer.install"]
+fixtures = ["corpus/ext_extras/x04_command_frameworks.py"]
+
+["depin.ext.typer.install_command_scope"]
+decision = "re-exported-alias"
+reason = "the name binds depin.ext.cli.install so this module's own install can call it; the target is exercised by corpus/ext_core/e03_cli.py"
+
+["depin.ext.taskiq.MessageScope"]
+fixtures = ["corpus/ext_extras/x05_taskiq.py"]
+
+["depin.ext.pytest.OverrideFactory"]
+fixtures = ["corpus/ext_extras/x06_pytest.py"]
+
+["depin.ext.pytest.AsyncOverrideFactory"]
+fixtures = ["corpus/ext_extras/x06_pytest.py"]
+
+["depin.ext.pytest.depin_container"]
+fixtures = ["corpus/ext_extras/x06_pytest.py"]
+
+["depin.ext.pytest.depin_override"]
+fixtures = ["corpus/ext_extras/x06_pytest.py"]
+
+["depin.ext.pytest.depin_aoverride"]
+fixtures = ["corpus/ext_extras/x06_pytest.py"]
+
+["depin.ext.pytest.depin_scope"]
+fixtures = ["corpus/ext_extras/x06_pytest.py"]
+
+["depin.ext.pytest.depin_ascope"]
+fixtures = ["corpus/ext_extras/x06_pytest.py"]
