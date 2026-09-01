@@ -77,6 +77,9 @@ threads = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3",
     "pytest-cov>=7.1,<8",
+    # The property modules carry a `timeout` marker, and `--strict-markers`
+    # fails collection when the plugin that defines it is absent.
+    "pytest-timeout>=2.4,<3",
 ]
 bench = [
     "pytest>=9.0.3",
