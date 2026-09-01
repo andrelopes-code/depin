@@ -103,12 +103,12 @@ def test_a_scoped_provider_is_resolved_once_per_invocation() -> None:
 
 def test_two_invocations_get_independent_scoped_instances() -> None:
     di = command_container([])
-    seen: list[int] = []
+    seen: list[Counter] = []
     ticks: list[int] = []
 
     def report() -> None:
         counter = hosted_container().resolve(Counter)
-        seen.append(id(counter))
+        seen.append(counter)
         ticks.append(counter.tick())
 
     app = scoped_application(di, report)
@@ -117,7 +117,7 @@ def test_two_invocations_get_independent_scoped_instances() -> None:
     assert runner.invoke(app, ['report']).exit_code == 0
     assert runner.invoke(app, ['report']).exit_code == 0
     assert ticks == [1, 1]
-    assert seen[0] != seen[1]
+    assert seen[0] is not seen[1]
 
 
 def test_the_scope_drains_its_teardowns_after_the_command_body_returned() -> None:
