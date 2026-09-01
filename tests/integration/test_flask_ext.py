@@ -82,12 +82,12 @@ def test_a_scoped_provider_is_resolved_once_per_request() -> None:
 
 
 def test_two_requests_get_independent_scoped_instances() -> None:
-    seen: list[int] = []
+    seen: list[Counter] = []
     app = Flask(__name__)
 
     def endpoint() -> dict[str, int]:
         counter = hosted_container().resolve(Counter)
-        seen.append(id(counter))
+        seen.append(counter)
         return {'n': counter.tick()}
 
     app.add_url_rule('/tick', view_func=endpoint)
@@ -99,7 +99,7 @@ def test_two_requests_get_independent_scoped_instances() -> None:
     second = client.get('/tick').get_json()
 
     assert (first, second) == ({'n': 1}, {'n': 1})
-    assert seen[0] != seen[1]
+    assert seen[0] is not seen[1]
 
 
 def test_the_request_scope_drains_its_teardowns_when_the_request_ends() -> None:

@@ -87,12 +87,12 @@ async def test_a_scoped_provider_is_resolved_once_per_request() -> None:
 
 
 async def test_two_requests_get_independent_scoped_instances() -> None:
-    seen: list[int] = []
+    seen: list[Counter] = []
 
     @get('/tick')
     async def endpoint() -> dict[str, int]:
         counter = await hosted_container().aresolve(Counter)
-        seen.append(id(counter))
+        seen.append(counter)
         return {'n': counter.tick()}
 
     di = Container().bind(Counter, scope=Scope.SCOPED).freeze()
@@ -101,7 +101,7 @@ async def test_two_requests_get_independent_scoped_instances() -> None:
         second = (await client.get('/tick')).json()
 
     assert (first, second) == ({'n': 1}, {'n': 1})
-    assert seen[0] != seen[1]
+    assert seen[0] is not seen[1]
 
 
 async def test_the_request_scope_drains_its_teardowns_when_the_request_ends() -> None:
