@@ -1,0 +1,20 @@
+# Pyrefly's configuration for the repository's own source. It has no
+# `pyproject.toml` table, so this file is the only place the setting can live.
+#
+# An unconfigured Pyrefly runs the `basic` preset, which does not report
+# `bad-argument-type` at all, so a green unconfigured run is not evidence. The
+# source gate passes `--preset strict`; everything a preset cannot carry is
+# here.
+#
+# The file list mirrors `[tool.basedpyright] include` exactly, for the reason
+# the `[tool.mypy]` comment gives: the checkers must see the same code, or
+# "they agree" means nothing.
+#
+# The language target and the platform are pinned rather than queried, because
+# `conformance/expected/pyrefly-source.txt` records counts measured under them.
+# `typing-forward` overrides both on the command line.
+
+project-includes = ["depin", "tests", "examples", "scripts"]
+project-excludes = ["**/__pycache__", "**/.venv"]
+python-version = "3.12"
+python-platform = "linux"

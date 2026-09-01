@@ -148,6 +148,7 @@ case-sensitive = true
 "examples/**" = ["T20"]
 "scripts/check_mutation_threshold.py" = ["T20"]
 "scripts/conformance/**" = ["T20"]
+"scripts/forward.py" = ["T20"]
 "benchmarks/compare.py" = ["T20"]
 
 [tool.ruff.lint.flake8-bugbear]
@@ -172,8 +173,12 @@ strict = true
 warn_unreachable = true
 enable_error_code = ["redundant-expr", "possibly-undefined", "truthy-bool", "ignore-without-code"]
 
-# Advisory only (see the `ty` job in `.github/workflows/ci.yml`); the file list
-# still mirrors `[tool.basedpyright] include` exactly, for the same reason.
+# The file list ty checks. Blocking, through the `typing-source` job: not at
+# zero, but against `conformance/expected/ty-source.txt`, which records each
+# tolerated diagnostic as a `file:rule:count` triple with a classification. The
+# list mirrors `[tool.basedpyright] include` exactly, for the same reason mypy's
+# does. Pyrefly's equivalent is the root `pyrefly.toml`; ty is the only one of
+# the two with a `pyproject.toml` table.
 [tool.ty.src]
 include = ["depin", "tests", "examples", "scripts"]
 

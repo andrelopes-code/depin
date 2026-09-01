@@ -92,6 +92,9 @@ class Selection:
     stages: tuple[str, ...]
     wheel: Path | None
     verify_artifact: bool
+    source: bool
+    overrides: Mapping[str, str]
+    target_python: str | None
 
 
 def is_table(value: object) -> TypeGuard[dict[str, object]]:

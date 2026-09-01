@@ -3,6 +3,6 @@
 # runner passes `--preset strict`; everything a preset cannot carry is here.
 
 python-interpreter = "${python}"
-python-version = "3.12"
+python-version = "${python_version}"
 python-platform = "linux"
 project-includes = ["../corpus/**/*.py"]
