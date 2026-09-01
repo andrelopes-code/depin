@@ -174,10 +174,24 @@ each integration's own message names its own setup step.
 
 - `click>=8.2` — `with_resource` predates it; 8.2 is where `Group` absorbed
   `MultiCommand`, and it is the tidier supported floor.
-- `typer>=0.15` — the oldest release the seam was exercised against end to end.
-  **Deliberately not `>=0.26`**: the protocol removes the vendoring problem, so
-  declaring a floor at the split would invent a constraint the design does not
-  have.
+- `typer>=0.16` — **corrected from `>=0.15` after the resolver disagreed with the
+  measurement.** The seam was measured working on 0.15.4, but
+  `--resolution lowest-direct` never selects that release: 0.15.4 caps Click below
+  8.2, and depin declares `click>=8.2`, so the resolver picks typer **0.15.0**,
+  which declares only `click>=8.0.0` and therefore accepts a Click it cannot run.
+  On that pair `--help` raises `TypeError: Parameter.make_metavar() missing 1
+  required positional argument: 'ctx'`, because Click 8.2 gave `make_metavar()` a
+  context and Typer passes one only from 0.16. The two extras resolve together, so
+  depin's own Click floor is the Click that Typer gets. 0.16.0 is the first
+  release that works, verified against PyPI metadata and real installs rather than
+  chosen conservatively.
+
+  Still **deliberately far below `>=0.26`**, the release that vendored click: the
+  protocol removes the vendoring problem, so a floor at the split would invent a
+  constraint the design does not have. 0.16.0 declares `click>=8.0.0` and is
+  click-backed, so the `minimum declared versions` job exercises `CommandContext`
+  against click-backed Typer and the `latest released versions` job against
+  vendored Typer — the protocol is proven across the split at both CI ends.
 - `taskiq>=0.11` — the middleware contract is identical on 0.11.0, 0.11.18 and
   0.12.6.
 
