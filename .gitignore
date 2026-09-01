@@ -30,3 +30,6 @@ mutants/
 
 # MkDocs build output
 site/
+
+# Agent scratch: plan ledgers, briefs, and review packages
+.superpowers/
