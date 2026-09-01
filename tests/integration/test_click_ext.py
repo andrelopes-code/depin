@@ -208,6 +208,46 @@ def test_the_group_scope_spans_the_subcommand_and_the_result_callback() -> None:
     assert len(torn) == 1
 
 
+def test_installing_on_a_group_and_again_on_its_subcommand_is_redundant() -> None:
+    """The nesting `depin.ext.cli.install` documents as safe but redundant, pinned.
+
+    The subcommand's scope becomes a child of the group's frame, so a key the
+    group already resolved is served from that frame's cache: one instance
+    across both scopes, and one teardown, run when the group's context closes.
+    """
+    torn: list[Resource] = []
+    di = command_container(torn)
+    counters: list[Counter] = []
+    resources: list[Resource] = []
+    torn_when_the_subcommand_returned: list[int] = []
+
+    @click.group()
+    @click.pass_context
+    def cli(ctx: Context) -> None:
+        _ = install(ctx, di)
+        counters.append(hosted_container().resolve(Counter))
+        resources.append(hosted_container().resolve(Resource))
+
+    def run(ctx: Context) -> None:
+        _ = install(ctx, di)
+        counters.append(hosted_container().resolve(Counter))
+        resources.append(hosted_container().resolve(Resource))
+
+    def finished(subcommand_result: object) -> None:
+        torn_when_the_subcommand_returned.append(len(torn))
+
+    _ = cli.result_callback()(finished)
+    _ = cli.command()(click.pass_context(run))
+
+    result = CliRunner().invoke(cli, ['run'])
+
+    assert result.exit_code == 0
+    assert counters[0] is counters[1]
+    assert resources[0] is resources[1]
+    assert torn_when_the_subcommand_returned == [0]
+    assert torn == [resources[0]]
+
+
 def test_a_provider_reads_an_option_off_the_seeded_context() -> None:
     di = probing_container()
     contexts: list[Context] = []
