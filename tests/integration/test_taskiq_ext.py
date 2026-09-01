@@ -252,17 +252,19 @@ async def test_post_execute_without_a_scope_open_does_nothing() -> None:
 
 async def test_three_interleaved_messages_each_close_their_own_scope() -> None:
     torn: list[int] = []
+    drained = asyncio.Event()
 
     def make() -> Generator[Resource]:
         item = Resource()
         yield item
         torn.append(id(item))
+        drained.set()
 
     di = Container().bind(make, scope=Scope.SCOPED, provides=Resource).freeze()
     broker = broker_for(di)
 
     all_arrived = asyncio.Event()
-    release = asyncio.Event()
+    release = {slot: asyncio.Event() for slot in (0, 1, 2)}
     on_arrival: dict[int, int] = {}
     on_release: dict[int, int] = {}
 
@@ -271,20 +273,28 @@ async def test_three_interleaved_messages_each_close_their_own_scope() -> None:
         on_arrival[slot] = id(hosted_container().resolve(Resource))
         if len(on_arrival) == 3:
             all_arrived.set()
-        await release.wait()
+        await release[slot].wait()
         on_release[slot] = id(hosted_container().resolve(Resource))
 
     await broker.startup()
     sent = [await report.kiq(slot) for slot in (0, 1, 2)]
     await all_arrived.wait()
-    release.set()
-    for message in sent:
-        (await outcome(message)).raise_for_error()
-    await broker.shutdown()
 
     assert len(set(on_arrival.values())) == 3
+    assert torn == []
+
+    for slot, message in enumerate(sent):
+        drained.clear()
+        release[slot].set()
+        async with asyncio.timeout(RESULT_DEADLINE):
+            await drained.wait()
+        assert torn[-1] == on_arrival[slot]
+        (await outcome(message)).raise_for_error()
+
+    await broker.shutdown()
+
     assert on_release == on_arrival
-    assert sorted(torn) == sorted(on_arrival.values())
+    assert torn == [on_arrival[slot] for slot in (0, 1, 2)]
 
 
 async def test_a_message_executed_inside_another_leaves_the_outer_scope_intact() -> None:

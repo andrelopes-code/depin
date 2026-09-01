@@ -349,7 +349,8 @@ async def test_starlette_example_accepts_an_injected_container() -> None:
 
 
 def test_click_example_opens_one_scope_per_invocation() -> None:
-    cli = build_cli(build_click_container())
+    di = build_click_container()
+    cli = build_cli(di)
     runner = CliRunner()
 
     first = runner.invoke(cli, ['--tenant', 'acme', 'report'])
@@ -364,6 +365,7 @@ def test_click_example_opens_one_scope_per_invocation() -> None:
     # The per-invocation session was opened and closed again with the scope.
     assert health.output == 'db=postgres://example open_sessions=0\n'
     assert optional_hosted_container() is None
+    di.close()
 
 
 def test_click_example_accepts_an_injected_container() -> None:
