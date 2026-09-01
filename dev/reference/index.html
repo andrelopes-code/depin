@@ -1003,6 +1003,34 @@
   
   
     <li class="md-nav__item">
+      <a href="cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="starlette/" class="md-nav__link">
         
   
@@ -1115,6 +1143,90 @@
   
   
     <li class="md-nav__item">
+      <a href="click/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Click
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="typer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Typer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="taskiq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Taskiq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="pytest/" class="md-nav__link">
         
   
@@ -1195,10 +1307,14 @@ never retyped by hand.</p>
 <li><a href="hosting/">Integration contract</a> — <code>Host</code> and the ambient container.</li>
 <li><a href="asgi/">ASGI request scope</a> — the framework-free ASGI middleware, no extra required.</li>
 <li><a href="wsgi/">WSGI request scope</a> — the framework-free WSGI middleware, no extra required.</li>
+<li><a href="cli/">Command scope</a> — the framework-free command seam, no extra required.</li>
 <li><a href="starlette/">Starlette</a> — the ASGI middleware seeded with a <code>starlette.requests.Request</code>.</li>
 <li><a href="fastapi/">FastAPI</a> — <code>Inject[T]</code>, plus the Starlette middleware under its own name.</li>
 <li><a href="litestar/">Litestar</a> — the ASGI middleware seeded with a <code>litestar.Request</code>.</li>
 <li><a href="flask/">Flask</a> — the WSGI middleware seeded with a <code>flask.Request</code>.</li>
+<li><a href="click/">Click</a> — the command seam seeded with a <code>click.Context</code>.</li>
+<li><a href="typer/">Typer</a> — the command seam, seeding nothing.</li>
+<li><a href="taskiq/">Taskiq</a> — the middleware that opens one scope per message.</li>
 <li><a href="pytest/">pytest</a> — the callables the plugin's override fixtures return.</li>
 </ul>
 <p>Looking for prose instead? Start with the <a href="../guide/">guide</a>.</p>

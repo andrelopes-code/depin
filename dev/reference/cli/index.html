@@ -10,29 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/">
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/cli/">
       
       
+        <link rel="prev" href="../wsgi/">
       
-        <link rel="next" href="guide/">
+      
+        <link rel="next" href="../starlette/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>depin</title>
+        <title>Command scope - depin</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -51,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#depin" class="md-skip">
+        <a href="#command-scope" class="md-skip">
           Skip to content
         </a>
       
@@ -98,7 +100,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="depin" class="md-header__button md-logo" aria-label="depin" data-md-component="logo">
+    <a href="../.." title="depin" class="md-header__button md-logo" aria-label="depin" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -118,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Command scope
             
           </span>
         </div>
@@ -234,7 +236,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="depin" class="md-nav__button md-logo" aria-label="depin" data-md-component="logo">
+    <a href="../.." title="depin" class="md-nav__button md-logo" aria-label="depin" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -261,37 +263,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Home
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -307,81 +282,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#install" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Install
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#quickstart" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quickstart
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-mental-model" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The mental model
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lifetimes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Lifetimes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#where-to-go-next" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Where to go next
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -445,7 +345,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/" class="md-nav__link">
+      <a href="../../guide/" class="md-nav__link">
         
   
   
@@ -473,7 +373,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/lifetimes/" class="md-nav__link">
+      <a href="../../guide/lifetimes/" class="md-nav__link">
         
   
   
@@ -501,7 +401,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/composition/" class="md-nav__link">
+      <a href="../../guide/composition/" class="md-nav__link">
         
   
   
@@ -529,7 +429,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/resolution/" class="md-nav__link">
+      <a href="../../guide/resolution/" class="md-nav__link">
         
   
   
@@ -557,7 +457,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/testing/" class="md-nav__link">
+      <a href="../../guide/testing/" class="md-nav__link">
         
   
   
@@ -585,7 +485,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/diagnostics/" class="md-nav__link">
+      <a href="../../guide/diagnostics/" class="md-nav__link">
         
   
   
@@ -613,7 +513,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/operations/" class="md-nav__link">
+      <a href="../../guide/operations/" class="md-nav__link">
         
   
   
@@ -641,7 +541,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/integrations/" class="md-nav__link">
+      <a href="../../guide/integrations/" class="md-nav__link">
         
   
   
@@ -669,7 +569,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guide/fastapi/" class="md-nav__link">
+      <a href="../../guide/fastapi/" class="md-nav__link">
         
   
   
@@ -704,7 +604,7 @@
   
   
     <li class="md-nav__item">
-      <a href="support-policy/" class="md-nav__link">
+      <a href="../../support-policy/" class="md-nav__link">
         
   
   
@@ -728,8 +628,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -740,11 +642,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -765,7 +667,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -783,7 +685,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -811,7 +713,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/container/" class="md-nav__link">
+      <a href="../container/" class="md-nav__link">
         
   
   
@@ -839,7 +741,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/frozen/" class="md-nav__link">
+      <a href="../frozen/" class="md-nav__link">
         
   
   
@@ -867,7 +769,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/scope/" class="md-nav__link">
+      <a href="../scope/" class="md-nav__link">
         
   
   
@@ -895,7 +797,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/markers/" class="md-nav__link">
+      <a href="../markers/" class="md-nav__link">
         
   
   
@@ -923,7 +825,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/errors/" class="md-nav__link">
+      <a href="../errors/" class="md-nav__link">
         
   
   
@@ -951,7 +853,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/diagnostics/" class="md-nav__link">
+      <a href="../diagnostics/" class="md-nav__link">
         
   
   
@@ -979,7 +881,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/operations/" class="md-nav__link">
+      <a href="../operations/" class="md-nav__link">
         
   
   
@@ -1007,7 +909,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/hosting/" class="md-nav__link">
+      <a href="../hosting/" class="md-nav__link">
         
   
   
@@ -1035,7 +937,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/asgi/" class="md-nav__link">
+      <a href="../asgi/" class="md-nav__link">
         
   
   
@@ -1063,7 +965,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/wsgi/" class="md-nav__link">
+      <a href="../wsgi/" class="md-nav__link">
         
   
   
@@ -1088,10 +990,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="reference/cli/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command scope
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1107,6 +1036,48 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ext.cli.install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ext.cli.CommandContext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CommandContext
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1119,7 +1090,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/starlette/" class="md-nav__link">
+      <a href="../starlette/" class="md-nav__link">
         
   
   
@@ -1147,7 +1118,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/fastapi/" class="md-nav__link">
+      <a href="../fastapi/" class="md-nav__link">
         
   
   
@@ -1175,7 +1146,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/litestar/" class="md-nav__link">
+      <a href="../litestar/" class="md-nav__link">
         
   
   
@@ -1203,7 +1174,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/flask/" class="md-nav__link">
+      <a href="../flask/" class="md-nav__link">
         
   
   
@@ -1231,7 +1202,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/click/" class="md-nav__link">
+      <a href="../click/" class="md-nav__link">
         
   
   
@@ -1259,7 +1230,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/typer/" class="md-nav__link">
+      <a href="../typer/" class="md-nav__link">
         
   
   
@@ -1287,7 +1258,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/taskiq/" class="md-nav__link">
+      <a href="../taskiq/" class="md-nav__link">
         
   
   
@@ -1315,7 +1286,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/pytest/" class="md-nav__link">
+      <a href="../pytest/" class="md-nav__link">
         
   
   
@@ -1370,10 +1341,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#install" class="md-nav__link">
+  <a href="#depin.ext.cli.install" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Install
+        install
       
     </span>
   </a>
@@ -1381,43 +1352,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quickstart" class="md-nav__link">
+  <a href="#depin.ext.cli.CommandContext" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quickstart
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-mental-model" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The mental model
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lifetimes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Lifetimes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#where-to-go-next" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Where to go next
+        CommandContext
       
     </span>
   </a>
@@ -1444,136 +1382,250 @@
   
 
 
-<h1 id="depin">depin<a class="headerlink" href="#depin" title="Permanent link">&para;</a></h1>
-<p>Type-first dependency injection for Python 3.12+.</p>
-<p>Declare bindings on a <code>Container</code>, call <code>freeze()</code> to validate the graph, then
-resolve from the immutable <code>FrozenContainer</code> it returns. Resolution is driven by
-type hints; <code>Protocol</code> and <code>Annotated</code> are first-class, and the core has zero
-runtime dependencies.</p>
-<h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>add<span class="w"> </span>pydepin<span class="w">                </span><span class="c1"># core</span>
-uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[fastapi]'</span><span class="w">     </span><span class="c1"># with the FastAPI integration</span>
-uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[starlette]'</span><span class="w">   </span><span class="c1"># with the Starlette integration</span>
-uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[litestar]'</span><span class="w">    </span><span class="c1"># with the Litestar integration</span>
-uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[flask]'</span><span class="w">       </span><span class="c1"># with the Flask integration</span>
-uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[click]'</span><span class="w">       </span><span class="c1"># with the Click integration</span>
-uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[typer]'</span><span class="w">       </span><span class="c1"># with the Typer integration</span>
-uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[taskiq]'</span><span class="w">      </span><span class="c1"># with the Taskiq integration</span>
+<h1 id="command-scope">Command scope<a class="headerlink" href="#command-scope" title="Permanent link">&para;</a></h1>
+<p>The framework-free seam the Click and Typer integrations specialise. See
+<a href="../../guide/integrations/#the-command-and-message-hosts">the command and message hosts</a>
+for which module to install.</p>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="depin.ext.cli.install" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">install</span>
+
+
+<a href="#depin.ext.cli.install" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">install</span><span class="p">(</span>
+    <span class="n">ctx</span><span class="p">:</span> <span class="n">C</span><span class="p">,</span>
+    <span class="n">container</span><span class="p">:</span> <span class="n">FrozenContainer</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">C</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">ProviderKey</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScopeFrame</span>
 </code></pre></div>
-<p><code>depin.ext.asgi</code> and <code>depin.ext.wsgi</code> are the framework-free middlewares the
-four web extras specialise, and <code>depin.ext.cli</code> is the framework-free command
-seam Click and Typer specialise; all three import no third-party package and
-need no extra. See
-<a href="guide/integrations/#the-request-and-response-integrations">the request and response integrations</a>
-and <a href="guide/integrations/#the-command-and-message-hosts">the command and message hosts</a>.</p>
-<p>The distribution is named <code>pydepin</code> on PyPI; the import package is <code>depin</code>.</p>
-<h2 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Scope</span><span class="p">,</span> <span class="n">Token</span>
+    <div class="doc doc-contents first">
 
-<span class="n">db_url</span> <span class="o">=</span> <span class="n">Token</span><span class="p">[</span><span class="nb">str</span><span class="p">](</span><span class="s1">'db.url'</span><span class="p">)</span>
-
-
-<span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">url</span>
+        <p>Open one depin scope bound to a command context's lifetime.</p>
+<p>Called from the callback of a command or a group. The container is
+published to the invocation's context for the duration of the scope, so
+<code>depin.hosted_container()</code> reaches it from anywhere the command calls into.
+The scope's teardowns run when the command context closes, including when
+the command body ends by raising, and the publication is undone after them.</p>
+<p>Installing on a group and again on one of its commands is safe but
+redundant: the inner scope becomes a child of the outer frame, so a key
+already cached there is what the inner scope resolves.</p>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">make_db</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">db_url</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Database</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">Database</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>ctx</code>
+            </td>
+            <td>
+                  <code><span title="depin.ext.cli.install[C]">C</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The command context that will own the scope. It ends the scope
+when it closes, so the scope lasts exactly as long as the
+invocation the framework opened it for.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>container</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="FrozenContainer (depin.FrozenContainer)" href="../frozen/#depin.FrozenContainer">FrozenContainer</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The frozen container to host for that invocation.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>seed</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="depin.ext.cli.install[C]">C</span>], <span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="ProviderKey (depin.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a>, <span title="object">object</span>] | None] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Called once, before this function returns, to produce the key and
+value to place into the fresh scope frame. It receives <code>ctx</code>.
+Returning <code>None</code> seeds nothing. Omitting it seeds nothing either.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-<span class="k">class</span><span class="w"> </span><span class="nc">UserRepo</span><span class="p">:</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">db</span> <span class="o">=</span> <span class="n">db</span>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ScopeFrame (depin.ScopeFrame)" href="../scope/#depin.ScopeFrame">ScopeFrame</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The scope's frame, so the caller can place its own values into it with</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ScopeFrame (depin.ScopeFrame)" href="../scope/#depin.ScopeFrame">ScopeFrame</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>depin.ScopeFrame.provide</code> — a tenant, a correlation id read off an</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ScopeFrame (depin.ScopeFrame)" href="../scope/#depin.ScopeFrame">ScopeFrame</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>option — before anything resolves.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-<span class="n">di</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">Container</span><span class="p">()</span>
-    <span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">db_url</span><span class="p">,</span> <span class="s1">'postgres://...'</span><span class="p">)</span>
-    <span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">make_db</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span> <span class="n">provides</span><span class="o">=</span><span class="n">Database</span><span class="p">)</span>
-    <span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">UserRepo</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">)</span>
-    <span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="p">)</span>
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TeardownError">TeardownError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An async provider left a teardown in the invocation's
+synchronous scope. Raised when the command context closes: a
+command callback cannot await, so an async provider has no place
+in one.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One or more teardowns failed when the invocation's
+scope closed. Every failure is included; one does not hide another.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-<span class="n">repo</span> <span class="o">=</span> <span class="n">di</span><span class="p">[</span><span class="n">UserRepo</span><span class="p">]</span>
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Install once, in the callback the framework runs before the command
+body, and let the framework's own context own the scope::</p>
+<div class="highlight"><pre><span></span><code>@app.callback()
+def main(ctx: typer.Context) -&gt; None:
+    install(ctx, di)
 </code></pre></div>
-<h2 id="the-mental-model">The mental model<a class="headerlink" href="#the-mental-model" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Stage</th>
-<th>Object</th>
-<th>What it does</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Declare</td>
-<td><code>Container</code></td>
-<td>Mutable builder. Collects bindings; validates nothing.</td>
-</tr>
-<tr>
-<td>Validate</td>
-<td><code>Container.freeze()</code></td>
-<td>Runs every static check, then returns the runtime.</td>
-</tr>
-<tr>
-<td>Resolve</td>
-<td><code>FrozenContainer</code></td>
-<td>Immutable. Builds and caches values, opens scopes, injects.</td>
-</tr>
-</tbody>
-</table>
-<p><code>freeze()</code> is the gate. It rejects missing providers, dependency cycles,
-duplicate bindings, a singleton that would capture a scoped provider, and
-providers whose type information is too thin to infer a key — all before a
-single value is constructed. See the <a href="guide/">guide</a> for the full
-list.</p>
-<h2 id="lifetimes">Lifetimes<a class="headerlink" href="#lifetimes" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Scope</th>
-<th>Built</th>
-<th>Cached on</th>
-<th>Torn down by</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>Scope.SINGLETON</code></td>
-<td>Once, on first resolution</td>
-<td>The container</td>
-<td><code>frozen.close()</code> / <code>aclose()</code></td>
-</tr>
-<tr>
-<td><code>Scope.SCOPED</code></td>
-<td>Once per active scope</td>
-<td>The scope frame</td>
-<td>Exit of <code>scope()</code> / <code>ascope()</code></td>
-</tr>
-<tr>
-<td><code>Scope.TRANSIENT</code></td>
-<td>Every resolution</td>
-<td>Nothing</td>
-<td>Not applicable</td>
-</tr>
-</tbody>
-</table>
-<h2 id="where-to-go-next">Where to go next<a class="headerlink" href="#where-to-go-next" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="guide/">Guide</a> — lifetimes and scopes, composing bindings,
-  resolution semantics, testing, inspecting the graph, and the web, command,
-  and message integrations.</li>
-<li><a href="reference/">API reference</a> — the full public API, generated from the
-  source docstrings.</li>
-<li><a href="https://github.com/andrelopes-code/depin/tree/main/examples">Examples</a> —
-  seventeen runnable programs, each executed by the test suite.</li>
-<li><a href="https://github.com/andrelopes-code/depin/blob/main/CONTRIBUTING.md">Contributing</a>
-  — development setup, the five gates, and the release process.</li>
-</ul>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="depin.ext.cli.CommandContext" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">CommandContext</span>
+
+
+<a href="#depin.ext.cli.CommandContext" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="typing.Protocol">Protocol</span></code></p>
+
+
+
+        <p>A command framework's context: anything that can own a resource for its own lifetime.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
 
 
 
@@ -1629,10 +1681,10 @@ list.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.sections", "navigation.top", "content.code.copy", "toc.follow"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

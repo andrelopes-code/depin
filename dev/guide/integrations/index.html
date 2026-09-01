@@ -614,13 +614,63 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-integrations-depin-ships" class="md-nav__link">
+  <a href="#the-request-and-response-integrations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The integrations depin ships
+        The request and response integrations
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-command-and-message-hosts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The command and message hosts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The command and message hosts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#click-and-typer-are-synchronous" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Click and Typer are synchronous
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#typer-seeds-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Typer seeds nothing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register-the-taskiq-middleware-last" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Register the Taskiq middleware last
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1139,6 +1189,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/starlette/" class="md-nav__link">
         
   
@@ -1251,6 +1329,90 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/click/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Click
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/typer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Typer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/taskiq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Taskiq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/pytest/" class="md-nav__link">
         
   
@@ -1317,13 +1479,63 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-integrations-depin-ships" class="md-nav__link">
+  <a href="#the-request-and-response-integrations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The integrations depin ships
+        The request and response integrations
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-command-and-message-hosts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The command and message hosts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The command and message hosts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#click-and-typer-are-synchronous" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Click and Typer are synchronous
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#typer-seeds-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Typer seeds nothing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register-the-taskiq-middleware-last" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Register the Taskiq middleware last
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1480,10 +1692,10 @@ the plan has no route for at all; a required parameter with no default keeps
 raising. Relying on that fallback skips the guarantees <code>scope_value()</code> buys,
 so treat it as what happens when the pairing is missing, not as a second way
 to seed.</p>
-<h2 id="the-integrations-depin-ships">The integrations depin ships<a class="headerlink" href="#the-integrations-depin-ships" title="Permanent link">&para;</a></h2>
-<p>Three of the four framework integrations are one of two middlewares — the ASGI
-one or the WSGI one — with a single seed applied. <code>depin.ext.fastapi</code> is the
-exception: its <code>RequestScope</code> is the Starlette one re-exported, and what the
+<h2 id="the-request-and-response-integrations">The request and response integrations<a class="headerlink" href="#the-request-and-response-integrations" title="Permanent link">&para;</a></h2>
+<p>Three of the four web framework integrations are one of two middlewares — the
+ASGI one or the WSGI one — with a single seed applied. <code>depin.ext.fastapi</code> is
+the exception: its <code>RequestScope</code> is the Starlette one re-exported, and what the
 module adds of its own is <code>Inject[T]</code>. Either way the module to import is
 chosen by the framework, and the extra is named after it:</p>
 <table>
@@ -1582,6 +1794,191 @@ it does depends on the framework:</p>
 the body from it; the WSGI seed can. Treat the body as a route concern, not
 a provider input.</p>
 </div>
+<h2 id="the-command-and-message-hosts">The command and message hosts<a class="headerlink" href="#the-command-and-message-hosts" title="Permanent link">&para;</a></h2>
+<p>The other two shapes a host takes are a command invocation and a queue message.
+Neither has a request, and both open one scope per unit of work.
+<code>depin.ext.cli</code> is the framework-free half of the first, the way
+<code>depin.ext.asgi</code> and <code>depin.ext.wsgi</code> are of the request/response hosts: a
+<code>CommandContext</code> is anything with a <code>with_resource</code> method, so a command
+framework outside the table below drives <code>install</code> with a <code>seed</code> of its own and
+needs nothing from depin beyond the contract above.</p>
+<table>
+<thead>
+<tr>
+<th>Host</th>
+<th>Module</th>
+<th>Seeded</th>
+<th>Install</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Click</td>
+<td><code>depin.ext.click</code></td>
+<td><code>click.Context</code></td>
+<td><code>uv add 'pydepin[click]'</code></td>
+</tr>
+<tr>
+<td>Typer</td>
+<td><code>depin.ext.typer</code></td>
+<td>nothing</td>
+<td><code>uv add 'pydepin[typer]'</code></td>
+</tr>
+<tr>
+<td>Taskiq</td>
+<td><code>depin.ext.taskiq</code></td>
+<td><code>taskiq.TaskiqMessage</code></td>
+<td><code>uv add 'pydepin[taskiq]'</code></td>
+</tr>
+<tr>
+<td>Any other command framework</td>
+<td><code>depin.ext.cli</code></td>
+<td>whatever you pass as <code>seed</code></td>
+<td>no extra</td>
+</tr>
+</tbody>
+</table>
+<p><code>cli.install</code> returns the scope's frame, which none of the middlewares above
+does, because none of them has a caller. Here the caller is the user's own
+command callback, so the frame is where a tenant or a correlation id read off an
+option goes before anything resolves.</p>
+<p><code>examples/click_app/</code> is the whole shape in one runnable program — registries, a
+CLI factory taking the container as an argument, the seeded <code>click.Context</code> and
+a tenant placed into the returned frame, and <code>close()</code> at exit. Run it with
+<code>python -m examples.click_app.main</code>. One example carries the shape because the
+shape is one idea — open a scope for the unit of work and let the host end it —
+and the other two hosts each depart from it somewhere the example cannot show.
+Typer keeps the structure and changes the seeding: there is no <code>typer.Context</code>
+seed to inherit, so the container declares <code>scope_value</code> on a key the caller
+owns and the callback places the context into the returned frame, which
+<a href="#typer-seeds-nothing">Typer seeds nothing</a> sets out. Taskiq changes the
+structure too: no <code>install</code> and no returned frame, but a <code>MessageScope</code>
+registered on a broker, <code>scope_value(TaskiqMessage)</code> for the seed the middleware
+fills, an async scope in place of a synchronous one, and <code>@broker.task</code> in place
+of <code>@click.command</code> — see
+<a href="#register-the-taskiq-middleware-last">register the Taskiq middleware last</a>.</p>
+<h3 id="click-and-typer-are-synchronous">Click and Typer are synchronous<a class="headerlink" href="#click-and-typer-are-synchronous" title="Permanent link">&para;</a></h3>
+<p>Neither framework awaits a coroutine callback: an <code>async def</code> command body is
+called and the coroutine it returns is dropped unawaited. The scope <code>install</code>
+opens is therefore a synchronous one, and every provider resolved inside it has
+to be synchronous too. An async one raises <code>AsyncInSyncContextError</code> —
+<a href="#sync-or-async">the general rule</a> met by a host that cannot await:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncGenerator</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Host</span><span class="p">,</span> <span class="n">Scope</span><span class="p">,</span> <span class="n">hosted_container</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Pool</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">closed</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pools</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Pool</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">open_pool</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="n">Pool</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">()</span>
+<span class="gp">... </span>    <span class="n">pools</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="k">yield</span> <span class="n">pool</span>
+<span class="gp">... </span>    <span class="n">pool</span><span class="o">.</span><span class="n">closed</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">command_di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">open_pool</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">SCOPED</span><span class="p">,</span> <span class="n">provides</span><span class="o">=</span><span class="n">Pool</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">command_host</span> <span class="o">=</span> <span class="n">Host</span><span class="p">(</span><span class="n">command_di</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">command_host</span><span class="o">.</span><span class="n">scope</span><span class="p">():</span>
+<span class="gp">... </span>    <span class="n">command_di</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">Pool</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="w">    </span><span class="o">...</span>
+<span class="gr">depin.errors.AsyncInSyncContextError</span>: <span class="n">Pool requires async resolution; call aresolve() instead</span>
+</code></pre></div>
+<p>Reaching for <code>aresolve()</code> instead is worse, not better, whenever the async
+provider registers a teardown — an async generator or an async context manager,
+which is what <code>open_pool</code> above is. It builds the provider, and the teardown it
+registers is one the synchronous scope cannot run, so closing the scope raises
+an <code>ExceptionGroup</code> wrapping <code>TeardownError</code> — and the pool it built is left
+open:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">build_a_pool</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Pool</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">with</span> <span class="n">command_host</span><span class="o">.</span><span class="n">scope</span><span class="p">():</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="k">await</span> <span class="n">command_di</span><span class="o">.</span><span class="n">aresolve</span><span class="p">(</span><span class="n">Pool</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">build_a_pool</span><span class="p">())</span>
+<span class="gp">... </span><span class="k">except</span> <span class="n">ExceptionGroup</span> <span class="k">as</span> <span class="n">group</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">group</span><span class="o">.</span><span class="n">exceptions</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="go">TeardownError</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">pool</span><span class="o">.</span><span class="n">closed</span> <span class="k">for</span> <span class="n">pool</span> <span class="ow">in</span> <span class="n">pools</span><span class="p">]</span>
+<span class="go">[False]</span>
+</code></pre></div>
+<p>An async provider that registers no teardown leaves nothing behind for the
+synchronous scope to fail on, so the same call succeeds and the scope closes
+clean:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">make_token</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="s1">'ready'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plain_di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">make_token</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">SCOPED</span><span class="p">,</span> <span class="n">provides</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plain_host</span> <span class="o">=</span> <span class="n">Host</span><span class="p">(</span><span class="n">plain_di</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">build_a_token</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">with</span> <span class="n">plain_host</span><span class="o">.</span><span class="n">scope</span><span class="p">():</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="k">await</span> <span class="n">plain_di</span><span class="o">.</span><span class="n">aresolve</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">build_a_token</span><span class="p">())</span>
+<span class="go">'ready'</span>
+</code></pre></div>
+<p>That is why the guidance is <code>ascope()</code> rather than a diagnostic: the harm shows
+up only for the providers that own something.</p>
+<p>An async CLI therefore drives the loop itself. The command body stays
+synchronous and does one thing — <code>asyncio.run</code> around a coroutine that opens
+<code>Host.ascope()</code>, which is the scope an async provider has a place in:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">async</span> <span class="k">with</span> <span class="n">command_host</span><span class="o">.</span><span class="n">ascope</span><span class="p">():</span>
+<span class="gp">... </span>        <span class="n">pool</span> <span class="o">=</span> <span class="k">await</span> <span class="n">hosted_container</span><span class="p">()</span><span class="o">.</span><span class="n">aresolve</span><span class="p">(</span><span class="n">Pool</span><span class="p">)</span>
+<span class="gp">... </span>        <span class="k">return</span> <span class="sa">f</span><span class="s1">'pool ready (closed=</span><span class="si">{</span><span class="n">pool</span><span class="o">.</span><span class="n">closed</span><span class="si">}</span><span class="s1">)'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">run</span><span class="p">())</span>
+<span class="go">'pool ready (closed=False)'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">pool</span><span class="o">.</span><span class="n">closed</span> <span class="k">for</span> <span class="n">pool</span> <span class="ow">in</span> <span class="n">pools</span><span class="p">]</span>
+<span class="go">[False, True]</span>
+</code></pre></div>
+<p>The second pool was torn down when <code>ascope()</code> closed; the first is still the
+one <code>scope()</code> leaked. In a Click command that is:</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">run</span><span class="p">())</span>
+</code></pre></div>
+<p><code>install</code> has no part in it. The scope is opened and closed inside the
+coroutine, not by the command context, so nothing is bound to a lifetime the
+event loop outlives.</p>
+<h3 id="typer-seeds-nothing">Typer seeds nothing<a class="headerlink" href="#typer-seeds-nothing" title="Permanent link">&para;</a></h3>
+<p>The omission is measured rather than an oversight. Typer 0.26.0 dropped its
+dependency on Click and vendored a private copy of it, so from that release the
+object a callback annotated
+<code>typer.Context</code> receives is a <code>typer._click.core.Context</code> and
+<code>isinstance(value, typer.Context)</code> is <code>False</code>. Seeding under the key
+<code>typer.Context</code> would bind a value that is not an instance of its own key:
+depin keys on the annotation as written, so the binding would resolve and hand
+every provider declaring that parameter something its own annotation denies.
+Seeding under the vendored class instead would make depin import a third-party
+private name. The module ships neither.</p>
+<p>The context is the caller's to seed, under a key the caller owns:</p>
+<div class="highlight"><pre><span></span><code><span class="n">COMMAND_CONTEXT</span><span class="p">:</span> <span class="n">Token</span><span class="p">[</span><span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">]</span> <span class="o">=</span> <span class="n">Token</span><span class="p">[</span><span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">](</span><span class="s1">'command-context'</span><span class="p">)</span>
+
+<span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">scope_value</span><span class="p">(</span><span class="n">COMMAND_CONTEXT</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Report</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">SCOPED</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">frame</span> <span class="o">=</span> <span class="n">install</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">di</span><span class="p">)</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">provide</span><span class="p">(</span><span class="n">COMMAND_CONTEXT</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span>
+</code></pre></div>
+<p><code>Report</code> then declares <code>Annotated[typer.Context, COMMAND_CONTEXT]</code> and reads
+the context through a name whose meaning the caller, not depin, defines.</p>
+<h3 id="register-the-taskiq-middleware-last">Register the Taskiq middleware last<a class="headerlink" href="#register-the-taskiq-middleware-last" title="Permanent link">&para;</a></h3>
+<p><code>depin.ext.taskiq.MessageScope</code> opens one async scope per message and seeds the
+<code>taskiq.TaskiqMessage</code> into it. Taskiq is the one host depin ships an
+integration for whose lifecycle is
+<a href="#hosts-whose-lifecycle-is-a-pair-of-hooks">a pair of hooks</a> rather than a
+block, so the order the hooks run in is part of the contract: <code>pre_execute</code> runs
+in registration order and <code>post_execute</code> in reverse. A middleware registered
+<em>after</em> <code>MessageScope</code> that raises in its own <code>pre_execute</code> skips
+<code>MessageScope.post_execute</code> entirely — the scope stays open and its teardowns
+never run. Register it last:</p>
+<div class="highlight"><pre><span></span><code><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">scope_value</span><span class="p">(</span><span class="n">TaskiqMessage</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Report</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">SCOPED</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+
+<span class="n">broker</span> <span class="o">=</span> <span class="n">InMemoryBroker</span><span class="p">()</span><span class="o">.</span><span class="n">with_middlewares</span><span class="p">(</span><span class="n">SimpleRetryMiddleware</span><span class="p">(),</span> <span class="n">MessageScope</span><span class="p">(</span><span class="n">di</span><span class="p">))</span>
+</code></pre></div>
+<p><code>scope_value(TaskiqMessage)</code> is the declaration the middleware cannot make on
+your behalf: it supplies the value for every message, never the binding.
+Without that declaration a provider that declares a <code>TaskiqMessage</code> parameter
+fails at <code>freeze()</code>, which reports <code>MissingProviderError</code> for the key rather
+than waiting for the first message to arrive.</p>
 <h2 id="a-worked-integration">A worked integration<a class="headerlink" href="#a-worked-integration" title="Permanent link">&para;</a></h2>
 <p>The host is a job runner: <code>run()</code> is its unit of work, <code>Job</code> is the object it
 has of its own to hand to providers.</p>
@@ -1659,7 +2056,14 @@ the two and calls <code>__enter__</code> / <code>__exit__</code> itself. Hold it
 keyed by whatever identifier the framework already hands the hooks — a task id,
 a message id — never on the integration object: one attribute is one slot for
 the whole process, and a second unit of work arriving before the first finishes
-overwrites it.</p>
+overwrites it. A framework whose two hooks run in the same
+<code>contextvars.Context</code> — Taskiq's do, because <code>pre_execute</code>, the task body and
+<code>post_execute</code> share one asyncio task — can hold it in a module-level
+<code>contextvars.ContextVar</code> instead, which is per unit of work for that reason and
+needs no identifier at all. One slot still holds one context manager, so a unit
+of work that can start another inside its own context puts a tuple of them in
+that variable and pops the last entry in the <code>after</code> hook.
+<code>depin.ext.taskiq.MessageScope</code> is written that way.</p>
 <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">AbstractContextManager</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">TracebackType</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">FrozenContainer</span><span class="p">,</span> <span class="n">ScopeFrame</span>
