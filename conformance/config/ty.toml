@@ -3,7 +3,7 @@
 
 [environment]
 python = "${venv}"
-python-version = "3.12"
+python-version = "${python_version}"
 python-platform = "linux"
 
 [terminal]

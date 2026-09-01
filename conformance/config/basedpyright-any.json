@@ -2,7 +2,7 @@
   "include": ["../corpus"],
   "exclude": ["**/__pycache__"],
   "typeCheckingMode": "strict",
-  "pythonVersion": "3.12",
+  "pythonVersion": "${python_version}",
   "pythonPlatform": "Linux",
   "useLibraryCodeForTypes": false,
   "reportMissingTypeStubs": true,

@@ -1,0 +1,24 @@
+# Pyrefly over `depin tests examples scripts`, measured under the exact
+# invocation the `typing-source` gate runs:
+#
+#   uvx pyrefly@<pinned> check --config pyrefly.toml --preset strict
+#
+# Paths come from `project-includes` in the root `pyrefly.toml`. 2 diagnostics
+# in 2 entries, with 31 more suppressed: Pyrefly honours `# type: ignore` by
+# default, so it reads the mypy half of every waiver pair in the repository and
+# needs no register entry for any of them. Under `--preset basic` the same run
+# reports 0, which is why an unconfigured Pyrefly is not evidence.
+#
+# One entry per line: `file:rule:count`, then the classification. The count is
+# load-bearing. A bare `file:rule` pair would absorb any number of further
+# diagnostics of that rule in that file, which is the property this register
+# exists to deny; line numbers were the alternative and they churn on every
+# edit. The stage fails on a diagnostic no entry carries, on an entry that no
+# longer appears, and on a count that moves in either direction.
+#
+# An `implicit-any-type-argument` entry on `Token[T]` in
+# `depin/_core/typeguards.py` was expected here and is absent: the guard now
+# names `TokenKey`, and the diagnostic went with it.
+
+depin/_core/graph.py:implicit-any-lambda:1 Pyrefly does not propagate the `sorted(key=...)` parameter type into the lambda, so `kv` reads as implicitly `Any` even though `missing` is fully annotated
+tests/unit/test_graph_properties.py:implicit-any-lambda:1 the same gap on `SearchStrategy.filter`: `case` reads as implicitly `Any` in the Hypothesis predicate

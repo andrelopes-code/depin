@@ -1,5 +1,6 @@
 """`checkers.toml`, the `uv.lock` lockstep check, and the corpus import ban."""
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Final
 
@@ -34,6 +35,28 @@ def read_pins(path: Path) -> Pins:
         extras=strings(install.get('extras'), f'{path.name} [install] extras'),
         framework_modules=tuple(text(modules, key, str(path)) for key in sorted(modules)),
         lockstep={name: text(lockstep, name, str(path)) for name in sorted(lockstep)},
+    )
+
+
+def override_pins(pins: Pins, versions: Mapping[str, str], python: str | None) -> Pins:
+    """Run the suite against a version or a language target other than the committed one.
+
+    `typing-forward` probes the newest release of each checker weekly, and the
+    lockstep assertion has to stand aside for exactly the checkers it
+    overrides: `uv.lock` still resolves the committed pin, so comparing a
+    deliberately different version against it would fail every forward run.
+    Nothing here writes `checkers.toml` — advancing a pin is a pull request
+    that shows the whole suite green on the new version.
+    """
+    if not versions and python is None:
+        return pins
+    return Pins(
+        versions={**pins.versions, **versions},
+        python=python if python is not None else pins.python,
+        platform=pins.platform,
+        extras=pins.extras,
+        framework_modules=pins.framework_modules,
+        lockstep={name: distribution for name, distribution in pins.lockstep.items() if name not in versions},
     )
 
 

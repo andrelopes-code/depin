@@ -1,8 +1,13 @@
-"""Run the consumer typing conformance suite: five checkers, one built wheel.
+"""Run the typing conformance suite: five checkers over two objects.
 
 The corpus under `conformance/` is ordinary consumer code. It is checked against
 the wheel this repository builds, installed into interpreters that have never
 heard of the checkout, in a core-only and an all-extras mode.
+
+``--source`` checks the other object, the repository's own code, where stock
+Pyright runs at zero and ty and Pyrefly run against a committed register. That
+layer needs no wheel and no interpreter of its own, so it skips everything the
+next two paragraphs describe.
 
 Two properties make the result mean something, and both are structural rather
 than incidental.
@@ -26,7 +31,9 @@ working directory however it arrived.
 
 Usage:
     uv run python -m scripts.conformance [--checker NAME] [--mode core|extras]
-                                         [--only STAGE]
+                                         [--only STAGE] [--pin CHECKER=VERSION]
+                                         [--target-python VERSION]
+    uv run python -m scripts.conformance --source [--checker NAME]
 
 | Module | Responsibility |
 | --- | --- |
@@ -35,7 +42,8 @@ Usage:
 | `workspace.py` | The wheel, the three interpreters, the copied corpus, and every subprocess. |
 | `isolation.py` | The assertions that run before any checking. |
 | `checkers.py` | One command builder and one output parser per checker. |
-| `stages.py` | The control, positive, anti-erasure and negative stages. |
+| `stages.py` | The control, positive, anti-erasure, negative and divergence stages. |
+| `source.py` | The Layer 1 gate over the repository source, and the registers behind it. |
 | `cli.py` | Argument parsing, the table, and the exit status. |
 """
 

@@ -56,6 +56,20 @@ def run_in_checkout(command: Sequence[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(list(command), cwd=CHECKOUT, capture_output=True, text=True, check=False)
 
 
+def run_on_the_checkout(command: Sequence[str], environment: Mapping[str, str]) -> subprocess.CompletedProcess[str]:
+    """Run one checker over the repository source itself.
+
+    The counterpart to `run_outside_checkout`. The consumer layer proves a
+    checker cannot see the checkout; the source layer checks nothing else, so
+    the working directory the other function refuses is the one this needs.
+    The environment is still scrubbed, because a stray `TY_CONFIG_FILE` or a
+    user's `XDG_CONFIG_HOME` would change what the gate measures.
+    """
+    return subprocess.run(
+        list(command), cwd=CHECKOUT, env=dict(environment), capture_output=True, text=True, check=False
+    )
+
+
 def venv_python(venv: Path) -> Path:
     return venv / ('Scripts' if os.name == 'nt' else 'bin') / 'python'
 
@@ -106,18 +120,27 @@ def build_workspace(root: Path, pins: Pins, wheel: Path) -> Workspace:
     return Workspace(root=root, corpus=root / 'conformance', wheel=wheel, venvs=venvs)
 
 
-def render_configs(workspace: Workspace) -> None:
+def render_configs(workspace: Workspace, pins: Pins) -> None:
     """Write one rendered configuration per checker per interpreter.
 
     Stock Pyright takes ``venvPath`` plus ``venv``; ``pythonPath`` is not a
     recognised key and is ignored with a warning, so the template carries the
     venv's parent and its name separately.
+
+    The language target is substituted rather than written literally, so that
+    ``--target-python`` moves the interpreter and every checker's declared
+    target together. A 3.14 interpreter checked against a configuration
+    claiming 3.12 would measure neither.
     """
     directory = workspace.corpus / 'config'
     # A rendered file is named `<stem>.<mode><suffix>`, so a dotted stem marks
-    # an output rather than a template and re-rendering one would compound.
+    # an output rather than a template and re-rendering one would compound. A
+    # `-source` stem is the Layer 1 configuration, which names no interpreter
+    # this function creates and is passed to its checker as it stands.
     templates = sorted(
-        path for path in directory.glob('*') if path.suffix in ('.json', '.toml', '.ini') and '.' not in path.stem
+        path
+        for path in directory.glob('*')
+        if path.suffix in ('.json', '.toml', '.ini') and '.' not in path.stem and not path.stem.endswith('-source')
     )
     for mode, venv in workspace.venvs.items():
         substitutions = {
@@ -125,6 +148,7 @@ def render_configs(workspace: Workspace) -> None:
             'venv_parent': str(venv.parent),
             'venv_name': venv.name,
             'python': str(venv_python(venv)),
+            'python_version': pins.python,
         }
         for template in templates:
             rendered = Template(template.read_text(encoding='utf-8')).substitute(substitutions)

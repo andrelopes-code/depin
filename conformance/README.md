@@ -1,17 +1,22 @@
-# The consumer typing conformance suite
+# The typing conformance suite
 
-Five type checkers — mypy, stock Pyright, Basedpyright, ty and Pyrefly — over a
-corpus of ordinary consumer code, checked against the wheel this repository
-builds, installed into interpreters that have never heard of the checkout.
+Five type checkers — mypy, stock Pyright, Basedpyright, ty and Pyrefly — over
+two objects: a corpus of ordinary consumer code, checked against the wheel this
+repository builds and installed into interpreters that have never heard of the
+checkout, and the repository's own source.
 
 ```bash
 uv run python -m scripts.conformance
 uv run python -m scripts.conformance --checker ty --mode core --only positive
+uv run python -m scripts.conformance --source
 ```
 
-`--checker`, `--mode` and `--only` are repeatable and narrow the run. The runner
-prints a per-checker, per-mode table and exits non-zero listing every failure,
-not only the first.
+`--checker`, `--mode` and `--only` are repeatable and narrow the run. `--source`
+switches to the source layer instead of the corpus. `--pin ty=0.0.80` and
+`--target-python 3.14` run one checker or one language target away from what
+`checkers.toml` names, which is what the weekly `typing-forward` workflow does.
+The runner prints a per-checker, per-mode table and exits non-zero listing every
+failure, not only the first.
 
 It is a CI gate, not a sixth commit gate: it builds a wheel and creates three
 interpreters, which does not belong in a per-commit loop.
@@ -22,7 +27,8 @@ interpreters, which does not belong in a per-commit loop.
 | --- | --- |
 | `checkers.toml` | The pinned version of each checker, the language and OS targets, the eight extras, and the eight framework-requiring `depin.ext` modules |
 | `coverage.toml` | One entry per public symbol: the fixtures that exercise it, or a decision and a reason |
-| `config/` | One native configuration per checker, templated — `${venv}`, `${venv_parent}`, `${venv_name}` and `${python}` are substituted at run time, once per interpreter |
+| `config/` | One native configuration per checker, templated — `${venv}`, `${venv_parent}`, `${venv_name}`, `${python}` and `${python_version}` are substituted at run time, once per interpreter |
+| `config/pyright-source.json` | Stock Pyright's configuration for the **repository source**, passed with `-p`. Not templated: it names no interpreter the runner creates |
 | `corpus/core/` | Consumer code that imports only `depin` and `depin.errors`. Checked in both install modes |
 | `corpus/ext_core/` | The `depin.ext` modules that import no third-party package — `__init__`, `asgi`, `wsgi`, `cli` — against a consumer's own structural types. Checked in **both** modes |
 | `corpus/ext_extras/` | The eight `depin.ext` modules that require an extra. Checked in all-extras mode only |
@@ -30,6 +36,8 @@ interpreters, which does not belong in a per-commit loop.
 | `divergence/` | Known false negatives in the public API, gated on each checker's verdict rather than on rejection |
 | `expected/negative.toml` | Per fixture and per checker: the line and the rule identifier |
 | `expected/divergence.toml` | Per fixture and per checker: `accept` or `reject`, as measured today |
+| `expected/ty-source.txt` | ty over the repository source: one `file:rule:count` triple and a classification per entry |
+| `expected/pyrefly-source.txt` | Pyrefly over the repository source, in the same form |
 
 The corpus imports only `depin`, `depin.errors` and `depin.ext.*`. It never
 imports `depin._core`, and the runner asserts that textually before it checks
@@ -42,6 +50,51 @@ named explicitly — there is no aggregate `all` extra. `corpus/core` and
 `corpus/ext_core` are checked in both; in `core` mode the runner additionally
 asserts that every one of the eight framework-requiring `depin.ext` modules
 fails to import, which is what proves the core carries no framework dependency.
+
+## The source layer
+
+`--source` checks `depin tests examples scripts` — the same file list
+`[tool.basedpyright] include` and `[tool.mypy] files` name — rather than the
+corpus. mypy and Basedpyright already gate that list at zero through `uv run`,
+so the source layer adds the three that did not run:
+
+- **Stock Pyright, at zero**, configured by `config/pyright-source.json` passed
+  with `-p`. It cannot live in `pyproject.toml`: Basedpyright 1.39.10 refuses to
+  parse a file carrying both a `pyright` and a `basedpyright` table, exits 3,
+  and discards the whole configuration — which would silently degrade the
+  repository's own commit gate to its defaults. A named file passed on the
+  command line is also not the root `pyrightconfig.json` that `AGENTS.md` bans,
+  which Pyright discovers implicitly.
+- **ty and Pyrefly, against a register.** The consumer corpus is held at zero
+  and gets no baseline file, because a baseline is exactly the filter that
+  contract forbids. The repository source is a different object: it writes every
+  intentional negative as a `# type: ignore[code]  # pyright: ignore[code]`
+  pair, and ty reads neither spelling, so 27 of its 44 diagnostics are that pair
+  being invisible to it.
+
+Appending `# ty: ignore[<rule>]` to those 27 lines does silence ty. It is not
+done. ty's own `unused-ignore-comment` rule fires as an error under
+`--error all`, so every directive would have to keep naming exactly the rules ty
+currently emits, and any release that renames one turns a blocking job red for a
+reason that is upstream's. It would also add 27 checker-specific ignores to a
+repository whose conventions require each suppression to be individually
+narrowest and individually explained.
+
+So each register line is a **`file:rule:count` triple and a one-line
+classification**, and the stage fails three ways: on a diagnostic no entry
+carries, on an entry that no longer appears, and on a count that moved in either
+direction. The count is load-bearing — a bare `file:rule` pair would absorb any
+number of further diagnostics of that rule in that file, which is the property
+the register exists to deny. Line numbers were the other option and they churn
+on every edit.
+
+Both registers were measured under the exact invocation the gate runs. ty's
+`--error all` is not the same measurement as a bare `uvx ty check`: it adds the
+unsoundness lints, and 32 diagnostics became 44.
+
+Pyrefly has no `pyproject.toml` table at all, so its source configuration is the
+root `pyrefly.toml`. The configuration traps below apply to this layer as much
+as to the corpus.
 
 ## Exact inference versus assignability
 
@@ -117,21 +170,25 @@ definition, and in CI the checkout is the default working directory.
 
 - **Stock Pyright silently drops an absolute path in `include`.** It prints
   `Ignoring path "…" in "include" array because it is not relative` and then
-  reports zero having checked nothing. Paths in `config/pyright.json` are
-  relative to the config file, and the file set is passed on the command line.
+  reports zero having checked nothing. Paths in `config/pyright.json` and
+  `config/pyright-source.json` are relative to the config file, and on the
+  corpus the file set is passed on the command line as well.
 - **`pythonPath` is not a stock-Pyright key.** It prints
   `Config contains unrecognized setting "pythonPath"` and continues.
   `venvPath` plus `venv` is the working form, which is why the templates carry
   the venv's parent and its name separately.
 - **An unconfigured Pyrefly runs the `basic` preset**, which does not report
-  `bad-argument-type` at all. The runner always passes an explicit config and
-  `--preset strict`.
+  `bad-argument-type` at all. Both layers pass an explicit config and
+  `--preset strict`; under `basic` the source layer reports 0 where `strict`
+  reports 2.
 - **ty has no strict mode and no presets.** `--error all` is the closest honest
   equivalent.
 
 The first two produce a green run over an empty file set, so the runner asserts
 a **non-zero checked-file count** for every checker that reports one: mypy,
-both Pyright engines, and Pyrefly. ty reports none, and the table says so.
+both Pyright engines, and Pyrefly. ty reports none, and the table says so. On
+the source layer stock Pyright's count is asserted **equal to mypy's** as well,
+because a count of its own catches only a total drop.
 
 ## Expected diagnostics are data, never message text
 
@@ -228,6 +285,17 @@ the `dev` group as well. The runner asserts the pinned version **equals what
 Minimum supported equals current tested for all five, because exactly one
 version of each has been measured. A pin advances by a pull request that shows
 the whole suite green on the new version.
+
+`.github/workflows/typing-forward.yml` runs weekly and builds the evidence a
+later change to that policy would need. It resolves the newest release of each
+of the five and runs both layers against it — both install modes, the 3.13 and
+3.14 language targets, and Windows and macOS, the last for the isolation guard
+rather than for inference — and probes one release behind for the three stable
+lines. It reaches the runner through `--pin` and `--target-python`, which
+override `checkers.toml` for one run and stand the lockstep assertion aside for
+exactly the checker they name. **It never writes `checkers.toml`.** It is
+advisory but not silent: each failing leg becomes a tracking issue titled for
+the checker and the version, carrying the diagnostics.
 
 ## What this directory does not guard
 

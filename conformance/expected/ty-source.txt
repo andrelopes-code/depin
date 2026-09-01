@@ -1,0 +1,66 @@
+# ty over `depin tests examples scripts`, measured under the exact invocation
+# the `typing-source` gate runs:
+#
+#   uvx ty@<pinned> check --error all --output-format concise
+#
+# Paths come from `[tool.ty.src] include` in pyproject.toml. 44 diagnostics in
+# 30 entries. A previously recorded figure of 32 was counted under a bare
+# `uvx ty check`; `--error all` adds ty's unsoundness lints, so it is not the
+# same measurement.
+#
+# One entry per line: `file:rule:count`, then the classification. The count is
+# load-bearing. A bare `file:rule` pair would absorb any number of further
+# diagnostics of that rule in that file, which is the property this register
+# exists to deny; line numbers were the alternative and they churn on every
+# edit. The stage fails on a diagnostic no entry carries, on an entry that no
+# longer appears, and on a count that moves in either direction.
+#
+# Three classifications recur.
+#
+# 1. Suppression spelling. 27 of the 44 sit on a line that already carries a
+#    `# type: ignore[code]  # pyright: ignore[code]` pair. ty honours a bare
+#    `# type: ignore` and its own `# ty: ignore[...]`, and reads neither of
+#    those two, so it re-reports code the other checkers have already been
+#    told about. Appending a third spelling to 27 lines is rejected: ty's own
+#    `unused-ignore-comment` fires as an error under `--error all`, so every
+#    directive would have to keep naming exactly the rules ty currently emits,
+#    and a blocking job would then break on an upstream rename. Registering
+#    them touches no source and adds no checker-specific comment to a
+#    repository whose conventions require each suppression to be individually
+#    narrowest and individually explained.
+# 2. Gradual inference under `--error all`. ty leaves a type variable, a
+#    `getattr` result or a `callable()` narrowing as `Unknown`, `Any` or
+#    `Top[(...) -> object]` where the other four solve it.
+# 3. A third-party resolution ty does not share: `taskiq.TaskiqResult` reaches
+#    it through pydantic's `PydanticRecursiveRef`.
+
+depin/_core/frozen.py:invalid-return-type:2 the two `_resolve_sync` / `_resolve_async` delegations that return `object` where `T` is promised; both lines carry the waiver pair ty does not read
+depin/_core/frozen.py:unsound-return-statement:1 ty does not solve `T` through a `type[T] | Token[T]` parameter, so `__getitem__`'s delegation to `resolve` infers `Unknown`
+depin/_core/graph.py:unsound-return-statement:1 the captive-chain walk reassigns `node` from a lookup keyed by `node`'s own attributes while the loop condition also reads it; ty breaks that cycle with `Unknown` in the unannotated `chain`
+depin/_core/markers.py:invalid-return-type:1 `injected()` returns the marker where `T` is promised; the line carries the waiver pair ty does not read
+depin/_core/markers.py:unsound-return-statement:1 `getattr` with a non-literal attribute name is `Any` to ty, and `--error all` refuses to return it as `ProviderKey | None`
+depin/_core/typeguards.py:invalid-return-type:1 ty's gradual model of `Callable`: `callable()` narrows to `Top[(...) -> object]`, which it will not return as `Callable[[object], object]`
+tests/integration/test_taskiq_ext.py:invalid-argument-type:1 ty resolves `taskiq.TaskiqResult` through pydantic's `PydanticRecursiveRef`, so the constructed result reads as `BaseModel | None | Any`
+tests/integration/test_taskiq_ext.py:unknown-argument:3 the same `PydanticRecursiveRef` resolution: `is_err`, `return_value` and `execution_time` match no parameter of its `__call__`
+tests/typing/test_conformance.py:unsound-return-statement:1 ty does not solve a constructor's type parameter from the declared return type, so `return Repo()` infers `Repo[Unknown]`
+tests/unit/test_conditional.py:no-matching-overload:2 two deliberate `when=` misuses, both lines carrying the waiver pair ty does not read
+tests/unit/test_container.py:no-matching-overload:2 two deliberate `singleton()` and `provides=` misuses, both lines carrying the waiver pair ty does not read
+tests/unit/test_free_threading.py:unsound-assignment:1 `getattr(sys, '_is_gil_enabled', None)` is `Any | None` to ty, and `--error all` refuses the annotated assignment
+tests/unit/test_frozen_async.py:unsound-assignment:1 `object.__getattribute__` is `Any` to ty, and `--error all` refuses the annotated assignment
+tests/unit/test_generic_keys.py:invalid-argument-type:1 a deliberate `alias()` misuse on a line carrying the waiver pair ty does not read
+tests/unit/test_generic_keys.py:no-matching-overload:2 two deliberate `provides=` misuses, both lines carrying the waiver pair ty does not read
+tests/unit/test_generic_keys.py:unsound-return-statement:3 three `return Repo()` fixtures; ty does not solve the constructor's type parameter from the declared return type
+tests/unit/test_graph_render.py:invalid-argument-type:1 a deliberate `explain(42)` misuse on a line carrying the waiver pair ty does not read
+tests/unit/test_graph_render.py:unsound-return-statement:1 one `return Repo()` fixture with the same unsolved constructor type parameter
+tests/unit/test_graph_validation.py:invalid-argument-type:4 four deliberate `collect`, `alias` and `decorate` misuses, every line carrying the waiver pair ty does not read
+tests/unit/test_graph_validation.py:invalid-assignment:1 the `sys.modules[name] = None` fixture, on a line carrying the waiver pair ty does not read
+tests/unit/test_health_declaration.py:no-matching-overload:1 a deliberate `check=3` misuse on a line carrying the waiver pair ty does not read
+tests/unit/test_markers.py:invalid-argument-type:2 two deliberate `provides()` misuses, both lines carrying the waiver pair ty does not read
+tests/unit/test_overrides.py:invalid-argument-type:1 a deliberate `override(42, 'x')` misuse on a line carrying the waiver pair ty does not read
+tests/unit/test_provider_contracts.py:unresolved-attribute:1 the `__wrapped__` assignment fixture, on a line carrying the waiver pair ty does not read
+tests/unit/test_providers.py:missing-type-argument:1 the bare `Iterator` fixture, on a line carrying the waiver pair ty does not read
+tests/unit/test_providers.py:no-matching-overload:1 a deliberate `bind(42, ...)` misuse on a line carrying the waiver pair ty does not read
+tests/unit/test_providers.py:unresolved-reference:2 two `'NeverDefined'` forward-reference fixtures, both lines carrying the waiver pair ty does not read
+tests/unit/test_providers.py:unsound-return-statement:2 one `return Repo()` fixture with an unsolved constructor type parameter, and one deliberately unannotated parameter returned as `int` behind the waiver pair ty does not read
+tests/unit/test_resolution.py:invalid-argument-type:1 a deliberate `resolve(42)` misuse on a line carrying the waiver pair ty does not read
+tests/unit/test_wsgi.py:call-top-callable:1 ty's gradual model of `Callable`: `assert callable(...)` narrows to `Top[(...) -> object]`, which it will not call

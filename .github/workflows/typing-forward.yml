@@ -1,0 +1,207 @@
+# What the five checkers do to this repository at versions nobody has pinned
+# yet. Advisory — an upstream release is not a merge blocker — but not silent:
+# every failing leg ends as a tracking issue naming the checker and the
+# version.
+
+name: typing-forward
+
+on:
+  schedule:
+    # Monday 06:00 UTC, after the weekly Dependabot run.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: typing-forward
+  cancel-in-progress: false
+
+defaults:
+  run:
+    # The matrix includes windows-latest, where the default shell would not
+    # read the heredocs below.
+    shell: bash
+
+jobs:
+  consumer:
+    name: ${{ matrix.checker }} newest (${{ matrix.leg.os }}, target ${{ matrix.leg.target }})
+    runs-on: ${{ matrix.leg.os }}
+    timeout-minutes: 30
+    # The leg is allowed to fail. It still shows as failed in the run, and the
+    # `report` job turns it into an issue; what it may not do is mark the
+    # workflow itself broken, because the cause is upstream's.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        checker: [mypy, pyright, basedpyright, ty, pyrefly]
+        # 3.13 and 3.14 are the language targets the per-pull-request job drops
+        # after measuring them byte-identical at 3.12; this is where that
+        # measurement is kept honest. The operating systems are here for the
+        # isolation guard rather than for inference — path-ancestry comparison
+        # and `.pth` discovery in site-packages are the platform-sensitive
+        # parts — so they run at the floor target only.
+        leg:
+          - { os: ubuntu-latest, target: '3.12' }
+          - { os: ubuntu-latest, target: '3.13' }
+          - { os: ubuntu-latest, target: '3.14' }
+          - { os: windows-latest, target: '3.12' }
+          - { os: macos-latest, target: '3.12' }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+
+      - name: Resolve the newest release
+        id: release
+        env:
+          PACKAGE: ${{ matrix.checker }}
+          OFFSET: '0'
+        run: uv run --no-project python -m scripts.forward newest "$PACKAGE" "$OFFSET" >> "$GITHUB_OUTPUT"
+
+      # `--pin` overrides the version for this run only and stands the lockstep
+      # assertion aside for exactly that checker. Nothing here writes
+      # `conformance/checkers.toml`: advancing a pin is a human pull request
+      # that shows the whole suite green on the new version.
+      - name: Run the conformance suite
+        id: suite
+        env:
+          CHECKER: ${{ matrix.checker }}
+          VERSION: ${{ steps.release.outputs.version }}
+          TARGET: ${{ matrix.leg.target }}
+          LEG: ${{ matrix.leg.os }} target ${{ matrix.leg.target }}
+        run: bash .github/scripts/forward-leg.sh
+
+      - name: Upload what this leg measured
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: forward-consumer-${{ matrix.checker }}-${{ matrix.leg.os }}-${{ matrix.leg.target }}
+          path: forward-report
+          if-no-files-found: error
+
+  source:
+    name: ${{ matrix.checker }} newest, repository source
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        checker: [pyright, ty, pyrefly]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+
+      - name: Sync dependencies
+        run: uv sync --locked --all-extras
+
+      - name: Resolve the newest release
+        id: release
+        env:
+          PACKAGE: ${{ matrix.checker }}
+          OFFSET: '0'
+        run: uv run --no-project python -m scripts.forward newest "$PACKAGE" "$OFFSET" >> "$GITHUB_OUTPUT"
+
+      # The registers in `conformance/expected/` were measured against the
+      # pinned versions, so a moved count here is the news this job exists to
+      # deliver rather than a fault.
+      - name: Check the repository source
+        env:
+          CHECKER: ${{ matrix.checker }}
+          VERSION: ${{ steps.release.outputs.version }}
+          SOURCE: '1'
+          LEG: repository source, ubuntu-latest
+        run: bash .github/scripts/forward-leg.sh
+
+      - name: Upload what this leg measured
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: forward-source-${{ matrix.checker }}
+          path: forward-report
+          if-no-files-found: error
+
+  previous:
+    name: ${{ matrix.checker }} one release behind
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      # The three stable lines only. ty is 0.0.x with no stable API and Pyrefly
+      # is young enough that a previous release proves little; the point of
+      # this leg is evidence, and the support policy sets minimum supported
+      # equal to current tested until a lower version has actually been
+      # measured green here.
+      matrix:
+        checker: [mypy, pyright, basedpyright]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+
+      - name: Resolve the release before the newest
+        id: release
+        env:
+          PACKAGE: ${{ matrix.checker }}
+          OFFSET: '1'
+        run: uv run --no-project python -m scripts.forward newest "$PACKAGE" "$OFFSET" >> "$GITHUB_OUTPUT"
+
+      - name: Run the conformance suite
+        env:
+          CHECKER: ${{ matrix.checker }}
+          VERSION: ${{ steps.release.outputs.version }}
+          TARGET: '3.12'
+          LEG: one release behind, ubuntu-latest
+        run: bash .github/scripts/forward-leg.sh
+
+      - name: Upload what this leg measured
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: forward-previous-${{ matrix.checker }}
+          path: forward-report
+          if-no-files-found: error
+
+  report:
+    name: tracking issues
+    needs: [consumer, source, previous]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download every leg
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: reports
+
+      # One issue per checker and version, so a checker that fails on four legs
+      # is one thread rather than four, and a later release opens a new one
+      # instead of burying the earlier evidence.
+      - name: Group the failing legs
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python3 -m scripts.forward issues reports forward-issues "$RUN_URL"
+
+      - name: Open or update one tracking issue per checker
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/forward-publish.sh

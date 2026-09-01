@@ -17,7 +17,7 @@ The library leans heavily on Python's modern type system — PEP 695 generics, `
 ## Tooling
 
 - **Package manager:** `uv`. Use `uv add <pkg>` / `uv remove <pkg>`. Commit `uv.lock`.
-- **Type checkers:** `basedpyright` in strict mode, plus `mypy --strict` as a second checker. Configuration lives in `pyproject.toml` under `[tool.basedpyright]` and `[tool.mypy]` — do not reintroduce `pyrightconfig.json`. CI runs both against each Python version in the test matrix.
+- **Type checkers:** `basedpyright` in strict mode, plus `mypy --strict` as a second checker. Configuration lives in `pyproject.toml` under `[tool.basedpyright]` and `[tool.mypy]` — do not reintroduce `pyrightconfig.json`. CI runs both against each Python version in the test matrix. Three more check the same file list in CI's `typing-source` job: stock Pyright at zero from `conformance/config/pyright-source.json`, ty and Pyrefly against `conformance/expected/ty-source.txt` and `conformance/expected/pyrefly-source.txt`. **Never add a `[tool.pyright]` table** — Basedpyright refuses to parse a `pyproject.toml` carrying both and falls back to its defaults, which silently degrades the commit gate. Pyrefly's source configuration is the root `pyrefly.toml`, because it has no `pyproject.toml` table.
 - **Formatter & linter:** `ruff`. Line length 120, single quotes.
 - **Tests:** `pytest` + `pytest-asyncio`.
 - **Python:** 3.12 or newer (PEP 695 syntax is used throughout).
