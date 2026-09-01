@@ -868,6 +868,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#depin.TokenKey" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenKey
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#depin.Named" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1385,6 +1396,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#depin.TokenKey" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenKey
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#depin.Named" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1463,6 +1485,8 @@
 
 
     <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="TokenKey (depin._core.markers.TokenKey)" href="#depin.TokenKey">TokenKey</a></code></p>
 
 
 
@@ -1481,6 +1505,71 @@ affect equality or hashing.</p>
 <span class="go">True</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">Token</span><span class="p">[</span><span class="nb">str</span><span class="p">](</span><span class="s1">'db.url'</span><span class="p">)</span> <span class="o">==</span> <span class="n">Token</span><span class="p">[</span><span class="nb">int</span><span class="p">](</span><span class="s1">'db.url'</span><span class="p">)</span>
 <span class="go">True</span>
+</code></pre></div>
+</details>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="depin.TokenKey" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">TokenKey</span>
+
+
+<a href="#depin.TokenKey" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>A named provider key, without the phantom type parameter <code>Token</code> carries.</p>
+<p><code>Token</code> is the only intended implementation. <code>TokenKey</code> exists so a
+position that holds a named key but has no type argument to name — the
+<code>ProviderKey</code> alias, the key a <code>Named</code> marker carries, the <code>provides=</code>
+keyword — can be spelled without writing <code>Token[object]</code>, whose phantom
+parameter has no variance every type checker agrees on.</p>
+<p>Subclassing is unsupported. Nothing prevents it — <code>Token</code> inherits from this
+class, so it cannot be final — and a subclass will compare equal to a
+<code>Token</code> of the same name and be accepted wherever a key is expected. That is
+a consequence of the shape, not a promise.</p>
+<p>Two instances are equal iff they share the same <code>name</code>.</p>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Token</span><span class="p">,</span> <span class="n">TokenKey</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">key</span><span class="p">:</span> <span class="n">TokenKey</span> <span class="o">=</span> <span class="n">Token</span><span class="p">[</span><span class="nb">str</span><span class="p">](</span><span class="s1">'db.url'</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">key</span>
+<span class="go">Token('db.url')</span>
 </code></pre></div>
 </details>
 
