@@ -278,12 +278,16 @@ async def test_fastapi_example_accepts_an_injected_container() -> None:
     di = build_container()
     app = create_app(di)
     transport = ASGITransport(app=app)
+    # Mutating the singleton before the requests is what turns the assertion
+    # below into an identity check: a second `Database` would report the URL
+    # `Settings` carries, not this one.
+    (await di.aresolve(Database)).url = 'postgres://pinned'
 
     async with AsyncClient(transport=transport, base_url='http://t') as client:
         first = await client.get('/health')
         second = await client.get('/health')
 
-    assert first.json()['db'] == second.json()['db']
+    assert first.json()['db'] == second.json()['db'] == 'postgres://pinned'
     await di.aclose()
 
 
@@ -305,11 +309,17 @@ async def test_starlette_example_serves_a_request_per_scope() -> None:
     app = create_starlette_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url='http://t') as client:
-        user = await client.get('/users', params={'uid': 1})
+        user = await client.get('/users', params={'uid': 1}, headers={'user-agent': 'probe/1.0'})
         health = await client.get('/health')
 
-    # `path` was read off the request the middleware seeded into the frame.
-    assert user.json() == {'id': 1, 'name': 'Ana', 'db': 'postgres://example', 'path': '/users'}
+    # `path` and `agent` were read off the request the middleware seeded into the frame.
+    assert user.json() == {
+        'id': 1,
+        'name': 'Ana',
+        'db': 'postgres://example',
+        'path': '/users',
+        'agent': 'probe/1.0',
+    }
     # The per-request session was opened and closed again with the scope.
     assert health.json()['open_sessions'] == 0
 
@@ -319,12 +329,16 @@ async def test_starlette_example_accepts_an_injected_container() -> None:
     di = build_starlette_container()
     app = create_starlette_app(di)
     transport = ASGITransport(app=app)
+    # Mutating the singleton before the requests is what turns the assertion
+    # below into an identity check: a second `Database` would report the URL
+    # `Settings` carries, not this one.
+    database = await di.aresolve(StarletteDatabase)
+    database.url = 'postgres://pinned'
 
     async with AsyncClient(transport=transport, base_url='http://t') as client:
         first = await client.get('/health')
         second = await client.get('/health')
 
-    assert first.json()['db'] == second.json()['db']
-    database = await di.aresolve(StarletteDatabase)
+    assert first.json()['db'] == second.json()['db'] == 'postgres://pinned'
     assert database.open_sessions == 0
     await di.aclose()

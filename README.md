@@ -21,11 +21,13 @@ Type-first dependency injection for Python 3.12+.
 - Every failure is a `DepinError`. No stray `TypeError` from the middle of the
   library.
 - **A public integration contract**: `Host`, `hosted_container`, and a version
-  constant. `depin.ext.fastapi` is written on it, and so is any integration you
-  write yourself — no `depin._core` import required.
+  constant. Every integration depin ships is written on it, and so is any
+  integration you write yourself — no `depin._core` import required.
   [Writing an integration](https://andrelopes-code.github.io/depin/guide/integrations/).
-- Optional FastAPI integration in `depin.ext.fastapi`. **The core has zero
-  runtime dependencies.**
+- Optional web integrations for FastAPI, Starlette, Litestar and Flask, built on
+  the framework-free `depin.ext.asgi` and `depin.ext.wsgi` middlewares that any
+  other ASGI or WSGI framework can install directly. **The core has zero runtime
+  dependencies.**
 - No `# type: ignore` at call sites: `resolve()`, `frozen[key]`, `injected()`,
   and `Inject[T]` are all precisely typed under `basedpyright --strict` and
   `mypy --strict`.
@@ -35,8 +37,14 @@ Type-first dependency injection for Python 3.12+.
 ```bash
 uv add pydepin                # core
 uv add 'pydepin[fastapi]'     # with the FastAPI integration
+uv add 'pydepin[starlette]'   # with the Starlette integration
+uv add 'pydepin[litestar]'    # with the Litestar integration
+uv add 'pydepin[flask]'       # with the Flask integration
 uv add 'pydepin[pytest]'      # with the tested pytest floor enforced
 ```
+
+`depin.ext.asgi` and `depin.ext.wsgi` are the framework-free middlewares those
+four specialise; they import no third-party package and need no extra.
 
 The `depin.ext.pytest` fixtures are registered on the `pytest11` entry point
 by the distribution, so plain `pydepin` already provides them; the `pytest`

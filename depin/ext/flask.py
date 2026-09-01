@@ -42,6 +42,16 @@ def seed_request(environ: WSGIEnvironment) -> tuple[ProviderKey, object]:
 
     Returns:
         The key to bind the request under, and the request itself.
+
+    Example:
+        >>> from wsgiref.util import setup_testing_defaults
+        >>> environ = {'PATH_INFO': '/orders', 'HTTP_X_TENANT': 'acme'}
+        >>> setup_testing_defaults(environ)
+        >>> key, request = seed_request(environ)
+        >>> key is Request
+        True
+        >>> request.headers['x-tenant']
+        'acme'
     """
     return Request, Request(environ)
 

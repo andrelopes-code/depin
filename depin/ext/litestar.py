@@ -44,6 +44,19 @@ def seed_request(scope: Scope) -> tuple[ProviderKey, object]:
 
     Returns:
         The key to bind the request under, and the request itself.
+
+    Example:
+        >>> scope = {
+        ...     'type': 'http',
+        ...     'method': 'POST',
+        ...     'path': '/orders',
+        ...     'headers': [(b'x-tenant', b'acme')],
+        ... }
+        >>> key, request = seed_request(scope)
+        >>> key == Request[object, object, State]
+        True
+        >>> request.headers['x-tenant']
+        'acme'
     """
     request: Request[object, object, State] = Request(scope)
     return Request[object, object, State], request

@@ -1,11 +1,12 @@
 """The ASGI half of every web integration: one scope per request, and nothing else.
 
 This module needs no installation extra and imports no third-party package,
-not even under ``TYPE_CHECKING``. ASGI is a structural protocol, so the four
-types it needs — application, connection scope, receive channel, send
-channel — are declared here with `typing.Protocol` instead of being borrowed
-from Starlette. Two consequences follow, and both are the reason for the rule:
-the module imports cleanly when no framework is installed, and a framework
+not even under ``TYPE_CHECKING``. ASGI is a structural protocol, so the types it
+needs are declared here instead of being borrowed from Starlette: the three
+callables — application, receive channel, send channel — as `typing.Protocol`,
+and the two mappings — the connection scope and the event the channels carry —
+as `type` aliases. Two consequences follow, and both are the reason for the
+rule: the module imports cleanly when no framework is installed, and a framework
 outside depin's curated set can install `RequestScope` without depin having to
 know about it.
 

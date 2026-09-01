@@ -4,8 +4,10 @@ Importing this module requires the ``fastapi`` extra (``pip install
 'pydepin[fastapi]'``); the depin core itself has no third-party dependencies.
 
 Written entirely against depin's public integration contract —
-`depin.optional_hosted_container` — plus the Starlette middleware, so it is
-also the worked example the "writing an integration" guide points at.
+`depin.optional_hosted_container` — plus the Starlette middleware, which is
+itself `depin.ext.asgi.RequestScope` with one seed applied. That shared
+middleware is where the contract is exercised end to end; this module adds
+`Inject` on top of it.
 """
 
 from typing import TYPE_CHECKING, Annotated

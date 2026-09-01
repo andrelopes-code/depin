@@ -73,7 +73,7 @@ async def main() -> None:
     app = create_app(di)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url='http://t') as client:
-        print('user:', (await client.get('/users', params={'uid': 1})).json())
+        print('user:', (await client.get('/users', params={'uid': 1}, headers={'user-agent': 'demo/1.0'})).json())
         print('health:', (await client.get('/health')).json())
 
     # The transport speaks no lifespan, so the shutdown drain is run by hand.

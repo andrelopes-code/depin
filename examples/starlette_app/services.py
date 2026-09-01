@@ -10,4 +10,10 @@ class UserService:
         self.trace = trace
 
     async def get(self, uid: int) -> dict[str, int | str]:
-        return {'id': uid, 'name': 'Ana', 'db': self.session.db.url, 'path': self.trace.path}
+        return {
+            'id': uid,
+            'name': 'Ana',
+            'db': self.session.db.url,
+            'path': self.trace.path,
+            'agent': self.trace.agent,
+        }

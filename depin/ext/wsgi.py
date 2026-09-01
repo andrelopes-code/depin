@@ -1,12 +1,13 @@
 """The WSGI half of every web integration: one scope per request, and nothing else.
 
 This module needs no installation extra and imports no third-party package,
-not even under ``TYPE_CHECKING``. WSGI is a structural protocol, so the three
-types it needs — application, environment, response starter — are declared here
-with `typing.Protocol` instead of being borrowed from a framework. Two
-consequences follow, and both are the reason for the rule: the module imports
-cleanly when no framework is installed, and a framework outside depin's curated
-set can install `RequestScope` without depin having to know about it.
+not even under ``TYPE_CHECKING``. WSGI is a structural protocol, so the types it
+needs are declared here instead of being borrowed from a framework: the two
+callables — application and response starter — as `typing.Protocol`, and the
+environment as a `type` alias. Two consequences follow, and both are the reason
+for the rule: the module imports cleanly when no framework is installed, and a
+framework outside depin's curated set can install `RequestScope` without depin
+having to know about it.
 
 `WSGIApp` and `RequestScope` are generic over the environment and the response
 starter because the middleware is transparent: it hands both to the
@@ -32,7 +33,14 @@ from typing import Protocol
 from depin import FrozenContainer, Host, ProviderKey
 
 type Environ = MutableMapping[str, object]
-"""The per-request environment: CGI variables plus the ``wsgi.*`` server keys."""
+"""The per-request environment: CGI variables plus the ``wsgi.*`` server keys.
+
+Mutable, unlike `depin.ext.asgi.ASGIScope`. That alias is read-only because a
+framework may spell its connection scope as a ``TypedDict``, which is not a
+`collections.abc.MutableMapping`; WSGI has no such case — the specification
+calls the environment a dictionary, and `wsgiref.types.WSGIEnvironment` is
+``dict[str, Any]`` — and middlewares are expected to write into it.
+"""
 
 
 class StartResponse(Protocol):
@@ -51,17 +59,17 @@ class RequestScope[EnvironT, StartResponseT]:
     """WSGI middleware that opens one depin scope around every request.
 
     Implemented directly against the WSGI protocol rather than a framework's
-    own middleware base class, so every WSGI integration depin ships
-    specialises this class, supplying only the ``seed`` that places its own
-    framework's request object into the frame.
+    own middleware base class, so it wraps the whole application — the
+    framework's own error handling and teardown callbacks included. Every WSGI
+    integration depin ships specialises this class, supplying only the ``seed``
+    that places its own framework's request object into the frame.
 
     The container is published to the request's context for the duration of
     the scope, so `depin.hosted_container()` reaches it from anywhere inside
-    the request. The scope's teardowns run when the downstream application
-    returns — including when it returns by raising — and the publication is
-    undone after them.
+    the request. The publication is undone once the scope's teardowns have
+    drained — including when the application returns by raising.
 
-    The scope ends when the application returns, not when the response is
+    That scope ends when the application returns, not when the response is
     finished. WSGI hands the server an iterable that the server consumes after
     the application has returned, and it offers no hook that outlives that
     return, so a streaming body cannot resolve: by the time the server pulls
