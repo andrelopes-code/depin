@@ -22,6 +22,9 @@ from starlette.routing import Route
 from depin import Container, FrozenContainer, Scope, hosted_container
 from depin.ext.starlette import RequestScope
 
+BODY = b'{"a":1}'
+JSON_HEADERS = {'content-type': 'application/json'}
+
 
 class Counter:
     """A scoped dependency whose identity distinguishes one request from the next."""
@@ -159,6 +162,9 @@ async def test_the_seeded_request_raises_on_a_body_read(handler_reads_first: boo
 
     di = Container().scope_value(Request).bind(BodyReader, scope=Scope.SCOPED).freeze()
     async with hosted(di, Route('/body', endpoint, methods=['POST'])) as client:
-        payload = (await client.post('/body', json={'a': 1})).json()
+        payload = (await client.post('/body', content=BODY, headers=JSON_HEADERS)).json()
 
-    assert payload == {'read_first': '{"a":1}' if handler_reads_first else None, 'handler_body': '{"a":1}'}
+    assert payload == {
+        'read_first': BODY.decode() if handler_reads_first else None,
+        'handler_body': BODY.decode(),
+    }

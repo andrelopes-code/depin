@@ -25,6 +25,9 @@ from litestar.testing import AsyncTestClient
 from depin import Container, FrozenContainer, Scope, hosted_container
 from depin.ext.litestar import RequestScope
 
+BODY = b'{"a":1}'
+JSON_HEADERS = {'content-type': 'application/json'}
+
 
 class Counter:
     """A scoped dependency whose identity distinguishes one request from the next."""
@@ -165,7 +168,9 @@ async def test_the_seeded_request_raises_when_nothing_has_parsed_the_body_yet() 
         return {'handler_body': (await request.body()).decode()}
 
     async with hosted(hosting_a_body_reader(), endpoint) as client:
-        assert (await client.post('/body', json={'a': 1})).json() == {'handler_body': '{"a":1}'}
+        payload = (await client.post('/body', content=BODY, headers=JSON_HEADERS)).json()
+
+    assert payload == {'handler_body': BODY.decode()}
 
 
 async def test_the_seeded_request_replays_the_body_the_handler_declared() -> None:
@@ -184,6 +189,6 @@ async def test_the_seeded_request_replays_the_body_the_handler_declared() -> Non
         return {'data': data, 'seen': (await reader.read()).decode()}
 
     async with hosted(hosting_a_body_reader(), endpoint) as client:
-        payload = (await client.post('/body', json={'a': 1})).json()
+        payload = (await client.post('/body', content=BODY, headers=JSON_HEADERS)).json()
 
-    assert payload == {'data': {'a': 1}, 'seen': '{"a":1}'}
+    assert payload == {'data': {'a': 1}, 'seen': BODY.decode()}
