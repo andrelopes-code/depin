@@ -1035,6 +1035,90 @@
   
   
     <li class="md-nav__item">
+      <a href="reference/asgi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ASGI request scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/wsgi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSGI request scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/starlette/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Starlette
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="reference/fastapi/" class="md-nav__link">
         
   
@@ -1043,6 +1127,62 @@
     
   
     FastAPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/litestar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Litestar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/flask/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flask
   
 
     
@@ -1201,7 +1341,13 @@ runtime dependencies.</p>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>uv<span class="w"> </span>add<span class="w"> </span>pydepin<span class="w">                </span><span class="c1"># core</span>
 uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[fastapi]'</span><span class="w">     </span><span class="c1"># with the FastAPI integration</span>
+uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[starlette]'</span><span class="w">   </span><span class="c1"># with the Starlette integration</span>
+uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[litestar]'</span><span class="w">    </span><span class="c1"># with the Litestar integration</span>
+uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[flask]'</span><span class="w">       </span><span class="c1"># with the Flask integration</span>
 </code></pre></div>
+<p><code>depin.ext.asgi</code> and <code>depin.ext.wsgi</code> are the framework-free middlewares those
+four specialise; they import no third-party package and need no extra. See
+<a href="guide/integrations/#the-integrations-depin-ships">writing an integration</a>.</p>
 <p>The distribution is named <code>pydepin</code> on PyPI; the import package is <code>depin</code>.</p>
 <h2 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span>
@@ -1301,12 +1447,12 @@ list.</p>
 <h2 id="where-to-go-next">Where to go next<a class="headerlink" href="#where-to-go-next" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="guide/">Guide</a> — lifetimes and scopes, composing bindings,
-  resolution semantics, testing, inspecting the graph, and the FastAPI
-  integration.</li>
+  resolution semantics, testing, inspecting the graph, and the web
+  integrations.</li>
 <li><a href="reference/">API reference</a> — the full public API, generated from the
   source docstrings.</li>
 <li><a href="https://github.com/andrelopes-code/depin/tree/main/examples">Examples</a> —
-  eight runnable programs, each executed by the test suite.</li>
+  sixteen runnable programs, each executed by the test suite.</li>
 <li><a href="https://github.com/andrelopes-code/depin/blob/main/CONTRIBUTING.md">Contributing</a>
   — development setup, the five gates, and the release process.</li>
 </ul>

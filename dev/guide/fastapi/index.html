@@ -1039,6 +1039,90 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/asgi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ASGI request scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/wsgi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSGI request scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/starlette/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Starlette
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/fastapi/" class="md-nav__link">
         
   
@@ -1047,6 +1131,62 @@
     
   
     FastAPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/litestar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Litestar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/flask/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flask
   
 
     
@@ -1249,8 +1389,11 @@ instance — satisfies it just as well. Reached that way no scope is open, so a
 <h2 id="one-scope-per-request">One scope per request<a class="headerlink" href="#one-scope-per-request" title="Permanent link">&para;</a></h2>
 <p><code>RequestScope</code> is implemented directly against the ASGI protocol rather than
 Starlette's <code>BaseHTTPMiddleware</code>, so streaming responses, server-sent events and
-WebSockets pass through unbuffered. Lifespan and other non-HTTP scopes are
-forwarded untouched, with no depin scope opened.</p>
+WebSockets pass through unbuffered. A connection scope that is neither <code>http</code>
+nor <code>websocket</code> — the lifespan scope above all — is forwarded untouched: no
+depin scope is opened and nothing is published. A websocket is scoped and
+hosted exactly like an HTTP request, but it is not seeded, because it has no
+request-body semantics and <code>Request</code> is HTTP-shaped.</p>
 <p>Every scoped provider is therefore built once per request and torn down when the
 response finishes:</p>
 <div class="highlight"><pre><span></span><code><span class="nd">@services</span><span class="o">.</span><span class="n">scoped</span><span class="p">()</span>

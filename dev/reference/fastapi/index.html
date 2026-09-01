@@ -13,10 +13,10 @@
         <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/fastapi/">
       
       
-        <link rel="prev" href="../hosting/">
+        <link rel="prev" href="../starlette/">
       
       
-        <link rel="next" href="../pytest/">
+        <link rel="next" href="../litestar/">
       
       
         
@@ -934,6 +934,90 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../asgi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ASGI request scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wsgi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSGI request scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../starlette/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Starlette
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -997,17 +1081,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#depin.ext.fastapi.RequestScope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RequestScope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#depin.ext.fastapi.Inject" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1022,6 +1095,62 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../litestar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Litestar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../flask/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flask
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1089,17 +1218,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#depin.ext.fastapi.RequestScope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RequestScope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#depin.ext.fastapi.Inject" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1131,74 +1249,11 @@
 
 
 <h1 id="fastapi-integration">FastAPI integration<a class="headerlink" href="#fastapi-integration" title="Permanent link">&para;</a></h1>
+<p><code>depin.ext.fastapi.RequestScope</code> is <code>depin.ext.starlette.RequestScope</code>,
+re-exported unchanged — <code>fastapi.Request</code> is <code>starlette.requests.Request</code>, so
+one middleware serves both. It is documented on the
+<a href="../starlette/">Starlette</a> page.</p>
 
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.ext.fastapi.RequestScope" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">RequestScope</span>
-
-
-<a href="#depin.ext.fastapi.RequestScope" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>ASGI middleware that opens a depin async scope around every HTTP request.</p>
-<p>Implemented directly against the ASGI protocol (not Starlette's
-<code>BaseHTTPMiddleware</code>) so streaming responses, server-sent events, and
-WebSockets pass through without buffering. Lifespan and other non-HTTP
-scopes are forwarded untouched, with no depin scope opened.</p>
-<p>The container is published to the request's context for the duration of
-the scope, so <code>depin.hosted_container()</code> reaches it from anywhere inside
-the request.</p>
-<p>For HTTP requests it places a metadata-only <code>fastapi.Request</code> into the
-active scope frame so scoped providers can read headers, URL, cookies, and
-state. That <code>Request</code> carries no receive channel: reading the body through
-it raises rather than consuming the stream the route handler needs (which
-would otherwise deadlock against FastAPI's own body parsing). Treat the body
-as a typed route parameter, not a provider input.</p>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <p>Install the middleware once, then resolve scoped providers per request::</p>
-<div class="highlight"><pre><span></span><code>app = FastAPI()
-app.add_middleware(RequestScope, container=di)
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
 
 <div class="doc doc-object doc-class">
 

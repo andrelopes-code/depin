@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/guide/">
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/wsgi/">
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../asgi/">
       
       
-        <link rel="next" href="lifetimes/">
+        <link rel="next" href="../starlette/">
       
       
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Overview - depin</title>
+        <title>WSGI request scope - depin</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#guide" class="md-skip">
+        <a href="#wsgi-request-scope" class="md-skip">
           Skip to content
         </a>
       
@@ -100,7 +100,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="depin" class="md-header__button md-logo" aria-label="depin" data-md-component="logo">
+    <a href="../.." title="depin" class="md-header__button md-logo" aria-label="depin" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              WSGI request scope
             
           </span>
         </div>
@@ -236,7 +236,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="depin" class="md-nav__button md-logo" aria-label="depin" data-md-component="logo">
+    <a href="../.." title="depin" class="md-nav__button md-logo" aria-label="depin" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -266,7 +266,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -290,8 +290,6 @@
       
   
   
-    
-  
   
   
     
@@ -304,11 +302,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
@@ -329,7 +327,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -344,37 +342,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../guide/" class="md-nav__link">
         
   
   
@@ -390,37 +361,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-three-stages" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The three stages
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -433,7 +373,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lifetimes/" class="md-nav__link">
+      <a href="../../guide/lifetimes/" class="md-nav__link">
         
   
   
@@ -461,7 +401,7 @@
   
   
     <li class="md-nav__item">
-      <a href="composition/" class="md-nav__link">
+      <a href="../../guide/composition/" class="md-nav__link">
         
   
   
@@ -489,7 +429,7 @@
   
   
     <li class="md-nav__item">
-      <a href="resolution/" class="md-nav__link">
+      <a href="../../guide/resolution/" class="md-nav__link">
         
   
   
@@ -517,7 +457,7 @@
   
   
     <li class="md-nav__item">
-      <a href="testing/" class="md-nav__link">
+      <a href="../../guide/testing/" class="md-nav__link">
         
   
   
@@ -545,7 +485,7 @@
   
   
     <li class="md-nav__item">
-      <a href="diagnostics/" class="md-nav__link">
+      <a href="../../guide/diagnostics/" class="md-nav__link">
         
   
   
@@ -573,7 +513,7 @@
   
   
     <li class="md-nav__item">
-      <a href="operations/" class="md-nav__link">
+      <a href="../../guide/operations/" class="md-nav__link">
         
   
   
@@ -601,7 +541,7 @@
   
   
     <li class="md-nav__item">
-      <a href="integrations/" class="md-nav__link">
+      <a href="../../guide/integrations/" class="md-nav__link">
         
   
   
@@ -629,7 +569,7 @@
   
   
     <li class="md-nav__item">
-      <a href="fastapi/" class="md-nav__link">
+      <a href="../../guide/fastapi/" class="md-nav__link">
         
   
   
@@ -664,7 +604,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../support-policy/" class="md-nav__link">
+      <a href="../../support-policy/" class="md-nav__link">
         
   
   
@@ -688,8 +628,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -700,11 +642,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -725,7 +667,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -743,7 +685,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -771,7 +713,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/container/" class="md-nav__link">
+      <a href="../container/" class="md-nav__link">
         
   
   
@@ -799,7 +741,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/frozen/" class="md-nav__link">
+      <a href="../frozen/" class="md-nav__link">
         
   
   
@@ -827,7 +769,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/scope/" class="md-nav__link">
+      <a href="../scope/" class="md-nav__link">
         
   
   
@@ -855,7 +797,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/markers/" class="md-nav__link">
+      <a href="../markers/" class="md-nav__link">
         
   
   
@@ -883,7 +825,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/errors/" class="md-nav__link">
+      <a href="../errors/" class="md-nav__link">
         
   
   
@@ -911,7 +853,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/diagnostics/" class="md-nav__link">
+      <a href="../diagnostics/" class="md-nav__link">
         
   
   
@@ -939,7 +881,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/operations/" class="md-nav__link">
+      <a href="../operations/" class="md-nav__link">
         
   
   
@@ -967,7 +909,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/hosting/" class="md-nav__link">
+      <a href="../hosting/" class="md-nav__link">
         
   
   
@@ -995,7 +937,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/asgi/" class="md-nav__link">
+      <a href="../asgi/" class="md-nav__link">
         
   
   
@@ -1020,10 +962,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../reference/wsgi/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSGI request scope
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1039,6 +1008,70 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ext.wsgi.RequestScope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RequestScope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ext.wsgi.WSGIApp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WSGIApp
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ext.wsgi.Environ" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ext.wsgi.StartResponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StartResponse
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1051,7 +1084,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/starlette/" class="md-nav__link">
+      <a href="../starlette/" class="md-nav__link">
         
   
   
@@ -1079,7 +1112,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/fastapi/" class="md-nav__link">
+      <a href="../fastapi/" class="md-nav__link">
         
   
   
@@ -1107,7 +1140,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/litestar/" class="md-nav__link">
+      <a href="../litestar/" class="md-nav__link">
         
   
   
@@ -1135,7 +1168,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/flask/" class="md-nav__link">
+      <a href="../flask/" class="md-nav__link">
         
   
   
@@ -1163,7 +1196,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/pytest/" class="md-nav__link">
+      <a href="../pytest/" class="md-nav__link">
         
   
   
@@ -1218,10 +1251,43 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-three-stages" class="md-nav__link">
+  <a href="#depin.ext.wsgi.RequestScope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The three stages
+        RequestScope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ext.wsgi.WSGIApp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WSGIApp
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ext.wsgi.Environ" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depin.ext.wsgi.StartResponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StartResponse
       
     </span>
   </a>
@@ -1248,71 +1314,309 @@
   
 
 
-<h1 id="guide">Guide<a class="headerlink" href="#guide" title="Permanent link">&para;</a></h1>
-<p>Eight pages, in the order most projects need them.</p>
-<ul>
-<li><strong><a href="lifetimes/">Lifetimes and scopes</a></strong> — how long a value lives, when it is
-  rebuilt, and when its teardown runs. Read this first; almost every question
-  about depin is really a question about lifetimes.</li>
-<li><strong><a href="composition/">Composing bindings</a></strong> — registries, containers built from
-  several sources, tags, protocols, tokens, and aliases.</li>
-<li><strong><a href="resolution/">Resolution semantics</a></strong> — optional dependencies and
-  collection injection: what a <code>T | None</code> parameter and a <code>list[T]</code> parameter
-  mean, and when each resolves to <code>None</code> or to every registered provider.</li>
-<li><strong><a href="testing/">Testing</a></strong> — replacing a dependency without rebuilding the
-  graph, and wiring test functions with <code>@inject</code>.</li>
-<li><strong><a href="diagnostics/">Inspecting the graph</a></strong> — the resolution tree, <code>dot</code> and
-  <code>mermaid</code> renderings, and how <code>freeze()</code> and <code>explain()</code> report the same
-  chain.</li>
-<li><strong><a href="operations/">Warmup and health</a></strong> — building every singleton before the
-  first request, and declaring checks <code>health()</code> runs on demand.</li>
-<li><strong><a href="integrations/">Writing an integration</a></strong> — the contract a framework
-  host is built against: <code>Host</code>, <code>hosted_container</code>, and the version that
-  governs both.</li>
-<li><strong><a href="fastapi/">FastAPI</a></strong> — the optional ASGI integration: one scope per
-  request, <code>Inject[T]</code>, and shutdown.</li>
-</ul>
-<h2 id="the-three-stages">The three stages<a class="headerlink" href="#the-three-stages" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Stage</th>
-<th>Object</th>
-<th>What it does</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Declare</td>
-<td><code>Container</code></td>
-<td>Mutable builder. Collects bindings; validates nothing.</td>
-</tr>
-<tr>
-<td>Validate</td>
-<td><code>Container.freeze()</code></td>
-<td>Runs every static check, then returns the runtime.</td>
-</tr>
-<tr>
-<td>Resolve</td>
-<td><code>FrozenContainer</code></td>
-<td>Immutable. Builds and caches values, opens scopes, injects.</td>
-</tr>
-</tbody>
-</table>
-<p><code>freeze()</code> is the gate, and it is deliberately strict. It rejects:</p>
-<ul>
-<li>a dependency with no provider, naming the resolution chain that needed it;</li>
-<li>a cycle in the graph;</li>
-<li>two bindings that resolve to the same key and tag;</li>
-<li>a singleton that depends on a scoped provider (it would capture one scope's
-  instance forever);</li>
-<li>a factory whose return type cannot be inferred, or a parameter with neither an
-  annotation nor a default;</li>
-<li>a generator or context-manager provider bound as transient, which would leave
-  its teardown unreachable.</li>
-</ul>
-<p>Everything above is caught before a single value is constructed, so a graph that
-freezes at start-up will not fail to wire itself under load.</p>
+<h1 id="wsgi-request-scope">WSGI request scope<a class="headerlink" href="#wsgi-request-scope" title="Permanent link">&para;</a></h1>
+<p>The framework-free middleware the Flask integration specialises. See
+<a href="../../guide/integrations/#the-integrations-depin-ships">the integrations depin ships</a>
+for which module to install.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="depin.ext.wsgi.RequestScope" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">RequestScope</span>
+
+
+<a href="#depin.ext.wsgi.RequestScope" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>WSGI middleware that opens one depin scope around every request.</p>
+<p>Implemented directly against the WSGI protocol rather than a framework's
+own middleware base class, so it wraps the whole application — the
+framework's own error handling and teardown callbacks included. Every WSGI
+integration depin ships specialises this class, supplying only the <code>seed</code>
+that places its own framework's request object into the frame.</p>
+<p>The container is published to the request's context for the duration of
+the scope, so <code>depin.hosted_container()</code> reaches it from anywhere inside
+the request. The publication is undone once the scope's teardowns have
+drained — including when the application returns by raising.</p>
+<p>That scope ends when the application returns, not when the response is
+finished. WSGI hands the server an iterable that the server consumes after
+the application has returned, and it offers no hook that outlives that
+return, so a streaming body cannot resolve: by the time the server pulls
+the first chunk the scope has drained and the container is no longer
+published. Resolve everything a streaming response needs before returning
+the iterable, and close over the values. The alternative — materialising
+the body into a list before returning it — would buy streaming safety by
+buffering every response in memory, which is a worse default than the
+boundary being stated, and it would defeat the one thing WSGI streaming is
+for. ASGI has no such limit; <code>depin.ext.asgi.RequestScope</code> keeps the scope
+open for the whole response.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>app</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="WSGIApp (depin.ext.wsgi.WSGIApp)" href="#depin.ext.wsgi.WSGIApp">WSGIApp</a>[<span title="depin.ext.wsgi.RequestScope[EnvironT]">EnvironT</span>, <span title="depin.ext.wsgi.RequestScope[StartResponseT]">StartResponseT</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The downstream WSGI application this middleware wraps.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>container</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="FrozenContainer (depin.FrozenContainer)" href="../frozen/#depin.FrozenContainer">FrozenContainer</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The frozen container to host for the duration of each
+request. Keyword-or-positional because the framework helpers that
+install middleware pass <code>app</code> positionally and <code>container</code> by
+keyword.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>seed</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="depin.ext.wsgi.RequestScope[EnvironT]">EnvironT</span>], <span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="ProviderKey (depin.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a>, <span title="object">object</span>] | None] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Called once per request, before the downstream application runs,
+to produce the key and value to place into the fresh scope frame.
+Returning <code>None</code> seeds nothing. Omitting it seeds nothing either.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TeardownError">TeardownError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An async provider left a teardown in the request's
+synchronous scope. A WSGI application cannot await, so an async
+provider has no place in one.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One or more teardowns failed when the request's scope
+closed. Every failure is included; one does not hide another.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Install the middleware once, per the wrapping framework's own idiom::</p>
+<div class="highlight"><pre><span></span><code>app.wsgi_app = RequestScope(app.wsgi_app, di, seed=lambda environ: (Request, Request(environ)))
+</code></pre></div>
+</details>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="depin.ext.wsgi.WSGIApp" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">WSGIApp</span>
+
+
+<a href="#depin.ext.wsgi.WSGIApp" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="typing.Protocol">Protocol</span></code></p>
+
+
+
+        <p>Any WSGI application or middleware: the downstream peer <code>RequestScope</code> wraps.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-type_alias">
+
+
+
+<h2 id="depin.ext.wsgi.Environ" class="doc doc-heading">
+            <span class="doc doc-object-name doc-type_alias-name">Environ</span>
+
+
+<a href="#depin.ext.wsgi.Environ" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nc">Environ</span> <span class="o">=</span> <span class="n">MutableMapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>The per-request environment: CGI variables plus the <code>wsgi.*</code> server keys.</p>
+<p>Mutable, unlike <code>depin.ext.asgi.ASGIScope</code>. That alias is read-only because a
+framework may spell its connection scope as a <code>TypedDict</code>, which is not a
+<code>collections.abc.MutableMapping</code>; WSGI has no such case — the specification
+calls the environment a dictionary, and <code>wsgiref.types.WSGIEnvironment</code> is
+<code>dict[str, Any]</code> — and middlewares are expected to write into it.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="depin.ext.wsgi.StartResponse" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">StartResponse</span>
+
+
+<a href="#depin.ext.wsgi.StartResponse" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="typing.Protocol">Protocol</span></code></p>
+
+
+
+        <p>The callable a WSGI application invokes to begin the response.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
 
 
 
@@ -1368,10 +1672,10 @@ freezes at start-up will not fail to wire itself under load.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
