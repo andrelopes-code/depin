@@ -213,13 +213,26 @@ repository whose conventions require every suppression to be individually
 narrowest and individually explained. A mechanical sweep of twenty-five lines is
 neither.
 
-So the ty register carries roughly thirty-one entries at three classifications —
-twenty-five suppression-spelling artefacts where ty agrees with mypy and Pyright
-about invalid code and cannot read their waiver, two from ty's gradual model of
-`Callable[..., object]`, and four from ty resolving `taskiq.TaskiqResult`
-through pydantic's `PydanticRecursiveRef`. The thirty-second,
-`tests/typing/test_conformance.py:82`, is removed by the oracle rewrite rather
-than registered.
+So the ty register carries three classifications: suppression-spelling
+artefacts, where ty agrees with mypy and Pyright about invalid code and cannot
+read their waiver; gradual inference, where ty leaves a type variable, a
+`getattr` result or a `callable()` narrowing as `Unknown`, `Any` or
+`Top[(...) -> object]`; and ty resolving `taskiq.TaskiqResult` through
+pydantic's `PydanticRecursiveRef`. `conformance/expected/ty-source.txt` is the
+count, not this paragraph: **30 entries covering 44 diagnostics** — 27
+suppression-spelling, 13 gradual-inference, 4 `PydanticRecursiveRef`.
+
+An earlier draft of this section estimated thirty-one entries, two of them from
+the gradual model. The estimate was extrapolated from the baseline's 32, counted
+under a bare `uvx ty check`; the gate runs `--error all`. Measured on the merged
+tree, the same run is 31 bare and 44 under the flag, and the 13 the flag adds are
+`unsound-return-statement` ten times, `unsound-assignment` twice and
+`missing-type-argument` once. Eleven of those 13 are gradual inference and two
+sit on a line already carrying the waiver pair, which is exactly how 2 became 13
+and 25 became 27. The estimate was right about what it could see and had no way
+to see the rest. `tests/typing/test_conformance.py:82` is removed by the oracle
+rewrite rather than registered, but the file still carries one entry, for an
+`unsound-return-statement` the bare run never emitted.
 
 Pyrefly's register carries three: two `implicit-any-lambda` and one
 `implicit-any-type-argument`, two in private modules and one in a unit test.
@@ -320,11 +333,13 @@ jobs where no framework is installed — the same technique
 **Three sources, not one.** The proposal asks for "every symbol re-exported from
 `depin`, every public exception surface whose typing affects control flow, and
 `depin.ext`". `depin/errors.py` carries eleven public exceptions, none of them
-in `depin.__all__`, and two of them inherit a builtin as well
+in `depin.__all__`, and four of them inherit a builtin as well
 (`InvalidProviderError(DepinError, TypeError)`,
-`TeardownError(DepinError, RuntimeError)`) — which is precisely a typing fact
-that changes what a consumer's `except` clause catches. They are enumerated by
-import, since `depin.errors` needs no framework.
+`InvalidScopeError(DepinError, ValueError)`,
+`TeardownError(DepinError, RuntimeError)`,
+`ContainerNotBoundError(DepinError, RuntimeError)`) — which is precisely a
+typing fact that changes what a consumer's `except` clause catches. They are
+enumerated by import, since `depin.errors` needs no framework.
 
 **The `ast` scanner's contract is specified, because the naive version misses
 the most important symbol in the package.** Only `depin/ext/fastapi.py` declares

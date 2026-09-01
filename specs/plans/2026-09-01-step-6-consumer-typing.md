@@ -11,7 +11,7 @@ a committed register of classified diagnostics. Layer 2 is the new contract: a
 `conformance/` corpus of ordinary consumer code, checked by all five against a
 built wheel installed into an isolated interpreter, in a core-only and an
 all-extras mode, at zero. Layer 3 is a weekly forward probe. One runner,
-`scripts/conformance.py`, is both the local entry point and the CI entry point.
+`scripts/conformance/`, is both the local entry point and the CI entry point.
 
 **Tech Stack:** Python 3.12–3.14, uv, mypy 2.3.1, stock Pyright 1.1.411,
 Basedpyright 1.39.10, ty 0.0.77, Pyrefly 1.2.0. No new runtime dependencies; the
@@ -124,7 +124,7 @@ rides into 0.17.0 with it.
 | `docs/reference/markers.md`, `mkdocs.yml` | `TokenKey` on the markers page | 1 |
 | `docs/guide/composition.md` | `provides=` with a token | 2 |
 | `conformance/` | **New.** The corpus, fixtures, configs and expected data | 3 |
-| `scripts/conformance.py` | **New.** The runner | 3 |
+| `scripts/conformance/` | **New.** The runner, a package rather than the single module this table first named: one file measured 687 code lines against the roughly-400 limit AGENTS.md sets, so it is split into `cli`, `model`, `pins`, `workspace`, `isolation`, `checkers`, `stages` and `source` | 3 |
 | `tests/unit/test_conformance_coverage.py` | **New.** Enforces the coverage map | 3 |
 | `.github/workflows/ci.yml` | `typing-artifact`, `typing-consumer`; then `typing-source`, old `ty` job removed | 3, 4 |
 | `.github/workflows/typing-forward.yml` | **New.** The weekly probe | 5 |
@@ -247,7 +247,7 @@ under Pyrefly.
 
 ## Task 3 — the conformance suite
 
-**Files:** `conformance/**`, `scripts/conformance.py`,
+**Files:** `conformance/**`, `scripts/conformance/`,
 `tests/unit/test_conformance_coverage.py`, `.github/workflows/ci.yml`,
 `tests/typing/test_conformance.py`
 
@@ -268,7 +268,7 @@ built from `main`.
       cannot see drift: `dev` declares `mypy>=1.18`, so every future resolution
       satisfies it while `uv run mypy` and `uvx mypy@2.3.1` diverge — and
       Dependabot runs weekly, so that divergence is scheduled.
-- [ ] `scripts/conformance.py`: builds the wheel outside the checkout, **copies
+- [ ] `scripts/conformance/`: builds the wheel outside the checkout, **copies
       `conformance/` into a temporary directory outside the checkout**, creates
       the core-only, all-extras and empty interpreters there, and runs every
       checker subprocess with that directory as its working directory. It
@@ -498,7 +498,7 @@ and the intentional-negative lines across `depin/` and `tests/`
       test. The `implicit-any-type-argument` entry names `Token[T]` in
       `depin/_core/typeguards.py` and **may disappear** once Task 1 makes that
       guard name `TokenKey`. Measure; do not transcribe.
-- [ ] Extend `scripts/conformance.py` with a register comparison: fail on a
+- [ ] Extend `scripts/conformance/` with a register comparison: fail on a
       diagnostic the register does not carry, **and** fail on a register entry
       that no longer appears. The second is what stops the register growing
       stale.
@@ -507,7 +507,7 @@ and the intentional-negative lines across `depin/` and `tests/`
       **delete the `ty (advisory)` job**, whose check step ends in `exit 0` and
       therefore establishes nothing.
 - [ ] Add `scripts` to `[tool.mypy] files` and `[tool.basedpyright] include` so
-      `scripts/conformance.py` is checked. `scripts/check_mutation_threshold.py`
+      `scripts/conformance/` is checked. `scripts/check_mutation_threshold.py`
       is already clean under both in strict mode, so this should be a two-line
       configuration change.
 

@@ -48,12 +48,60 @@ uv run pytest
 - `uv run ruff check` — lints.
 - `uv run basedpyright` — type-checks in strict mode. No `# type: ignore`,
   `# pyright: ignore`, `typing.cast`, or `Any` shortcuts.
-- `uv run mypy` — type-checks in strict mode with the second checker. See the
-  [support policy](https://andrelopes-code.github.io/depin/support-policy/)
-  for the one documented gap between the two checkers.
+- `uv run mypy` — type-checks in strict mode with the second checker.
 - `uv run pytest` — runs the test suite, the doctests embedded in the
   public-API docstrings, the doctests in `docs/guide/`, and the programs under
   `examples/`.
+
+## The typing conformance suite
+
+Five type checkers — mypy, stock Pyright, Basedpyright, ty and Pyrefly — are
+gated in three layers. The
+[support policy](https://andrelopes-code.github.io/depin/support-policy/) states
+each checker's authority in each layer; this section is how to run them.
+
+| Layer | Object | How it runs |
+| --- | --- | --- |
+| 1. Implementation | `depin tests examples scripts`, in the checkout | mypy and Basedpyright at zero, in the five gates above. Stock Pyright at zero, ty and Pyrefly against a committed register, in CI's `typing-source` job |
+| 2. Consumer contract | `conformance/`, checked against the built wheel installed into an isolated interpreter | CI's `typing-artifact` and `typing-consumer` jobs, all five at zero, in both install modes |
+| 3. Forward probe | both, on the newest release of each checker | the weekly `typing-forward` workflow, advisory |
+
+**The five gates above are unchanged, and the conformance suite is not a sixth
+one.** It builds a wheel and creates three interpreters before it checks
+anything, which does not belong in a per-commit loop. It is a CI gate. Run it
+locally when you change the public surface, the corpus, the runner, or a pinned
+checker version — and let CI run it otherwise.
+
+```bash
+uv run python -m scripts.conformance
+uv run python -m scripts.conformance --source
+```
+
+The first checks the consumer corpus against a freshly built wheel; the second
+checks the repository source. Both print a per-checker, per-mode table and exit
+non-zero listing every failure rather than only the first.
+
+Four flags narrow a run. `--checker`, `--mode` and `--only` are repeatable.
+
+| Flag | Values | Effect |
+| --- | --- | --- |
+| `--checker` | `mypy`, `pyright`, `basedpyright`, `ty`, `pyrefly` | Run one checker instead of all five |
+| `--mode` | `core`, `extras` | Run one install mode instead of both |
+| `--only` | `control`, `positive`, `anti-erasure`, `negative`, `divergence` | Run one stage instead of all of them. The wheel and isolation assertions always run |
+| `--source` | — | Check the repository source instead of the corpus. `--mode` and `--only` do not apply |
+
+```bash
+uv run python -m scripts.conformance --checker ty --mode core --only positive
+uv run python -m scripts.conformance --source --checker pyrefly
+```
+
+`--source` needs the project environment complete, because the file list it
+checks includes the integration tests: run `uv sync --all-extras` first, or the
+three checkers report unresolved framework imports.
+
+`conformance/README.md` documents what each tree holds, what the runner asserts
+before it checks anything, and why the corpus is copied out of the checkout
+before any checker sees it.
 
 ## Commits
 
