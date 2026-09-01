@@ -21,8 +21,9 @@ match the wrapped framework's exactly. Starlette spells its scope and messages
 ``MutableMapping[str, Any]``, Litestar spells them as ``TypedDict``s, and no
 single framework-free alias is compatible with both in both directions. Being
 generic, the middleware adopts whichever triple the framework beneath it
-declares and stays exactly as strict as that framework is. The aliases below
-are the triple a hand-written application uses when no framework is involved.
+declares and stays exactly as strict as that framework is. `ASGIScope`,
+`Receive` and `Send` below are the triple a hand-written application uses when
+no framework is involved.
 
 The three awaitable members return `collections.abc.Awaitable` rather than
 being declared ``async def``. An ``async def`` member narrows the return to a

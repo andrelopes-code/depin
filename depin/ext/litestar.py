@@ -36,8 +36,9 @@ from depin.ext.asgi import RequestScope as ASGIRequestScope
 def seed_request(scope: Scope) -> tuple[ProviderKey, object]:
     """Build the `litestar.Request` that `RequestScope` places into each HTTP frame.
 
-    The request is constructed from the connection scope alone, which is what
-    makes it metadata-only: see `RequestScope` for what that costs and why.
+    The request is constructed from the connection scope alone, so the body
+    must not be read through it: see `RequestScope` for what such a read does
+    and why.
 
     Args:
         scope: The ASGI connection scope of the request being opened.

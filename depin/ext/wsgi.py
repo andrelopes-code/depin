@@ -20,8 +20,8 @@ against `wsgiref.types`, whose response starter takes an ``exc_info`` third
 argument and returns a ``write`` callable — neither of which the minimal
 `StartResponse` below states. Being generic, the middleware adopts whichever
 pair the framework beneath it declares and stays exactly as strict as that
-framework is. The aliases below are the pair a hand-written application uses
-when no framework is involved.
+framework is. `Environ` and `StartResponse` below are the pair a hand-written
+application uses when no framework is involved.
 
 Written against depin's public integration contract — `depin.Host` — so it
 reaches nothing inside the private package.

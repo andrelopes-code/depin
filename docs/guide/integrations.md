@@ -4,9 +4,13 @@ The integrations depin ships are not special: they are written entirely
 against the same seam any third-party integration uses — `Host`,
 `hosted_container`, `optional_hosted_container`, `ContractVersion`, and
 `CONTRACT_VERSION`, all re-exported from `depin`. `depin.ext.asgi` and
-`depin.ext.wsgi` are the two that exercise the whole of it. This page states
-the contract, lists what depin ships on it, then builds one integration — a
-job runner — against it end to end.
+`depin.ext.wsgi` are the two that drive it per request: each holds a `Host`,
+opens a scope around the request, and applies the seed it was constructed with
+to the frame. `depin.ext.fastapi` reads the container back with
+`optional_hosted_container()`, and `Host.activated()` on its own is called by
+no integration depin ships — `tests/unit/test_hosting.py` covers it. This page
+states the contract, lists what depin ships on it, then builds one
+integration — a job runner — against it end to end.
 
 ## What an integration does
 
