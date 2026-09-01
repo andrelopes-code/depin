@@ -192,8 +192,22 @@ each integration's own message names its own setup step.
   click-backed, so the `minimum declared versions` job exercises `CommandContext`
   against click-backed Typer and the `latest released versions` job against
   vendored Typer — the protocol is proven across the split at both CI ends.
-- `taskiq>=0.11` — the middleware contract is identical on 0.11.0, 0.11.18 and
-  0.12.6.
+- `taskiq>=0.11.19` — **corrected from `>=0.11`, which was set by the wrong
+  guarantee.** The middleware contract *is* identical from 0.11.0, as measured;
+  what the floor actually turns on is something outside that contract. A
+  synchronous task body reaches the container only because Taskiq copies the
+  message's context into the executor thread, and `contextvars.copy_context()`
+  entered `Receiver.run_task` in **0.11.19**. Confirmed against every 0.11.x and
+  0.12.x wheel on PyPI: absent through 0.11.18, present from 0.11.19. Probed on
+  0.11.0, a sync task body raises `ContainerNotBoundError`; on 0.12.6 it reaches
+  the container, and resolving an async provider from it raises
+  `AsyncInSyncContextError`.
+
+  The floor is exact rather than defensive: the sync-body test fails at
+  `taskiq==0.11.18` and passes at `0.11.19`. It exists because the first version
+  of this integration documented the sync-body behaviour while declaring a floor
+  two-thirds of which did not have it, and no test exercised a sync body, so the
+  `minimum declared versions` job passed anyway.
 
 ## What Typer does not get
 
