@@ -1,7 +1,7 @@
 # WSGI request scope
 
 The framework-free middleware the Flask integration specialises. See
-[the integrations depin ships](../guide/integrations.md#the-integrations-depin-ships)
+[the request and response integrations](../guide/integrations.md#the-request-and-response-integrations)
 for which module to install.
 
 ::: depin.ext.wsgi.RequestScope

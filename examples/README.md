@@ -20,6 +20,7 @@ Every example is a runnable module and is executed by
 | [`integration`](integration/main.py) | `python -m examples.integration.main` | `Host` opening one scope per unit of work, a seeded frame value, and `hosted_container()` in a handler that holds no container. |
 | [`fastapi_app`](fastapi_app/main.py) | `uvicorn examples.fastapi_app.main:create_app --factory` | Registries, an app factory, one scope per request, `aclose()` on shutdown. |
 | [`starlette_app`](starlette_app/main.py) | `python -m examples.starlette_app.main` | `scope_value(Request)` for the request the middleware seeds, `hosted_container()` in a route that holds no container, one scope per request. |
+| [`click_app`](click_app/main.py) | `python -m examples.click_app.main` | Registries, a CLI factory, one scope per invocation opened in the group callback, the seeded `click.Context` and a tenant placed into the returned frame, `close()` at exit. |
 | [`eviction`](eviction/main.py) | `python -m examples.eviction.main` | `override()` replacing a key even after it was built, a consumer resolved earlier keeping its cached instance anyway, and `reset()` evicting that consumer so it sees the override — the pattern behind `depin.ext.pytest`'s `depin_override` fixture. |
 
 Install the extras first:

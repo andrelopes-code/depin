@@ -1,11 +1,15 @@
 """The examples under `examples/` are executed here so they cannot rot."""
 
 import pytest
+from click.testing import CliRunner
 from httpx import ASGITransport, AsyncClient
 
 from depin import ProviderShape, optional_hosted_container
 from examples.aliasing.main import Page, RedisStore
 from examples.aliasing.main import build as build_aliasing
+from examples.click_app.main import build_cli
+from examples.click_app.main import build_container as build_click_container
+from examples.click_app.registries import Database as ClickDatabase
 from examples.collections.main import Dispatcher, EmailHandler, Handler, SmsHandler, WebhookHandler
 from examples.collections.main import build as build_collections
 from examples.conditional.main import Checkout as SwitchedCheckout
@@ -342,3 +346,40 @@ async def test_starlette_example_accepts_an_injected_container() -> None:
     assert first.json()['db'] == second.json()['db'] == 'postgres://pinned'
     assert database.open_sessions == 0
     await di.aclose()
+
+
+def test_click_example_opens_one_scope_per_invocation() -> None:
+    di = build_click_container()
+    cli = build_cli(di)
+    runner = CliRunner()
+
+    first = runner.invoke(cli, ['--tenant', 'acme', 'report'])
+    second = runner.invoke(cli, ['--tenant', 'globex', 'report'])
+    health = runner.invoke(cli, ['health'])
+
+    assert first.exit_code == second.exit_code == health.exit_code == 0
+    # `tenant` came off an option through the frame `install` returned;
+    # `subcommand` off the `click.Context` the integration seeded.
+    assert first.output == 'tenant=acme subcommand=report db=postgres://example sessions=1\n'
+    assert second.output == 'tenant=globex subcommand=report db=postgres://example sessions=1\n'
+    # The per-invocation session was opened and closed again with the scope.
+    assert health.output == 'db=postgres://example open_sessions=0\n'
+    assert optional_hosted_container() is None
+    di.close()
+
+
+def test_click_example_accepts_an_injected_container() -> None:
+    di = build_click_container()
+    cli = build_cli(di)
+    # Mutating the singleton before the invocations is what turns the assertion
+    # below into an identity check: a second `Database` would report the URL
+    # `Settings` carries, not this one.
+    database = di[ClickDatabase]
+    database.url = 'postgres://pinned'
+
+    runner = CliRunner()
+    assert runner.invoke(cli, ['health']).output == 'db=postgres://pinned open_sessions=0\n'
+    assert runner.invoke(cli, ['report']).output.startswith('tenant=acme subcommand=report db=postgres://pinned')
+
+    di.close()
+    assert database.closed
