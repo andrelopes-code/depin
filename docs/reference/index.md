@@ -13,10 +13,14 @@ never retyped by hand.
 - [Integration contract](hosting.md) — `Host` and the ambient container.
 - [ASGI request scope](asgi.md) — the framework-free ASGI middleware, no extra required.
 - [WSGI request scope](wsgi.md) — the framework-free WSGI middleware, no extra required.
+- [Command scope](cli.md) — the framework-free command seam, no extra required.
 - [Starlette](starlette.md) — the ASGI middleware seeded with a `starlette.requests.Request`.
 - [FastAPI](fastapi.md) — `Inject[T]`, plus the Starlette middleware under its own name.
 - [Litestar](litestar.md) — the ASGI middleware seeded with a `litestar.Request`.
 - [Flask](flask.md) — the WSGI middleware seeded with a `flask.Request`.
+- [Click](click.md) — the command seam seeded with a `click.Context`.
+- [Typer](typer.md) — the command seam, seeding nothing.
+- [Taskiq](taskiq.md) — the middleware that opens one scope per message.
 - [pytest](pytest.md) — the callables the plugin's override fixtures return.
 
 Looking for prose instead? Start with the [guide](../guide/index.md).

@@ -75,8 +75,12 @@ nav:
       - Integration contract: reference/hosting.md
       - ASGI request scope: reference/asgi.md
       - WSGI request scope: reference/wsgi.md
+      - Command scope: reference/cli.md
       - Starlette: reference/starlette.md
       - FastAPI: reference/fastapi.md
       - Litestar: reference/litestar.md
       - Flask: reference/flask.md
+      - Click: reference/click.md
+      - Typer: reference/typer.md
+      - Taskiq: reference/taskiq.md
       - pytest: reference/pytest.md
