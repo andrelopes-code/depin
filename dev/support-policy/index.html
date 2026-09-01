@@ -716,6 +716,100 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Type checkers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#three-layers-and-what-each-checker-decides-in-each" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three layers, and what each checker decides in each
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#versions-and-targets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Versions and targets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimum-supported-equals-current-tested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum supported equals current tested
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#two-install-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two install modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#one-target-per-pull-request-four-more-once-a-week" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One target per pull request, four more once a week
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-anti-any-requirement-is-carried-by-two-checkers-not-five" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The anti-Any requirement is carried by two checkers, not five
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#two-known-false-negatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two known false negatives
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-ty-and-pyrefly-gate-against-a-register-on-layer-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why ty and Pyrefly gate against a register on Layer 1
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1424,6 +1518,100 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Type checkers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#three-layers-and-what-each-checker-decides-in-each" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three layers, and what each checker decides in each
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#versions-and-targets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Versions and targets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimum-supported-equals-current-tested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum supported equals current tested
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#two-install-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two install modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#one-target-per-pull-request-four-more-once-a-week" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One target per pull request, four more once a week
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-anti-any-requirement-is-carried-by-two-checkers-not-five" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The anti-Any requirement is carried by two checkers, not five
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#two-known-false-negatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two known false negatives
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-ty-and-pyrefly-gate-against-a-register-on-layer-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why ty and Pyrefly gate against a register on Layer 1
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1497,14 +1685,204 @@ the floor version.</p>
 those at their declared minimum in a dedicated job, so the floor is verified
 rather than assumed, and separately at the current release.</p>
 <h2 id="type-checkers">Type checkers<a class="headerlink" href="#type-checkers" title="Permanent link">&para;</a></h2>
-<p>The public API is verified under <code>basedpyright --strict</code> and <code>mypy --strict</code>, and
-a conformance suite asserts the inferred type of the public call sites it covers.
-Neither checker is treated as authoritative over the other: a change must
-satisfy both.</p>
-<p>Astral's <code>ty</code> runs in CI over the same code, advisorily: its job is allowed to
-fail without blocking a merge. <code>ty</code> is pre-1.0 on <code>0.0.x</code> versioning, and its
-own documentation warns that diagnostics can change between any two releases,
-so it is not yet part of the support commitment above.</p>
+<p>Five checkers are supported: mypy, stock Pyright, Basedpyright, ty and Pyrefly.
+Support is measured from where a user stands — a consumer project that installs
+the published wheel — and not from the repository checkout.</p>
+<h3 id="three-layers-and-what-each-checker-decides-in-each">Three layers, and what each checker decides in each<a class="headerlink" href="#three-layers-and-what-each-checker-decides-in-each" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>What is checked</th>
+<th>mypy</th>
+<th>stock Pyright</th>
+<th>Basedpyright</th>
+<th>ty</th>
+<th>Pyrefly</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Implementation</td>
+<td><code>depin tests examples scripts</code>, in the checkout</td>
+<td>zero, blocking</td>
+<td>zero, blocking</td>
+<td>zero, blocking</td>
+<td>register, blocking</td>
+<td>register, blocking</td>
+</tr>
+<tr>
+<td>2. Consumer contract</td>
+<td>a corpus of ordinary consumer code, against the installed wheel</td>
+<td>zero, blocking</td>
+<td>zero, blocking</td>
+<td>zero, blocking</td>
+<td>zero, blocking</td>
+<td>zero, blocking</td>
+</tr>
+<tr>
+<td>3. Forward probe</td>
+<td>both of the above, on the newest release of each checker</td>
+<td>advisory</td>
+<td>advisory</td>
+<td>advisory</td>
+<td>advisory</td>
+<td>advisory</td>
+</tr>
+</tbody>
+</table>
+<p>Layer 2 is the support commitment. It is the only layer whose object is the
+artifact a user installs, and every one of the five must report zero diagnostics
+on it. No checker is authoritative over another: a change must satisfy all five.</p>
+<p>Layer 1 keeps the existing discipline over private code, tests and examples.
+mypy and Basedpyright run it on every commit; stock Pyright, ty and Pyrefly run
+it in CI.</p>
+<p>Layer 3 is advisory by construction. An upstream release is not a merge blocker,
+but a failing probe opens a tracking issue naming the checker and the version,
+and the release checklist requires each open issue to be resolved one of three
+ways: make the new release green, retain and document the tested ceiling, or
+document a verified upstream blocker.</p>
+<h3 id="versions-and-targets">Versions and targets<a class="headerlink" href="#versions-and-targets" title="Permanent link">&para;</a></h3>
+<p><code>conformance/checkers.toml</code> is the only place these numbers appear. CI and the
+local runner both read it, so a local run reproduces the gate exactly.</p>
+<table>
+<thead>
+<tr>
+<th>Checker</th>
+<th>Tested version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mypy</td>
+<td>2.3.1</td>
+</tr>
+<tr>
+<td>stock Pyright</td>
+<td>1.1.411</td>
+</tr>
+<tr>
+<td>Basedpyright</td>
+<td>1.39.10</td>
+</tr>
+<tr>
+<td>ty</td>
+<td>0.0.77</td>
+</tr>
+<tr>
+<td>Pyrefly</td>
+<td>1.2.0</td>
+</tr>
+</tbody>
+</table>
+<p>The language target is Python 3.12 and the operating-system target is Linux.</p>
+<p>Stock Pyright is run independently of Basedpyright, at both layers. Basedpyright
+1.39.10 is built on a different pyright commit than stock Pyright 1.1.411 and
+carries a different rule set, so a Basedpyright result is not counted as a
+Pyright result.</p>
+<h3 id="minimum-supported-equals-current-tested">Minimum supported equals current tested<a class="headerlink" href="#minimum-supported-equals-current-tested" title="Permanent link">&para;</a></h3>
+<p>For all five checkers, the minimum supported version is the version in the table
+above. Exactly one version of each has been measured; naming a lower minimum
+would be a support claim with no evidence behind it.</p>
+<ul>
+<li>The <strong>tested</strong> version advances by a pull request that shows the whole suite
+  green on the new version. It never advances automatically.</li>
+<li>The <strong>minimum</strong> version advances with it, unless the weekly probe has measured
+  a lower version green and that measurement is recorded.</li>
+<li>A version is dropped when its line is superseded and no measurement is
+  retained for it.</li>
+</ul>
+<p>The probe's previous-release leg is what will make it possible to name a lower
+minimum honestly. Until then the two numbers are the same number.</p>
+<h3 id="two-install-modes">Two install modes<a class="headerlink" href="#two-install-modes" title="Permanent link">&para;</a></h3>
+<p>The consumer corpus is checked twice, against two interpreters built from the
+same wheel.</p>
+<ul>
+<li><strong>core-only</strong> installs <code>pydepin</code> alone. The corpus covers <code>depin</code>,
+  <code>depin.errors</code>, and the four <code>depin.ext</code> modules that import no third-party
+  package. The runner additionally asserts that all eight framework-requiring
+  <code>depin.ext</code> modules — <code>click</code>, <code>fastapi</code>, <code>flask</code>, <code>litestar</code>, <code>pytest</code>,
+  <code>starlette</code>, <code>taskiq</code>, <code>typer</code> — are <strong>unresolvable</strong> in this interpreter,
+  which is what proves the core carries no framework dependency.</li>
+<li><strong>all-extras</strong> installs the wheel with all eight extras named explicitly and
+  adds the eight framework modules to the corpus.</li>
+</ul>
+<h3 id="one-target-per-pull-request-four-more-once-a-week">One target per pull request, four more once a week<a class="headerlink" href="#one-target-per-pull-request-four-more-once-a-week" title="Permanent link">&para;</a></h3>
+<p>Each pull request runs one Python target, 3.12, and one operating system, Linux.
+The weekly probe runs 3.13 and 3.14, and Windows and macOS.</p>
+<p>The Python axis is a regression detector: the three targets were measured
+byte-identical for all five checkers in both install modes, so a per-pull-request
+matrix would triple the job count and buy nothing.</p>
+<p>The operating-system axis exists for the isolation guard, not for inference.
+What a checker infers from a wheel does not vary by host; path-ancestry
+comparison and <code>.pth</code> discovery in <code>site-packages</code> do, and those are what the
+guard rests on.</p>
+<h3 id="the-anti-any-requirement-is-carried-by-two-checkers-not-five">The anti-<code>Any</code> requirement is carried by two checkers, not five<a class="headerlink" href="#the-anti-any-requirement-is-carried-by-two-checkers-not-five" title="Permanent link">&para;</a></h3>
+<p><code>Any</code> satisfies an assignment in both directions, so neither an exact type
+assertion nor a typed witness detects it on its own. Two checker-native rules
+carry the requirement:</p>
+<ul>
+<li>Basedpyright with <code>reportAny</code> and <code>reportExplicitAny</code> at error, over the whole
+  positive corpus;</li>
+<li>mypy with <code>--disallow-any-expr</code>, over the core corpus only — in all-extras
+  mode, third-party annotations produce <code>Any</code> expressions the corpus does not
+  own.</li>
+</ul>
+<p>ty cannot express an anti-<code>Any</code> rule at all, and stock Pyright has no equivalent
+of <code>reportAny</code>. This requirement is therefore two checkers' and not five's, and
+the policy says so rather than implying coverage it does not have.</p>
+<h3 id="two-known-false-negatives">Two known false negatives<a class="headerlink" href="#two-known-false-negatives" title="Permanent link">&para;</a></h3>
+<p>Two public signatures accept a call they should reject. Both are recorded as
+divergence fixtures whose gate is each checker's verdict rather than rejection,
+and both are routed to the Step 8 surface review, which is the last window in
+which the call shape may change.</p>
+<table>
+<thead>
+<tr>
+<th>Call</th>
+<th>Verdict today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FrozenContainer.override(Config, Other())</code></td>
+<td>accepted by all five</td>
+</tr>
+<tr>
+<td><code>Container.value(Token[int], 'str')</code></td>
+<td>accepted by four; rejected by Pyrefly</td>
+</tr>
+</tbody>
+</table>
+<p>In both, the type variable appears in the key parameter and in the value
+parameter, so the solver widens it to the join of the two. The gate fails when a
+verdict moves in either direction: a checker that starts rejecting one is news to
+be recorded deliberately, and a checker that stops rejecting one is a loss of
+detection.</p>
+<p>Pyrefly rejects the second because it infers the phantom parameter of <code>Token[T]</code>
+as invariant where the typing specification's variance-inference algorithm tests
+covariance first, and where the other four infer covariance. That divergence is
+reported upstream as
+<a href="https://github.com/facebook/pyrefly/issues/4777">facebook/pyrefly#4777</a>, with a
+nine-line reproducer that imports nothing from depin.</p>
+<h3 id="why-ty-and-pyrefly-gate-against-a-register-on-layer-1">Why ty and Pyrefly gate against a register on Layer 1<a class="headerlink" href="#why-ty-and-pyrefly-gate-against-a-register-on-layer-1" title="Permanent link">&para;</a></h3>
+<p>On Layer 2 every checker is held at zero and no baseline file exists, because
+filtering known errors out of a positive fixture is not compatibility.</p>
+<p>The repository source is a different object. It writes every intentional negative
+as a <code># type: ignore[code]  # pyright: ignore[code]</code> pair, and ty reads neither
+spelling, so it re-reports code the other checkers have already been told about.
+Holding ty at zero there would mean either rewriting those suppressions to suit a
+<code>0.0.x</code> tool or hiding genuine upstream limitations.</p>
+<p>So ty and Pyrefly are gated against <code>conformance/expected/ty-source.txt</code> and
+<code>conformance/expected/pyrefly-source.txt</code>. Each line is a <code>file:rule:count</code>
+triple with a one-line classification, and the job fails three ways: on a
+diagnostic no entry carries, on an entry that no longer appears, and on a count
+that moves in either direction.</p>
+<p>That is stricter than the advisory job it replaced, not more lenient. The
+previous arrangement ended in <code>exit 0</code> and could not fail. A register cannot
+absorb a second diagnostic of a rule it already knows about, cannot absorb a
+diagnostic in a file it does not name, and forces a deliberate edit — with a
+written classification — before any of that changes.</p>
 
 
 
