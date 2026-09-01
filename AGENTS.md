@@ -199,6 +199,25 @@ and listed in `examples/README.md`.
 - Body only when context is needed beyond the subject.
 - **Do not add co-author trailers, tool attributions, or any reference to automation / assistants / AI in commits, PR descriptions, or code.** Everything in the history must read as written by the repository authors.
 
+### Which prefixes cut a release
+
+`release-please-config.json` lists every prefix under `changelog-sections`, and
+the ones marked `hidden` produce no changelog entry. A release is skipped
+entirely when the changelog would be empty, so **only `feat:`, `fix:`, `perf:`,
+`deps:` and `revert:` open a release pull request**. Everything else — `docs:`,
+`chore:`, `refactor:`, `test:`, `build:`, `ci:`, `style:` — rides along in the
+next release that a user-facing change creates.
+
+This is deliberate. A version published to PyPI is a claim that something
+changed for the person installing it; a roadmap edit or a test refactor is not
+that. Four patch releases were cut for documentation before the sections were
+declared explicitly.
+
+The one case that needs care is a **declared dependency floor**, which is
+user-facing but conventionally written as `build:`. Widening a floor can wait
+for the next release. Raising one changes what a consumer can install, so write
+it as `fix:` and let it cut a release of its own.
+
 ## What not to do
 
 - Do not use `# type: ignore`, `# pyright: ignore`, `typing.cast`, or `Any` as shortcuts.
