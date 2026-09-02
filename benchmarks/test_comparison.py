@@ -1,8 +1,10 @@
 import pytest
 
+from benchmarks.comparison.adapters.dependency_injector import ADAPTER, warm_chain
 from benchmarks.comparison.shapes import chain, observation
 from benchmarks.contracts import Observation
 from benchmarks.harness import HarnessError
+from benchmarks.workloads import WORKLOADS
 
 
 def test_chain_constructs_a_typed_five_node_observation() -> None:
@@ -58,3 +60,33 @@ def test_chain_creates_fresh_nodes_and_an_isolated_log() -> None:
 def test_chain_rejects_a_non_positive_size(size: int) -> None:
     with pytest.raises(HarnessError, match='chain size must be at least one'):
         _ = chain(size)
+
+
+def test_dependency_injector_warm_singleton_matches_depin_and_uses_thread_safe_provider() -> None:
+    workload = next(workload for workload in WORKLOADS if workload.name == 'resolve_cached_singleton')
+    candidate = next(candidate for candidate in ADAPTER.candidates(WORKLOADS) if candidate.workload == workload.name)
+    provider = warm_chain(1).leaf
+
+    assert candidate.competitor.distribution == 'dependency-injector'
+    assert candidate.competitor.version == '4.49.1'
+    assert candidate.implementation is not None
+    assert candidate.implementation.observe() == workload.subject.observe()
+    assert type(provider).__name__ == 'ThreadSafeSingleton'
+
+    prepared = candidate.implementation.prepare()
+    assert prepared.close is not None
+    first = prepared.call()
+    prepared.close()
+    second = prepared.call()
+    prepared.close()
+    assert first is not second
+
+
+def test_dependency_injector_transient_chain_matches_depin() -> None:
+    workload = next(workload for workload in WORKLOADS if workload.name == 'resolve_a_transient_chain')
+    candidate = next(candidate for candidate in ADAPTER.candidates(WORKLOADS) if candidate.workload == workload.name)
+
+    assert candidate.competitor.distribution == 'dependency-injector'
+    assert candidate.competitor.version == '4.49.1'
+    assert candidate.implementation is not None
+    assert candidate.implementation.observe() == workload.subject.observe()
