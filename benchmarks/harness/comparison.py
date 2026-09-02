@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Sequence
 from importlib import metadata
 from pathlib import Path
@@ -168,6 +169,12 @@ def _validate_raw(report: Path, *, repetition: int, order: str, expected: set[st
         for field in ('stddev', 'iqr', 'max', 'total', 'duration'):
             if field in stats:
                 _finite(stats[field], where=f'{where}.stats.{field}')
+        if 'data' in stats:
+            rounds_data = require_array(stats['data'], f'{where}.stats.data')
+            if not rounds_data:
+                raise HarnessError(f'{where}.stats.data is empty; repair the pytest-benchmark report')
+            for round_index, round_value in enumerate(rounds_data):
+                _finite(round_value, where=f'{where}.stats.data[{round_index}]', positive=True)
         if 'duration' in fields:
             _finite(fields['duration'], where=f'{where}.duration')
     missing = sorted(expected - names)
@@ -188,6 +195,10 @@ def _timeout_text(value: str | bytes | None) -> str:
     if value is None:
         return ''
     return value.decode() if isinstance(value, bytes) else value
+
+
+def _monotonic() -> float:
+    return time.monotonic()
 
 
 def _run(
@@ -247,8 +258,9 @@ def collect(
     """Run the protocol and write its reduced evidence dataset."""
     if repetitions < DEFAULT_REPETITIONS:
         raise HarnessError(f'{repetitions} repetitions; the protocol needs at least five')
-    if timeout_seconds <= 0:
-        raise HarnessError(f'{timeout_seconds} timeout seconds; the child timeout must be positive')
+    if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
+        raise HarnessError(f'{timeout_seconds} timeout seconds; the child timeout must be finite and positive')
+    deadline = _monotonic() + timeout_seconds
     revision, pins = _preflight(allow_dirty=allow_dirty)
     expected = _expected_ids()
     repetitions_data: list[dict[str, object]] = []
@@ -256,13 +268,19 @@ def collect(
     scratch_parent.mkdir(parents=True, exist_ok=True)
     for index in range(repetitions):
         order = 'forward' if index % 2 == 0 else 'reverse'
+        remaining = deadline - _monotonic()
+        if remaining <= 0.0:
+            raise HarnessError(
+                f'repetition {index} ({order}) reached the total collection deadline before child spawn; '
+                'increase --timeout-seconds or reduce the collection workload'
+            )
         with tempfile.TemporaryDirectory(dir=scratch_parent, prefix=f'.{out.name}-') as scratch:
             aggregates = _run(
                 command,
                 Path(scratch) / 'report.json',
                 order,
                 repetition=index,
-                timeout_seconds=timeout_seconds,
+                timeout_seconds=remaining,
                 expected=expected,
             )
         medians = {name: aggregate.median for name, aggregate in sorted(aggregates.items())}

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 import benchmarks.harness.comparison as comparison
-from benchmarks.harness import HarnessError
+from benchmarks.harness import HarnessError, reduce
 
 EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
 
@@ -41,6 +41,12 @@ elif mutation == 'nan_median':
     benchmarks[0]['stats']['median'] = float('nan')
 elif mutation == 'infinite_mean':
     benchmarks[0]['stats']['mean'] = float('inf')
+elif mutation == 'nan_data':
+    benchmarks[0]['stats']['data'][0] = float('nan')
+elif mutation == 'negative_data':
+    benchmarks[0]['stats']['data'][0] = -1.0
+elif mutation == 'infinite_data':
+    benchmarks[0]['stats']['data'][0] = float('inf')
 with open(report, 'w', encoding='utf-8') as stream:
     json.dump({'benchmarks': benchmarks}, stream)
 with open(os.environ['CALL_LOG'], 'a', encoding='utf-8') as stream:
@@ -202,6 +208,9 @@ raise SystemExit(23)
         ('negative_minimum', 'stats.min'),
         ('nan_median', 'median'),
         ('infinite_mean', 'mean'),
+        ('nan_data', r'data\[0\]'),
+        ('negative_data', r'data\[0\]'),
+        ('infinite_data', r'data\[0\]'),
     ],
 )
 def test_collection_refuses_malformed_or_incomplete_raw_reports(
@@ -222,19 +231,61 @@ def test_collection_refuses_malformed_or_incomplete_raw_reports(
 
 def test_collection_times_out_a_blocked_child_and_cleans_up(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     child = tmp_path / 'blocked.py'
-    child.write_text('import signal\nsignal.pause()\n', encoding='utf-8')
+    child.write_text("import signal\nprint('blocked-marker', flush=True)\nsignal.pause()\n", encoding='utf-8')
     monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
     monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
 
-    with pytest.raises(HarnessError, match='timed out'):
-        _ = comparison.collect(
-            repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'), timeout_seconds=0.01
-        )
+    with pytest.raises(HarnessError, match='blocked-marker') as raised:
+        _ = comparison.collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'), timeout_seconds=1)
 
+    assert 'repetition 0 (forward)' in str(raised.value)
+    assert str(child) in str(raised.value)
     assert not list(tmp_path.rglob('report.json'))
+
+
+def test_collection_uses_one_total_deadline_and_refuses_a_second_spawn_after_expiry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[float] = []
+    clock = iter((100.0, 101.0, 111.0))
+
+    def monotonic() -> float:
+        return next(clock)
+
+    def run(
+        _: tuple[str, ...],
+        __: Path,
+        ___: str,
+        *,
+        repetition: int,
+        timeout_seconds: int | float,
+        expected: set[str],
+    ) -> dict[str, reduce.Aggregate]:
+        calls.append(float(timeout_seconds))
+        return {
+            'test_comparison[resolve-depin]': reduce.Aggregate(
+                'test_comparison[resolve-depin]', 1000, 1.0, 2.0, 2.0, 0.0, 0.0
+            ),
+            'test_comparison[resolve-wireup-2.12.0]': reduce.Aggregate(
+                'test_comparison[resolve-wireup-2.12.0]', 1000, 1.0, 2.0, 2.0, 0.0, 0.0
+            ),
+        }
+
+    monkeypatch.setattr(comparison, '_monotonic', monotonic)
+    monkeypatch.setattr(comparison, '_run', run)
+    monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
+    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
+    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+
+    with pytest.raises(HarnessError, match='before child'):
+        _ = comparison.collect(repetitions=5, out=tmp_path / 'out', timeout_seconds=10)
+
+    assert calls == [9.0]
 
 
 @pytest.mark.parametrize('failure', ['write', 'replace'])
@@ -271,3 +322,4 @@ def test_atomic_collection_preserves_existing_evidence_when_finalization_fails(
         _ = comparison.collect(repetitions=5, out=destination.parent, command=(str(child), '{report}'))
 
     assert destination.read_text(encoding='utf-8') == '{"existing": true}\n'
+    assert not (destination.parent / '.comparison.json.tmp').exists()
