@@ -7,6 +7,7 @@ tie-break included.
 """
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import pytest
@@ -20,9 +21,9 @@ from depin._core.spec import Ident, ParamSpec, ProviderKey, ProviderShape, Provi
 from depin.errors import MissingProviderError
 
 # Hypothesis-driven property module; its slowest case runs under a second, and
-# the two complexity cases assert half-second and fifth-of-a-second budgets of
-# their own. Fifteen seconds is the same margin the other property modules take,
-# and still catches the hung mutant the mutation gate's --timeout=2 targets.
+# the two complexity cases measure two sizes three times each. Fifteen seconds is
+# the same margin the other property modules take, and still catches the hung
+# mutant the mutation gate's --timeout=2 targets.
 pytestmark = pytest.mark.timeout(15)
 
 type _Reference = dict[Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]]
@@ -294,38 +295,89 @@ def _layered_namespace(size: int) -> dict[str, object]:
     return namespace
 
 
-def test_failing_freeze_is_not_cubic_in_the_chain_length() -> None:
-    """400 providers deep, reported well inside half a second.
+CUBIC_GROWTH_LIMIT = 3.0
+"""What doubling a chain may multiply the failing-freeze cost by.
 
-    The enumerating walk took 1.4 s on the host this was written on and grew as
-    the cube of the chain length. The budget states a complexity class, not a
-    timing: it leaves the dynamic program two orders of magnitude of headroom
-    for a shared runner while staying under what the walk it replaced reached.
+Doubling the length doubles a linear walk and multiplies a cubic one by eight.
+Measured over 200 and 400 providers: **1.80** as the repaired code stands, and
+**5.91** with `benchmarks/seeds/scaling-restore-enumerating-walk.patch` applied.
+Three sits between them with room on both sides.
+"""
+
+PATH_GROWTH_LIMIT = 2.0
+"""What going from 16 to 24 nodes may multiply the missing-key walk's cost by.
+
+The number of simple paths through a fan-in-2 DAG is Fibonacci in its size, so
+those eight nodes multiply the path count by about eighteen. Measured: **1.00**
+repaired, **33.84** seeded.
+"""
+
+
+def _growth(smaller: Callable[[], object], larger: Callable[[], object]) -> float:
+    """How much more the larger case costs, as the best of three runs on each.
+
+    A ratio rather than a budget, because a wall-clock budget states a host. The
+    previous form of these two checks asserted half a second and a fifth of a
+    second, and the seeded cubic walk came in at 0.42 s against the first of them
+    — passing, on a host faster than the one the budget was written on. A ratio
+    cancels the host and leaves the complexity class, which is what is being
+    asserted. The best of three is kept because a scheduling hiccup can only
+    lengthen a run.
     """
-    container = _bind_all(_chain_namespace(400), 400)
-
-    start = time.perf_counter()
-    with pytest.raises(MissingProviderError, match='no provider for Missing'):
-        _ = container.freeze()
-    elapsed = time.perf_counter() - start
-
-    assert elapsed < 0.5
+    return min(_elapsed(larger) for _ in range(3)) / min(_elapsed(smaller) for _ in range(3))
 
 
-def test_explain_of_an_unbound_key_is_not_exponential_in_the_path_count() -> None:
-    """A 24-node fan-in-2 DAG carries Fibonacci-many simple paths.
+def _elapsed(operation: Callable[[], object]) -> float:
+    started = time.perf_counter()
+    _ = operation()
+    return time.perf_counter() - started
 
-    The enumerating walk took 0.36 s on the host this was written on and roughly
-    tripled every four nodes. Same budget rationale as the freeze case.
-    """
-    namespace = _layered_namespace(24)
-    frozen = _bind_all(namespace, 24).freeze()
+
+def _failing_freeze(size: int) -> Callable[[], object]:
+    """Freeze a chain of `size` providers whose deepest node needs an unbound key."""
+    container = _bind_all(_chain_namespace(size), size)
+
+    def attempt() -> object:
+        try:
+            return container.freeze()
+        except MissingProviderError as failure:
+            # Returned rather than raised: the caller times this, and an
+            # exception crossing the timed region would be measured as one.
+            return failure
+
+    return attempt
+
+
+def _explain_absent(size: int) -> Callable[[], str]:
+    namespace = _layered_namespace(size)
+    frozen = _bind_all(namespace, size).freeze()
     absent = namespace['Absent']
     assert isinstance(absent, type)
+    return lambda: frozen.explain(absent)
 
-    start = time.perf_counter()
-    reported = frozen.explain(absent)
-    elapsed = time.perf_counter() - start
 
-    assert 'no provider for Absent' in reported
-    assert elapsed < 0.2
+def test_failing_freeze_does_not_grow_cubically_with_the_chain_length() -> None:
+    """The chain the error names is found by a dynamic program, not by enumeration.
+
+    The walk this replaced was cubic in the chain length. What pins that is the
+    growth between two sizes rather than the cost at one: the path also carries
+    `suggest_candidates` scanning `sys.modules`, a constant of about 11 ms here
+    that has nothing to do with the graph, and a single-size budget measures the
+    constant as much as the walk.
+    """
+    reported = _failing_freeze(200)()
+
+    assert isinstance(reported, MissingProviderError)
+    assert 'no provider for Missing' in str(reported)
+    assert _growth(_failing_freeze(200), _failing_freeze(400)) < CUBIC_GROWTH_LIMIT
+
+
+def test_explain_of_an_unbound_key_does_not_grow_with_the_path_count() -> None:
+    """`explain()` reports the deepest chain without enumerating the paths to it.
+
+    Same shape of assertion, and the same reason: the rendering shares the module
+    scan, so the growth between two sizes is what isolates the walk.
+    """
+    assert 'no provider for Absent' in _explain_absent(24)()
+
+    assert _growth(_explain_absent(16), _explain_absent(24)) < PATH_GROWTH_LIMIT

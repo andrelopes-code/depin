@@ -62,10 +62,12 @@ RETIRED: tuple[Retirement, ...] = (
             'watched was repaired; the repair is what left the constant in charge.'
         ),
         covered_by=(
-            '`tests/unit/test_longest_chain.py::test_failing_freeze_is_not_cubic_in_the_chain_length`, which '
-            'asserts a complexity class over 400 providers on a budget two orders of magnitude above the '
-            'constant, and the fixed-size latency workloads `freeze_a_chain_missing_a_provider_of_50` and '
-            '`_of_100`.'
+            '`tests/unit/test_longest_chain.py::test_failing_freeze_does_not_grow_cubically_with_the_chain_'
+            'length`, which compares 200 providers against 400 — the sizes at which the walk overtakes the '
+            'constant — and reads 1.80 repaired against 5.91 with the cubic walk restored. It replaced a '
+            'half-second wall-clock budget that the same seeded walk passed at 0.42 s, on a host faster than '
+            'the one that budget was written on. The fixed-size latency workloads '
+            '`freeze_a_chain_missing_a_provider_of_50` and `_of_100` cover the path as well.'
         ),
     ),
     Retirement(
@@ -79,9 +81,11 @@ RETIRED: tuple[Retirement, ...] = (
             'that quantity.'
         ),
         covered_by=(
-            '`tests/unit/test_longest_chain.py::test_explain_of_an_unbound_key_is_not_exponential_in_the_'
-            'path_count`, over a 24-node fan-in-2 DAG, and the fixed-size latency workloads '
-            '`explain_an_unbound_key_of_16` and `_of_20`.'
+            '`tests/unit/test_longest_chain.py::test_explain_of_an_unbound_key_does_not_grow_with_the_path_'
+            'count`, which compares a 16-node fan-in-2 DAG against a 24-node one — eighteen times the simple '
+            'paths — and reads 1.00 repaired against 24.94 with the enumerating walk restored. The '
+            'fixed-size latency workloads `explain_an_unbound_key_of_16` and `_of_20` cover the path as '
+            'well.'
         ),
     ),
 )
