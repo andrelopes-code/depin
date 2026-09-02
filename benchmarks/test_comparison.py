@@ -214,3 +214,53 @@ def test_dishka_candidates_cover_workloads_in_order_with_three_equivalent_shapes
         assert implementation.observe() == subjects[name].observe()
 
     assert all(candidate.reason for candidate in candidates if candidate.equivalence is not Equivalence.EQUIVALENT)
+
+
+def test_dishka_prepared_calls_preserve_core_lifetimes_and_allow_repeated_cleanup() -> None:
+    candidates = {candidate.workload: candidate for candidate in dishka_adapter.ADAPTER.candidates(WORKLOADS)}
+    values: dict[str, tuple[object, object]] = {}
+
+    for name in ('resolve_cached_singleton', 'resolve_a_transient_chain', 'open_and_close_a_scope'):
+        implementation = candidates[name].implementation
+        assert implementation is not None
+        prepared = implementation.prepare()
+        close = prepared.close
+        assert close is not None
+        try:
+            values[name] = (prepared.call(), prepared.call())
+        finally:
+            close()
+            close()
+
+    assert values['resolve_cached_singleton'][0] is values['resolve_cached_singleton'][1]
+    assert values['resolve_a_transient_chain'][0] is not values['resolve_a_transient_chain'][1]
+    assert values['open_and_close_a_scope'][0] is not values['open_and_close_a_scope'][1]
+
+
+def test_dishka_scoped_prepared_cycle_closes_a_real_request_resource() -> None:
+    log: list[str] = []
+    implementation = dishka_adapter.scoped_teardown_implementation(log)
+    prepared = implementation.prepare()
+    close = prepared.close
+    assert close is not None
+    try:
+        _ = prepared.call()
+        _ = prepared.call()
+    finally:
+        close()
+        close()
+
+    assert log == ['opened', 'closed', 'opened', 'closed']
+
+
+def test_dishka_root_cleanup_closes_a_real_app_resource_once() -> None:
+    log: list[str] = []
+    prepared = dishka_adapter.app_teardown_prepared(log)
+    close = prepared.close
+    assert close is not None
+
+    _ = prepared.call()
+    close()
+    close()
+
+    assert log == ['opened', 'closed']
