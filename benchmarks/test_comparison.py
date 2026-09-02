@@ -1,5 +1,6 @@
 from collections.abc import Callable, Generator
 from importlib.metadata import PackageNotFoundError
+from typing import Protocol
 
 import pytest
 
@@ -10,7 +11,7 @@ import benchmarks.comparison.adapters.wireup as wireup_adapter
 from benchmarks.comparison.adapters.dependency_injector import ADAPTER, warm_chain
 from benchmarks.comparison.contracts import Competitor, Equivalence
 from benchmarks.comparison.shapes import Chain, chain, observation
-from benchmarks.contracts import Observation
+from benchmarks.contracts import Observation, Prepared
 from benchmarks.harness import HarnessError
 from benchmarks.workloads import WORKLOADS
 from benchmarks.workloads.micro import CHAIN_DEPTH, HOT_GRAPH
@@ -18,6 +19,24 @@ from benchmarks.workloads.micro import CHAIN_DEPTH, HOT_GRAPH
 
 class _TrackedResource:
     pass
+
+
+class _RegistryCloseMarker:
+    pass
+
+
+class _RegistryWithCloseCallback(Protocol):
+    def register_factory(
+        self,
+        svc_type: type[object],
+        factory: Callable[..., object],
+        *,
+        on_registry_close: Callable[[], None],
+    ) -> None: ...
+
+
+def _register_close_callback(registry: _RegistryWithCloseCallback, callback: Callable[[], None]) -> None:
+    registry.register_factory(_RegistryCloseMarker, _RegistryCloseMarker, on_registry_close=callback)
 
 
 def _tracked_chain_builder(log: list[str], expected_size: int) -> Callable[[int], Chain]:
@@ -496,3 +515,35 @@ def test_svcs_candidates_cover_workloads_in_order_with_one_partial_shape() -> No
         'resolve_cached_singleton',
     )
     assert all(candidate.reason for candidate in candidates if candidate.equivalence is not Equivalence.EQUIVALENT)
+
+
+def test_svcs_partial_candidate_observes_the_subject_construction_order() -> None:
+    workload = next(workload for workload in WORKLOADS if workload.name == 'resolve_cached_singleton')
+    candidate = next(
+        candidate for candidate in svcs_adapter.ADAPTER.candidates(WORKLOADS) if candidate.workload == workload.name
+    )
+
+    assert candidate.implementation is not None
+    assert candidate.implementation.observe() == workload.subject.observe()
+
+
+def test_svcs_closes_container_cache_and_registry_callback_once() -> None:
+    close_log: list[str] = []
+
+    def record_registry_close() -> None:
+        close_log.append('registry')
+
+    chain = svcs_adapter.warm_chain(1)
+    _register_close_callback(chain.registry, record_registry_close)
+    first = chain.container.get(chain.shape.leaf)
+    chain.container.close()
+    second = chain.container.get(chain.shape.leaf)
+
+    prepared = Prepared(call=lambda: second, close=chain.close)
+    close = prepared.close
+    assert close is not None
+    close()
+    close()
+
+    assert first is not second
+    assert close_log == ['registry']

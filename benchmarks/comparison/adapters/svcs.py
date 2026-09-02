@@ -96,6 +96,8 @@ def _implementation() -> Implementation:
     def observe() -> Observation:
         observed = warm_chain(HOT_GRAPH)
         try:
+            _ = observed.container.get(observed.shape.leaf)
+            observed.shape.log.clear()
             value = observed.container.get(observed.shape.leaf)
             return observation(observed.shape, value)
         finally:

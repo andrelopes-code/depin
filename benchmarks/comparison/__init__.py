@@ -5,3 +5,5 @@ from benchmarks.comparison.inventory import build as _build
 WORKLOADS = _build()
 
 del _build
+
+__all__ = ('WORKLOADS',)

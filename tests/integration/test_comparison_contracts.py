@@ -254,7 +254,13 @@ def test_comparative_inventory_covers_every_workload_in_adapter_order() -> None:
 
 
 def test_comparison_namespace_exports_only_the_workload_inventory() -> None:
+    namespace: dict[str, object] = {}
+    exec('from benchmarks.comparison import *', namespace)
+
     assert not hasattr(comparison, 'build')
+    assert comparison.__all__ == ('WORKLOADS',)
+    assert {name for name in namespace if name != '__builtins__'} == {'WORKLOADS'}
+    assert namespace['WORKLOADS'] is COMPARATIVE_WORKLOADS
 
 
 @dataclass(frozen=True, slots=True)
