@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://andrelopes-code.github.io/depin/0.17/guide/testing/">
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/0.17/performance/results/">
       
       
-        <link rel="prev" href="../resolution/">
+        <link rel="prev" href="../methodology/">
       
       
-        <link rel="next" href="../diagnostics/">
+        <link rel="next" href="../reproducing/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Testing - depin</title>
+        <title>Results - depin</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#testing" class="md-skip">
+        <a href="#measured-results" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Testing
+              Results
             
           </span>
         </div>
@@ -290,8 +290,6 @@
       
   
   
-    
-  
   
   
     
@@ -304,11 +302,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
@@ -329,12 +327,325 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
   
     Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/lifetimes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifetimes and scopes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/composition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Composing bindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/resolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resolution semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inspecting the graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing an integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/fastapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastAPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance
   
 
           </label>
@@ -375,70 +686,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../lifetimes/" class="md-nav__link">
+      <a href="../methodology/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Lifetimes and scopes
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../composition/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Composing bindings
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../resolution/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Resolution semantics
+    Methodology
   
 
     
@@ -475,7 +730,7 @@
   <span class="md-ellipsis">
     
   
-    Testing
+    Results
   
 
     
@@ -493,7 +748,7 @@
   <span class="md-ellipsis">
     
   
-    Testing
+    Results
   
 
     
@@ -519,10 +774,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overriding-a-provider" class="md-nav__link">
+  <a href="#environment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overriding a provider
+        Environment
       
     </span>
   </a>
@@ -530,10 +785,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#a-pytest-fixture" class="md-nav__link">
+  <a href="#latency" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A pytest fixture
+        Latency
       
     </span>
   </a>
@@ -541,10 +796,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-pytest-plugin" class="md-nav__link">
+  <a href="#work" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The pytest plugin
+        Work
       
     </span>
   </a>
@@ -552,10 +807,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#replacing-bindings-instead-of-overriding-them" class="md-nav__link">
+  <a href="#allocations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Replacing bindings instead of overriding them
+        Allocations
       
     </span>
   </a>
@@ -563,10 +818,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#wiring-a-function-under-test" class="md-nav__link">
+  <a href="#retained-memory" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Wiring a function under test
+        Retained memory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaling
       
     </span>
   </a>
@@ -589,262 +855,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../diagnostics/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Inspecting the graph
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operations/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Warmup and health
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../integrations/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Writing an integration
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../fastapi/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    FastAPI
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Performance
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Performance
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../performance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../performance/methodology/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Methodology
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../performance/results/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Results
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../performance/reproducing/" class="md-nav__link">
+      <a href="../reproducing/" class="md-nav__link">
         
   
   
@@ -1545,10 +1556,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overriding-a-provider" class="md-nav__link">
+  <a href="#environment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overriding a provider
+        Environment
       
     </span>
   </a>
@@ -1556,10 +1567,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#a-pytest-fixture" class="md-nav__link">
+  <a href="#latency" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A pytest fixture
+        Latency
       
     </span>
   </a>
@@ -1567,10 +1578,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-pytest-plugin" class="md-nav__link">
+  <a href="#work" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The pytest plugin
+        Work
       
     </span>
   </a>
@@ -1578,10 +1589,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#replacing-bindings-instead-of-overriding-them" class="md-nav__link">
+  <a href="#allocations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Replacing bindings instead of overriding them
+        Allocations
       
     </span>
   </a>
@@ -1589,10 +1600,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#wiring-a-function-under-test" class="md-nav__link">
+  <a href="#retained-memory" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Wiring a function under test
+        Retained memory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaling
       
     </span>
   </a>
@@ -1619,183 +1641,704 @@
   
 
 
-<h1 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h1>
-<p>The point of wiring by type is that a test can substitute any node of the graph
-without the code under test noticing.</p>
-<h2 id="overriding-a-provider">Overriding a provider<a class="headerlink" href="#overriding-a-provider" title="Permanent link">&para;</a></h2>
-<p><code>override()</code> replaces a key for the duration of a block, everywhere it appears —
-including deep in the graph, as a dependency of something else:</p>
-<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Clock</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">now</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'real'</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Report</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">clock</span><span class="p">:</span> <span class="n">Clock</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">clock</span> <span class="o">=</span> <span class="n">clock</span>
-<span class="gp">...</span>
-<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="gp">... </span>        <span class="k">return</span> <span class="sa">f</span><span class="s1">'at </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">clock</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">}</span><span class="s1">'</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">FrozenClock</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">now</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="gp">... </span>        <span class="k">return</span> <span class="s1">'2026-01-01'</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Clock</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Report</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">di</span><span class="o">.</span><span class="n">override</span><span class="p">(</span><span class="n">Clock</span><span class="p">,</span> <span class="n">FrozenClock</span><span class="p">()):</span>
-<span class="gp">... </span>    <span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
-<span class="go">'at 2026-01-01'</span>
-</code></pre></div>
-<p>Three details worth knowing:</p>
-<ul>
-<li>If the replacement is a callable that is not a class, it is treated as a
-  factory and invoked per resolution. Anything else is returned as-is.</li>
-<li>The override is bound to the current <code>contextvars.Context</code>, so concurrent
-  tests do not leak into each other.</li>
-<li>Overrides nest, innermost wins, and a key that was never bound at all can be
-  overridden — useful for a dependency you only stub.</li>
-</ul>
-<div class="admonition note">
-<p class="admonition-title">What survives an override</p>
-<p><code>override()</code> replaces the key immediately, even for a singleton already
-built. What survives is a <em>consumer</em> — a value built before the block
-keeps the instance it was constructed with, because a provider's arguments
-are resolved once, at construction time:</p>
-<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Clock</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Report</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">di</span><span class="o">.</span><span class="n">override</span><span class="p">(</span><span class="n">Clock</span><span class="p">,</span> <span class="n">FrozenClock</span><span class="p">()):</span>
-<span class="gp">... </span>    <span class="n">di</span><span class="p">[</span><span class="n">Clock</span><span class="p">]</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
-<span class="gp">... </span>    <span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
-<span class="go">'2026-01-01'</span>
-<span class="go">'at real'</span>
-</code></pre></div>
-<p><code>reset()</code> drops every built singleton's cache, so the next resolution of
-<code>Report</code> rebuilds it and picks up the override that is active at that
-point:</p>
-<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">di</span><span class="o">.</span><span class="n">override</span><span class="p">(</span><span class="n">Clock</span><span class="p">,</span> <span class="n">FrozenClock</span><span class="p">()):</span>
-<span class="gp">... </span>    <span class="n">di</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-<span class="gp">... </span>    <span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
-<span class="go">'at 2026-01-01'</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
-<span class="go">'at real'</span>
-</code></pre></div>
-<p>The <code>depin.ext.pytest</code> fixtures below call <code>reset()</code> on both edges of the
-block, so a test never has to reason about which <em>singletons in the root
-cache</em> were built first. A scoped value already cached in an open
-<code>depin_scope</code> frame is outside that cache: neither edge evicts it, so it
-keeps the dependency it was built with for as long as the scope stays
-open.</p>
-</div>
-<h2 id="a-pytest-fixture">A pytest fixture<a class="headerlink" href="#a-pytest-fixture" title="Permanent link">&para;</a></h2>
-<p>Freezing is cheap and gives every test an isolated cache:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">myapp.wiring</span><span class="w"> </span><span class="kn">import</span> <span class="n">build</span>
-
-
-<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">di</span><span class="p">():</span>
-    <span class="n">container</span> <span class="o">=</span> <span class="n">build</span><span class="p">()</span>
-    <span class="k">yield</span> <span class="n">container</span>
-    <span class="n">container</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">test_report_uses_the_clock</span><span class="p">(</span><span class="n">di</span><span class="p">):</span>
-    <span class="k">with</span> <span class="n">di</span><span class="o">.</span><span class="n">override</span><span class="p">(</span><span class="n">Clock</span><span class="p">,</span> <span class="n">FrozenClock</span><span class="p">()):</span>
-        <span class="k">assert</span> <span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span> <span class="o">==</span> <span class="s1">'at 2026-01-01'</span>
-</code></pre></div>
-<p>For an async graph use <code>aclose()</code> in the teardown half of the fixture.</p>
-<h2 id="the-pytest-plugin">The pytest plugin<a class="headerlink" href="#the-pytest-plugin" title="Permanent link">&para;</a></h2>
-<p><code>depin.ext.pytest</code> is registered on the <code>pytest11</code> entry point by the
-distribution, so installing <code>pydepin</code> at all makes its fixtures available in
-any suite with no <code>conftest.py</code> import. The <code>pytest</code> extra adds nothing to
-that: it only states the pytest floor the plugin is tested against.</p>
-<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>add<span class="w"> </span>pydepin<span class="w">                </span><span class="c1"># the fixtures are already available</span>
-uv<span class="w"> </span>add<span class="w"> </span><span class="s1">'pydepin[pytest]'</span><span class="w">      </span><span class="c1"># and the tested pytest floor is enforced</span>
-</code></pre></div>
-<p>The plugin defines <code>depin_container</code> itself, but only to raise: a suite that
-never hands it a container gets a <code>ContainerNotBoundError</code> naming the fixture
-to define. Add one to your own <code>conftest.py</code>; every other fixture builds on
-whatever it returns:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">FrozenContainer</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">myapp.wiring</span><span class="w"> </span><span class="kn">import</span> <span class="n">build</span>
-
-
-<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">depin_container</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">FrozenContainer</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">build</span><span class="p">()</span>
-</code></pre></div>
-<p><code>depin_override</code> is <code>depin_container</code>'s <code>override()</code> with the fix from the
-note above already applied — it calls <code>reset()</code> before entering the block and
-again on exit:</p>
-<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">test_report_uses_the_fake_clock</span><span class="p">(</span><span class="n">depin_container</span><span class="p">,</span> <span class="n">depin_override</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="c1"># Report is a singleton and is already built here, before the override.</span>
-    <span class="n">real</span> <span class="o">=</span> <span class="n">depin_container</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span>
-
-    <span class="k">with</span> <span class="n">depin_override</span><span class="p">(</span><span class="n">Clock</span><span class="p">,</span> <span class="n">FrozenClock</span><span class="p">())</span> <span class="k">as</span> <span class="n">di</span><span class="p">:</span>
-        <span class="k">assert</span> <span class="n">di</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span> <span class="o">==</span> <span class="s1">'at 2026-01-01'</span>
-
-    <span class="c1"># Report is a singleton in the root cache, so reset() on exit rebuilds it</span>
-    <span class="c1"># against the real Clock the next time it is resolved.</span>
-    <span class="k">assert</span> <span class="n">depin_container</span><span class="p">[</span><span class="n">Report</span><span class="p">]</span><span class="o">.</span><span class="n">render</span><span class="p">()</span> <span class="o">==</span> <span class="s1">'at real'</span>
-</code></pre></div>
-<p>Use <code>depin_aoverride</code> — the same shape, built on <code>areset()</code> — when a
-singleton on the overridden path is constructed by an async provider;
-<code>reset()</code> raises for that case rather than leaving it half torn down.</p>
-<p><code>depin_scope</code> opens one synchronous scope around the test and yields its
-<code>ScopeFrame</code>, so a <code>Container.scope_value</code> key can be seeded before anything
-resolves through it:</p>
-<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">test_job_sees_the_seeded_value</span><span class="p">(</span><span class="n">depin_container</span><span class="p">,</span> <span class="n">depin_scope</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">depin_scope</span><span class="o">.</span><span class="n">provide</span><span class="p">(</span><span class="n">job</span><span class="p">,</span> <span class="s1">'reindex'</span><span class="p">)</span>
-    <span class="k">assert</span> <span class="n">depin_container</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">job</span><span class="p">)</span> <span class="o">==</span> <span class="s1">'reindex'</span>
-</code></pre></div>
-<p><code>depin_ascope</code> is its async counterpart, built on <code>Host.ascope()</code>.</p>
-<p>One test may request <code>depin_scope</code> and <code>depin_override</code> together. Both edges
-of the override block reach the root cache only, so a scoped value already
-built inside the open scope is untouched and keeps the dependency it was
-constructed with.</p>
-<p><code>examples/eviction/</code> in the repository runs the same eviction without pytest,
-as a plain module.</p>
-<h2 id="replacing-bindings-instead-of-overriding-them">Replacing bindings instead of overriding them<a class="headerlink" href="#replacing-bindings-instead-of-overriding-them" title="Permanent link">&para;</a></h2>
-<p>When a whole subsystem differs in tests — an in-memory store instead of a
-database — swap the registry rather than each provider:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">myapp.wiring</span><span class="w"> </span><span class="kn">import</span> <span class="n">services</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">tests.fakes</span><span class="w"> </span><span class="kn">import</span> <span class="n">fake_infra</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">build_test_container</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">Container</span><span class="p">(</span><span class="n">fake_infra</span><span class="p">,</span> <span class="n">services</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-</code></pre></div>
-<p>This keeps the production graph untouched and still exercises the real
-<code>Container</code> / <code>FrozenContainer</code>, which is what you want a wiring test to prove.</p>
-<h2 id="wiring-a-function-under-test">Wiring a function under test<a class="headerlink" href="#wiring-a-function-under-test" title="Permanent link">&para;</a></h2>
-<p><code>@inject</code> fills only the parameters whose default is <code>injected(...)</code>, and leaves
-everything else to the caller — including those same parameters, if the caller
-passes them:</p>
-<div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">injected</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Repo</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="gp">... </span>        <span class="k">return</span> <span class="mi">3</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">FakeRepo</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="gp">... </span>        <span class="k">return</span> <span class="mi">99</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Repo</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nd">@di</span><span class="o">.</span><span class="n">inject</span>
-<span class="gp">... </span><span class="k">def</span><span class="w"> </span><span class="nf">summary</span><span class="p">(</span><span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">repo</span><span class="p">:</span> <span class="n">Repo</span> <span class="o">=</span> <span class="n">injected</span><span class="p">(</span><span class="n">Repo</span><span class="p">))</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s1">=</span><span class="si">{</span><span class="n">repo</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="si">}</span><span class="s1">'</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">summary</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">'n'</span><span class="p">)</span>
-<span class="go">'n=3'</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">summary</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">'n'</span><span class="p">,</span> <span class="n">repo</span><span class="o">=</span><span class="n">FakeRepo</span><span class="p">())</span>
-<span class="go">'n=99'</span>
-</code></pre></div>
-<p>Injected keys are validated when the decorator runs, not when the function is
-called: decorating a function that asks for an unregistered key raises
-<code>MissingProviderError</code> immediately, at import time, instead of on the first
-request.</p>
+<h1 id="measured-results">Measured results<a class="headerlink" href="#measured-results" title="Permanent link">&para;</a></h1>
+<h2 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>distributions.pydepin</td>
+<td>0.17.0</td>
+</tr>
+<tr>
+<td>distributions.pytest</td>
+<td>9.1.1</td>
+</tr>
+<tr>
+<td>distributions.pytest-benchmark</td>
+<td>5.3.0</td>
+</tr>
+<tr>
+<td>host.available_processors</td>
+<td>4</td>
+</tr>
+<tr>
+<td>host.cpu_model</td>
+<td>Intel(R) Xeon(R) CPU E5-2683 v4 @ 2.10GHz</td>
+</tr>
+<tr>
+<td>host.load_average</td>
+<td>2.43, 2.73, 2.47</td>
+</tr>
+<tr>
+<td>host.machine</td>
+<td>x86_64</td>
+</tr>
+<tr>
+<td>host.processor</td>
+<td>x86_64</td>
+</tr>
+<tr>
+<td>host.processors</td>
+<td>4</td>
+</tr>
+<tr>
+<td>host.release</td>
+<td>6.8.0-138-generic</td>
+</tr>
+<tr>
+<td>host.system</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>interpreter.compiler</td>
+<td>Clang 22.1.3</td>
+</tr>
+<tr>
+<td>interpreter.free_threading</td>
+<td>no</td>
+</tr>
+<tr>
+<td>interpreter.hash_randomization</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>interpreter.implementation</td>
+<td>CPython</td>
+</tr>
+<tr>
+<td>interpreter.recursion_limit</td>
+<td>1000</td>
+</tr>
+<tr>
+<td>interpreter.version</td>
+<td>3.12.13</td>
+</tr>
+</tbody>
+</table>
+<h2 id="latency">Latency<a class="headerlink" href="#latency" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Repetitions</th>
+<th>Rounds</th>
+<th>Median</th>
+<th>Spread across repetitions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>test_latency[build_the_graph_view-depin]</td>
+<td>5</td>
+<td>179</td>
+<td>4.280 ms</td>
+<td>3.1%</td>
+</tr>
+<tr>
+<td>test_latency[call_through_an_inject_wrapper-depin]</td>
+<td>5</td>
+<td>24213</td>
+<td>5.570 µs</td>
+<td>7.9%</td>
+</tr>
+<tr>
+<td>test_latency[call_through_an_inject_wrapper-direct]</td>
+<td>5</td>
+<td>79473</td>
+<td>119.030 ns</td>
+<td>3.3%</td>
+</tr>
+<tr>
+<td>test_latency[explain_a_deep_chain-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>6.584 ms</td>
+<td>2.9%</td>
+</tr>
+<tr>
+<td>test_latency[explain_a_deep_chain_with_every_node_decorated-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>16.584 ms</td>
+<td>3.2%</td>
+</tr>
+<tr>
+<td>test_latency[explain_a_layered_dag-depin]</td>
+<td>5</td>
+<td>149</td>
+<td>4.961 ms</td>
+<td>3.8%</td>
+</tr>
+<tr>
+<td>test_latency[explain_an_unbound_key_of_16-depin]</td>
+<td>5</td>
+<td>125</td>
+<td>7.357 ms</td>
+<td>2.1%</td>
+</tr>
+<tr>
+<td>test_latency[explain_an_unbound_key_of_20-depin]</td>
+<td>5</td>
+<td>131</td>
+<td>7.432 ms</td>
+<td>2.5%</td>
+</tr>
+<tr>
+<td>test_latency[export_a_large_graph_as_dot-depin]</td>
+<td>5</td>
+<td>380</td>
+<td>2.449 ms</td>
+<td>3.4%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_application_startup-depin]</td>
+<td>5</td>
+<td>324</td>
+<td>2.445 ms</td>
+<td>3.5%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_application_startup-direct]</td>
+<td>5</td>
+<td>505</td>
+<td>1.633 ms</td>
+<td>3.9%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_async_resource_teardown-depin]</td>
+<td>5</td>
+<td>1154</td>
+<td>776.438 µs</td>
+<td>2.9%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_async_resource_teardown-direct]</td>
+<td>5</td>
+<td>1390</td>
+<td>653.256 µs</td>
+<td>6.0%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_cpu_light_endpoint-depin]</td>
+<td>5</td>
+<td>1114</td>
+<td>729.435 µs</td>
+<td>4.5%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_cpu_light_endpoint-direct]</td>
+<td>5</td>
+<td>1317</td>
+<td>647.650 µs</td>
+<td>4.3%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_endpoint_with_work-depin]</td>
+<td>5</td>
+<td>931</td>
+<td>1.005 ms</td>
+<td>4.1%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_endpoint_with_work-direct]</td>
+<td>5</td>
+<td>1063</td>
+<td>882.937 µs</td>
+<td>5.7%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_request_scoped_graph-depin]</td>
+<td>5</td>
+<td>1137</td>
+<td>779.516 µs</td>
+<td>4.2%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_request_scoped_graph-direct]</td>
+<td>5</td>
+<td>1001</td>
+<td>654.946 µs</td>
+<td>5.7%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_singletons_and_transients-depin]</td>
+<td>5</td>
+<td>1210</td>
+<td>760.037 µs</td>
+<td>4.7%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_singletons_and_transients-direct]</td>
+<td>5</td>
+<td>1075</td>
+<td>654.150 µs</td>
+<td>4.4%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_chain_missing_a_provider_of_100-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>10.960 ms</td>
+<td>4.2%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_chain_missing_a_provider_of_50-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>9.175 ms</td>
+<td>1.7%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_chain_of_10-depin]</td>
+<td>5</td>
+<td>1638</td>
+<td>385.197 µs</td>
+<td>4.3%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_chain_of_100-depin]</td>
+<td>5</td>
+<td>258</td>
+<td>3.552 ms</td>
+<td>3.9%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_chain_of_1000-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>35.862 ms</td>
+<td>5.5%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_decorated_chain_of_10-depin]</td>
+<td>5</td>
+<td>934</td>
+<td>928.047 µs</td>
+<td>2.5%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_decorated_chain_of_100-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>8.659 ms</td>
+<td>3.2%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_decorated_chain_of_1000-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>88.759 ms</td>
+<td>4.7%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_generic_key_chain_of_10-depin]</td>
+<td>5</td>
+<td>860</td>
+<td>694.034 µs</td>
+<td>8.9%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_generic_key_chain_of_100-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>6.660 ms</td>
+<td>3.8%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_generic_key_chain_of_1000-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>84.266 ms</td>
+<td>4.2%</td>
+</tr>
+<tr>
+<td>test_latency[open_a_request_shaped_scope-depin]</td>
+<td>5</td>
+<td>10459</td>
+<td>26.723 µs</td>
+<td>6.9%</td>
+</tr>
+<tr>
+<td>test_latency[open_a_request_shaped_scope-direct]</td>
+<td>5</td>
+<td>181227</td>
+<td>776.141 ns</td>
+<td>12.1%</td>
+</tr>
+<tr>
+<td>test_latency[open_and_close_a_scope-depin]</td>
+<td>5</td>
+<td>2806</td>
+<td>325.633 µs</td>
+<td>4.2%</td>
+</tr>
+<tr>
+<td>test_latency[open_and_close_a_scope-direct]</td>
+<td>5</td>
+<td>93756</td>
+<td>2.948 µs</td>
+<td>7.1%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_collection_of_10-depin]</td>
+<td>5</td>
+<td>17504</td>
+<td>18.164 µs</td>
+<td>4.1%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_collection_of_10-direct]</td>
+<td>5</td>
+<td>49841</td>
+<td>196.417 ns</td>
+<td>6.3%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_collection_of_100-depin]</td>
+<td>5</td>
+<td>4968</td>
+<td>133.030 µs</td>
+<td>1.9%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_collection_of_100-direct]</td>
+<td>5</td>
+<td>43347</td>
+<td>416.097 ns</td>
+<td>3.2%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_transient_chain-depin]</td>
+<td>5</td>
+<td>9337</td>
+<td>34.548 µs</td>
+<td>4.2%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_transient_chain-direct]</td>
+<td>5</td>
+<td>134626</td>
+<td>2.179 µs</td>
+<td>6.1%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_an_async_singleton-depin]</td>
+<td>5</td>
+<td>17988</td>
+<td>16.837 µs</td>
+<td>16.4%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_an_async_singleton-direct]</td>
+<td>5</td>
+<td>31781</td>
+<td>13.291 µs</td>
+<td>12.9%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_cached_singleton-depin]</td>
+<td>5</td>
+<td>107969</td>
+<td>1.759 µs</td>
+<td>4.9%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_cached_singleton-direct]</td>
+<td>5</td>
+<td>43445</td>
+<td>92.580 ns</td>
+<td>1.8%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_cached_singleton_through_an_alias-depin]</td>
+<td>5</td>
+<td>34005</td>
+<td>3.657 µs</td>
+<td>5.9%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_cached_singleton_through_an_alias-direct]</td>
+<td>5</td>
+<td>101896</td>
+<td>92.190 ns</td>
+<td>1.1%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_singleton_through_a_two_deep_decoration_chain-depin]</td>
+<td>5</td>
+<td>112537</td>
+<td>1.766 µs</td>
+<td>5.4%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_singleton_through_a_two_deep_decoration_chain-direct]</td>
+<td>5</td>
+<td>102512</td>
+<td>92.880 ns</td>
+<td>4.9%</td>
+</tr>
+<tr>
+<td>test_latency[warmup_a_cold_singleton_graph-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>11.956 ms</td>
+<td>4.1%</td>
+</tr>
+<tr>
+<td>test_latency[warmup_a_cold_singleton_graph-direct]</td>
+<td>5</td>
+<td>2961</td>
+<td>262.731 µs</td>
+<td>7.5%</td>
+</tr>
+</tbody>
+</table>
+<h2 id="work">Work<a class="headerlink" href="#work" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Python calls per operation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>allocations_of_a_cached_singleton_resolution</td>
+<td>9</td>
+</tr>
+<tr>
+<td>allocations_of_a_request_shaped_scope</td>
+<td>105</td>
+</tr>
+<tr>
+<td>allocations_of_a_scope_cycle</td>
+<td>396</td>
+</tr>
+<tr>
+<td>allocations_of_a_transient_chain</td>
+<td>202</td>
+</tr>
+<tr>
+<td>allocations_of_an_inject_call</td>
+<td>29</td>
+</tr>
+</tbody>
+</table>
+<h2 id="allocations">Allocations<a class="headerlink" href="#allocations" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Blocks per operation</th>
+<th>Bytes per operation</th>
+<th>Peak bytes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>allocations_of_a_cached_singleton_resolution</td>
+<td>13</td>
+<td>1168</td>
+<td>2056</td>
+</tr>
+<tr>
+<td>allocations_of_a_request_shaped_scope</td>
+<td>27</td>
+<td>2360</td>
+<td>4360</td>
+</tr>
+<tr>
+<td>allocations_of_a_scope_cycle</td>
+<td>76</td>
+<td>6240</td>
+<td>14496</td>
+</tr>
+<tr>
+<td>allocations_of_a_transient_chain</td>
+<td>53</td>
+<td>4968</td>
+<td>5752</td>
+</tr>
+<tr>
+<td>allocations_of_an_inject_call</td>
+<td>17</td>
+<td>1360</td>
+<td>2064</td>
+</tr>
+</tbody>
+</table>
+<h2 id="retained-memory">Retained memory<a class="headerlink" href="#retained-memory" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Bytes held</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>retained_by_a_frozen_container_of_100</td>
+<td>34568</td>
+</tr>
+<tr>
+<td>retained_by_a_frozen_container_of_1000</td>
+<td>326000</td>
+</tr>
+<tr>
+<td>retained_by_a_warm_singleton_cache_of_1000</td>
+<td>397560</td>
+</tr>
+<tr>
+<td>retained_by_an_open_scope_of_20</td>
+<td>10512</td>
+</tr>
+</tbody>
+</table>
+<h2 id="scaling">Scaling<a class="headerlink" href="#scaling" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Curve</th>
+<th>Size</th>
+<th>Cost per operation</th>
+<th>Growth over the previous size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>scale_explain_missing_key</td>
+<td>10</td>
+<td>5.479 ms</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_explain_missing_key</td>
+<td>12</td>
+<td>5.503 ms</td>
+<td>1.00x</td>
+</tr>
+<tr>
+<td>scale_explain_missing_key</td>
+<td>14</td>
+<td>5.444 ms</td>
+<td>0.99x</td>
+</tr>
+<tr>
+<td>scale_failing_freeze</td>
+<td>25</td>
+<td>6.332 ms</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_failing_freeze</td>
+<td>50</td>
+<td>7.197 ms</td>
+<td>1.14x</td>
+</tr>
+<tr>
+<td>scale_failing_freeze</td>
+<td>100</td>
+<td>9.035 ms</td>
+<td>1.26x</td>
+</tr>
+<tr>
+<td>scale_freeze_graph_size</td>
+<td>100</td>
+<td>3.487 ms</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_freeze_graph_size</td>
+<td>200</td>
+<td>6.858 ms</td>
+<td>1.97x</td>
+</tr>
+<tr>
+<td>scale_freeze_graph_size</td>
+<td>400</td>
+<td>13.787 ms</td>
+<td>2.01x</td>
+</tr>
+<tr>
+<td>scale_resolve_collection</td>
+<td>10</td>
+<td>23.673 µs</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_resolve_collection</td>
+<td>100</td>
+<td>190.198 µs</td>
+<td>8.03x</td>
+</tr>
+<tr>
+<td>scale_resolve_collection</td>
+<td>200</td>
+<td>383.158 µs</td>
+<td>2.01x</td>
+</tr>
+<tr>
+<td>scale_resolve_fan_out</td>
+<td>10</td>
+<td>19.584 µs</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_resolve_fan_out</td>
+<td>20</td>
+<td>37.330 µs</td>
+<td>1.91x</td>
+</tr>
+<tr>
+<td>scale_resolve_fan_out</td>
+<td>40</td>
+<td>70.684 µs</td>
+<td>1.89x</td>
+</tr>
+<tr>
+<td>scale_resolve_transient_depth</td>
+<td>10</td>
+<td>19.068 µs</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_resolve_transient_depth</td>
+<td>40</td>
+<td>197.115 µs</td>
+<td>10.34x</td>
+</tr>
+<tr>
+<td>scale_resolve_transient_depth</td>
+<td>160</td>
+<td>764.523 µs</td>
+<td>3.88x</td>
+</tr>
+<tr>
+<td>scale_scope_teardown</td>
+<td>10</td>
+<td>102.169 µs</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_scope_teardown</td>
+<td>20</td>
+<td>184.875 µs</td>
+<td>1.81x</td>
+</tr>
+<tr>
+<td>scale_scope_teardown</td>
+<td>40</td>
+<td>351.049 µs</td>
+<td>1.90x</td>
+</tr>
+</tbody>
+</table>
 
 
 

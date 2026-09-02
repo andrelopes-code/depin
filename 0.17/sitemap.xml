@@ -2,126 +2,142 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/support-policy/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/guide/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/guide/composition/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/guide/diagnostics/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/guide/fastapi/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/guide/integrations/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/guide/lifetimes/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/guide/operations/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/guide/resolution/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/guide/testing/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
+    </url>
+    <url>
+         <loc>https://andrelopes-code.github.io/depin/0.17/performance/</loc>
+         <lastmod>2026-09-02</lastmod>
+    </url>
+    <url>
+         <loc>https://andrelopes-code.github.io/depin/0.17/performance/methodology/</loc>
+         <lastmod>2026-09-02</lastmod>
+    </url>
+    <url>
+         <loc>https://andrelopes-code.github.io/depin/0.17/performance/reproducing/</loc>
+         <lastmod>2026-09-02</lastmod>
+    </url>
+    <url>
+         <loc>https://andrelopes-code.github.io/depin/0.17/performance/results/</loc>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/asgi/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/cli/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/click/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/container/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/diagnostics/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/errors/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/fastapi/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/flask/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/frozen/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/hosting/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/litestar/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/markers/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/operations/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/pytest/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/scope/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/starlette/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/taskiq/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/typer/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
     <url>
          <loc>https://andrelopes-code.github.io/depin/0.17/reference/wsgi/</loc>
-         <lastmod>2026-09-01</lastmod>
+         <lastmod>2026-09-02</lastmod>
     </url>
 </urlset>
