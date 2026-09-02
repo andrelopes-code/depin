@@ -25,7 +25,7 @@ def test_chain_constructs_a_typed_five_node_observation() -> None:
     )
 
 
-def test_chain_log_is_reset_between_observations() -> None:
+def test_caller_clears_chain_log_between_observations() -> None:
     shared = chain(1)
 
     first = shared.factories[0]()
@@ -36,6 +36,25 @@ def test_chain_log_is_reset_between_observations() -> None:
     assert observation(shared, second).constructed == ('Node0',)
 
 
-def test_chain_rejects_an_empty_shape() -> None:
+def test_chain_creates_fresh_nodes_and_an_isolated_log() -> None:
+    first = chain(3)
+    second = chain(3)
+
+    identical_nodes = tuple(
+        first_node is second_node for first_node, second_node in zip(first.nodes, second.nodes, strict=True)
+    )
+    assert identical_nodes == (False, False, False)
+
+    value: object = first.factories[0]()
+    for factory in first.factories[1:]:
+        value = factory(value)
+
+    assert type(value) is first.leaf
+    assert first.log == ['Node0', 'Node1', 'Node2']
+    assert second.log == []
+
+
+@pytest.mark.parametrize('size', [0, -1])
+def test_chain_rejects_a_non_positive_size(size: int) -> None:
     with pytest.raises(HarnessError, match='chain size must be at least one'):
-        _ = chain(0)
+        _ = chain(size)
