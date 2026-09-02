@@ -1,9 +1,13 @@
 import math
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
 
+import benchmarks.comparison as comparison
 from benchmarks.comparison import WORKLOADS as COMPARATIVE_WORKLOADS
+from benchmarks.comparison import inventory
 from benchmarks.comparison.adapters import ADAPTERS
 from benchmarks.comparison.contracts import (
     AbsoluteTarget,
@@ -12,7 +16,7 @@ from benchmarks.comparison.contracts import (
     Equivalence,
 )
 from benchmarks.comparison.targets import load
-from benchmarks.contracts import Implementation, Metric, Observation, Prepared
+from benchmarks.contracts import Implementation, Metric, Observation, Prepared, Workload
 from benchmarks.harness import HarnessError
 from benchmarks.workloads import WORKLOADS
 
@@ -247,3 +251,33 @@ def test_comparative_inventory_covers_every_workload_in_adapter_order() -> None:
     assert {
         comparative.workload.name for comparative in COMPARATIVE_WORKLOADS if comparative.target is not None
     } == expected_targets
+
+
+def test_comparison_namespace_exports_only_the_workload_inventory() -> None:
+    assert not hasattr(comparison, 'build')
+
+
+@dataclass(frozen=True, slots=True)
+class _MismatchedCompetitorAdapter:
+    competitor: Competitor = field(default_factory=lambda: Competitor('expected-adapter', '1.0'))
+
+    def candidates(self, workloads: Sequence[Workload]) -> tuple[Candidate, ...]:
+        return (
+            Candidate(
+                workloads[0].name,
+                Competitor('wrong-record', '1.0'),
+                Equivalence.INCOMPARABLE,
+                'the controlled record belongs to a different competitor',
+                None,
+            ),
+        )
+
+
+def test_inventory_rejects_a_candidate_from_a_different_competitor() -> None:
+    workload = WORKLOADS[0]
+
+    with pytest.raises(
+        HarnessError,
+        match=(rf'{workload.name}.*wrong-record-1\.0.*expected-adapter-1\.0.*return a candidate for the adapter'),
+    ):
+        _ = inventory.index_candidates(_MismatchedCompetitorAdapter(), (workload,))

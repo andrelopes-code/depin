@@ -10,10 +10,15 @@ from benchmarks.harness import HarnessError
 from benchmarks.workloads import WORKLOADS
 
 
-def _index_candidates(adapter: Adapter, workloads: tuple[Workload, ...]) -> dict[str, Candidate]:
+def index_candidates(adapter: Adapter, workloads: tuple[Workload, ...]) -> dict[str, Candidate]:
     expected = {workload.name for workload in workloads}
     indexed: dict[str, Candidate] = {}
     for candidate in adapter.candidates(workloads):
+        if candidate.competitor != adapter.competitor:
+            raise HarnessError(
+                f'{candidate.workload}: {candidate.competitor.label} does not match adapter '
+                f"{adapter.competitor.label}; return a candidate for the adapter's pinned competitor"
+            )
         if candidate.workload not in expected:
             raise HarnessError(
                 f'{candidate.workload}: {adapter.competitor.label} produced an extra candidate; '
@@ -55,7 +60,7 @@ def build() -> tuple[ComparativeWorkload, ...]:
             f'leadership targets coverage mismatch: {detail}; align targets with direct latency workloads'
         )
 
-    indexed = tuple(_index_candidates(adapter, WORKLOADS) for adapter in ADAPTERS)
+    indexed = tuple(index_candidates(adapter, WORKLOADS) for adapter in ADAPTERS)
     comparative: list[ComparativeWorkload] = []
     for workload in WORKLOADS:
         candidates = tuple(by_workload[workload.name] for by_workload in indexed)

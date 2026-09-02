@@ -1,5 +1,7 @@
 """The complete ordered competitor comparison inventory."""
 
-from benchmarks.comparison.inventory import build
+from benchmarks.comparison.inventory import build as _build
 
-WORKLOADS = build()
+WORKLOADS = _build()
+
+del _build
