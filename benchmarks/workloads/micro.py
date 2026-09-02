@@ -93,9 +93,14 @@ class Boxed[T]:
     """The generic origin `resolve_a_generic_key` resolves a parameterisation of.
 
     Spelled as a subscript rather than built through `types.GenericAlias`, because
-    this key is fixed at authoring time and both checkers read `Boxed[Repo]` as a
-    key without help.
+    this key is fixed at authoring time and every checker reads `Boxed[Repo]` as a
+    key without help. It holds its parameter rather than only declaring one, so
+    the argument is inferred at every construction instead of being asserted at
+    one.
     """
+
+    def __init__(self, value: T) -> None:
+        self.value = value
 
 
 class Connection:
@@ -137,7 +142,7 @@ def _decoration(wrapper: type[Decorated], node: type[object]) -> Callable[..., o
 
 
 def _boxed() -> Boxed[Repo]:
-    return Boxed()
+    return Boxed(Repo())
 
 
 def _sole() -> Sole:
@@ -711,7 +716,7 @@ def _resolve_a_generic_key() -> Workload:
         )
 
     def direct_setup() -> Session:
-        held = Wired(Boxed[Repo]())
+        held = Wired(Boxed(Repo()))
         return Session(
             call=lambda: held.value,
             observe=lambda: Observation(result=type(held.value).__name__, constructed=(), closed=()),

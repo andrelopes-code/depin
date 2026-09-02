@@ -195,6 +195,16 @@ pythonpath = ["."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-ra --strict-markers --doctest-modules --doctest-glob=*.md"
+# `benchmarks/test_latency.py` carries a per-case `benchmark(min_rounds=...)`
+# marker, and `tests/integration` imports that module for the workload inventory,
+# so the ordinary suite reaches the marker in an environment where
+# `pytest-benchmark` is not installed — it lives only in the `bench` group, which
+# is what keeps the framework out of the free-threaded job. Declaring the name
+# here is what stops `--strict-markers` failing collection there; the plugin
+# declares it again when it is present, which pytest merges.
+markers = [
+    "benchmark: pytest-benchmark's marker, carrying each case's derived rounds floor",
+]
 filterwarnings = ["error::pytest.PytestUnhandledThreadExceptionWarning"]
 
 [tool.coverage.run]
