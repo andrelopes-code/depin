@@ -1265,7 +1265,7 @@ the list reading as a progression:
 - **A public integration contract**: `Host`, `hosted_container`, and a version
   constant. `depin.ext.fastapi` is written on it, and so is any integration you
   write yourself — no `depin._core` import required.
-  [Writing an integration](https://andrelopes-code.github.io/depin/guide/integrations/).
+  [Writing an integration](https://andrelopes-code.github.io/depin/latest/guide/integrations/).
 ```
 
 - [ ] **Step 9: Record the new module in `AGENTS.md`**

@@ -57,7 +57,7 @@ uv run pytest
 
 Five type checkers — mypy, stock Pyright, Basedpyright, ty and Pyrefly — are
 gated in three layers. The
-[support policy](https://andrelopes-code.github.io/depin/support-policy/) states
+[support policy](https://andrelopes-code.github.io/depin/latest/support-policy/) states
 each checker's authority in each layer; this section is how to run them.
 
 | Layer | Object | How it runs |
@@ -191,7 +191,7 @@ in the ordinary suite — a workload whose baseline stops being equivalent fails
 a normal test, before anything is timed.
 
 The methodology, the environments, and the reasoning behind the budgets are on
-the [performance pages](https://andrelopes-code.github.io/depin/performance/methodology/)
+the [performance pages](https://andrelopes-code.github.io/depin/latest/performance/methodology/)
 and in `specs/2026-09-02-step-7-performance-design.md`.
 
 ### What CI checks

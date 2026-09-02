@@ -23,7 +23,7 @@ Type-first dependency injection for Python 3.12+.
 - **A public integration contract**: `Host`, `hosted_container`, and a version
   constant. Every integration depin ships is written on it, and so is any
   integration you write yourself — no `depin._core` import required.
-  [Writing an integration](https://andrelopes-code.github.io/depin/guide/integrations/).
+  [Writing an integration](https://andrelopes-code.github.io/depin/latest/guide/integrations/).
 - Optional web integrations for FastAPI, Starlette, Litestar and Flask, built on
   the framework-free `depin.ext.asgi` and `depin.ext.wsgi` middlewares that any
   other ASGI or WSGI framework can install directly. **The core has zero runtime
@@ -125,7 +125,7 @@ with di.scope():
     conn = di[Connection]  # built here, released when the block ends
 ```
 
-Read [Lifetimes and scopes](https://andrelopes-code.github.io/depin/guide/lifetimes/)
+Read [Lifetimes and scopes](https://andrelopes-code.github.io/depin/latest/guide/lifetimes/)
 for nesting, captive dependencies, and shutdown.
 
 ## Cookbook
@@ -190,7 +190,7 @@ read headers, URL, cookies, and state — but it is metadata-only: the request b
 belongs to the route's typed parameters, and reading it from a provider raises
 rather than racing the handler's own parsing.
 
-Full walkthrough: [FastAPI guide](https://andrelopes-code.github.io/depin/guide/fastapi/).
+Full walkthrough: [FastAPI guide](https://andrelopes-code.github.io/depin/latest/guide/fastapi/).
 
 ## Caveats
 
@@ -217,7 +217,7 @@ they do not support — there is no overall score and no claim to be the fastest
 library.
 
 Measured figures, methodology, scaling curves and reproduction instructions:
-[performance](https://andrelopes-code.github.io/depin/performance/). No numbers
+[performance](https://andrelopes-code.github.io/depin/latest/performance/). No numbers
 are quoted here, so nothing on this page can go stale.
 
 ## Project status
@@ -226,7 +226,7 @@ Beta, pre-1.0. CI enforces `ruff`, `basedpyright --strict`, `mypy --strict`, the
 full test suite with its embedded doctests, and a 95% coverage floor, on Python
 3.12–3.14 across Linux, macOS, and Windows, plus the free-threaded builds of 3.13
 and 3.14. See the
-[support policy](https://andrelopes-code.github.io/depin/support-policy/).
+[support policy](https://andrelopes-code.github.io/depin/latest/support-policy/).
 Releases are published from CI via PyPI Trusted Publishing. Minor releases may
 still contain breaking changes until 1.0; those are marked in the
 [changelog](CHANGELOG.md).
