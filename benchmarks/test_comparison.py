@@ -4,6 +4,7 @@ import pytest
 
 import benchmarks.comparison.adapters.dependency_injector as dependency_injector_adapter
 import benchmarks.comparison.adapters.dishka as dishka_adapter
+import benchmarks.comparison.adapters.wireup as wireup_adapter
 from benchmarks.comparison.adapters.dependency_injector import ADAPTER, warm_chain
 from benchmarks.comparison.contracts import Competitor, Equivalence
 from benchmarks.comparison.shapes import Chain, chain, observation
@@ -301,3 +302,87 @@ def test_dishka_root_cleanup_closes_a_real_app_resource_once(monkeypatch: pytest
     close()
 
     assert log == ['opened', 'closed']
+
+
+def test_wireup_singleton_transient_and_scoped_observations_match_depin() -> None:
+    candidates = {candidate.workload: candidate for candidate in wireup_adapter.ADAPTER.candidates(WORKLOADS)}
+    subjects = {workload.name: workload.subject for workload in WORKLOADS}
+
+    for name in ('resolve_cached_singleton', 'resolve_a_transient_chain', 'open_and_close_a_scope'):
+        implementation = candidates[name].implementation
+        assert implementation is not None
+        assert implementation.observe() == subjects[name].observe()
+
+
+def test_wireup_prepared_calls_preserve_core_lifetimes_and_allow_repeated_cleanup() -> None:
+    candidates = {candidate.workload: candidate for candidate in wireup_adapter.ADAPTER.candidates(WORKLOADS)}
+    values: dict[str, tuple[object, object]] = {}
+
+    for name in ('resolve_cached_singleton', 'resolve_a_transient_chain', 'open_and_close_a_scope'):
+        implementation = candidates[name].implementation
+        assert implementation is not None
+        prepared = implementation.prepare()
+        close = prepared.close
+        assert close is not None
+        try:
+            values[name] = (prepared.call(), prepared.call())
+        finally:
+            close()
+            close()
+
+    assert values['resolve_cached_singleton'][0] is values['resolve_cached_singleton'][1]
+    assert values['resolve_a_transient_chain'][0] is not values['resolve_a_transient_chain'][1]
+    assert values['open_and_close_a_scope'][0] is not values['open_and_close_a_scope'][1]
+
+
+def test_wireup_uses_root_get_for_singletons_and_scopes_for_other_lifetimes() -> None:
+    singleton = wireup_adapter.warm_chain(1)
+    try:
+        singleton_first = singleton.container.get(singleton.shape.leaf)
+        singleton_second = singleton.container.get(singleton.shape.leaf)
+    finally:
+        singleton.close()
+        singleton.close()
+
+    transient = wireup_adapter.transient_chain(1)
+    try:
+        with transient.container.enter_scope() as transient_scope:
+            transient_first = transient_scope.get(transient.shape.leaf)
+            transient_second = transient_scope.get(transient.shape.leaf)
+    finally:
+        transient.close()
+        transient.close()
+
+    scoped_chain = wireup_adapter.scoped_chain(1)
+    try:
+        with scoped_chain.container.enter_scope() as request:
+            scoped_first = request.get(scoped_chain.shape.leaf)
+            scoped_second = request.get(scoped_chain.shape.leaf)
+    finally:
+        scoped_chain.close()
+        scoped_chain.close()
+
+    assert singleton_first is singleton_second
+    assert transient_first is not transient_second
+    assert scoped_first is scoped_second
+
+
+def test_wireup_candidates_cover_workloads_in_order_with_three_equivalent_shapes() -> None:
+    candidates = wireup_adapter.ADAPTER.candidates(WORKLOADS)
+    subjects = {workload.name: workload.subject for workload in WORKLOADS}
+    by_name = {candidate.workload: candidate for candidate in candidates}
+
+    assert tuple(candidate.workload for candidate in candidates) == tuple(workload.name for workload in WORKLOADS)
+    assert all(candidate.competitor == Competitor('wireup', '2.12.0') for candidate in candidates)
+    assert tuple(candidate.workload for candidate in candidates if candidate.equivalence is Equivalence.EQUIVALENT) == (
+        'resolve_cached_singleton',
+        'resolve_a_transient_chain',
+        'open_and_close_a_scope',
+    )
+    for name in ('resolve_cached_singleton', 'resolve_a_transient_chain', 'open_and_close_a_scope'):
+        implementation = by_name[name].implementation
+        assert implementation is not None
+        assert implementation.label == 'wireup-2.12.0'
+        assert implementation.observe() == subjects[name].observe()
+
+    assert all(candidate.reason for candidate in candidates if candidate.equivalence is not Equivalence.EQUIVALENT)
