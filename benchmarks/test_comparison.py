@@ -1,4 +1,5 @@
 from collections.abc import Callable, Generator
+from importlib.metadata import PackageNotFoundError
 
 import pytest
 
@@ -386,3 +387,72 @@ def test_wireup_candidates_cover_workloads_in_order_with_three_equivalent_shapes
         assert implementation.observe() == subjects[name].observe()
 
     assert all(candidate.reason for candidate in candidates if candidate.equivalence is not Equivalence.EQUIVALENT)
+
+
+def test_wireup_singleton_prepare_warms_the_leaf_before_the_measured_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    log: list[str] = []
+    monkeypatch.setattr(wireup_adapter, 'chain', _tracked_chain_builder(log, HOT_GRAPH))
+    candidate = next(
+        candidate
+        for candidate in wireup_adapter.ADAPTER.candidates(WORKLOADS)
+        if candidate.workload == 'resolve_cached_singleton'
+    )
+
+    assert candidate.implementation is not None
+    prepared = candidate.implementation.prepare()
+    close = prepared.close
+    assert close is not None
+    try:
+        assert log == ['opened']
+        _ = prepared.call()
+        assert log == ['opened']
+    finally:
+        close()
+        close()
+
+    assert log == ['opened', 'closed']
+
+
+def test_wireup_scoped_prepared_cycle_closes_a_real_request_resource(monkeypatch: pytest.MonkeyPatch) -> None:
+    log: list[str] = []
+    monkeypatch.setattr(wireup_adapter, 'chain', _tracked_chain_builder(log, CHAIN_DEPTH))
+    candidate = next(
+        candidate
+        for candidate in wireup_adapter.ADAPTER.candidates(WORKLOADS)
+        if candidate.workload == 'open_and_close_a_scope'
+    )
+
+    assert candidate.implementation is not None
+    prepared = candidate.implementation.prepare()
+    close = prepared.close
+    assert close is not None
+    try:
+        _ = prepared.call()
+        _ = prepared.call()
+    finally:
+        close()
+        close()
+
+    assert log == ['opened', 'closed', 'opened', 'closed']
+
+
+def test_wireup_version_guard_rejects_a_missing_distribution(monkeypatch: pytest.MonkeyPatch) -> None:
+    def missing(_: str) -> str:
+        raise PackageNotFoundError
+
+    monkeypatch.setattr(wireup_adapter, 'version', missing)
+
+    with pytest.raises(HarnessError, match='wireup is not installed in the bench group'):
+        wireup_adapter.require_installed_version()
+
+
+def test_wireup_version_guard_rejects_a_different_distribution_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    def different_version(_: str) -> str:
+        return '2.12.1'
+
+    monkeypatch.setattr(wireup_adapter, 'version', different_version)
+
+    with pytest.raises(HarnessError, match=r'wireup 2\.12\.1 is installed; 2\.12\.0 is required'):
+        wireup_adapter.require_installed_version()

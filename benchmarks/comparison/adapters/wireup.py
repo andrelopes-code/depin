@@ -19,12 +19,17 @@ _VERSION = '2.12.0'
 
 type Lifetime = Literal['singleton', 'transient', 'scoped']
 
-try:
-    _installed_version = version(_DISTRIBUTION)
-except PackageNotFoundError as error:
-    raise HarnessError(f'{_DISTRIBUTION} is not installed in the bench group') from error
-if _installed_version != _VERSION:
-    raise HarnessError(f'{_DISTRIBUTION} {_installed_version} is installed; {_VERSION} is required')
+
+def require_installed_version() -> None:
+    try:
+        installed_version = version(_DISTRIBUTION)
+    except PackageNotFoundError as error:
+        raise HarnessError(f'{_DISTRIBUTION} is not installed in the bench group') from error
+    if installed_version != _VERSION:
+        raise HarnessError(f'{_DISTRIBUTION} {installed_version} is installed; {_VERSION} is required')
+
+
+require_installed_version()
 
 
 @dataclass(frozen=True, slots=True)
