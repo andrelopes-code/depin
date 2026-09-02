@@ -24,7 +24,8 @@ _MODES = (pytest.param(True, id='subprocess'), pytest.param(False, id='in-proces
 
 
 def _run(pytester: pytest.Pytester, *, subprocess: bool) -> pytest.RunResult:
-    return pytester.runpytest_subprocess() if subprocess else pytester.runpytest()
+    args = ('-o', 'asyncio_default_fixture_loop_scope=function')
+    return pytester.runpytest_subprocess(*args) if subprocess else pytester.runpytest(*args)
 
 
 _CLOCK_REPORT_SHAPES = """\
