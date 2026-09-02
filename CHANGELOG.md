@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.1](https://github.com/andrelopes-code/depin/compare/v0.17.0...v0.17.1) (2026-09-02)
+
+
+### Performance Improvements
+
+* solve the missing-provider chain once and publish the evidence ([#81](https://github.com/andrelopes-code/depin/issues/81)) ([a490c4a](https://github.com/andrelopes-code/depin/commit/a490c4a3bc748ad254b62525daf4b1e15bd9e7df))
+
 ## [0.17.0](https://github.com/andrelopes-code/depin/compare/v0.16.3...v0.17.0) (2026-09-01)
 
 
