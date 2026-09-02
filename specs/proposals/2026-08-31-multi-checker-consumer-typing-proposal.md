@@ -1,8 +1,30 @@
 # Proposal: consumer typing compatibility across common type checkers
 
 Date: 2026-08-31
-Status: queued proposal; requires a design specification and implementation plan
+Status: accepted and implemented in Step 6, released in 0.17.0
 Scope: public typing contract, distribution artifact, and compatibility verification
+
+## Outcome
+
+Taken from the queue and closed by Step 6. The design is in
+`specs/2026-09-01-step-6-consumer-typing-design.md`, the plan in
+`specs/plans/2026-09-01-step-6-consumer-typing.md`, and the evidence — normal
+results and fault injection — in
+`specs/evidence/2026-09-01-step-6-consumer-typing.md`. The support policy the
+proposal asked for is `docs/support-policy.md`.
+
+Two items are routed onward rather than delivered, and the evidence report says
+so item by item:
+
+- The two false negatives this work discovered — `FrozenContainer.override`
+  accepting a replacement of an unrelated type, and `Container.value` accepting
+  a value the token does not carry — go to the Step 8 surface review, which is
+  the last window in which a call shape may change. They are gated meanwhile as
+  divergence fixtures, on each checker's verdict rather than on rejection.
+- The request to test the oldest supported version of each stable checker line
+  beside the current one is deferred to the weekly forward probe. Exactly one
+  version of each checker has been measured, so naming a lower minimum today
+  would be a support claim with no evidence behind it.
 
 ## Nature of this document
 
