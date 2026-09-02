@@ -81,10 +81,11 @@ accepted dataset.
 The version comes from `importlib.metadata`, is checked against the exact pin,
 and is written into every dataset.
 
-`Candidate` records a competitor, an equivalence class, a non-empty reason, and
-an optional `Implementation`. Equivalent and partial candidates must carry an
-implementation. Incomparable candidates must not carry one. These invariants are
-validated while the inventory is built, before timing starts.
+`Candidate` records the stable workload name, a competitor, an equivalence class,
+a non-empty reason, and an optional `Implementation`. Equivalent and partial
+candidates must carry an implementation. Incomparable candidates must not carry
+one. These invariants are validated while the inventory is built, before timing
+starts; association never depends on tuple position.
 
 `ComparativeWorkload` records the existing `Workload`, exactly one candidate for
 each maintained competitor, an `AbsoluteTarget`, and the names of any secondary
