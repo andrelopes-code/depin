@@ -1,6 +1,8 @@
 import pytest
 
+import benchmarks.comparison.adapters.dependency_injector as dependency_injector_adapter
 from benchmarks.comparison.adapters.dependency_injector import ADAPTER, warm_chain
+from benchmarks.comparison.contracts import Competitor, Equivalence
 from benchmarks.comparison.shapes import chain, observation
 from benchmarks.contracts import Observation
 from benchmarks.harness import HarnessError
@@ -90,3 +92,81 @@ def test_dependency_injector_transient_chain_matches_depin() -> None:
     assert candidate.competitor.version == '4.49.1'
     assert candidate.implementation is not None
     assert candidate.implementation.observe() == workload.subject.observe()
+
+
+def test_dependency_injector_cold_singleton_initializes_during_prepare(monkeypatch: pytest.MonkeyPatch) -> None:
+    class RecordedSole:
+        constructed = 0
+
+        def __init__(self) -> None:
+            type(self).constructed += 1
+
+    monkeypatch.setattr(dependency_injector_adapter, 'Sole', RecordedSole)
+    candidate = next(
+        candidate
+        for candidate in ADAPTER.candidates(WORKLOADS)
+        if candidate.workload == 'construct_a_singleton_for_the_first_time'
+    )
+
+    assert candidate.implementation is not None
+    prepared = candidate.implementation.prepare()
+    assert RecordedSole.constructed == 1
+    assert prepared.close is not None
+    _ = prepared.call()
+    assert RecordedSole.constructed == 2
+    prepared.close()
+
+
+def test_dependency_injector_candidates_cover_workloads_in_order_with_expected_families() -> None:
+    candidates = ADAPTER.candidates(WORKLOADS)
+    subjects = {workload.name: workload.subject for workload in WORKLOADS}
+    by_name = {candidate.workload: candidate for candidate in candidates}
+
+    assert tuple(candidate.workload for candidate in candidates) == tuple(workload.name for workload in WORKLOADS)
+    assert all(candidate.competitor == Competitor('dependency-injector', '4.49.1') for candidate in candidates)
+    assert tuple(candidate.workload for candidate in candidates if candidate.equivalence is Equivalence.EQUIVALENT) == (
+        'resolve_cached_singleton',
+        'resolve_a_transient_chain',
+        'construct_a_singleton_for_the_first_time',
+    )
+    for name in ('resolve_cached_singleton', 'resolve_a_transient_chain', 'construct_a_singleton_for_the_first_time'):
+        implementation = by_name[name].implementation
+        assert implementation is not None
+        assert implementation.observe() == subjects[name].observe()
+
+    assert by_name['open_and_close_a_scope'].reason == (
+        'provider overrides are substitutions, not nested scope frames with scoped caches'
+    )
+    assert by_name['freeze_a_chain_of_10'].reason == (
+        'Dependency Injector has no separate frozen resolution plan or depin graph diagnostics operation'
+    )
+    assert by_name['allocations_of_a_cached_singleton_resolution'].reason == (
+        'the measured allocation, retention, or scaling source has no equivalent Dependency Injector operation'
+    )
+    assert by_name['fastapi_cpu_light_endpoint'].reason == (
+        'the FastAPI integration has different request lifecycle and dependency declaration semantics'
+    )
+    assert by_name['resolve_cached_singleton_through_an_alias'].reason == (
+        'Dependency Injector delegates do not provide depin typed-key alias resolution'
+    )
+    assert by_name['resolve_a_collection_of_10'].reason == (
+        'Dependency Injector has no depin collection binding and aggregation operation'
+    )
+    assert by_name['call_through_an_inject_wrapper'].reason == (
+        'Dependency Injector wiring does not share depin injection wrapper calling semantics'
+    )
+    assert by_name['resolve_through_an_active_override'].reason == (
+        'Dependency Injector provider overrides are not depin context-local override frames'
+    )
+    assert by_name['resolve_an_async_singleton'].reason == (
+        'Dependency Injector async and resource providers have different resolution and teardown semantics'
+    )
+    assert by_name['resolve_a_generic_key'].reason == (
+        'Dependency Injector providers are not resolved from depin parameterised generic keys'
+    )
+    assert by_name['resolve_singleton_through_a_two_deep_decoration_chain'].reason == (
+        'Dependency Injector provider composition does not model depin decoration chains'
+    )
+    assert by_name['resolve_with_no_active_override'].reason == (
+        'Dependency Injector provider overrides are not depin context-local override frames'
+    )

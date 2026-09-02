@@ -95,6 +95,7 @@ def _implementation(build: Callable[[], ProviderChain], *, warm: bool) -> Implem
 def _cold_singleton() -> Implementation:
     def prepare() -> Prepared:
         provider: _ResettableProvider = providers.ThreadSafeSingleton(Sole)
+        _ = provider()
 
         def call() -> object:
             _ = provider.reset()
@@ -133,12 +134,14 @@ class DependencyInjectorAdapter:
         return tuple(candidates)
 
     def _candidate(self, workload: Workload) -> Candidate:
-        equivalent = {
-            'resolve_cached_singleton': _implementation(lambda: warm_chain(HOT_GRAPH), warm=True),
-            'resolve_a_transient_chain': _implementation(lambda: _transient_chain(CHAIN_DEPTH), warm=False),
-            'construct_a_singleton_for_the_first_time': _cold_singleton(),
-        }
-        implementation = equivalent.get(workload.name)
+        if workload.name == 'resolve_cached_singleton':
+            implementation = _implementation(lambda: warm_chain(HOT_GRAPH), warm=True)
+        elif workload.name == 'resolve_a_transient_chain':
+            implementation = _implementation(lambda: _transient_chain(CHAIN_DEPTH), warm=False)
+        elif workload.name == 'construct_a_singleton_for_the_first_time':
+            implementation = _cold_singleton()
+        else:
+            implementation = None
         if implementation is not None:
             return Candidate(
                 workload.name,
