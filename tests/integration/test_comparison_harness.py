@@ -4,9 +4,171 @@ from pathlib import Path
 import pytest
 
 import benchmarks.harness.comparison as comparison
-from benchmarks.harness import HarnessError, reduce
+import benchmarks.harness.leadership as leadership
+from benchmarks.harness import HarnessError, reduce, require_number, require_object
 
 EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
+
+
+def _leadership_dataset(
+    *,
+    depin: tuple[float, ...] = (0.9, 0.9, 0.9, 0.9, 0.9),
+    direct: tuple[float, ...] = (0.4, 0.4, 0.4, 0.4, 0.4),
+    competitors: dict[str, tuple[str, tuple[float, ...]]] | None = None,
+    target: dict[str, float] | None = None,
+    secondary: bool = True,
+    qualified: bool = True,
+) -> dict[str, object]:
+    candidates = competitors or {'wireup-2.12.0': ('equivalent', (1.0, 1.0, 1.0, 1.0, 1.0))}
+    names = {'depin': depin, 'direct': direct} | {label: values for label, (_, values) in candidates.items()}
+    repetitions: list[dict[str, object]] = []
+    for index in range(len(depin)):
+        samples = {
+            f'test_comparison[resolve-{label}]': {
+                'median': values[index],
+                'mean': values[index],
+                'rounds': 1000 if qualified else 1,
+            }
+            for label, values in names.items()
+        }
+        repetitions.append(
+            {
+                'medians': {name: sample['median'] for name, sample in samples.items()},
+                'rounds': {name: sample['rounds'] for name, sample in samples.items()},
+                'samples': samples,
+            }
+        )
+    return {
+        'accepted': True,
+        'repetitions': repetitions,
+        'seed': 17,
+        'targets': {
+            'resolve': {
+                'candidates': [
+                    {'classification': classification, 'label': label, 'reason': 'synthetic'}
+                    for label, (classification, _) in candidates.items()
+                ],
+                'secondary': {'passed': secondary},
+                'target': target or {'fixed_seconds': 1.0, 'fraction_of_direct': None},
+            }
+        },
+    }
+
+
+def _calibration(*, allowance: float = 0.01, eligible: bool = True) -> dict[str, object]:
+    return {'workloads': {'resolve': {'allowance': allowance, 'eligible': eligible, 'p99': allowance}}}
+
+
+@pytest.mark.parametrize(
+    ('dataset', 'calibration', 'status'),
+    [
+        (_leadership_dataset(), _calibration(), 'leader'),
+        (
+            _leadership_dataset(depin=(1.0,) * 5),
+            _calibration(),
+            'shared-leader',
+        ),
+        (
+            _leadership_dataset(depin=(1.2,) * 5),
+            _calibration(),
+            'loss',
+        ),
+        (
+            _leadership_dataset(target={'fixed_seconds': 0.5, 'fraction_of_direct': 0.5}),
+            _calibration(),
+            'absolute-failure',
+        ),
+        (_leadership_dataset(secondary=False), _calibration(), 'regression'),
+        (_leadership_dataset(qualified=False), _calibration(), 'unstable'),
+        (
+            _leadership_dataset(competitors={'wireup-2.12.0': ('partial', (0.1,) * 5)}),
+            _calibration(),
+            'no-equivalent-competitor',
+        ),
+    ],
+)
+def test_leadership_evaluates_each_workload_status(
+    dataset: dict[str, object], calibration: dict[str, object], status: str
+) -> None:
+    verdict = leadership.evaluate(dataset, calibration)[0]
+
+    assert verdict.status.value == status
+
+
+def test_leadership_selects_the_fastest_equivalent_and_excludes_partial_candidates() -> None:
+    dataset = _leadership_dataset(
+        competitors={
+            'slow-1': ('equivalent', (1.2,) * 5),
+            'fast-1': ('equivalent', (1.0,) * 5),
+            'partial-1': ('partial', (0.1,) * 5),
+        }
+    )
+
+    verdict = leadership.evaluate(dataset, _calibration())[0]
+
+    assert verdict.competitor is not None
+    assert verdict.competitor.label == 'fast-1'
+    assert verdict.status is leadership.Status.LEADER
+
+
+def test_leadership_uses_the_confidence_upper_bound_against_the_allowance() -> None:
+    dataset = _leadership_dataset(depin=(1.01,) * 5)
+
+    verdict = leadership.evaluate(dataset, _calibration(allowance=0.005))[0]
+
+    assert verdict.status is leadership.Status.LOSS
+    assert verdict.competitor is not None
+    assert verdict.competitor.paired.high > 0.005
+
+
+def test_leadership_direct_overhead_uses_the_lower_target_ceiling() -> None:
+    dataset = _leadership_dataset(target={'fixed_seconds': 0.9, 'fraction_of_direct': 0.5})
+
+    verdict = leadership.evaluate(dataset, _calibration())[0]
+
+    assert verdict.absolute_ceiling == 0.2
+    assert verdict.absolute_overhead == 0.5
+    assert verdict.absolute_passed is False
+
+
+def test_leadership_marks_a_null_p99_above_five_percent_unstable_without_clamping() -> None:
+    dataset = _leadership_dataset()
+    null = _leadership_dataset(depin=(1.0, 1.0, 1.0, 1.0, 1.0), direct=(0.9, 1.1, 0.9, 1.1, 0.9))
+
+    calibration = leadership.calibrate(null)
+    verdict = leadership.evaluate(dataset, calibration)[0]
+
+    workloads = require_object(calibration['workloads'], 'calibration.workloads')
+    resolve = require_object(workloads['resolve'], 'calibration.workloads.resolve')
+    assert require_number(resolve['p99'], 'calibration.workloads.resolve.p99') > 0.05
+    assert resolve['eligible'] is False
+    assert verdict.status is leadership.Status.UNSTABLE
+
+
+@pytest.mark.parametrize(
+    ('dataset', 'calibration', 'expected'),
+    [
+        (_leadership_dataset(), _calibration(), 0),
+        (_leadership_dataset(depin=(1.2,) * 5), _calibration(), 1),
+        (_leadership_dataset(qualified=False), _calibration(), 3),
+    ],
+)
+def test_leadership_evaluate_cli_returns_the_documented_exit_status(
+    tmp_path: Path, dataset: dict[str, object], calibration: dict[str, object], expected: int
+) -> None:
+    dataset_path = tmp_path / 'comparison.json'
+    calibration_path = tmp_path / 'calibration.json'
+    dataset_path.write_text(json.dumps(dataset), encoding='utf-8')
+    calibration_path.write_text(json.dumps(calibration), encoding='utf-8')
+
+    assert leadership.main(('evaluate', str(dataset_path), '--calibration', str(calibration_path))) == expected
+
+
+def test_leadership_cli_returns_two_for_malformed_input(tmp_path: Path) -> None:
+    malformed = tmp_path / 'comparison.json'
+    malformed.write_text('{}', encoding='utf-8')
+
+    assert leadership.main(('calibrate', str(malformed), '--out', str(tmp_path / 'calibration.json'))) == 2
 
 
 def _child(path: Path) -> Path:

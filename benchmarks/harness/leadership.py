@@ -1,0 +1,329 @@
+"""Calibrate comparison noise and evaluate per-workload leadership evidence."""
+
+import argparse
+import math
+import statistics
+import sys
+from collections.abc import Sequence
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+
+from benchmarks.harness import (
+    HarnessError,
+    read_json,
+    require_array,
+    require_number,
+    require_object,
+    require_text,
+    stats,
+    write_json,
+)
+
+MINIMUM_REPETITIONS = 5
+MAXIMUM_ALLOWANCE = 0.05
+CALIBRATION_INCREMENT = 0.001
+EXIT_PASS = 0
+EXIT_FAILURE = 1
+EXIT_MALFORMED = 2
+EXIT_UNSTABLE = 3
+
+
+class Status(Enum):
+    LEADER = 'leader'
+    SHARED_LEADER = 'shared-leader'
+    LOSS = 'loss'
+    ABSOLUTE_FAILURE = 'absolute-failure'
+    REGRESSION = 'regression'
+    UNSTABLE = 'unstable'
+    NO_EQUIVALENT_COMPETITOR = 'no-equivalent-competitor'
+
+
+@dataclass(frozen=True, slots=True)
+class CompetitorVerdict:
+    label: str
+    paired: stats.Paired
+    passed: bool
+
+
+@dataclass(frozen=True, slots=True)
+class WorkloadVerdict:
+    workload: str
+    status: Status
+    competitor: CompetitorVerdict | None
+    competitive_passed: bool | None
+    absolute_overhead: float | None
+    absolute_ceiling: float | None
+    absolute_passed: bool | None
+    secondary_passed: bool
+
+
+def _boolean(value: object, where: str) -> bool:
+    if not isinstance(value, bool):
+        raise HarnessError(f'{where}: expected a boolean, found {value!r}')
+    return value
+
+
+def _finite_positive(value: object, where: str) -> float:
+    number = require_number(value, where)
+    if not math.isfinite(number) or number <= 0.0:
+        raise HarnessError(f'{where}: expected a finite positive duration, found {number!r}')
+    return number
+
+
+def _seed(dataset: dict[str, object]) -> int:
+    value = require_number(dataset.get('seed'), 'dataset.seed')
+    if not value.is_integer():
+        raise HarnessError(f'dataset.seed: expected an integer, found {value!r}')
+    return int(value)
+
+
+def _workloads(dataset: dict[str, object]) -> dict[str, dict[str, object]]:
+    targets = require_object(dataset.get('targets'), 'dataset.targets')
+    if not targets:
+        raise HarnessError('dataset.targets: no workload descriptions; recollect the comparison dataset')
+    return {name: require_object(value, f'dataset.targets.{name}') for name, value in targets.items()}
+
+
+def _repetitions(dataset: dict[str, object]) -> list[dict[str, object]]:
+    repetitions = require_array(dataset.get('repetitions'), 'dataset.repetitions')
+    if len(repetitions) < MINIMUM_REPETITIONS:
+        raise HarnessError(
+            f'dataset.repetitions: {len(repetitions)} repetitions; at least {MINIMUM_REPETITIONS} are needed'
+        )
+    return [require_object(value, f'dataset.repetitions[{index}]') for index, value in enumerate(repetitions)]
+
+
+def _sample(repetition: dict[str, object], workload: str, label: str, where: str) -> dict[str, object] | None:
+    samples = require_object(repetition.get('samples'), f'{where}.samples')
+    return (
+        None
+        if (sample := samples.get(f'test_comparison[{workload}-{label}]')) is None
+        else require_object(sample, where)
+    )
+
+
+def _qualified(sample: dict[str, object], where: str) -> float | None:
+    if 'qualified' in sample and not _boolean(sample['qualified'], f'{where}.qualified'):
+        return None
+    median = _finite_positive(sample.get('median'), f'{where}.median')
+    mean = _finite_positive(sample.get('mean'), f'{where}.mean')
+    rounds = _finite_positive(sample.get('rounds'), f'{where}.rounds')
+    return median if rounds >= 1000.0 or mean * rounds >= 0.5 else None
+
+
+def _paired_medians(
+    repetitions: Sequence[dict[str, object]], workload: str, base: str, head: str
+) -> tuple[list[float], list[float]]:
+    before: list[float] = []
+    after: list[float] = []
+    for index, repetition in enumerate(repetitions):
+        where = f'dataset.repetitions[{index}]'
+        left, right = _sample(repetition, workload, base, where), _sample(repetition, workload, head, where)
+        if left is None or right is None:
+            continue
+        left_median, right_median = _qualified(left, f'{where}.{base}'), _qualified(right, f'{where}.{head}')
+        if left_median is None or right_median is None:
+            continue
+        before.append(left_median)
+        after.append(right_median)
+    return before, after
+
+
+def _calibration_entry(value: object, workload: str) -> tuple[float | None, bool]:
+    fields = require_object(value, f'calibration.workloads.{workload}')
+    eligible = _boolean(fields.get('eligible'), f'calibration.workloads.{workload}.eligible')
+    p99_value = fields.get('p99')
+    p99 = None if p99_value is None else require_number(p99_value, f'calibration.workloads.{workload}.p99')
+    if p99 is not None and (not math.isfinite(p99) or p99 < 0.0):
+        raise HarnessError(f'calibration.workloads.{workload}.p99: expected a finite non-negative number')
+    allowance = fields.get('allowance')
+    if eligible:
+        if p99 is None:
+            raise HarnessError(f'calibration.workloads.{workload}: eligible evidence needs a p99 allowance')
+        if allowance is None:
+            allowance = p99
+        calibrated = require_number(allowance, f'calibration.workloads.{workload}.allowance')
+        if calibrated > MAXIMUM_ALLOWANCE:
+            raise HarnessError(f'calibration.workloads.{workload}: allowance exceeds the 5% maximum; recalibrate')
+        return calibrated, True
+    return p99, False
+
+
+def calibrate(dataset: dict[str, object]) -> dict[str, object]:
+    """Derive deterministic per-workload allowances from a null comparison dataset."""
+    seed = _seed(dataset)
+    repetitions = _repetitions(dataset)
+    calibrated: dict[str, object] = {}
+    for workload in sorted(_workloads(dataset)):
+        direct, depin = _paired_medians(repetitions, workload, 'direct', 'depin')
+        if len(direct) < MINIMUM_REPETITIONS:
+            calibrated[workload] = {'eligible': False, 'p99': None}
+            continue
+        paired = stats.paired_ratio(direct, depin, seed=seed)
+        p99 = max(abs(paired.low), abs(paired.high), abs(paired.ratio))
+        allowance = math.ceil(p99 / CALIBRATION_INCREMENT) * CALIBRATION_INCREMENT
+        calibrated[workload] = {'allowance': allowance, 'eligible': allowance <= MAXIMUM_ALLOWANCE, 'p99': allowance}
+    return {'workloads': calibrated}
+
+
+def _candidates(description: dict[str, object], workload: str) -> list[tuple[str, str]]:
+    encoded = require_array(description.get('candidates'), f'dataset.targets.{workload}.candidates')
+    candidates: list[tuple[str, str]] = []
+    for index, value in enumerate(encoded):
+        fields = require_object(value, f'dataset.targets.{workload}.candidates[{index}]')
+        candidates.append(
+            (
+                require_text(fields.get('label'), f'dataset.targets.{workload}.candidates[{index}].label'),
+                require_text(
+                    fields.get('classification'), f'dataset.targets.{workload}.candidates[{index}].classification'
+                ),
+            )
+        )
+    return candidates
+
+
+def _secondary(description: dict[str, object], workload: str) -> bool:
+    encoded = description.get('secondary')
+    if encoded is None:
+        return True
+    fields = require_object(encoded, f'dataset.targets.{workload}.secondary')
+    return _boolean(fields.get('passed'), f'dataset.targets.{workload}.secondary.passed')
+
+
+def _absolute(
+    description: dict[str, object], workload: str, depin: Sequence[float], direct: Sequence[float]
+) -> tuple[float | None, float | None, bool | None]:
+    target = description.get('target')
+    if target is None:
+        return None, None, None
+    fields = require_object(target, f'dataset.targets.{workload}.target')
+    fixed = _finite_positive(fields.get('fixed_seconds'), f'dataset.targets.{workload}.target.fixed_seconds')
+    fraction_value = fields.get('fraction_of_direct')
+    fraction = (
+        None
+        if fraction_value is None
+        else require_number(fraction_value, f'dataset.targets.{workload}.target.fraction_of_direct')
+    )
+    if fraction is not None and not 0.0 < fraction <= 1.0:
+        raise HarnessError(f'dataset.targets.{workload}.target.fraction_of_direct: expected a fraction within (0, 1]')
+    overhead = statistics.median(after - before for before, after in zip(direct, depin, strict=True))
+    ceiling = fixed if fraction is None else min(fixed, statistics.median(direct) * fraction)
+    return overhead, ceiling, overhead <= ceiling
+
+
+def evaluate(dataset: dict[str, object], calibration: dict[str, object]) -> tuple[WorkloadVerdict, ...]:
+    """Evaluate all workloads from decoded comparison and calibration JSON."""
+    seed = _seed(dataset)
+    repetitions = _repetitions(dataset)
+    calibration_entries = require_object(calibration.get('workloads'), 'calibration.workloads')
+    verdicts: list[WorkloadVerdict] = []
+    for workload, description in sorted(_workloads(dataset).items()):
+        calibration_value = calibration_entries.get(workload)
+        if calibration_value is None:
+            raise HarnessError(f'{workload}: calibration is missing; run calibrate against a null collection')
+        allowance, eligible = _calibration_entry(calibration_value, workload)
+        if eligible and allowance is None:
+            raise HarnessError(f'{workload}: eligible calibration has no allowance; recalibrate the null evidence')
+        direct, depin = _paired_medians(repetitions, workload, 'direct', 'depin')
+        secondary = _secondary(description, workload)
+        overhead, ceiling, absolute = (
+            _absolute(description, workload, depin, direct)
+            if len(direct) >= MINIMUM_REPETITIONS
+            else (None, None, None)
+        )
+        equivalents = [(label, kind) for label, kind in _candidates(description, workload) if kind == 'equivalent']
+        competitor: CompetitorVerdict | None = None
+        competitive: bool | None = None
+        if eligible and allowance is not None and len(depin) >= MINIMUM_REPETITIONS and equivalents:
+            measured: list[tuple[float, str, stats.Paired]] = []
+            for label, _ in equivalents:
+                candidate, subject = _paired_medians(repetitions, workload, label, 'depin')
+                if len(candidate) < MINIMUM_REPETITIONS or len(subject) < MINIMUM_REPETITIONS:
+                    continue
+                paired = stats.paired_ratio(candidate, subject, seed=seed)
+                measured.append((statistics.median(candidate), label, paired))
+            if len(measured) != len(equivalents):
+                status = Status.UNSTABLE
+            else:
+                _, label, paired = min(measured)
+                competitive = paired.ratio <= 0.0 and paired.high <= allowance
+                competitor = CompetitorVerdict(label=label, paired=paired, passed=competitive)
+                status = Status.LEADER if competitive and paired.high < 0.0 else Status.SHARED_LEADER
+        elif not eligible or len(depin) < MINIMUM_REPETITIONS or len(direct) < MINIMUM_REPETITIONS:
+            status = Status.UNSTABLE
+        elif not equivalents:
+            status = Status.NO_EQUIVALENT_COMPETITOR
+        else:
+            status = Status.UNSTABLE
+        if status not in {Status.UNSTABLE, Status.NO_EQUIVALENT_COMPETITOR}:
+            if competitive is False:
+                status = Status.LOSS
+            elif absolute is False:
+                status = Status.ABSOLUTE_FAILURE
+            elif not secondary:
+                status = Status.REGRESSION
+        verdicts.append(
+            WorkloadVerdict(workload, status, competitor, competitive, overhead, ceiling, absolute, secondary)
+        )
+    return tuple(verdicts)
+
+
+def _path(value: str) -> Path:
+    candidate = Path(value)
+    return candidate / 'comparison.json' if candidate.is_dir() else candidate
+
+
+def _write_atomic(path: Path, payload: dict[str, object]) -> None:
+    temporary = path.with_name(f'.{path.name}.tmp')
+    try:
+        write_json(temporary, payload)
+        temporary.replace(path)
+    except OSError as error:
+        if temporary.exists():
+            temporary.unlink(missing_ok=True)
+        raise HarnessError(f'{path}: cannot atomically write calibration ({error})') from error
+
+
+def _arguments(argv: Sequence[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog='python -m benchmarks.harness.leadership')
+    commands = parser.add_subparsers(dest='command', required=True)
+    calibration = commands.add_parser('calibrate')
+    calibration.add_argument('dataset')
+    calibration.add_argument('--out', required=True)
+    evaluation = commands.add_parser('evaluate')
+    evaluation.add_argument('dataset')
+    evaluation.add_argument('--calibration', required=True)
+    return parser.parse_args(argv)
+
+
+def _exit(verdicts: Sequence[WorkloadVerdict]) -> int:
+    statuses = {verdict.status for verdict in verdicts}
+    if Status.UNSTABLE in statuses:
+        return EXIT_UNSTABLE
+    if statuses - {Status.LEADER, Status.SHARED_LEADER, Status.NO_EQUIVALENT_COMPETITOR}:
+        return EXIT_FAILURE
+    return EXIT_PASS
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run the calibration or evaluator command line interface."""
+    try:
+        arguments = _arguments(argv)
+        if arguments.command == 'calibrate':
+            dataset = read_json(_path(require_text(arguments.dataset, 'DATASET')))
+            _write_atomic(Path(require_text(arguments.out, '--out')), calibrate(dataset))
+            return EXIT_PASS
+        dataset = read_json(_path(require_text(arguments.dataset, 'DATASET')))
+        calibration = read_json(Path(require_text(arguments.calibration, '--calibration')))
+        verdicts = evaluate(dataset, calibration)
+        for verdict in verdicts:
+            _ = sys.stdout.write(f'{verdict.status.value:<25} {verdict.workload}\n')
+        return _exit(verdicts)
+    except HarnessError as error:
+        _ = sys.stderr.write(f'{error}\n')
+        return EXIT_MALFORMED
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
