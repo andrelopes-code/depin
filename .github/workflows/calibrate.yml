@@ -6,8 +6,10 @@ name: Calibrate
 # on a workstation and failed a documentation-only pull request on the runner.
 #
 # Both sides of the collection are the same checkout, so every difference in it
-# is noise by construction. Run it from the Actions tab, take the generated file
-# from the artifact, and commit it.
+# is noise by construction. Run it from the Actions tab, or by putting the
+# `calibrate` label on a pull request — which is the only way to reach a workflow
+# that is not on the default branch yet. Take the generated file from the
+# artifact and commit it.
 
 on:
   workflow_dispatch:
@@ -16,12 +18,15 @@ on:
         description: 'Repetitions per side; the trial count is C(2R, R) x 6 per workload'
         required: false
         default: '5'
+  pull_request:
+    types: [labeled]
 
 permissions:
   contents: read
 
 jobs:
   calibrate:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'calibrate'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -38,7 +43,7 @@ jobs:
 
       - name: Collect a null dataset
         env:
-          REPETITIONS: ${{ inputs.repetitions }}
+          REPETITIONS: ${{ inputs.repetitions || '5' }}
         run: >
           uv run --no-sync python -m benchmarks.harness.pairs
           --base-dir . --head-dir . --repetitions "${REPETITIONS}" --out /tmp/null
