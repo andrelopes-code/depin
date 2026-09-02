@@ -1,5 +1,6 @@
 """Immutable contracts for classifying and judging competitor implementations."""
 
+import math
 from dataclasses import dataclass
 from enum import Enum
 
@@ -57,7 +58,7 @@ class AbsoluteTarget:
     justification: str
 
     def __post_init__(self) -> None:
-        if self.fixed_seconds <= 0.0:
+        if not math.isfinite(self.fixed_seconds) or self.fixed_seconds <= 0.0:
             raise HarnessError(f'{self.fixed_seconds}: fixed target must be positive')
         if self.fraction_of_direct is not None and not 0.0 < self.fraction_of_direct <= 1.0:
             raise HarnessError(f'{self.fraction_of_direct}: direct fraction must be within (0, 1]')
