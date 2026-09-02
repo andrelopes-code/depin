@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 import pytest
 
@@ -8,8 +9,10 @@ from benchmarks.comparison.contracts import (
     Competitor,
     Equivalence,
 )
-from benchmarks.contracts import Implementation, Observation, Prepared
+from benchmarks.comparison.targets import load
+from benchmarks.contracts import Implementation, Metric, Observation, Prepared
 from benchmarks.harness import HarnessError
+from benchmarks.workloads import WORKLOADS
 
 
 def _implementation() -> Implementation:
@@ -87,3 +90,30 @@ def test_an_absolute_target_justification_is_non_empty_and_unpadded(justificatio
 def test_an_absolute_target_uses_the_lower_applicable_ceiling(direct_seconds: float, expected: float) -> None:
     target = AbsoluteTarget(12e-6, 0.1, 'handler budget')
     assert target.ceiling(direct_seconds) == pytest.approx(expected)
+
+
+def test_every_direct_latency_workload_has_one_absolute_target() -> None:
+    targets = load(Path('benchmarks/leadership-targets.toml'))
+    expected = {
+        workload.name
+        for workload in WORKLOADS
+        if workload.claim.metric is Metric.LATENCY and workload.baseline is not None
+    }
+    assert set(targets) == expected
+
+
+def test_an_unknown_target_field_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / 'targets.toml'
+    path.write_text(
+        '[case]\nfixed_seconds = 0.1\njustification = "reason"\nunknown = 1\n',
+        encoding='utf-8',
+    )
+    with pytest.raises(HarnessError, match='unknown field'):
+        load(path)
+
+
+def test_a_non_positive_target_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / 'targets.toml'
+    path.write_text('[case]\nfixed_seconds = 0\njustification = "reason"\n', encoding='utf-8')
+    with pytest.raises(HarnessError, match='fixed target'):
+        load(path)
