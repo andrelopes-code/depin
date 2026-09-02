@@ -237,7 +237,10 @@ uv run --group docs mkdocs serve
 ```
 
 `mkdocs build --strict` runs in CI: a broken cross-reference or an orphaned page
-fails the build. `docs/reference/` is generated from the docstrings — edit the
+fails the build. It does not check absolute links back at the site, and the
+site is versioned with `mike`, so a link below the root needs the `latest/`
+alias — `<site>/latest/guide/fastapi/`, never `<site>/guide/fastapi/`, which
+404s. `tests/integration/test_documentation_links.py` enforces it. `docs/reference/` is generated from the docstrings — edit the
 source, not the page. `docs/guide/` is hand-written, and its `pycon` blocks are
 doctests executed by `uv run pytest`.
 
