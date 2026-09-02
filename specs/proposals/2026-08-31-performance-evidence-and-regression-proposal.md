@@ -1,7 +1,12 @@
 # Proposal: trustworthy performance evidence and regression protection
 
 Date: 2026-08-31
-Status: queued proposal; requires a design specification and implementation plan
+Status: accepted and implemented in Step 7, released in 0.18.0. Design:
+`specs/2026-09-02-step-7-performance-design.md`. Plan:
+`specs/plans/2026-09-02-step-7-performance.md`. Evidence:
+`specs/evidence/2026-09-02-step-7-performance-baseline.md` and
+`specs/evidence/2026-09-02-step-7-performance.md`. Competitor comparison
+screened and deferred to Step 9, which owns the comparison page
 Scope: performance methodology, production relevance, regression control, optimization, and public evidence
 
 ## Nature of this document

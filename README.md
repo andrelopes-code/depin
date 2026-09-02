@@ -208,6 +208,18 @@ Full walkthrough: [FastAPI guide](https://andrelopes-code.github.io/depin/guide/
   parameters and validates them at decoration time, raising
   `MissingProviderError` immediately if a marked key is unregistered.
 
+## Performance
+
+Every workload is paired with the simplest honest Python doing the same work, and
+the two are proved to behave identically before either is timed. Results are
+published per workload with their baseline, their uncertainty, and the readings
+they do not support — there is no overall score and no claim to be the fastest
+library.
+
+Measured figures, methodology, scaling curves and reproduction instructions:
+[performance](https://andrelopes-code.github.io/depin/performance/). No numbers
+are quoted here, so nothing on this page can go stale.
+
 ## Project status
 
 Beta, pre-1.0. CI enforces `ruff`, `basedpyright --strict`, `mypy --strict`, the

@@ -10,7 +10,7 @@ from collections.abc import Iterable
 from types import ModuleType
 from typing import Final
 
-from depin._core import decoration
+from depin._core import decoration, longest_chain
 from depin._core.markers import get_provides
 from depin._core.providers import ASYNC_SHAPES, build_specs
 from depin._core.scope import Scope
@@ -80,15 +80,19 @@ def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index, inactive: froz
     all_specs = tuple(specs)
     if not _any_unsatisfied(all_specs, by_key):
         return
-    missing: dict[Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]] = {}
-    for root in all_specs:
-        _collect_missing(root, by_key, (root,), missing)
+    missing = longest_chain.over_specs(all_specs)
     # Deepest chain first: the longest resolution path is the most informative
     # one to show when several providers are unsatisfied.
-    ordered = sorted(missing.items(), key=lambda kv: len(kv[1][0]), reverse=True)
+    ordered = sorted(missing.items(), key=lambda kv: len(kv[1].chain), reverse=True)
     lines = [
-        format_missing(ident[0], tuple(spec.key for spec in chain), owner.key, param_name, inactive=ident in inactive)
-        for ident, (chain, owner, param_name) in ordered
+        format_missing(
+            ident[0],
+            tuple(step[0] for step in found.chain),
+            found.owner[0],
+            found.parameter,
+            inactive=ident in inactive,
+        )
+        for ident, found in ordered
     ]
     if len(lines) == 1:
         raise MissingProviderError(lines[0])
@@ -99,49 +103,20 @@ def _check_missing(specs: Iterable[ProviderSpec], by_key: _Index, inactive: froz
 def _any_unsatisfied(specs: Iterable[ProviderSpec], by_key: _Index) -> bool:
     """Whether some spec declares a required parameter that no binding provides.
 
-    Exactly the condition `_collect_missing` ends up detecting, but answered in
-    one pass over the specs instead of a walk from every root: a parameter is
-    unsatisfied where it stands, independently of the chains that reach it, unless
-    a default or an optional annotation excuses it. The walk then runs only to
-    reconstruct the deepest chain for the error message. `_check_missing` skips
-    that walk whenever this returns `False`, so the two must keep agreeing on
-    what counts as missing, or a real gap goes unreported.
+    Exactly the condition `depin._core.longest_chain.over_specs` ends up
+    detecting, but answered in one pass over the specs instead of over the whole
+    graph: a parameter is unsatisfied where it stands, independently of the
+    chains that reach it, unless a default or an optional annotation excuses it.
+    The chain search then runs only to reconstruct the deepest chain for the
+    error message. `_check_missing` skips it whenever this returns `False`, so
+    the two must keep agreeing on what counts as missing, or a real gap goes
+    unreported.
     """
     return any(
         not param.has_default and not param.optional and (param.key, param.tag) not in by_key
         for spec in specs
         for param in spec.params
     )
-
-
-def _collect_missing(
-    root: ProviderSpec,
-    by_key: _Index,
-    chain: tuple[ProviderSpec, ...],
-    missing: dict[Ident, tuple[tuple[ProviderSpec, ...], ProviderSpec, str]],
-) -> None:
-    # The walk decides on whether a binding exists, not on whether the parameter
-    # also carries a default: a satisfied parameter is traversed either way, which
-    # is what keeps this walk and `render._deepest_requirement` agreeing on one
-    # chain. Iterative DFS over the dependency graph; each entry is the current
-    # spec paired with the chain that led to it, and cycles are broken by the
-    # ``id(dep) in chain_specs`` check below and reported by `_toposort`.
-    stack: list[tuple[ProviderSpec, tuple[ProviderSpec, ...]]] = [(root, chain)]
-    while stack:
-        spec, current_chain = stack.pop()
-        chain_specs = {id(c) for c in current_chain}
-        for param in spec.params:
-            dep = by_key.get((param.key, param.tag))
-            if dep is None:
-                if param.has_default or param.optional:
-                    continue
-                ident = (param.key, param.tag)
-                if ident not in missing or len(current_chain) > len(missing[ident][0]):
-                    missing[ident] = (current_chain, spec, param.name)
-                continue
-            if id(dep) in chain_specs:
-                continue
-            stack.append((dep, (*current_chain, dep)))
 
 
 def format_missing(

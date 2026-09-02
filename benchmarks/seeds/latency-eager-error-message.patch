@@ -1,0 +1,16 @@
+diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
+index 4609511..fda8c72 100644
+--- a/depin/_core/frozen.py
++++ b/depin/_core/frozen.py
+@@ -591,9 +591,10 @@ class FrozenContainer:
+     def _lookup(self, key: object, tag: str | None) -> ProviderSpec:
+         if not is_provider_key(key):
+             raise MissingProviderError(f'cannot look up provider for {key!r}: not a valid key type')
++        absent = f'no provider for {fmt_key(key)} (tag={tag!r})'
+         spec = self._lookup_optional(key, tag)
+         if spec is None:
+-            raise MissingProviderError(f'no provider for {fmt_key(key)} (tag={tag!r})')
++            raise MissingProviderError(absent)
+         return spec
+ 
+     def _lookup_optional(self, key: ProviderKey, tag: str | None) -> ProviderSpec | None:

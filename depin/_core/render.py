@@ -1,5 +1,6 @@
 """Text renderings of a `DependencyGraph`: a resolution tree, Graphviz, and Mermaid."""
 
+from depin._core import longest_chain
 from depin._core.diagnostics import DependencyGraph, GraphEdge, GraphNode
 from depin._core.graph import INACTIVE_NOTE, format_missing, suggest_candidates
 from depin._core.spec import Ident, ProviderKey, fmt_key
@@ -80,41 +81,26 @@ def _deepest_requirement(
 ) -> tuple[tuple[ProviderKey, ...], ProviderKey, str] | None:
     """The longest chain reaching an unsatisfied parameter bound for ``(key, tag)``.
 
-    Walks `graph.nodes`, the topological order; `depin._core.graph._collect_missing`
-    walks specs in declaration order instead. The two orders can differ, and the
-    two walks agree on what counts as missing only for the optional case: an
+    Searches `graph.nodes`, the topological order; `depin._core.graph` searches
+    specs in declaration order instead. The two orders can differ, and the two
+    searches agree on what counts as missing only for the optional case: an
     unbound edge that is optional and carries no default is skipped by both,
     since neither would ever report it. They disagree on a defaulted edge —
-    `_collect_missing` skips it outright, because a default satisfies the call
-    and `freeze()` must never raise over it, while this walk still reports it,
+    `freeze()` skips it outright, because a default satisfies the call and
+    `freeze()` must never raise over it, while this one still reports it,
     because `explain()` names the chain a defaulted parameter would need if it
     were required, and the chain-consistency tests rely on that chain being
     reported the same way whether or not the parameter carries a default. Where
-    both walks do report a chain, they agree on which one wins: the longest
-    chain wins outright, and a tie — whether between two roots or between two
-    siblings sharing one root — is broken the same way by both, because each
-    pushes a node's children in forward order onto a LIFO stack and compares
-    with a strict ``>``, so the first chain found at a given length is the one
-    that stands. It inherits that walk's cost on a dense graph; the roadmap
-    routes that to Step 6.
+    both do report a chain, they agree on which one wins: the longest chain wins
+    outright, and a tie — whether between two roots or between two siblings
+    sharing one root — is broken the same way by both, because both go through
+    `depin._core.longest_chain`, which reproduces the traversal order the
+    enumerating walk decided ties by.
     """
-    best: tuple[tuple[ProviderKey, ...], ProviderKey, str] | None = None
-    for root in graph.nodes:
-        stack: list[tuple[GraphNode, tuple[Ident, ...]]] = [(root, ((root.key, root.tag),))]
-        while stack:
-            node, chain = stack.pop()
-            for edge in node.dependencies:
-                child = graph.find(edge.key, tag=edge.tag)
-                if child is None:
-                    if edge.optional and not edge.has_default:
-                        continue
-                    if (edge.key, edge.tag) == (key, tag) and (best is None or len(chain) > len(best[0])):
-                        best = (tuple(ident[0] for ident in chain), node.key, edge.parameter)
-                    continue
-                if (child.key, child.tag) in chain:
-                    continue
-                stack.append((child, (*chain, (child.key, child.tag))))
-    return best
+    found = longest_chain.over_graph(graph).get((key, tag))
+    if found is None:
+        return None
+    return (tuple(step[0] for step in found.chain), found.owner[0], found.parameter)
 
 
 def render_dot(graph: DependencyGraph) -> str:

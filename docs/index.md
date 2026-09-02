@@ -93,6 +93,9 @@ list.
   and message integrations.
 - [API reference](reference/index.md) — the full public API, generated from the
   source docstrings.
+- [Performance](performance/index.md) — what each operation costs against a
+  direct-Python baseline, how it scales, the methodology, and the limits of what
+  the numbers support.
 - [Examples](https://github.com/andrelopes-code/depin/tree/main/examples) —
   seventeen runnable programs, each executed by the test suite.
 - [Contributing](https://github.com/andrelopes-code/depin/blob/main/CONTRIBUTING.md)

@@ -1,0 +1,12 @@
+diff --git a/depin/_core/longest_chain.py b/depin/_core/longest_chain.py
+--- a/depin/_core/longest_chain.py
++++ b/depin/_core/longest_chain.py
+@@ -102,7 +102,7 @@ def _longest(nodes: tuple[_Node, ...]) -> dict[Ident, Requirement]:
+     index = {node.ident: position for position, node in enumerate(nodes)}
+     children = tuple(tuple(index[edge.ident] for edge in node.edges if edge.ident in index) for node in nodes)
+     order = _topological(children)
+-    if order is None:
++    if order is None or True:
+         return _enumerate_paths(nodes, index)
+     return _dynamic(nodes, index, children, order)
+ 

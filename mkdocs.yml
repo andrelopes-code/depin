@@ -62,6 +62,11 @@ nav:
       - Warmup and health: guide/operations.md
       - Writing an integration: guide/integrations.md
       - FastAPI: guide/fastapi.md
+  - Performance:
+      - Overview: performance/index.md
+      - Methodology: performance/methodology.md
+      - Results: performance/results.md
+      - Reproducing: performance/reproducing.md
   - Support policy: support-policy.md
   - Reference:
       - Overview: reference/index.md

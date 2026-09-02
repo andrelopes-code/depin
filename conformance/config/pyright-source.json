@@ -1,7 +1,20 @@
 {
-  "include": ["../../depin", "../../tests", "../../examples", "../../scripts"],
-  "exclude": ["**/__pycache__", "../../.venv"],
-  "executionEnvironments": [{ "root": "../.." }],
+  "include": [
+    "../../depin",
+    "../../tests",
+    "../../examples",
+    "../../scripts",
+    "../../benchmarks"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "../../.venv"
+  ],
+  "executionEnvironments": [
+    {
+      "root": "../.."
+    }
+  ],
   "typeCheckingMode": "strict",
   "pythonVersion": "3.12",
   "reportMissingTypeStubs": false,

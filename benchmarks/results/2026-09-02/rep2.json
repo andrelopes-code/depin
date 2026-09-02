@@ -1,0 +1,422 @@
+{
+  "aggregates": {
+    "test_latency[build_the_graph_view-depin]": {
+      "iqr": 0.0001596710062585771,
+      "mean": 0.00538402977178404,
+      "median": 0.00422837701626122,
+      "minimum": 0.00376471399795264,
+      "rounds": 179,
+      "stddev": 0.0077471465728262984
+    },
+    "test_latency[call_through_an_inject_wrapper-depin]": {
+      "iqr": 4.5902561396360397e-07,
+      "mean": 5.983800906177534e-06,
+      "median": 5.441019311547279e-06,
+      "minimum": 4.758010618388653e-06,
+      "rounds": 40140,
+      "stddev": 3.4314019691900222e-06
+    },
+    "test_latency[call_through_an_inject_wrapper-direct]": {
+      "iqr": 8.901115506887427e-09,
+      "mean": 1.2775299464107334e-07,
+      "median": 1.1903000995516777e-07,
+      "minimum": 1.0464922524988651e-07,
+      "rounds": 80393,
+      "stddev": 4.631649455410904e-08
+    },
+    "test_latency[explain_a_deep_chain-depin]": {
+      "iqr": 0.00018676702165976167,
+      "mean": 0.007428309984970838,
+      "median": 0.006510213017463684,
+      "minimum": 0.006032789940945804,
+      "rounds": 120,
+      "stddev": 0.007080265682846839
+    },
+    "test_latency[explain_a_deep_chain_with_every_node_decorated-depin]": {
+      "iqr": 0.000833226484246552,
+      "mean": 0.021329913197162872,
+      "median": 0.016584407014306635,
+      "minimum": 0.01549969392362982,
+      "rounds": 120,
+      "stddev": 0.015836442221864488
+    },
+    "test_latency[explain_a_layered_dag-depin]": {
+      "iqr": 0.00015242607332766056,
+      "mean": 0.005260922064695953,
+      "median": 0.004948851012159139,
+      "minimum": 0.004614006029441953,
+      "rounds": 184,
+      "stddev": 0.004118743295670187
+    },
+    "test_latency[explain_an_unbound_key_of_16-depin]": {
+      "iqr": 0.00026467404677532613,
+      "mean": 0.007371224156396023,
+      "median": 0.007378513924777508,
+      "minimum": 0.0069263470359146595,
+      "rounds": 131,
+      "stddev": 0.00017743865828917442
+    },
+    "test_latency[explain_an_unbound_key_of_20-depin]": {
+      "iqr": 0.00020373266306705773,
+      "mean": 0.007452024010105235,
+      "median": 0.007445289054885507,
+      "minimum": 0.006995202973484993,
+      "rounds": 137,
+      "stddev": 0.00019304226722195042
+    },
+    "test_latency[export_a_large_graph_as_dot-depin]": {
+      "iqr": 0.00013055297313258052,
+      "mean": 0.0024562538298165525,
+      "median": 0.002443416975438595,
+      "minimum": 0.0021720801014453173,
+      "rounds": 380,
+      "stddev": 9.200510356161593e-05
+    },
+    "test_latency[fastapi_application_startup-depin]": {
+      "iqr": 0.00021300962544046342,
+      "mean": 0.0028284687852398764,
+      "median": 0.0024454649537801743,
+      "minimum": 0.0021388999884948134,
+      "rounds": 359,
+      "stddev": 0.004406043498960854
+    },
+    "test_latency[fastapi_application_startup-direct]": {
+      "iqr": 0.00018184471991844475,
+      "mean": 0.0017869851382449268,
+      "median": 0.0016329039353877306,
+      "minimum": 0.0013648249441757798,
+      "rounds": 625,
+      "stddev": 0.0025888918838541035
+    },
+    "test_latency[fastapi_async_resource_teardown-depin]": {
+      "iqr": 5.999789573252201e-05,
+      "mean": 0.0007813984954502092,
+      "median": 0.0007764380425214767,
+      "minimum": 0.0006443249294534326,
+      "rounds": 1154,
+      "stddev": 6.067467790851911e-05
+    },
+    "test_latency[fastapi_async_resource_teardown-direct]": {
+      "iqr": 4.692206857725978e-05,
+      "mean": 0.0006585268098175725,
+      "median": 0.0006516900612041354,
+      "minimum": 0.0005418219370767474,
+      "rounds": 1495,
+      "stddev": 5.262433947624502e-05
+    },
+    "test_latency[fastapi_cpu_light_endpoint-depin]": {
+      "iqr": 5.544131272472441e-05,
+      "mean": 0.00073628870882374,
+      "median": 0.0007289660861715674,
+      "minimum": 0.000607385067269206,
+      "rounds": 1197,
+      "stddev": 6.168962746290401e-05
+    },
+    "test_latency[fastapi_cpu_light_endpoint-direct]": {
+      "iqr": 4.522202652879059e-05,
+      "mean": 0.0006559149633497844,
+      "median": 0.0006473630201071501,
+      "minimum": 0.0005417770007625222,
+      "rounds": 1499,
+      "stddev": 5.011386916992513e-05
+    },
+    "test_latency[fastapi_endpoint_with_work-depin]": {
+      "iqr": 6.589925033040345e-05,
+      "mean": 0.0010066034328513618,
+      "median": 0.0010050709825009108,
+      "minimum": 0.0008345850510522723,
+      "rounds": 1015,
+      "stddev": 6.710657579086203e-05
+    },
+    "test_latency[fastapi_endpoint_with_work-direct]": {
+      "iqr": 6.366305751726031e-05,
+      "mean": 0.0008979942007840157,
+      "median": 0.0008877499494701624,
+      "minimum": 0.0007404639618471265,
+      "rounds": 1063,
+      "stddev": 6.95287343319471e-05
+    },
+    "test_latency[fastapi_request_scoped_graph-depin]": {
+      "iqr": 6.0099002439528704e-05,
+      "mean": 0.0007851999798763409,
+      "median": 0.0007795159472152591,
+      "minimum": 0.0006402420112863183,
+      "rounds": 1137,
+      "stddev": 5.938494139591014e-05
+    },
+    "test_latency[fastapi_request_scoped_graph-direct]": {
+      "iqr": 3.8132595364004374e-05,
+      "mean": 0.0006600721039739905,
+      "median": 0.0006488559884019196,
+      "minimum": 0.0005600720178335905,
+      "rounds": 1396,
+      "stddev": 4.586216147569125e-05
+    },
+    "test_latency[fastapi_singletons_and_transients-depin]": {
+      "iqr": 5.5567012168467045e-05,
+      "mean": 0.0007671684982491581,
+      "median": 0.0007600365206599236,
+      "minimum": 0.0006262380629777908,
+      "rounds": 1276,
+      "stddev": 6.114106657540865e-05
+    },
+    "test_latency[fastapi_singletons_and_transients-direct]": {
+      "iqr": 4.930960130877793e-05,
+      "mean": 0.0006629347394025603,
+      "median": 0.000656033051200211,
+      "minimum": 0.0005459319800138474,
+      "rounds": 1075,
+      "stddev": 5.298421916772827e-05
+    },
+    "test_latency[freeze_a_chain_missing_a_provider_of_100-depin]": {
+      "iqr": 0.00035195850068703294,
+      "mean": 0.011025178970885462,
+      "median": 0.01096039148978889,
+      "minimum": 0.010328851058147848,
+      "rounds": 120,
+      "stddev": 0.0003935158370165683
+    },
+    "test_latency[freeze_a_chain_missing_a_provider_of_50-depin]": {
+      "iqr": 0.00030623149359598756,
+      "mean": 0.009255729574942962,
+      "median": 0.009193816513288766,
+      "minimum": 0.008833198924548924,
+      "rounds": 120,
+      "stddev": 0.0003333649661951895
+    },
+    "test_latency[freeze_a_chain_of_10-depin]": {
+      "iqr": 4.374954733066261e-05,
+      "mean": 0.00039486591432288655,
+      "median": 0.00039085105527192354,
+      "minimum": 0.0003216470358893275,
+      "rounds": 1901,
+      "stddev": 7.740841012936504e-05
+    },
+    "test_latency[freeze_a_chain_of_100-depin]": {
+      "iqr": 0.00018300500232726336,
+      "mean": 0.00362906501761019,
+      "median": 0.0036137339775450528,
+      "minimum": 0.0031304119620472193,
+      "rounds": 274,
+      "stddev": 0.00020438757522087998
+    },
+    "test_latency[freeze_a_chain_of_1000-depin]": {
+      "iqr": 0.000994913571048528,
+      "mean": 0.03732926394538178,
+      "median": 0.03620989550836384,
+      "minimum": 0.03409545496106148,
+      "rounds": 120,
+      "stddev": 0.007867140309577962
+    },
+    "test_latency[freeze_a_decorated_chain_of_10-depin]": {
+      "iqr": 7.082498632371426e-05,
+      "mean": 0.0009250858646464039,
+      "median": 0.000928046996705234,
+      "minimum": 0.0007631999906152487,
+      "rounds": 938,
+      "stddev": 6.382195955099454e-05
+    },
+    "test_latency[freeze_a_decorated_chain_of_100-depin]": {
+      "iqr": 0.00027765444247052073,
+      "mean": 0.008666864418773911,
+      "median": 0.008659116923809052,
+      "minimum": 0.008257780922576785,
+      "rounds": 120,
+      "stddev": 0.00018433874596621885
+    },
+    "test_latency[freeze_a_decorated_chain_of_1000-depin]": {
+      "iqr": 0.0016662279958836734,
+      "mean": 0.09744017964112572,
+      "median": 0.08875891746720299,
+      "minimum": 0.08574562799185514,
+      "rounds": 120,
+      "stddev": 0.020190251546593936
+    },
+    "test_latency[freeze_a_generic_key_chain_of_10-depin]": {
+      "iqr": 6.39949575997889e-05,
+      "mean": 0.0007317956106447095,
+      "median": 0.0007090379949659109,
+      "minimum": 0.0005715690786018968,
+      "rounds": 995,
+      "stddev": 0.00012373530038699065
+    },
+    "test_latency[freeze_a_generic_key_chain_of_100-depin]": {
+      "iqr": 0.00031253095949068666,
+      "mean": 0.00680618300975766,
+      "median": 0.006801719020586461,
+      "minimum": 0.006238044938072562,
+      "rounds": 120,
+      "stddev": 0.0002205727263626516
+    },
+    "test_latency[freeze_a_generic_key_chain_of_1000-depin]": {
+      "iqr": 0.0013922704965807498,
+      "mean": 0.08826194541470614,
+      "median": 0.08476215653354302,
+      "minimum": 0.0825616599759087,
+      "rounds": 120,
+      "stddev": 0.0127475082608238
+    },
+    "test_latency[open_a_request_shaped_scope-depin]": {
+      "iqr": 2.148968633264303e-06,
+      "mean": 2.8326959511479618e-05,
+      "median": 2.6454974431544542e-05,
+      "minimum": 2.3004948161542416e-05,
+      "rounds": 12472,
+      "stddev": 7.251065481101677e-06
+    },
+    "test_latency[open_a_request_shaped_scope-direct]": {
+      "iqr": 4.215897726161136e-08,
+      "mean": 8.184592115762939e-07,
+      "median": 7.761409506201744e-07,
+      "minimum": 6.637170112558774e-07,
+      "rounds": 183554,
+      "stddev": 4.987360536915626e-07
+    },
+    "test_latency[open_and_close_a_scope-depin]": {
+      "iqr": 4.333333345130086e-05,
+      "mean": 0.00035533074654487356,
+      "median": 0.0003304060082882643,
+      "minimum": 0.0002707389649003744,
+      "rounds": 2977,
+      "stddev": 0.0001305636636291854
+    },
+    "test_latency[open_and_close_a_scope-direct]": {
+      "iqr": 2.1990854293107986e-07,
+      "mean": 3.3955361689279943e-06,
+      "median": 3.113062120974064e-06,
+      "minimum": 2.6659108698368073e-06,
+      "rounds": 94339,
+      "stddev": 8.422231463158527e-06
+    },
+    "test_latency[resolve_a_collection_of_10-depin]": {
+      "iqr": 1.3480894267559052e-06,
+      "mean": 2.0284531312738337e-05,
+      "median": 1.867848914116621e-05,
+      "minimum": 1.6176956705749035e-05,
+      "rounds": 20972,
+      "stddev": 6.808984602947558e-06
+    },
+    "test_latency[resolve_a_collection_of_10-direct]": {
+      "iqr": 1.4493707567453384e-08,
+      "mean": 2.2428269805227272e-07,
+      "median": 2.0760344341397285e-07,
+      "minimum": 1.7710262909531593e-07,
+      "rounds": 49841,
+      "stddev": 3.01870045276475e-07
+    },
+    "test_latency[resolve_a_collection_of_100-depin]": {
+      "iqr": 1.614197390154004e-05,
+      "mean": 0.00013908167176013107,
+      "median": 0.00013303000014275312,
+      "minimum": 0.00011335499584674835,
+      "rounds": 4968,
+      "stddev": 1.9329219400510513e-05
+    },
+    "test_latency[resolve_a_collection_of_100-direct]": {
+      "iqr": 2.9802322387695312e-08,
+      "mean": 4.4114397428224997e-07,
+      "median": 4.080531653016806e-07,
+      "minimum": 3.606488462537527e-07,
+      "rounds": 119347,
+      "stddev": 1.8950339891679203e-07
+    },
+    "test_latency[resolve_a_transient_chain-depin]": {
+      "iqr": 2.530519850552082e-06,
+      "mean": 3.6316204974346804e-05,
+      "median": 3.438495332375169e-05,
+      "minimum": 2.9588001780211926e-05,
+      "rounds": 10576,
+      "stddev": 8.583004224597796e-06
+    },
+    "test_latency[resolve_a_transient_chain-direct]": {
+      "iqr": 1.5995465219020844e-07,
+      "mean": 2.3627325041383912e-06,
+      "median": 2.179061993956566e-06,
+      "minimum": 1.9139843061566353e-06,
+      "rounds": 193011,
+      "stddev": 1.9352221567778554e-06
+    },
+    "test_latency[resolve_an_async_singleton-depin]": {
+      "iqr": 1.3220123946666718e-06,
+      "mean": 2.0689624531163202e-05,
+      "median": 1.8959050066769123e-05,
+      "minimum": 1.6361940652132034e-05,
+      "rounds": 18410,
+      "stddev": 7.19433482536596e-06
+    },
+    "test_latency[resolve_an_async_singleton-direct]": {
+      "iqr": 1.1090305633842945e-06,
+      "mean": 1.6072522142159145e-05,
+      "median": 1.487403642386198e-05,
+      "minimum": 1.280906144529581e-05,
+      "rounds": 34100,
+      "stddev": 5.98653993637327e-06
+    },
+    "test_latency[resolve_cached_singleton-depin]": {
+      "iqr": 6.495974957942963e-08,
+      "mean": 1.9576826763960287e-06,
+      "median": 1.8300488591194153e-06,
+      "minimum": 1.5150289982557297e-06,
+      "rounds": 107969,
+      "stddev": 1.854410568928589e-06
+    },
+    "test_latency[resolve_cached_singleton-direct]": {
+      "iqr": 6.83940015733242e-09,
+      "mean": 9.99480139081896e-08,
+      "median": 9.241048246622085e-08,
+      "minimum": 8.039991371333599e-08,
+      "rounds": 102575,
+      "stddev": 4.226431524108304e-08
+    },
+    "test_latency[resolve_cached_singleton_through_an_alias-depin]": {
+      "iqr": 9.313225746154785e-08,
+      "mean": 3.972891464248294e-06,
+      "median": 3.7619611248373985e-06,
+      "minimum": 3.1460076570510864e-06,
+      "rounds": 66025,
+      "stddev": 2.3340547824761667e-06
+    },
+    "test_latency[resolve_cached_singleton_through_an_alias-direct]": {
+      "iqr": 6.94009941071272e-09,
+      "mean": 9.91724686383413e-08,
+      "median": 9.25001222640276e-08,
+      "minimum": 8.055008947849273e-08,
+      "rounds": 102480,
+      "stddev": 4.452231185338629e-08
+    },
+    "test_latency[resolve_singleton_through_a_two_deep_decoration_chain-depin]": {
+      "iqr": 6.891787052154541e-08,
+      "mean": 1.9343907244947302e-06,
+      "median": 1.8069986253976822e-06,
+      "minimum": 1.5050172805786133e-06,
+      "rounds": 132592,
+      "stddev": 2.7553966459388707e-06
+    },
+    "test_latency[resolve_singleton_through_a_two_deep_decoration_chain-direct]": {
+      "iqr": 6.898771971464156e-09,
+      "mean": 9.999876604038994e-08,
+      "median": 9.287963621318341e-08,
+      "minimum": 8.056988008320332e-08,
+      "rounds": 102512,
+      "stddev": 7.307859159407099e-08
+    },
+    "test_latency[warmup_a_cold_singleton_graph-depin]": {
+      "iqr": 0.0004004481015726924,
+      "mean": 0.014156200853176416,
+      "median": 0.011952962027862668,
+      "minimum": 0.011302463011816144,
+      "rounds": 120,
+      "stddev": 0.010403094729506965
+    },
+    "test_latency[warmup_a_cold_singleton_graph-direct]": {
+      "iqr": 2.893805503845215e-05,
+      "mean": 0.0004053869540245583,
+      "median": 0.0002627309877425432,
+      "minimum": 0.0002252379199489951,
+      "rounds": 3299,
+      "stddev": 0.0025259517995968326
+    }
+  },
+  "first": "base",
+  "repetition": 2
+}

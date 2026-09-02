@@ -105,10 +105,15 @@ threads = [
     # fails collection when the plugin that defines it is absent.
     "pytest-timeout>=2.4,<3",
 ]
+# Tier 3 drives a real FastAPI application in process through
+# `httpx.ASGITransport`, so the benchmark job needs both even though the core
+# has zero runtime dependencies.
 bench = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3",
     "pytest-benchmark>=5.1",
+    "fastapi>=0.133",
+    "httpx>=0.27",
 ]
 docs = [
     # MkDocs 2.0 removes the plugin system and the theming system with no
@@ -149,7 +154,7 @@ case-sensitive = true
 "scripts/check_mutation_threshold.py" = ["T20"]
 "scripts/conformance/**" = ["T20"]
 "scripts/forward.py" = ["T20"]
-"benchmarks/compare.py" = ["T20"]
+"benchmarks/harness/*.py" = ["T20"]
 
 [tool.ruff.lint.flake8-bugbear]
 # injected() is designed to sit in default-value position; it returns a fresh
@@ -157,7 +162,7 @@ case-sensitive = true
 extend-immutable-calls = ["depin.injected", "depin._core.markers.injected"]
 
 [tool.basedpyright]
-include = ["depin", "tests", "examples", "scripts"]
+include = ["depin", "tests", "examples", "scripts", "benchmarks"]
 exclude = ["**/__pycache__", ".venv"]
 typeCheckingMode = "strict"
 pythonVersion = "3.12"
@@ -168,7 +173,7 @@ reportMissingTypeStubs = false
 # must see the same code, or "both are clean" means nothing.
 [tool.mypy]
 python_version = "3.12"
-files = ["depin", "tests", "examples", "scripts"]
+files = ["depin", "tests", "examples", "scripts", "benchmarks"]
 strict = true
 warn_unreachable = true
 enable_error_code = ["redundant-expr", "possibly-undefined", "truthy-bool", "ignore-without-code"]
@@ -180,7 +185,7 @@ enable_error_code = ["redundant-expr", "possibly-undefined", "truthy-bool", "ign
 # does. Pyrefly's equivalent is the root `pyrefly.toml`; ty is the only one of
 # the two with a `pyproject.toml` table.
 [tool.ty.src]
-include = ["depin", "tests", "examples", "scripts"]
+include = ["depin", "tests", "examples", "scripts", "benchmarks"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "depin", "docs"]

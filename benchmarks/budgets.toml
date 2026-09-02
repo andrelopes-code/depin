@@ -1,0 +1,408 @@
+# Per-workload regression budgets, and the measurement each one rests on.
+#
+# A uniform threshold cannot be right: measured per-workload dispersion on the
+# reference host spans an order of magnitude, so one number is simultaneously too
+# loose for the quiet workloads and too tight for the noisy ones. Each latency
+# budget below is twice that workload's own measured paired null p99, floored by
+# the band it falls in - 5% low, 8% medium, 15% high.
+#
+# Derived from a paired null collection: 10 runs of identical code,
+# 5 per side, with the statistic evaluated over every split of those
+# runs into two halves (1512 trials per workload).
+#
+# Regenerate by the procedure in docs/performance/methodology.md. Never widen a
+# budget to make a failing pull request green: benchmarks/harness/budgets.py
+# refuses a latency limit under its class floor, and refuses to loosen any of the
+# deterministic budgets at all.
+
+[[budget]]
+workload = "build_the_graph_view"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.92% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "call_through_an_inject_wrapper"
+metric = "latency"
+limit = 0.09
+noise = "medium"
+justification = "paired null p99 4.38% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "explain_a_deep_chain"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.14% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "explain_a_deep_chain_with_every_node_decorated"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.56% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "explain_a_layered_dag"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 0.99% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "explain_an_unbound_key_of_16"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.94% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "explain_an_unbound_key_of_20"
+metric = "latency"
+limit = 0.06
+noise = "low"
+justification = "paired null p99 2.55% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "export_a_large_graph_as_dot"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 2.03% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "fastapi_application_startup"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.97% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "fastapi_async_resource_teardown"
+metric = "latency"
+limit = 0.06
+noise = "low"
+justification = "paired null p99 2.72% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "fastapi_cpu_light_endpoint"
+metric = "latency"
+limit = 0.06
+noise = "low"
+justification = "paired null p99 2.99% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "fastapi_endpoint_with_work"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.95% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "fastapi_request_scoped_graph"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 2.09% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "fastapi_singletons_and_transients"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 2.41% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "freeze_a_chain_missing_a_provider_of_100"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 2.23% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "freeze_a_chain_missing_a_provider_of_50"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.33% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "freeze_a_chain_of_10"
+metric = "latency"
+limit = 0.06
+noise = "low"
+justification = "paired null p99 2.94% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "freeze_a_chain_of_100"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 2.37% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "freeze_a_chain_of_1000"
+metric = "latency"
+limit = 0.06
+noise = "low"
+justification = "paired null p99 2.56% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "freeze_a_decorated_chain_of_10"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.65% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "freeze_a_decorated_chain_of_100"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 2.36% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "freeze_a_decorated_chain_of_1000"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.56% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "freeze_a_generic_key_chain_of_10"
+metric = "latency"
+limit = 0.08
+noise = "medium"
+justification = "paired null p99 3.28% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "freeze_a_generic_key_chain_of_100"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 2.19% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "freeze_a_generic_key_chain_of_1000"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.50% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "open_a_request_shaped_scope"
+metric = "latency"
+limit = 0.08
+noise = "medium"
+justification = "paired null p99 3.53% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "open_and_close_a_scope"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 2.49% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "resolve_a_collection_of_10"
+metric = "latency"
+limit = 0.06
+noise = "low"
+justification = "paired null p99 2.99% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "resolve_a_collection_of_100"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.40% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "resolve_a_transient_chain"
+metric = "latency"
+limit = 0.06
+noise = "low"
+justification = "paired null p99 2.55% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "resolve_an_async_singleton"
+metric = "latency"
+limit = 0.1
+noise = "medium"
+justification = "paired null p99 4.82% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "resolve_cached_singleton"
+metric = "latency"
+limit = 0.08
+noise = "medium"
+justification = "paired null p99 3.96% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "resolve_cached_singleton_through_an_alias"
+metric = "latency"
+limit = 0.11
+noise = "medium"
+justification = "paired null p99 5.28% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "resolve_singleton_through_a_two_deep_decoration_chain"
+metric = "latency"
+limit = 0.08
+noise = "medium"
+justification = "paired null p99 3.81% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "warmup_a_cold_singleton_graph"
+metric = "latency"
+limit = 0.05
+noise = "low"
+justification = "paired null p99 1.04% over 1512 trials from 10 runs of identical code"
+
+[[budget]]
+workload = "allocations_of_a_cached_singleton_resolution"
+metric = "allocations"
+limit = 0.0
+noise = "low"
+justification = "blocks and bytes per operation; deterministic under a fixed hash seed"
+
+[[budget]]
+workload = "allocations_of_a_cached_singleton_resolution"
+metric = "work"
+limit = 0.0
+noise = "low"
+justification = "Python calls per operation; deterministic, so any increase is a real added call"
+
+[[budget]]
+workload = "allocations_of_a_transient_chain"
+metric = "allocations"
+limit = 0.0
+noise = "low"
+justification = "blocks and bytes per operation; deterministic under a fixed hash seed"
+
+[[budget]]
+workload = "allocations_of_a_transient_chain"
+metric = "work"
+limit = 0.0
+noise = "low"
+justification = "Python calls per operation; deterministic, so any increase is a real added call"
+
+[[budget]]
+workload = "allocations_of_a_scope_cycle"
+metric = "allocations"
+limit = 0.0
+noise = "low"
+justification = "blocks and bytes per operation; deterministic under a fixed hash seed"
+
+[[budget]]
+workload = "allocations_of_a_scope_cycle"
+metric = "work"
+limit = 0.0
+noise = "low"
+justification = "Python calls per operation; deterministic, so any increase is a real added call"
+
+[[budget]]
+workload = "allocations_of_an_inject_call"
+metric = "allocations"
+limit = 0.0
+noise = "low"
+justification = "blocks and bytes per operation; deterministic under a fixed hash seed"
+
+[[budget]]
+workload = "allocations_of_an_inject_call"
+metric = "work"
+limit = 0.0
+noise = "low"
+justification = "Python calls per operation; deterministic, so any increase is a real added call"
+
+[[budget]]
+workload = "allocations_of_a_request_shaped_scope"
+metric = "allocations"
+limit = 0.0
+noise = "low"
+justification = "blocks and bytes per operation; deterministic under a fixed hash seed"
+
+[[budget]]
+workload = "allocations_of_a_request_shaped_scope"
+metric = "work"
+limit = 0.0
+noise = "low"
+justification = "Python calls per operation; deterministic, so any increase is a real added call"
+
+[[budget]]
+workload = "retained_by_a_frozen_container_of_100"
+metric = "retained"
+limit = 0.02
+noise = "low"
+justification = "bytes still reachable; 2% absorbs container resizing and nothing more"
+
+[[budget]]
+workload = "retained_by_a_frozen_container_of_1000"
+metric = "retained"
+limit = 0.02
+noise = "low"
+justification = "bytes still reachable; 2% absorbs container resizing and nothing more"
+
+[[budget]]
+workload = "retained_by_a_warm_singleton_cache_of_1000"
+metric = "retained"
+limit = 0.02
+noise = "low"
+justification = "bytes still reachable; 2% absorbs container resizing and nothing more"
+
+[[budget]]
+workload = "retained_by_an_open_scope_of_20"
+metric = "retained"
+limit = 0.02
+noise = "low"
+justification = "bytes still reachable; 2% absorbs container resizing and nothing more"
+
+[[budget]]
+workload = "scale_explain_missing_key"
+metric = "scaling"
+limit = 0.15
+noise = "low"
+justification = "a ratio between two sizes, which cancels host noise; a complexity-class test, not a timing one"
+
+[[budget]]
+workload = "scale_failing_freeze"
+metric = "scaling"
+limit = 0.15
+noise = "low"
+justification = "a ratio between two sizes, which cancels host noise; a complexity-class test, not a timing one"
+
+[[budget]]
+workload = "scale_freeze_graph_size"
+metric = "scaling"
+limit = 0.15
+noise = "low"
+justification = "a ratio between two sizes, which cancels host noise; a complexity-class test, not a timing one"
+
+[[budget]]
+workload = "scale_resolve_collection"
+metric = "scaling"
+limit = 0.15
+noise = "low"
+justification = "a ratio between two sizes, which cancels host noise; a complexity-class test, not a timing one"
+
+[[budget]]
+workload = "scale_resolve_fan_out"
+metric = "scaling"
+limit = 0.15
+noise = "low"
+justification = "a ratio between two sizes, which cancels host noise; a complexity-class test, not a timing one"
+
+[[budget]]
+workload = "scale_resolve_transient_depth"
+metric = "scaling"
+limit = 0.15
+noise = "low"
+justification = "a ratio between two sizes, which cancels host noise; a complexity-class test, not a timing one"
+
+[[budget]]
+workload = "scale_scope_teardown"
+metric = "scaling"
+limit = 0.15
+noise = "low"
+justification = "a ratio between two sizes, which cancels host noise; a complexity-class test, not a timing one"

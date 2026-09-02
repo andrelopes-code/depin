@@ -14,7 +14,7 @@
 # `conformance/expected/pyrefly-source.txt` records counts measured under them.
 # `typing-forward` overrides both on the command line.
 
-project-includes = ["depin", "tests", "examples", "scripts"]
+project-includes = ["depin", "tests", "examples", "scripts", "benchmarks"]
 project-excludes = ["**/__pycache__", "**/.venv"]
 python-version = "3.12"
 python-platform = "linux"
