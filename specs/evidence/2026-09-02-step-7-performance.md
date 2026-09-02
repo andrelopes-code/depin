@@ -164,7 +164,7 @@ rather than a constructor-injecting container, and no competitor validates a
 whole graph at build time the way `freeze()` does, so the startup tier is largely
 incomparable while cached and transient resolution is comparable.
 
-**No competitor number is published in 0.18.0.** The protocol is in place — an
+**No competitor number is published in this release.** The protocol is in place — an
 adapter is an `Implementation` like any other, held to the same `Observation`
 equality by the same test — and Step 9 owns the comparison page. The deferral is
 about validity, not effort: a comparison is only as fresh as its adapters, and a

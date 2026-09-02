@@ -55,7 +55,7 @@ evidence".
 ## Non-goals for this step
 
 - No aggregate ranking, league table, or "fastest DI library" claim, in any form.
-- No competitor numbers published in 0.18.0. The reason is in "Competitors" below.
+- No competitor numbers published in this release. The reason is in "Competitors" below.
 - No optimisation of the cached resolution path. The evidence for restructuring it
   is recorded and handed to Step 8.
 - No repair of the depth cliff. Recorded and handed to Step 8.
@@ -309,7 +309,7 @@ guard is exercised at all.
 
 ## Competitors
 
-The protocol is implemented; no competitor number is published in 0.18.0.
+The protocol is implemented; no competitor number is published in this release.
 
 The eligibility screen is applied to dishka, wireup, svcs and
 dependency-injector, and its outcome recorded. The `Workload.alternatives` slot
@@ -390,7 +390,7 @@ update silently.
 | Driving FastAPI without measuring a network stack | In-process `httpx.ASGITransport`, one event loop for the measurement, startup measured separately |
 | Noise and impact data justifying budgets | The null experiment, re-run against the delivered suite; the formula above |
 | Rerunning near-threshold results without hiding a regression | One escalation at double R; the second verdict is final |
-| Which competitors | Screened; none published in 0.18.0; the reason is recorded |
+| Which competitors | Screened; none published in this release; the reason is recorded |
 | Who reviews adapters for fairness | The pull request that adds one, against a written equivalence sheet, with the version pinned in its own dependency group |
 | Storing raw artifacts without bloating the repository | Per-repetition aggregates, not round arrays: 21 MB becomes kilobytes |
 | Cadence keeping claims fresh | Refresh on any release that changes `depin/_core/` or the harness; the coherence test forces it when the inventory moves |
