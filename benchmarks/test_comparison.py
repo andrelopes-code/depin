@@ -1,3 +1,4 @@
+import os
 from collections.abc import Callable, Generator
 from importlib.metadata import PackageNotFoundError
 from typing import Protocol
@@ -9,10 +10,11 @@ import benchmarks.comparison.adapters.dishka as dishka_adapter
 import benchmarks.comparison.adapters.svcs as svcs_adapter
 import benchmarks.comparison.adapters.wireup as wireup_adapter
 from benchmarks.comparison.adapters.dependency_injector import ADAPTER, warm_chain
-from benchmarks.comparison.contracts import Competitor, Equivalence
+from benchmarks.comparison.contracts import Candidate, Competitor, Equivalence
+from benchmarks.comparison.inventory import build
 from benchmarks.comparison.shapes import Chain, chain, observation
-from benchmarks.contracts import Observation, Prepared
-from benchmarks.harness import HarnessError
+from benchmarks.contracts import Implementation, Observation, Prepared, Workload
+from benchmarks.harness import HarnessError, reduce
 from benchmarks.workloads import WORKLOADS
 from benchmarks.workloads.micro import CHAIN_DEPTH, HOT_GRAPH
 
@@ -547,3 +549,71 @@ def test_svcs_closes_container_cache_and_registry_callback_once() -> None:
 
     assert first is not second
     assert close_log == ['registry']
+
+
+class Benchmark(Protocol):
+    extra_info: dict[str, object]
+
+    def __call__[T](self, function: Callable[[], T]) -> T: ...
+
+
+_CASES: tuple[tuple[str, Workload, Implementation, Candidate | None], ...] = tuple(
+    item
+    for comparative in build()
+    for item in (
+        (f'{comparative.workload.name}-depin', comparative.workload, comparative.workload.subject, None),
+        *(
+            (
+                f'{comparative.workload.name}-{candidate.implementation.label}',
+                comparative.workload,
+                candidate.implementation,
+                candidate,
+            )
+            for candidate in comparative.candidates
+            if candidate.implementation is not None
+        ),
+    )
+)
+
+
+def _ordered_cases() -> tuple[tuple[str, Workload, Implementation, Candidate | None], ...]:
+    if os.environ.get('DEPIN_COMPARISON_ORDER') == 'reverse':
+        return tuple(reversed(_CASES))
+    return _CASES
+
+
+@pytest.mark.parametrize(
+    ('workload', 'implementation', 'candidate'),
+    [
+        pytest.param(
+            workload,
+            implementation,
+            candidate,
+            marks=pytest.mark.benchmark(min_rounds=reduce.MINIMUM_ROUNDS),
+            id=name,
+        )
+        for name, workload, implementation, candidate in _ordered_cases()
+    ],
+)
+def test_comparison(
+    benchmark: Benchmark,
+    workload: Workload,
+    implementation: Implementation,
+    candidate: Candidate | None,
+) -> None:
+    if (
+        candidate is not None
+        and candidate.equivalence is Equivalence.EQUIVALENT
+        and implementation.observe() != workload.subject.observe()
+    ):
+        raise HarnessError(
+            f'{workload.name}: {candidate.competitor.label} claims equivalence with a different observation'
+        )
+    prepared = implementation.prepare()
+    try:
+        _ = benchmark(prepared.call)
+    finally:
+        if prepared.close is not None:
+            prepared.close()
+    benchmark.extra_info['equivalence'] = 'subject' if candidate is None else candidate.equivalence.value
+    benchmark.extra_info['reason'] = 'depin subject' if candidate is None else candidate.reason
