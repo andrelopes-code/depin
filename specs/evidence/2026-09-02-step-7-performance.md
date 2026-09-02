@@ -453,6 +453,42 @@ complete. The `benchmarks` job skipped its gate, correctly — the base branch
 predates the harness, so there was nothing to compare against, and the gate
 engages from the next pull request onward.
 
+## Correction, after the first live gate run
+
+The `benchmarks` job could not gate anything on the pull request that introduced
+it, because the base branch carried no harness. The first run against a real base
+was the documentation-only pull request that followed, and it failed. Two claims
+in this report need qualifying.
+
+**`scale_failing_freeze` does not detect what its claim says.** Measured on the
+runner with both sides identical, its cost is 7.095, 7.021 and 7.026 ms at sizes
+25, 50 and 100 — flat across a fourfold range, because the path is dominated by
+the `sys.modules` scan this report already attributes at 2.97 ms of 3.41 ms. The
+growth ratios are all ≈1.0 and their difference between two identical revisions
+reached +23.61% against a 15% budget.
+
+The seeded scaling demonstration above stands: restoring the cubic walk makes the
+walk dominate the constant again, which is why the seed fired. But the curve
+detects only a regression large enough to overtake the constant, and is noise
+below that — so "the scaling gate is protected" is true for the seeded class and
+overstated in general. The repair is what invalidated the workload, by removing
+the cost the curve was built to watch.
+
+**The sample-quality floor does not transfer between hosts.**
+`MINIMUM_LATENCY_ROUNDS = 120` was derived from one measurement on the reference
+host. On the runner it bound `build_the_graph_view` to 120 rounds and 0.408 s,
+under the half-second the rule requires, and it does not bind a fast workload at
+all: `resolve_a_collection_of_10` ran 485 rounds for 0.007 s where the reference
+host gives 20,174. A round count cannot satisfy a rule stated in seconds.
+
+Both come from the same mistake: budgets and floors measured on a quiet
+workstation and applied to a shared runner. This report's gate table describes
+the reference host, and the blocking gate runs somewhere else.
+
+The repairs, and a calibration collection on CI rather than only on the reference
+host, are specified in
+`specs/2026-09-02-step-7-coverage-completion-design.md`.
+
 ## What this step did not do
 
 Recorded so that a later reader does not mistake absence for oversight.

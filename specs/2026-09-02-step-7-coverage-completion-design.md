@@ -17,6 +17,75 @@ Released state: 0.17.1. The performance evidence system exists, is gated, and is
 published. This document closes the distance between what the design said it
 would cover and what the inventory actually covers.
 
+## Two defects the first live gate run exposed, which come first
+
+The `benchmarks` job could not gate anything until `main` carried the harness.
+The first pull request where it ran for real was documentation-only — no change
+under `depin/` or `benchmarks/` — and it failed. Both causes are defects in what
+Step 7 shipped, and both outrank the coverage work below.
+
+### `scale_failing_freeze` does not measure scaling
+
+Measured on the runner, base and head being identical code:
+
+| | size 25 | size 50 | size 100 |
+| --- | ---: | ---: | ---: |
+| base | 7.095 ms | 7.021 ms | 7.026 ms |
+| head | 4.413 ms | 5.028 ms | 6.219 ms |
+
+The base curve is **flat across a fourfold size range**. The cost is dominated by
+a constant that has nothing to do with graph size: `suggest_candidates` scanning
+`sys.modules`, which the Step 7 evidence already recorded as 2.97 ms of 3.41 ms
+on this path. The gate compares growth ratios, those ratios are all ≈1.0, and
+their difference between two identical revisions came out at +23.61% against a
+15% budget.
+
+Worse, the two sides differ systematically on identical code — 7.0 ms against
+4.4–6.2 ms — because the module scan depends on how many modules each process has
+loaded, which is not a property of the revision under test.
+
+The workload was valid before the repair, when the walk dominated the constant,
+and the repair is what invalidated it. That is why the seeded scaling regression
+still fires: restoring the cubic walk makes it dominate again. So the curve
+detects a large complexity regression and is noise for everything else, which is
+not what its claim says.
+
+**Fix:** retire the curve rather than retune its budget, and state the reason on
+the results page. The failing-freeze path keeps its deterministic work-count
+check, which is sensitive to the walk and immune to the constant. The same audit
+applies to `scale_explain_missing_key`, which shares the constant.
+
+### The sample-quality floor is tuned to the wrong host
+
+Three workloads returned `no-verdict` because a repetition fell under the
+quality rule. `MINIMUM_LATENCY_ROUNDS = 120` was chosen against a measurement on
+the reference host and does not transfer:
+
+- `build_the_graph_view` ran exactly 120 rounds for 0.408 s. The floor bound it,
+  and 120 rounds only reaches half a second for an operation slower than about
+  4.2 ms. It is 5.9 ms on the reference host and 3.4 ms on the runner.
+- `resolve_a_collection_of_10` ran 485 rounds for 0.007 s, where the same
+  workload takes 20,174 rounds locally. The floor does not bind a fast operation
+  at all, so it inherits the calibration unreliability it was added to remove.
+
+A fixed round count cannot satisfy a rule stated in seconds, because the rounds
+needed depend on the operation's cost. The floor must be derived per workload
+from that cost, which the published dataset already records as each workload's
+median. `pytest.mark.benchmark(min_rounds=...)` applied per workload by the
+timing shell expresses it directly.
+
+Note this was checked and is **not** an `iterations` accounting error:
+`pytest-benchmark` reports `iterations = 1` for every workload here, so
+`rounds x mean` is the measured time.
+
+### What both have in common
+
+Budgets and floors were derived on a quiet workstation and applied to a shared
+runner. The Step 7 design separates the two environments and then calibrated the
+blocking gate against the wrong one. A relative gate has to take its noise from
+the environment it runs in, so the re-measurement below must include a
+calibration collection **on CI**, not only on the reference host.
+
 ## What this is repairing
 
 An audit of the delivered tree against the Step 7 design found three
