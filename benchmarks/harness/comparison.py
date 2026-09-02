@@ -119,9 +119,11 @@ def collect(
         raise HarnessError(f'{repetitions} repetitions; the protocol needs at least five')
     revision, pins = _preflight(allow_dirty=allow_dirty)
     repetitions_data: list[dict[str, object]] = []
+    scratch_parent = out.parent
+    scratch_parent.mkdir(parents=True, exist_ok=True)
     for index in range(repetitions):
         order = 'forward' if index % 2 == 0 else 'reverse'
-        with tempfile.TemporaryDirectory() as scratch:
+        with tempfile.TemporaryDirectory(dir=scratch_parent, prefix=f'.{out.name}-') as scratch:
             aggregates = _run(command, Path(scratch) / 'report.json', order)
         medians = {name: aggregate.median for name, aggregate in sorted(aggregates.items())}
         rounds = {name: aggregate.rounds for name, aggregate in sorted(aggregates.items())}
@@ -130,12 +132,13 @@ def collect(
                 'order': order,
                 'medians': medians,
                 'rounds': rounds,
+                'samples': {name: reduce.encode(aggregate) for name, aggregate in sorted(aggregates.items())},
                 'duration': sum(aggregate.measured for aggregate in aggregates.values()),
             }
         )
     dataset: dict[str, object] = {
         'accepted': not allow_dirty,
-        'environment': _environment(),
+        'environment': _environment() | {'python_hash_seed': memory.HASH_SEED},
         'harness_revision': revision,
         'pins': pins,
         'repetitions': repetitions_data,
