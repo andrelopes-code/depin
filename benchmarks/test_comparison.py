@@ -1,13 +1,37 @@
+from collections.abc import Callable, Generator
+
 import pytest
 
 import benchmarks.comparison.adapters.dependency_injector as dependency_injector_adapter
 import benchmarks.comparison.adapters.dishka as dishka_adapter
 from benchmarks.comparison.adapters.dependency_injector import ADAPTER, warm_chain
 from benchmarks.comparison.contracts import Competitor, Equivalence
-from benchmarks.comparison.shapes import chain, observation
+from benchmarks.comparison.shapes import Chain, chain, observation
 from benchmarks.contracts import Observation
 from benchmarks.harness import HarnessError
 from benchmarks.workloads import WORKLOADS
+from benchmarks.workloads.micro import CHAIN_DEPTH, HOT_GRAPH
+
+
+class _TrackedResource:
+    pass
+
+
+def _tracked_chain_builder(log: list[str], expected_size: int) -> Callable[[int], Chain]:
+    def build(size: int) -> Chain:
+        if size != expected_size:
+            raise HarnessError(f'expected chain depth {expected_size}, got {size}')
+
+        def tracked() -> Generator[_TrackedResource, None, None]:
+            log.append('opened')
+            try:
+                yield _TrackedResource()
+            finally:
+                log.append('closed')
+
+        return Chain(nodes=(_TrackedResource,), factories=(tracked,), leaf=_TrackedResource, log=[])
+
+    return build
 
 
 def test_chain_constructs_a_typed_five_node_observation() -> None:
@@ -237,10 +261,16 @@ def test_dishka_prepared_calls_preserve_core_lifetimes_and_allow_repeated_cleanu
     assert values['open_and_close_a_scope'][0] is not values['open_and_close_a_scope'][1]
 
 
-def test_dishka_scoped_prepared_cycle_closes_a_real_request_resource() -> None:
+def test_dishka_scoped_prepared_cycle_closes_a_real_request_resource(monkeypatch: pytest.MonkeyPatch) -> None:
     log: list[str] = []
-    implementation = dishka_adapter.scoped_teardown_implementation(log)
-    prepared = implementation.prepare()
+    monkeypatch.setattr(dishka_adapter, 'chain', _tracked_chain_builder(log, CHAIN_DEPTH))
+    candidate = next(
+        candidate
+        for candidate in dishka_adapter.ADAPTER.candidates(WORKLOADS)
+        if candidate.workload == 'open_and_close_a_scope'
+    )
+    assert candidate.implementation is not None
+    prepared = candidate.implementation.prepare()
     close = prepared.close
     assert close is not None
     try:
@@ -253,9 +283,16 @@ def test_dishka_scoped_prepared_cycle_closes_a_real_request_resource() -> None:
     assert log == ['opened', 'closed', 'opened', 'closed']
 
 
-def test_dishka_root_cleanup_closes_a_real_app_resource_once() -> None:
+def test_dishka_root_cleanup_closes_a_real_app_resource_once(monkeypatch: pytest.MonkeyPatch) -> None:
     log: list[str] = []
-    prepared = dishka_adapter.app_teardown_prepared(log)
+    monkeypatch.setattr(dishka_adapter, 'chain', _tracked_chain_builder(log, HOT_GRAPH))
+    candidate = next(
+        candidate
+        for candidate in dishka_adapter.ADAPTER.candidates(WORKLOADS)
+        if candidate.workload == 'resolve_cached_singleton'
+    )
+    assert candidate.implementation is not None
+    prepared = candidate.implementation.prepare()
     close = prepared.close
     assert close is not None
 

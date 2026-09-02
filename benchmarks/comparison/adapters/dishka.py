@@ -1,6 +1,6 @@
 """Dishka implementations of comparable benchmark workloads."""
 
-from collections.abc import Callable, Generator, Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from importlib.metadata import PackageNotFoundError, version
 
@@ -31,24 +31,6 @@ class _ChainProvider(Provider):
             setattr(self, f'factory_{index}', self.provide(staticmethod(factory), scope=scope, cache=cache))
 
 
-class _TrackedResource:
-    pass
-
-
-class _TeardownProvider(Provider):
-    def __init__(self, log: list[str], scope: Scope) -> None:
-        super().__init__()
-        self._log = log
-        self.provide(self._tracked, scope=scope)
-
-    def _tracked(self) -> Generator[_TrackedResource, None, None]:
-        self._log.append('opened')
-        try:
-            yield _TrackedResource()
-        finally:
-            self._log.append('closed')
-
-
 @dataclass(frozen=True, slots=True)
 class DishkaChain:
     shape: Chain
@@ -73,11 +55,6 @@ def transient_chain(size: int) -> DishkaChain:
 
 def scoped_chain(size: int) -> DishkaChain:
     return _chain(size, Scope.REQUEST, cache=True)
-
-
-def _teardown_chain(log: list[str], scope: Scope) -> DishkaChain:
-    shape = Chain(nodes=(_TrackedResource,), factories=(), leaf=_TrackedResource, log=[])
-    return DishkaChain(shape=shape, container=make_container(_TeardownProvider(log, scope)))
 
 
 def _implementation(build: Callable[[], DishkaChain], *, warm: bool) -> Implementation:
@@ -119,15 +96,6 @@ def _scoped_implementation(build: Callable[[], DishkaChain]) -> Implementation:
             observed.close()
 
     return Implementation(label=ADAPTER.competitor.label, prepare=prepare, observe=observe)
-
-
-def scoped_teardown_implementation(log: list[str]) -> Implementation:
-    return _scoped_implementation(lambda: _teardown_chain(log, Scope.REQUEST))
-
-
-def app_teardown_prepared(log: list[str]) -> Prepared:
-    prepared = _teardown_chain(log, Scope.APP)
-    return Prepared(call=lambda: prepared.container.get(prepared.shape.leaf), close=prepared.close)
 
 
 @dataclass(frozen=True, slots=True)
