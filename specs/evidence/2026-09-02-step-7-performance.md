@@ -486,8 +486,12 @@ workstation and applied to a shared runner. This report's gate table describes
 the reference host, and the blocking gate runs somewhere else.
 
 The repairs, and a calibration collection on CI rather than only on the reference
-host, are specified in
-`specs/2026-09-02-step-7-coverage-completion-design.md`.
+host, are specified in `specs/2026-09-02-step-7-coverage-completion-design.md`
+and measured in `specs/evidence/2026-09-02-step-7-gate-repair.md`. Two further
+statements in this report did not survive that measurement: the seeded scaling
+regression no longer fails the failing-freeze budget it is credited with above,
+and the noise class each claim declares disagreed with the calibration for 25 of
+41 workloads.
 
 ## What this step did not do
 

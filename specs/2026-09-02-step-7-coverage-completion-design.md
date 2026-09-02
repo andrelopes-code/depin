@@ -2,7 +2,7 @@
 
 Date: 2026-09-02
 
-Status: approved, pending implementation
+Status: implemented; measured in `specs/evidence/2026-09-02-step-7-gate-repair.md`
 
 Scope: the coverage the Step 7 design specification promised and the
 implementation did not deliver, plus the tier 4 items its own narrowing dropped
