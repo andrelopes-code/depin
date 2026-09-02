@@ -252,11 +252,11 @@ jobs:
   benchmarks:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
-      # Both sides are measured on this runner, back to back. A baseline stored
-      # in the repository would have been measured on a different machine, and
-      # the comparison would report hardware rather than code.
+      # Both revisions are measured on this runner, interleaved. A baseline
+      # stored in the repository would have been measured on a different
+      # machine, and the comparison would report hardware rather than code.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -265,40 +265,76 @@ jobs:
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           python-version: '3.12'
-          # This job's own `uv sync` runs only when the base branch carries a
-          # benchmark suite; when it doesn't, nothing here ever installs, and
-          # the cache post-step then errors because there is nothing to save.
+          # The syncs below run only when the base branch carries the harness;
+          # when it doesn't, nothing here ever installs, and the cache post-step
+          # then errors because there is nothing to save.
           enable-cache: false
 
-      - name: Measure the base branch
+      - name: Prepare the base revision
         id: base
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
           git worktree add /tmp/base "origin/${BASE_REF}"
-          if [ ! -d /tmp/base/benchmarks ]; then
-            echo "base branch carries no benchmark suite; nothing to compare against, skipping the gate"
-            echo 'has-suite=false' >> "$GITHUB_OUTPUT"
+          if [ ! -d /tmp/base/benchmarks/harness ]; then
+            echo "base branch carries no measurement harness; nothing to compare against, skipping the gate"
+            echo 'has-harness=false' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo 'has-suite=true' >> "$GITHUB_OUTPUT"
-          cd /tmp/base
-          uv sync --no-default-groups --group bench
-          uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/base.json
+          echo 'has-harness=true' >> "$GITHUB_OUTPUT"
 
-      - name: Measure this branch
-        if: steps.base.outputs.has-suite == 'true'
+      - name: Install both benchmark environments
+        if: steps.base.outputs.has-harness == 'true'
         run: |
           set -euo pipefail
           uv sync --no-default-groups --group bench
-          uv run --no-sync pytest benchmarks --benchmark-only --benchmark-json=/tmp/head.json
+          cd /tmp/base && uv sync --no-default-groups --group bench
 
-      # Shared CI runners are noisy; 25% catches an order-of-magnitude
-      # regression without failing the build on ordinary run-to-run drift.
+      # Independent process-level repetitions, alternating which revision runs
+      # first. One complete run of the base followed by one of the head would
+      # turn any drift over the job — thermal behaviour, frequency scaling, a
+      # noisy neighbour — into a systematic bias favouring whichever ran first.
+      - name: Measure both revisions
+        if: steps.base.outputs.has-harness == 'true'
+        run: >
+          uv run --no-sync python -m benchmarks.harness.pairs
+          --base-dir /tmp/base --head-dir . --repetitions 5 --out /tmp/measurements
+
       - name: Compare
-        if: steps.base.outputs.has-suite == 'true'
-        run: uv run --no-sync python -m benchmarks.compare /tmp/base.json /tmp/head.json --max-regression=0.25
+        id: gate
+        if: steps.base.outputs.has-harness == 'true'
+        run: |
+          set +e
+          uv run --no-sync python -m benchmarks.harness.gate /tmp/measurements --budgets benchmarks/budgets.toml
+          code=$?
+          echo "code=${code}" >> "$GITHUB_OUTPUT"
+          # 3 is "the point estimate is over budget but its interval still spans
+          # it". Re-measured once below; every other code is final here.
+          if [ "${code}" = "3" ]; then exit 0; fi
+          exit "${code}"
+
+      # One escalation, at double the repetitions, and its verdict stands. A
+      # second inconclusive fails: unlimited retries are how a real regression
+      # eventually lands in a green run.
+      - name: Re-measure an inconclusive verdict
+        if: steps.gate.outputs.code == '3'
+        run: |
+          set -euo pipefail
+          uv run --no-sync python -m benchmarks.harness.pairs \
+            --base-dir /tmp/base --head-dir . --repetitions 10 --out /tmp/escalated
+          uv run --no-sync python -m benchmarks.harness.gate /tmp/escalated --budgets benchmarks/budgets.toml
+
+      - name: Upload the measurements
+        if: always() && steps.base.outputs.has-harness == 'true'
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: benchmark-measurements
+          path: |
+            /tmp/measurements
+            /tmp/escalated
+          if-no-files-found: ignore
+          retention-days: 14
 
   dependency-review:
     if: github.event_name == 'pull_request'

@@ -1,4 +1,4 @@
-# Pyrefly over `depin tests examples scripts`, measured under the exact
+# Pyrefly over `depin tests examples scripts benchmarks`, measured under the exact
 # invocation the `typing-source` gate runs:
 #
 #   uvx pyrefly@<pinned> check --config pyrefly.toml --preset strict

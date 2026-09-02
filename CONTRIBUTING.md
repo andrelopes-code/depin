@@ -175,17 +175,57 @@ state and must never be committed.
 
 ## Benchmarks
 
-`benchmarks/` holds `pytest-benchmark` suites that guard hot paths — container
-resolution, scope entry, injection — against regressions. They sit outside
-`testpaths`, so a plain `uv run pytest` does not collect them; run them
-explicitly:
+`benchmarks/` holds the performance evidence system: the workload inventory,
+the measurement harness, and the regression gates. It sits outside `testpaths`,
+so a plain `uv run pytest` does not collect it; run it explicitly:
 
 ```bash
 uv run --group bench pytest benchmarks --benchmark-only
 ```
 
-CI runs the same suite against the base branch and the head branch and fails
-the build on a regression past the tolerance in `benchmarks/compare.py`.
+Every workload carries a claim contract naming what it measures and what it
+cannot be read as saying, and every workload is paired with a direct-Python
+baseline doing the same useful work. `tests/integration/test_workload_contracts.py`
+and `tests/integration/test_workload_equivalence.py` enforce both, and they run
+in the ordinary suite — a workload whose baseline stops being equivalent fails as
+a normal test, before anything is timed.
+
+The methodology, the environments, and the reasoning behind the budgets are on
+the [performance pages](https://andrelopes-code.github.io/depin/performance/methodology/)
+and in `specs/2026-09-02-step-7-performance-design.md`.
+
+### What CI checks
+
+Two different things, with different sensitivities.
+
+The **latency gate** measures the base commit and the head commit on the same
+runner across several paired repetitions, alternating which side runs first, and
+compares each workload against a budget derived from that workload's measured
+noise. It fails only when the regression is larger than the budget with
+confidence, and an inconclusive result is re-measured once at double the
+repetitions.
+
+The **deterministic gates** — Python calls per operation, allocations per
+operation, and scaling ratios — need no pairing and carry no noise. They catch
+what the latency gate structurally cannot: a change that adds work to the
+resolution path but stays inside the timing noise floor.
+
+### When a check fails
+
+Classify before changing anything, and never change a budget to make a pull
+request green.
+
+| Classification | What to do |
+| --- | --- |
+| Real regression | Reproduce, profile, then fix it or document the trade-off deliberately |
+| Harness defect | Fix the setup, the timing boundary, the semantic validation or the parsing; withdraw any published result it affected |
+| Environmental noise | Re-measure under the documented policy; improve isolation if it recurs |
+| Workload drift | The semantics changed: start a new result series and explain the change |
+| Dependency or interpreter change | Isolate the external movement and report both it and its user impact |
+| Budget defect | Revise a threshold only with accumulated noise data and an impact argument |
+
+A budget below its workload's measured noise floor is rejected by the harness, so
+the last row cannot be used to silence the first.
 
 ## Documentation
 

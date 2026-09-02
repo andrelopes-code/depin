@@ -1,0 +1,12 @@
+diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
+index 4609511..45f51fc 100644
+--- a/depin/_core/frozen.py
++++ b/depin/_core/frozen.py
+@@ -630,6 +630,7 @@ class FrozenContainer:
+ 
+     def _resolve_cached_sync(self, spec: ProviderSpec, frame: ScopeFrame) -> object:
+         cache_id = (spec.key, spec.tag)
++        _trace = {'key': spec.key, 'tag': spec.tag, 'scope': spec.scope}
+         while True:
+             cached, claim = frame.claim_cached(cache_id)
+             if cached is not MISSING:
