@@ -58,22 +58,19 @@ DEFAULT_SEED = 20260902
 REPORT_PLACEHOLDER = '{report}'
 ENVIRONMENT_FILE = 'environment.json'
 DETERMINISTIC_FILE = 'deterministic.json'
-# pytest-benchmark stops a workload once it has spent `--benchmark-max-time`,
-# and its calibration occasionally lands far under that: one repetition of
-# `build_the_graph_view` ran 16 rounds where its four siblings ran 183 to 232,
-# and `reduce.qualifies` then excluded it, leaving the workload without the five
-# valid pairs a verdict needs. A rounds floor removes that failure mode at the
-# collection step rather than escalating it into a second measurement. 120 is
-# the count that carries `reduce.MINIMUM_SECONDS` for the slowest workload the
-# calibration has been observed to under-sample.
-MINIMUM_LATENCY_ROUNDS = 120
+# No `--benchmark-min-rounds` here. pytest-benchmark's calibration under-samples
+# a workload often enough to matter — one repetition of `build_the_graph_view` ran
+# 16 rounds where its four siblings ran 183 to 232 — but the floor that repairs
+# that is per workload, not per run: a count that carries half a second of a 4 ms
+# operation is a thousandth of a second of a microsecond one. `test_latency`
+# applies `reduce.rounds_for` to each case instead, from the cost the accepted
+# dataset recorded for it.
 LATENCY_COMMAND = (
     '-m',
     'pytest',
     'benchmarks',
     '--benchmark-only',
     '-q',
-    f'--benchmark-min-rounds={MINIMUM_LATENCY_ROUNDS}',
     '--benchmark-json={report}',
 )
 DETERMINISTIC_COMMAND = ('-m', 'benchmarks.harness.pairs', '--deterministic', '{report}')

@@ -1,0 +1,82 @@
+name: Calibrate
+
+# A relative gate takes its noise from the environment it runs in. The budgets
+# the pull-request gate applies are therefore derived here, on the runner, and
+# not on a developer workstation — the first version of this gate was calibrated
+# on a workstation and failed a documentation-only pull request on the runner.
+#
+# Both sides of the collection are the same checkout, so every difference in it
+# is noise by construction. Run it from the Actions tab, take the generated file
+# from the artifact, and commit it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      repetitions:
+        description: 'Repetitions per side; the trial count is C(2R, R) x 6 per workload'
+        required: false
+        default: '5'
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+          enable-cache: false
+
+      - name: Install the benchmark environment
+        run: uv sync --no-default-groups --group bench
+
+      - name: Collect a null dataset
+        env:
+          REPETITIONS: ${{ inputs.repetitions }}
+        run: >
+          uv run --no-sync python -m benchmarks.harness.pairs
+          --base-dir . --head-dir . --repetitions "${REPETITIONS}" --out /tmp/null
+
+      - name: Derive the budgets
+        run: |
+          set -euo pipefail
+          uv run --no-sync python -m benchmarks.harness.calibrate /tmp/null > /tmp/budgets.toml
+          {
+            echo '## Measured dispersion on this runner'
+            echo
+            echo '```'
+            uv run --no-sync python -m benchmarks.harness.calibrate /tmp/null --summary
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Reported, never enforced. A null collection that does not pass the
+      # committed budgets is the finding this job exists to produce, so failing
+      # here would hide it behind a red job instead of printing it.
+      - name: Gate the null collection against the committed budgets
+        run: |
+          set +e
+          {
+            echo '## Committed budgets over the null collection'
+            echo
+            echo '```'
+            uv run --no-sync python -m benchmarks.harness.gate /tmp/null --budgets benchmarks/budgets.toml
+            echo "exit ${?}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the calibration
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: calibration
+          path: |
+            /tmp/null
+            /tmp/budgets.toml
+          if-no-files-found: error
+          retention-days: 14

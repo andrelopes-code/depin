@@ -34,9 +34,29 @@ from benchmarks.harness import (
 )
 from benchmarks.harness import budgets as budget_module
 from benchmarks.harness.pairs import DETERMINISTIC_FILE, ENVIRONMENT_FILE, HEAD
+from benchmarks.harness.unmeasured import REFUSED, RETIRED
 
 USAGE = 'python -m benchmarks.harness.report DIR'
 UNITS = ((1.0, 's'), (1e-3, 'ms'), (1e-6, 'µs'), (1e-9, 'ns'))
+APPLICATION_TIER = 'application'
+NANOSECOND = 1e-9
+
+QUANTILE_NOTE = (
+    'Tail quantiles and CPU time are published for the application tier only. An end-to-end request has a '
+    'tail a caller meets; a microbenchmark round is a calibrated loop, so its p99 describes the calibration '
+    'rather than the operation. CPU is reported and not gated: process CPU on a shared runner carries the '
+    "runner's noise, and the deterministic metrics already carry what can be gated exactly."
+)
+
+RETIRED_NOTE = (
+    'Measured once, no longer measured. A workload withdrawn without a record is indistinguishable from one '
+    'that was never written.'
+)
+
+REFUSED_NOTE = (
+    'Asked for by the performance proposal and not measured here, with what an honest measurement would need '
+    'in its place.'
+)
 
 
 def _duration(seconds: float) -> str:
@@ -71,32 +91,86 @@ def _environment_rows(payload: Mapping[str, object], where: str) -> list[list[st
     return rows
 
 
-def _latency_rows(directory: Path) -> list[list[str]]:
-    files = sorted(directory.glob('rep*.json'))
-    if not files:
-        return []
+def _measurements(directory: Path) -> dict[str, list[reduce.Aggregate]]:
     measurements: dict[str, list[reduce.Aggregate]] = {}
-    for path in files:
+    for path in sorted(directory.glob('rep*.json')):
         payload = read_json(path)
         aggregates = require_object(payload.get('aggregates'), f'{path}: aggregates')
         for name, aggregate in reduce.decode_all(aggregates, str(path)).items():
             measurements.setdefault(name, []).append(aggregate)
+    return measurements
 
+
+def _spread(repetitions: Sequence[reduce.Aggregate]) -> str:
+    medians = sorted(aggregate.median for aggregate in repetitions)
+    return f'{medians[-1] / medians[0] - 1.0 if medians[0] > 0 else 0.0:.1%}'
+
+
+def _across(values: Sequence[float | None]) -> float | None:
+    """The median of the repetitions that carry a reading, or None when none of them do."""
+    present = [value for value in values if value is not None]
+    return statistics.median(present) if present else None
+
+
+def _optional_duration(seconds: float | None) -> str:
+    return '—' if seconds is None else _duration(seconds)
+
+
+def _common(name: str, repetitions: Sequence[reduce.Aggregate]) -> list[str]:
+    return [
+        _cell(name),
+        str(len(repetitions)),
+        str(min(aggregate.rounds for aggregate in repetitions)),
+        _duration(statistics.median([aggregate.median for aggregate in repetitions])),
+    ]
+
+
+def _is_application(repetitions: Sequence[reduce.Aggregate]) -> bool:
+    return any(aggregate.tier == APPLICATION_TIER for aggregate in repetitions)
+
+
+def _latency_rows(measurements: Mapping[str, Sequence[reduce.Aggregate]]) -> list[list[str]]:
+    return [
+        [*_common(name, measurements[name]), _spread(measurements[name])]
+        for name in sorted(measurements)
+        if not _is_application(measurements[name])
+    ]
+
+
+def _application_rows(measurements: Mapping[str, Sequence[reduce.Aggregate]]) -> list[list[str]]:
     rows: list[list[str]] = []
     for name in sorted(measurements):
         repetitions = measurements[name]
-        medians = sorted(aggregate.median for aggregate in repetitions)
-        spread = medians[-1] / medians[0] - 1.0 if medians[0] > 0 else 0.0
+        if not _is_application(repetitions):
+            continue
+        cpu = _across([aggregate.cpu for aggregate in repetitions])
         rows.append(
             [
-                _cell(name),
-                str(len(repetitions)),
-                str(min(aggregate.rounds for aggregate in repetitions)),
-                _duration(statistics.median(medians)),
-                f'{spread:.1%}',
+                *_common(name, repetitions),
+                _optional_duration(_across([aggregate.p95 for aggregate in repetitions])),
+                _optional_duration(_across([aggregate.p99 for aggregate in repetitions])),
+                _optional_duration(None if cpu is None else cpu * NANOSECOND),
+                _spread(repetitions),
             ]
         )
     return rows
+
+
+def _unmeasured_sections() -> list[str]:
+    lines = ['## Retired measurements', '', RETIRED_NOTE, '']
+    lines += _table(
+        ('Workload', 'What it claimed', 'Why it was retired', 'What covers the path now'),
+        [
+            [_cell(entry.workload), _cell(entry.claimed), _cell(entry.reason), _cell(entry.covered_by)]
+            for entry in RETIRED
+        ],
+    )
+    lines += ['## Refused measurements', '', REFUSED_NOTE, '']
+    lines += _table(
+        ('Case', 'Why it is refused', 'What it would need'),
+        [[_cell(entry.case), _cell(entry.reason), _cell(entry.needed)] for entry in REFUSED],
+    )
+    return lines
 
 
 def _deterministic_sections(path: Path) -> list[str]:
@@ -182,12 +256,22 @@ def render(dataset: Path) -> str:
         ),
     )
 
-    rows = _latency_rows(published)
+    measurements = _measurements(published)
+    rows = _latency_rows(measurements)
     if rows:
         lines += ['## Latency', '']
         lines += _table(('Workload', 'Repetitions', 'Rounds', 'Median', 'Spread across repetitions'), rows)
 
+    application = _application_rows(measurements)
+    if application:
+        lines += ['## Application tier', '', QUANTILE_NOTE, '']
+        lines += _table(
+            ('Workload', 'Repetitions', 'Rounds', 'Median', 'p95', 'p99', 'CPU', 'Spread across repetitions'),
+            application,
+        )
+
     lines += _deterministic_sections(published / DETERMINISTIC_FILE)
+    lines += _unmeasured_sections()
     return '\n'.join(lines).rstrip('\n') + '\n'
 
 

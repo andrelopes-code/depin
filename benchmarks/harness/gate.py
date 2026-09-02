@@ -43,7 +43,6 @@ from benchmarks.harness.pairs import BASE, DETERMINISTIC_FILE, ENVIRONMENT_FILE,
 
 USAGE = 'python -m benchmarks.harness.gate DIR --budgets benchmarks/budgets.toml'
 MINIMUM_REPETITIONS = 5
-SUBJECT_LABEL = 'depin'
 ALLOCATION_FIELDS = ('blocks', 'size')
 EXIT_PASS = 0
 EXIT_REGRESSION = 1
@@ -102,29 +101,8 @@ def _budget_for(available: Mapping[tuple[str, str], Budget], workload: str, metr
     return budget
 
 
-def _subject(name: str) -> str | None:
-    """The workload a benchmark case measured, or `None` when it did not measure `depin`.
-
-    The timing shell parametrises one case per implementation, with the id
-    `<workload>-<label>`, so `test_latency[resolve_cached_singleton-depin]` is the
-    `depin` subject of `resolve_cached_singleton` and the `-direct` case beside it
-    is the baseline it is published against. The baseline is measured for the ratio
-    the report prints, not for a budget: what a gate protects is `depin`'s own cost.
-
-    A case name carrying no parameter is its own workload, so a report produced by
-    a shell that does not parametrise is still gated.
-    """
-    if not name.endswith(']') or '[' not in name:
-        return name
-    inside = name[name.index('[') + 1 : -1]
-    workload, separator, label = inside.rpartition('-')
-    if not separator:
-        return inside
-    return workload if label == SUBJECT_LABEL else None
-
-
 def _subjects(aggregates: Mapping[str, reduce.Aggregate]) -> dict[str, reduce.Aggregate]:
-    named = {_subject(name): aggregate for name, aggregate in aggregates.items()}
+    named = {reduce.subject_of(name): aggregate for name, aggregate in aggregates.items()}
     return {name: aggregate for name, aggregate in named.items() if name is not None}
 
 

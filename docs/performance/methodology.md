@@ -10,8 +10,8 @@ has passed through the same chain, and a number that has not is not published.
 1. **A claim contract**, written before the workload is measured. It states the
    user question, the useful work performed, what the timed region includes and
    excludes, the lifetime and caching semantics, the graph shape, the concurrency
-   model, the metric and its unit, the expected noise, and — the part that
-   matters most — the readings the result does **not** support.
+   model, the metric and its unit, and — the part that matters most — the
+   readings the result does **not** support.
 2. **Semantic validation**, by an ordinary test with no timing in it. Two
    implementations of a workload are comparable only when they observably do the
    same thing: same result, same objects constructed in the same order, same
@@ -75,6 +75,19 @@ run, by a check that cannot produce a false alarm. They are proxies for cost
 rather than cost itself, which is why they supplement latency instead of
 replacing it.
 
+## Tail quantiles and CPU, where they mean something
+
+End-to-end results carry p50, p95 and p99, and the process CPU one request spent.
+Microbenchmark results carry none of the four. A microbenchmark round is a
+calibrated loop, so its p99 describes the calibration rather than the operation,
+and process CPU has a clock resolution that a microsecond-scale operation sits
+under.
+
+CPU is reported and never gated. Process CPU on a shared runner carries the
+runner's scheduling, and the deterministic metrics already carry what can be
+gated exactly. It is published so a higher request rate bought with more CPU is
+visible as what it is rather than read as an improvement.
+
 ## Two environments, doing different jobs
 
 **The pull-request environment** measures the base commit and the proposed commit
@@ -113,6 +126,14 @@ can be recomputed from the same data.
 A repetition counts only if it accumulated enough rounds or enough measured time.
 Below five valid repetitions the check reports no verdict rather than a pass.
 
+The rounds a repetition needs are derived per workload, from the cost the
+published dataset already records for it, and widened for a host faster than the
+one that dataset was measured on. A single round count cannot serve: 120 rounds
+is half a second of a 4 ms operation, six seconds of a 50 ms one, and a
+thousandth of a second of a microsecond one. The first version of this gate used
+one count for every workload, and it neither bound the fast workloads nor carried
+the rule for the slow ones on the runner it ran on.
+
 A workload fails only when the *lower* bound of its interval exceeds its budget —
 that is, when the regression is larger than the budget with confidence. A point
 estimate over budget whose interval still spans it is inconclusive, and triggers
@@ -130,6 +151,35 @@ by editing a number.
 
 For the deterministic metrics the budget is exact: calls and allocations per
 operation may not increase at all.
+
+The budget file is generated, never typed. `benchmarks.harness.calibrate` reads a
+null collection — both sides the same revision — and writes the file, so every
+number in it is the output of a measurement rather than a decision about one. The
+runs in such a collection are exchangeable, which is what lets ten of them carry
+1512 trials of the same statistic: every way of splitting them into two halves is
+another trial.
+
+It is calibrated on the environment the gate runs in — the pull-request runner —
+because that is where its false alarms are paid for. A budget derived on a
+developer workstation and applied to a shared runner is not a relative gate, and
+the first version of this one was exactly that: it failed a documentation-only
+pull request on its first live run. The reference host is calibrated too, and the
+two are published together, because the distance between them is what the rule
+above is protecting against.
+
+## A workload that stops measuring what it claims
+
+A measurement can be invalidated by the repair it motivated. Both error-path
+scaling curves were: they watched a walk that dominated their cost, the walk was
+made cheap, and what remained was a constant that does not depend on graph size —
+so the curves went flat and reported the constant's dispersion as growth.
+
+The response is to withdraw the workload rather than widen its budget. A budget
+retuned to accommodate a number that means nothing publishes the same number with
+a wider band. Every withdrawal is recorded on the [results](results.md) page with
+what it claimed, what invalidated it, and what covers the path instead — because
+a workload that is quietly deleted is indistinguishable from one that was never
+written.
 
 ## The checks are proven to fail
 

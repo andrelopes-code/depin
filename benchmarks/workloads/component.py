@@ -11,7 +11,6 @@ from typing import Annotated
 from benchmarks.contracts import (
     Claim,
     Metric,
-    NoiseClass,
     Observation,
     Tier,
     Workload,
@@ -118,7 +117,6 @@ def _freeze_claim(*, work: str, shape: str, valid: tuple[str, ...], invalid: tup
         concurrency=CONCURRENCY,
         metric=Metric.LATENCY,
         unit='seconds per operation',
-        noise=NoiseClass.MEDIUM,
         valid=valid,
         invalid=(NO_BASELINE_VALIDATION, *invalid),
     )
@@ -129,7 +127,6 @@ def _diagnostic_claim(
     question: str,
     work: str,
     shape: str,
-    noise: NoiseClass,
     valid: tuple[str, ...],
     invalid: tuple[str, ...],
 ) -> Claim:
@@ -143,7 +140,6 @@ def _diagnostic_claim(
         concurrency=CONCURRENCY,
         metric=Metric.LATENCY,
         unit='seconds per operation',
-        noise=noise,
         valid=valid,
         invalid=(NO_BASELINE_DIAGNOSTIC, *invalid),
     )
@@ -279,7 +275,6 @@ def _warmup_a_cold_singleton_graph() -> Workload:
             concurrency=CONCURRENCY,
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.MEDIUM,
             valid=(
                 'The absolute startup cost of constructing a graph of this size.',
                 'The ratio to constructing the same objects by hand, which is what warmup replaces.',
@@ -348,7 +343,6 @@ def _open_a_request_shaped_scope() -> Workload:
             concurrency=CONCURRENCY,
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.MEDIUM,
             valid=(
                 'The per-request overhead of the scope shape every integration runs.',
                 'The ratio to constructing the same two objects into a per-request map by hand.',
@@ -382,7 +376,6 @@ def _build_the_graph_view() -> Workload:
             question='What does the public graph view over a validated plan cost?',
             work=f'Build the node and edge view of a {LARGE_GRAPH}-provider graph.',
             shape=f'A linear chain of {LARGE_GRAPH} providers.',
-            noise=NoiseClass.MEDIUM,
             valid=('The diagnostic cost of the graph view, published apart from resolution.',),
             invalid=('Not a cost any resolution pays: the view is built only when it is asked for.',),
         ),
@@ -398,7 +391,6 @@ def _explain_a_deep_chain() -> Workload:
             question='What does rendering a resolution tree cost over a chain nothing is reached twice in?',
             work=f'Render the resolution tree below the leaf of a {LARGE_GRAPH}-provider chain.',
             shape=f'A linear chain of {LARGE_GRAPH} providers, so every node is reached exactly once.',
-            noise=NoiseClass.LOW,
             valid=('The cost of rendering a tree with one line per node and no repeated subtree.',),
             invalid=(
                 'Not evidence about the subtree-elision guard: the baseline counted 0 occurrences of '
@@ -417,7 +409,6 @@ def _explain_a_deep_chain_with_every_node_decorated() -> Workload:
             question='What does a decorator over every node add to rendering a resolution tree?',
             work=f'Render the resolution tree below the leaf of a decorated {LARGE_GRAPH}-provider chain.',
             shape='`explain_a_deep_chain`, with one pass-through decorator over every node.',
-            noise=NoiseClass.MEDIUM,
             valid=('The cost of rendering a decoration chain, read against `explain_a_deep_chain`.',),
             invalid=('Not evidence about the elision guard: this shape reaches no node twice either.',),
         ),
@@ -435,7 +426,6 @@ def _explain_a_layered_dag() -> Workload:
                 f'{LAYERED_GRAPH} providers where node i depends on both i-1 and i-2, so all but two nodes are '
                 'reached twice and the second visit is elided.'
             ),
-            noise=NoiseClass.MEDIUM,
             valid=(
                 'The cost of rendering a tree whose subtrees repeat, and the only coverage the subtree-elision '
                 'guard has: this shape elides 498 subtrees where `explain_a_deep_chain` elides none, so '
@@ -469,7 +459,6 @@ def _export_a_large_graph_as_dot() -> Workload:
             question='What does exporting a graph to Graphviz cost?',
             work=f'Render a {LARGE_GRAPH}-provider graph as a dot document.',
             shape=f'A linear chain of {LARGE_GRAPH} providers.',
-            noise=NoiseClass.LOW,
             valid=('The export cost, and the quietest workload in the suite to gate against.',),
             invalid=('Not a cost any resolution pays: the export runs only when it is asked for.',),
         ),
@@ -521,7 +510,6 @@ def _freeze_a_chain_missing_a_provider(size: int) -> Workload:
             concurrency=CONCURRENCY,
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.MEDIUM,
             valid=(
                 'The cost of the actionable error path, which no benchmark covered before this one.',
                 'The complexity class of the missing-provider walk, read across the two sizes: the baseline '
@@ -569,7 +557,6 @@ def _explain_an_unbound_key(size: int) -> Workload:
             concurrency=CONCURRENCY,
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.MEDIUM,
             valid=(
                 'The cost of the missing-key path, which no benchmark covered before this one.',
                 'The complexity class of the walk, read across the two sizes: the baseline measured the '

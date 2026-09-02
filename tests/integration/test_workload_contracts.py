@@ -3,6 +3,7 @@
 import pytest
 
 from benchmarks.contracts import Claim, Implementation, Metric, Workload
+from benchmarks.harness import unmeasured
 from benchmarks.test_latency import implementations, inventory
 
 ABSENT_BASELINE = 'no direct baseline'
@@ -110,3 +111,24 @@ def test_every_implementation_prepares_a_callable_and_releases_it(candidate: Imp
     finally:
         if prepared.close is not None:
             prepared.close()
+
+
+@pytest.mark.parametrize('retirement', unmeasured.RETIRED, ids=[entry.workload for entry in unmeasured.RETIRED])
+def test_a_retirement_states_what_it_claimed_why_it_went_and_what_covers_the_path(
+    retirement: unmeasured.Retirement,
+) -> None:
+    """A withdrawn workload leaves a record, or a later reader cannot tell it from an oversight."""
+    for field, stated in (
+        ('claimed', retirement.claimed),
+        ('reason', retirement.reason),
+        ('covered_by', retirement.covered_by),
+    ):
+        assert stated, f'{retirement.workload}.{field} is empty'
+        assert stated.strip() == stated, f'{retirement.workload}.{field} is padded'
+
+
+@pytest.mark.parametrize('refusal', unmeasured.REFUSED, ids=[entry.case for entry in unmeasured.REFUSED])
+def test_a_refusal_names_what_an_honest_measurement_would_need_instead(refusal: unmeasured.Refusal) -> None:
+    for field, stated in (('reason', refusal.reason), ('needed', refusal.needed)):
+        assert stated, f'{refusal.case}.{field} is empty'
+        assert stated.strip() == stated, f'{refusal.case}.{field} is padded'

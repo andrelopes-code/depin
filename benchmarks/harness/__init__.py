@@ -1,4 +1,4 @@
-"""The measurement harness: pairing, reduction, statistics, gating and publication.
+"""The measurement harness: pairing, reduction, statistics, calibration, gating and publication.
 
 Nothing here imports `pytest-benchmark`. The plugin writes JSON; this package
 reads it. A gate that never imports the tool it reads from stays runnable against
@@ -15,6 +15,8 @@ can rely on without `Any`.
 """
 
 import json
+import math
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TypeGuard
 
@@ -26,6 +28,35 @@ class HarnessError(Exception):
     report is worse than stopping, because the guess is what a regression hides
     behind.
     """
+
+
+def quantile(ordered: Sequence[float], fraction: float) -> float:
+    """The `fraction` quantile of an already sorted, non-empty sample, interpolated.
+
+    Shared because two callers need the same definition of a percentile: the tail
+    statistics published for a workload, and the bootstrap interval a verdict is
+    formed from. Two definitions would put a p99 on the results page that the
+    gate's own arithmetic does not agree with.
+
+    Raises:
+        HarnessError: the sample is empty.
+
+    Example:
+        ```pycon
+        >>> from benchmarks.harness import quantile
+        >>> quantile([1.0, 2.0, 3.0, 4.0], 0.5)
+        2.5
+
+        ```
+    """
+    if not ordered:
+        raise HarnessError('an empty sample has no quantile')
+    position = fraction * (len(ordered) - 1)
+    lower = math.floor(position)
+    upper = math.ceil(position)
+    if lower == upper:
+        return ordered[lower]
+    return ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower)
 
 
 def is_object(value: object) -> TypeGuard[dict[str, object]]:

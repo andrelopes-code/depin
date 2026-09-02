@@ -37,12 +37,15 @@ class Metric(Enum):
 class NoiseClass(Enum):
     """The dispersion band a workload was measured into, under the paired protocol.
 
-    The bands are the ones `specs/evidence/2026-09-02-step-7-performance-baseline.md`
-    measured over ten independent repetitions of the suite, quoted as the 99th
-    percentile of the paired statistic under the null hypothesis: `LOW` at or
-    below 3%, `MEDIUM` at or below 6%, `HIGH` above it. A budget below its
-    workload's band would fail on noise, so `benchmarks.harness.budgets` refuses
-    one.
+    Quoted as the 99th percentile of the paired statistic under the null
+    hypothesis: `LOW` at or below 3%, `MEDIUM` at or below 6%, `HIGH` above it. A
+    budget below its workload's band would fail on noise, so
+    `benchmarks.harness.budgets` refuses one.
+
+    A `Claim` does not carry one. The band is a measurement rather than an
+    authored statement, and it belongs to the environment it was measured in, so
+    it lives only in `benchmarks/budgets.toml` — where
+    `benchmarks.harness.calibrate` writes it beside the p99 that produced it.
     """
 
     LOW = 'low'
@@ -72,7 +75,6 @@ class Claim:
     concurrency: str
     metric: Metric
     unit: str
-    noise: NoiseClass
     valid: tuple[str, ...]
     invalid: tuple[str, ...]
 
@@ -91,6 +93,24 @@ class Observation:
     constructed: tuple[str, ...]
     closed: tuple[str, ...]
     error: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Cost:
+    """What one timed call consumed beyond wall time.
+
+    A timed callable may return one of these instead of its result, and the
+    timing shell files what it carries beside the wall-clock aggregate. Process
+    CPU is the reason the type exists: a higher request rate bought with more CPU
+    is not an improvement, so a throughput figure is never published without CPU
+    beside it.
+
+    Only the application tier returns one. A microbenchmark's rounds are a
+    calibrated loop, and `time.process_time_ns` has a resolution that makes a
+    per-round CPU reading of a microsecond-scale operation meaningless.
+    """
+
+    cpu_nanoseconds: int
 
 
 @dataclass(frozen=True, slots=True)
