@@ -5,6 +5,7 @@ import pytest
 
 import benchmarks.comparison.adapters.dependency_injector as dependency_injector_adapter
 import benchmarks.comparison.adapters.dishka as dishka_adapter
+import benchmarks.comparison.adapters.svcs as svcs_adapter
 import benchmarks.comparison.adapters.wireup as wireup_adapter
 from benchmarks.comparison.adapters.dependency_injector import ADAPTER, warm_chain
 from benchmarks.comparison.contracts import Competitor, Equivalence
@@ -456,3 +457,42 @@ def test_wireup_version_guard_rejects_a_different_distribution_version(monkeypat
 
     with pytest.raises(HarnessError, match=r'wireup 2\.12\.1 is installed; 2\.12\.0 is required'):
         wireup_adapter.require_installed_version()
+
+
+def test_svcs_container_caches_one_shared_chain_per_container_and_closes_it() -> None:
+    candidate = next(
+        candidate
+        for candidate in svcs_adapter.ADAPTER.candidates(WORKLOADS)
+        if candidate.workload == 'resolve_cached_singleton'
+    )
+
+    assert candidate.competitor == Competitor('svcs', '26.1.0')
+    assert candidate.equivalence is Equivalence.PARTIAL
+    assert candidate.implementation is not None
+    assert candidate.implementation.label == 'svcs-26.1.0'
+    assert candidate.reason == (
+        'per-container caching has no singleton single-flight guarantee or nested lifetime contract'
+    )
+
+    prepared = candidate.implementation.prepare()
+    close = prepared.close
+    assert close is not None
+    try:
+        first = prepared.call()
+        second = prepared.call()
+    finally:
+        close()
+        close()
+
+    assert first is second
+
+
+def test_svcs_candidates_cover_workloads_in_order_with_one_partial_shape() -> None:
+    candidates = svcs_adapter.ADAPTER.candidates(WORKLOADS)
+
+    assert tuple(candidate.workload for candidate in candidates) == tuple(workload.name for workload in WORKLOADS)
+    assert all(candidate.competitor == Competitor('svcs', '26.1.0') for candidate in candidates)
+    assert tuple(candidate.workload for candidate in candidates if candidate.equivalence is Equivalence.PARTIAL) == (
+        'resolve_cached_singleton',
+    )
+    assert all(candidate.reason for candidate in candidates if candidate.equivalence is not Equivalence.EQUIVALENT)

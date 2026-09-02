@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from benchmarks.comparison import WORKLOADS as COMPARATIVE_WORKLOADS
+from benchmarks.comparison.adapters import ADAPTERS
 from benchmarks.comparison.contracts import (
     AbsoluteTarget,
     Candidate,
@@ -208,3 +210,40 @@ def test_a_non_positive_target_is_rejected(tmp_path: Path) -> None:
     path.write_text('[case]\nfixed_seconds = 0\njustification = "reason"\n', encoding='utf-8')
     with pytest.raises(HarnessError, match='fixed target'):
         load(path)
+
+
+def test_comparative_inventory_covers_every_workload_in_adapter_order() -> None:
+    expected_targets = {
+        workload.name
+        for workload in WORKLOADS
+        if workload.claim.metric is Metric.LATENCY and workload.baseline is not None
+    }
+
+    assert tuple(comparative.workload for comparative in COMPARATIVE_WORKLOADS) == WORKLOADS
+    assert all(len(comparative.candidates) == len(ADAPTERS) for comparative in COMPARATIVE_WORKLOADS)
+    assert all(
+        tuple(candidate.competitor for candidate in comparative.candidates)
+        == tuple(adapter.competitor for adapter in ADAPTERS)
+        for comparative in COMPARATIVE_WORKLOADS
+    )
+    assert all(
+        len(
+            {
+                candidate.implementation.label
+                for candidate in comparative.candidates
+                if candidate.implementation is not None
+            }
+        )
+        == len([candidate for candidate in comparative.candidates if candidate.implementation is not None])
+        for comparative in COMPARATIVE_WORKLOADS
+    )
+    assert all(
+        candidate.implementation is None
+        or candidate.equivalence is not Equivalence.EQUIVALENT
+        or candidate.implementation.observe() == comparative.workload.subject.observe()
+        for comparative in COMPARATIVE_WORKLOADS
+        for candidate in comparative.candidates
+    )
+    assert {
+        comparative.workload.name for comparative in COMPARATIVE_WORKLOADS if comparative.target is not None
+    } == expected_targets
