@@ -6,13 +6,13 @@ smallest and the shape is easiest to read.
 """
 
 import asyncio
-from collections.abc import Callable
+import contextlib
+from collections.abc import Callable, Generator, Iterator
 from typing import Protocol
 
 from benchmarks.contracts import (
     Claim,
     Metric,
-    NoiseClass,
     Observation,
     Tier,
     Workload,
@@ -62,6 +62,51 @@ class Repo:
         return 3
 
 
+class Sole:
+    """The single provider the override pair and the generic-key workload resolve.
+
+    One provider rather than the hundred `resolve_cached_singleton` uses, because
+    the three of them are read as differences from each other and a chain would
+    add a setup cost none of the differences are about. The cached lookup is flat
+    in graph size — the baseline measured it within 3% over 1 to 300 nodes — so
+    the two families stay comparable anyway.
+    """
+
+
+class Substitute(Sole):
+    """What the active override returns in place of the registered provider."""
+
+
+class Indirect:
+    """One level of indirection over a held object.
+
+    The direct counterpart of an active override: hand-wiring reaches the
+    substitute through the holder that stands in for the override frame, so the
+    baseline performs one more hop than `Wired` alone.
+    """
+
+    def __init__(self, inner: Wired) -> None:
+        self.inner = inner
+
+
+class Boxed[T]:
+    """The generic origin `resolve_a_generic_key` resolves a parameterisation of.
+
+    Spelled as a subscript rather than built through `types.GenericAlias`, because
+    this key is fixed at authoring time and every checker reads `Boxed[Repo]` as a
+    key without help. It holds its parameter rather than only declaring one, so
+    the argument is inferred at every construction instead of being asserted at
+    one.
+    """
+
+    def __init__(self, value: T) -> None:
+        self.value = value
+
+
+class Connection:
+    """The resource `resolve_a_sync_resource_with_teardown` opens and drains."""
+
+
 class Pool:
     """The async singleton, whose provider is a coroutine function."""
 
@@ -94,6 +139,14 @@ def _decoration(wrapper: type[Decorated], node: type[object]) -> Callable[..., o
 
     wrap.__annotations__ = {'inner': node, 'return': node}
     return wrap
+
+
+def _boxed() -> Boxed[Repo]:
+    return Boxed(Repo())
+
+
+def _sole() -> Sole:
+    return Sole()
 
 
 def _construct_chain(nodes: tuple[type[object], ...]) -> object:
@@ -163,7 +216,6 @@ def _resolve_cached_singleton() -> Workload:
             concurrency=CONCURRENCY,
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.MEDIUM,
             valid=(
                 'The recurring cost of reaching a dependency through depin rather than holding it.',
                 'The ratio to the direct implementation, which is an attribute read on a held object.',
@@ -208,7 +260,6 @@ def _resolve_cached_singleton_through_an_alias() -> Workload:
             concurrency=CONCURRENCY,
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.MEDIUM,
             valid=('The alias hop, read as the difference from `resolve_cached_singleton` at the same graph size.',),
             invalid=(
                 'Not an absolute alias cost: the number is one resolution, of which the hop is a part.',
@@ -254,7 +305,6 @@ def _resolve_singleton_through_a_two_deep_decoration_chain() -> Workload:
             concurrency=CONCURRENCY,
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.MEDIUM,
             valid=(
                 'The two decoration hops, read as the difference from `resolve_cached_singleton`. '
                 'Both workloads use a 100-node chain, so the difference is the decoration.',
@@ -305,7 +355,6 @@ def _resolve_a_collection(size: int) -> Workload:
             concurrency=CONCURRENCY,
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.MEDIUM,
             valid=(
                 'The per-member cost of a collection, read across the two sizes.',
                 'The ratio to building the same list from held references.',
@@ -358,7 +407,6 @@ def _resolve_a_transient_chain() -> Workload:
             concurrency=CONCURRENCY,
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.LOW,
             valid=(
                 'The construction overhead per node, as the ratio to constructing the same chain by hand.',
                 'The increment over `resolve_cached_singleton`, which is the same lookup without construction.',
@@ -432,7 +480,6 @@ def _open_and_close_a_scope() -> Workload:
             concurrency=CONCURRENCY,
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.HIGH,
             valid=('A regression alarm on the scope path, against its own measured band.',),
             invalid=(
                 'Not an absolute figure worth publishing: the baseline measured this the noisiest case in the '
@@ -484,7 +531,6 @@ def _call_through_an_inject_wrapper() -> Workload:
             concurrency=CONCURRENCY,
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.MEDIUM,
             valid=('The dispatch overhead of `@inject`, as the ratio to calling the same function directly.',),
             invalid=(
                 'Not a per-parameter cost: one parameter is injected, and the wrapper is entered once either way.',
@@ -544,7 +590,6 @@ def _resolve_an_async_singleton() -> Workload:
             concurrency='Single-threaded; one event loop for the whole measurement, driven by run_until_complete.',
             metric=Metric.LATENCY,
             unit='seconds per operation',
-            noise=NoiseClass.MEDIUM,
             valid=(
                 'The difference from the direct implementation, which drives a bare coroutine through the same '
                 'loop boundary. That difference — about 3.5 µs when the baseline measured it — is depin.',
@@ -553,6 +598,393 @@ def _resolve_an_async_singleton() -> Workload:
                 'Not the cost of an async resolution: most of the timed region is asyncio, which is why the '
                 'direct implementation is the same loop call around a coroutine that does nothing.',
                 'Not the cost of constructing an async provider, which happens once, in setup.',
+            ),
+        ),
+        subject=implementation('depin', depin_setup),
+        baseline=implementation('direct', direct_setup),
+    )
+
+
+def _resolve_with_no_active_override() -> Workload:
+    def depin_setup() -> Session:
+        frozen = Container().bind(_sole).freeze()
+        _ = frozen.resolve(Sole)
+        return Session(
+            call=lambda: frozen.resolve(Sole),
+            observe=lambda: Observation(result=type(frozen.resolve(Sole)).__name__, constructed=(), closed=()),
+        )
+
+    def direct_setup() -> Session:
+        held = Wired(Sole())
+        return Session(
+            call=lambda: held.value,
+            observe=lambda: Observation(result=type(held.value).__name__, constructed=(), closed=()),
+        )
+
+    return Workload(
+        name='resolve_with_no_active_override',
+        tier=Tier.ISOLATED,
+        claim=Claim(
+            question='What does the override check cost on a resolution nothing has overridden?',
+            work='Return a cached singleton from a one-provider graph with the override stack empty.',
+            included='The key lookup, the ContextVar read that finds no override, and the cache read.',
+            excluded='Declaration, freeze, and the construction of the singleton, all done in setup.',
+            semantics='Singleton. The cache is warm before the first timed call, so nothing is constructed.',
+            shape='One provider with no dependencies; its key is resolved.',
+            concurrency=CONCURRENCY,
+            metric=Metric.LATENCY,
+            unit='seconds per operation',
+            valid=(
+                'The production case: `overrides.active` is on every resolution, and in a deployed process it '
+                'always takes the empty branch.',
+                'The control the override and generic-key workloads are read against. All three resolve one '
+                'provider, so the difference between them is the feature and not the graph.',
+            ),
+            invalid=(
+                'Not an isolated cost for the ContextVar read: the whole resolution is timed, and the read is '
+                'a part of it.',
+                'Not a different measurement from `resolve_cached_singleton` in kind — only in graph size, '
+                'which the baseline measured flat within 3% over 1 to 300 nodes.',
+            ),
+        ),
+        subject=implementation('depin', depin_setup),
+        baseline=implementation('direct', direct_setup),
+    )
+
+
+def _resolve_through_an_active_override() -> Workload:
+    def depin_setup() -> Session:
+        frozen = Container().bind(_sole).freeze()
+        stack = contextlib.ExitStack()
+        _ = stack.enter_context(frozen.override(Sole, Substitute()))
+        _ = frozen.resolve(Sole)
+        return Session(
+            call=lambda: frozen.resolve(Sole),
+            observe=lambda: Observation(result=type(frozen.resolve(Sole)).__name__, constructed=(), closed=()),
+            close=stack.close,
+        )
+
+    def direct_setup() -> Session:
+        held = Indirect(Wired(Substitute()))
+        return Session(
+            call=lambda: held.inner.value,
+            observe=lambda: Observation(result=type(held.inner.value).__name__, constructed=(), closed=()),
+        )
+
+    return Workload(
+        name='resolve_through_an_active_override',
+        tier=Tier.ISOLATED,
+        claim=Claim(
+            question='What does a resolution cost while an override for that key is installed?',
+            work='Return the replacement value for a key one active override substitutes.',
+            included=(
+                'The key lookup, the ContextVar read that finds the override, and the transient spec the '
+                'override is wrapped in on every lookup.'
+            ),
+            excluded='Declaration, freeze, and entering the override, all done in setup.',
+            semantics=(
+                'The override is a value, not a factory, so nothing is constructed. The substituted spec is '
+                'transient, so no cache is consulted and the registered singleton is never reached.'
+            ),
+            shape='One provider with no dependencies, with one override installed over its key.',
+            concurrency=CONCURRENCY,
+            metric=Metric.LATENCY,
+            unit='seconds per operation',
+            valid=(
+                'What using an override costs, read as the difference from `resolve_with_no_active_override`: '
+                'the branch that fires against the branch that does not.',
+                'The ratio to the direct implementation, which reaches a held object through one indirection.',
+            ),
+            invalid=(
+                'Not a production figure. An override is a testing seam, and a deployed process installs none.',
+                'Not the cost of installing or leaving an override, which happens once and is in setup.',
+                'Not the cost of an override whose replacement is a factory, which is called per resolution.',
+            ),
+        ),
+        subject=implementation('depin', depin_setup),
+        baseline=implementation('direct', direct_setup),
+    )
+
+
+def _resolve_a_generic_key() -> Workload:
+    def depin_setup() -> Session:
+        frozen = Container().bind(_boxed).freeze()
+        _ = frozen.resolve(Boxed[Repo])
+        return Session(
+            call=lambda: frozen.resolve(Boxed[Repo]),
+            observe=lambda: Observation(result=type(frozen.resolve(Boxed[Repo])).__name__, constructed=(), closed=()),
+        )
+
+    def direct_setup() -> Session:
+        held = Wired(Boxed(Repo()))
+        return Session(
+            call=lambda: held.value,
+            observe=lambda: Observation(result=type(held.value).__name__, constructed=(), closed=()),
+        )
+
+    return Workload(
+        name='resolve_a_generic_key',
+        tier=Tier.ISOLATED,
+        claim=Claim(
+            question='What does a parameterised generic key cost at resolution time?',
+            work='Return a cached singleton bound under `Boxed[Repo]` rather than under a bare class.',
+            included=(
+                'The key lookup, which takes the `get_origin` branch of the key check because the key is not '
+                'a class, then the override check and the cache read.'
+            ),
+            excluded='Declaration, freeze, and the construction of the singleton, all done in setup.',
+            semantics='Singleton. The cache is warm before the first timed call, so nothing is constructed.',
+            shape='One provider with no dependencies, keyed by a parameterised generic.',
+            concurrency=CONCURRENCY,
+            metric=Metric.LATENCY,
+            unit='seconds per operation',
+            valid=(
+                'What a generic key costs per resolution, read as the difference from '
+                '`resolve_with_no_active_override`, which resolves one provider under a plain class key.',
+            ),
+            invalid=(
+                'Not the freeze-time cost of a generic key, which `freeze_a_generic_key_chain_of_*` measures '
+                'and which is a different code path with a different frequency.',
+                'Not a statement about collections: `list[Element]` is also a generic key, but resolving one '
+                'gathers members as well.',
+            ),
+        ),
+        subject=implementation('depin', depin_setup),
+        baseline=implementation('direct', direct_setup),
+    )
+
+
+def _construct_a_singleton_for_the_first_time() -> Workload:
+    def recording(log: list[str]) -> Callable[[], Sole]:
+        def provide() -> Sole:
+            log.append(Sole.__name__)
+            return Sole()
+
+        return provide
+
+    def depin_setup() -> Session:
+        frozen = Container().bind(_sole).freeze()
+        _ = frozen.resolve(Sole)
+
+        def cold() -> object:
+            frozen.reset()
+            return frozen.resolve(Sole)
+
+        log: list[str] = []
+        observed = Container().bind(recording(log)).freeze()
+        _ = observed.resolve(Sole)
+
+        def observe() -> Observation:
+            observed.reset()
+            log.clear()
+            value = observed.resolve(Sole)
+            return Observation(result=type(value).__name__, constructed=tuple(log), closed=())
+
+        return Session(call=cold, observe=observe)
+
+    def direct_setup() -> Session:
+        cache: dict[type[Sole], Sole] = {Sole: Sole()}
+
+        def cold() -> object:
+            cache.clear()
+            cache[Sole] = Sole()
+            return cache[Sole]
+
+        def observe() -> Observation:
+            cache.clear()
+            log = [Sole.__name__]
+            cache[Sole] = Sole()
+            return Observation(result=type(cache[Sole]).__name__, constructed=tuple(log), closed=())
+
+        return Session(call=cold, observe=observe)
+
+    return Workload(
+        name='construct_a_singleton_for_the_first_time',
+        tier=Tier.ISOLATED,
+        claim=Claim(
+            question='What does the first resolution of a singleton cost, before anything is cached?',
+            work='Drop the singleton cache and resolve the key again, so the value is constructed.',
+            included=(
+                'The cache being dropped, the lookup, the construction, and the cache write. Dropping is '
+                'inside the timed region because there is no other way to reach a cold cache repeatedly, and '
+                'the direct implementation clears its own one-entry cache for the same reason.'
+            ),
+            excluded='Declaration and freeze, both done in setup.',
+            semantics=(
+                'Singleton. Every timed call constructs exactly one value, because the provider it drops has '
+                'no dependencies and registers no teardown for the drop to run.'
+            ),
+            shape='One provider with no dependencies; its key is resolved from cold.',
+            concurrency=CONCURRENCY,
+            metric=Metric.LATENCY,
+            unit='seconds per operation',
+            valid=(
+                'The cold path, read against `resolve_with_no_active_override`, which is the same lookup with '
+                'the value already there.',
+                'The ratio to the direct implementation, which clears and refills the same one-entry cache.',
+            ),
+            invalid=(
+                'Not a startup figure for a real graph: one provider is constructed here, and a startup builds '
+                'all of them in dependency order.',
+                'Not the cost of `reset()` as an operation, which is measured here only over an empty teardown record.',
+            ),
+        ),
+        subject=implementation('depin', depin_setup),
+        baseline=implementation('direct', direct_setup),
+    )
+
+
+def _sync_resource() -> Callable[[], Iterator[Connection]]:
+    def provide() -> Iterator[Connection]:
+        yield Connection()
+
+    return provide
+
+
+def _recording_sync_resource(log: list[str]) -> Callable[[], Iterator[Connection]]:
+    """`_sync_resource`, naming the resource in `log` as it opens and as it closes.
+
+    A separate factory rather than a flag inside the provider, so the timed
+    implementation carries no branch the observed one needs.
+    """
+
+    def provide() -> Iterator[Connection]:
+        log.append(f'open {Connection.__name__}')
+        yield Connection()
+        log.append(f'close {Connection.__name__}')
+
+    return provide
+
+
+def _resolve_a_sync_resource_with_teardown() -> Workload:
+    def depin_setup() -> Session:
+        frozen = Container().bind(_sync_resource(), provides=Connection, scope=Scope.SCOPED).freeze()
+
+        def cycle() -> object:
+            with frozen.scope():
+                return frozen.resolve(Connection)
+
+        log: list[str] = []
+        observed = Container().bind(_recording_sync_resource(log), provides=Connection, scope=Scope.SCOPED).freeze()
+
+        def observe() -> Observation:
+            log.clear()
+            with observed.scope():
+                value = observed.resolve(Connection)
+            return Observation(
+                result=type(value).__name__,
+                constructed=tuple(event.removeprefix('open ') for event in log if event.startswith('open ')),
+                closed=tuple(event.removeprefix('close ') for event in log if event.startswith('close ')),
+            )
+
+        return Session(call=cycle, observe=observe)
+
+    def direct_setup() -> Session:
+        @contextlib.contextmanager
+        def hold() -> Generator[Connection]:
+            yield Connection()
+
+        def cycle() -> object:
+            with hold() as connection:
+                return connection
+
+        def observe() -> Observation:
+            log: list[str] = []
+
+            @contextlib.contextmanager
+            def recording() -> Generator[Connection]:
+                log.append('open')
+                yield Connection()
+                log.append('close')
+
+            with recording() as connection:
+                value = connection
+            return Observation(
+                result=type(value).__name__,
+                constructed=tuple(Connection.__name__ for event in log if event == 'open'),
+                closed=tuple(Connection.__name__ for event in log if event == 'close'),
+            )
+
+        return Session(call=cycle, observe=observe)
+
+    return Workload(
+        name='resolve_a_sync_resource_with_teardown',
+        tier=Tier.ISOLATED,
+        claim=Claim(
+            question='What does one resource with a teardown cost, from open to drain?',
+            work='Enter a scope, resolve one generator-backed resource, and leave the scope so it is closed.',
+            included='Frame creation, one resolution, the generator entered, the teardown recorded, and the drain.',
+            excluded='Declaration and freeze, both done in setup.',
+            semantics=(
+                'Scoped. The resource is constructed once per scope, its teardown registered on construction, '
+                'and run when the scope closes.'
+            ),
+            shape='One scoped generator provider; the resource is resolved inside one scope.',
+            concurrency=CONCURRENCY,
+            metric=Metric.LATENCY,
+            unit='seconds per operation',
+            valid=(
+                'What teardown adds to a scope, read against `open_and_close_a_scope`, whose providers register none.',
+                'The ratio to the direct implementation, a handwritten context manager doing the same work.',
+            ),
+            invalid=(
+                'Not an async teardown, which runs on a different path and through an event loop.',
+                'Not a per-resource cost transferable to a scope holding many: `scale_scope_teardown` is the '
+                'curve for that.',
+                'Not the teardown path after a failure, where the drain collects exceptions instead.',
+            ),
+        ),
+        subject=implementation('depin', depin_setup),
+        baseline=implementation('direct', direct_setup),
+    )
+
+
+def _call_through_an_inject_wrapper_with_explicit_arguments() -> Workload:
+    def depin_setup() -> Session:
+        frozen = Container().bind(Repo).freeze()
+
+        @frozen.inject
+        def handler(offset: int, repo: Repo = injected(Repo)) -> int:
+            return repo.count() + offset
+
+        _ = handler(1)
+        return Session(
+            call=lambda: handler(1),
+            observe=lambda: Observation(result=str(handler(1)), constructed=(), closed=()),
+        )
+
+    def direct_setup() -> Session:
+        held = Repo()
+
+        def handler(offset: int, repo: Repo = held) -> int:
+            return repo.count() + offset
+
+        return Session(
+            call=lambda: handler(1),
+            observe=lambda: Observation(result=str(handler(1)), constructed=(), closed=()),
+        )
+
+    return Workload(
+        name='call_through_an_inject_wrapper_with_explicit_arguments',
+        tier=Tier.ISOLATED,
+        claim=Claim(
+            question='What does an argument the caller supplies add to an injected call?',
+            work='Call a two-parameter function with one argument supplied and one injected.',
+            included='The wrapper dispatch, the argument the caller passed, the resolution of the injected one.',
+            excluded='Declaration, freeze, wrapping, and the construction of the dependency, all done in setup.',
+            semantics='Singleton dependency, cached before the first timed call.',
+            shape='One provider with no dependencies, injected into a function that also takes one argument.',
+            concurrency=CONCURRENCY,
+            metric=Metric.LATENCY,
+            unit='seconds per operation',
+            valid=(
+                'What a supplied argument costs the wrapper, read as the difference from '
+                '`call_through_an_inject_wrapper`, which supplies none.',
+                'The ratio to calling the same two-parameter function directly.',
+            ),
+            invalid=(
+                'Not a per-argument cost: one argument is supplied, and the wrapper is entered once either way.',
+                'Not an async call, which goes through a different wrapper.',
             ),
         ),
         subject=implementation('depin', depin_setup),
@@ -569,5 +1001,11 @@ WORKLOADS: tuple[Workload, ...] = (
     _resolve_a_transient_chain(),
     _open_and_close_a_scope(),
     _call_through_an_inject_wrapper(),
+    _call_through_an_inject_wrapper_with_explicit_arguments(),
     _resolve_an_async_singleton(),
+    _resolve_with_no_active_override(),
+    _resolve_through_an_active_override(),
+    _resolve_a_generic_key(),
+    _construct_a_singleton_for_the_first_time(),
+    _resolve_a_sync_resource_with_teardown(),
 )

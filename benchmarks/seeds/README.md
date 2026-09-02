@@ -11,10 +11,17 @@ accident, not a deliberate sabotage — and each targets a different gate.
 | --- | --- | --- |
 | `latency-eager-error-message.patch` | Formats the missing-provider message on every lookup instead of only when the lookup fails | Latency, on the frequent resolution workloads |
 | `allocation-per-resolution-dict.patch` | Builds a throwaway dictionary on every cached resolution | Allocations, exactly, from a single repetition — a count has no dispersion to average away |
-| `scaling-restore-enumerating-walk.patch` | Restores the pre-repair chain search, which is cubic on the failing-freeze path and exponential on the missing-key path | Scaling. The fixed-size latency workloads stay green, which is the point |
+| `scaling-restore-enumerating-walk.patch` | Restores the pre-repair chain search, which is cubic on the failing-freeze path and exponential on the missing-key path | The two complexity checks in `tests/unit/test_longest_chain.py`, which compare growth between two sizes |
 
-The third is the one that shows why the scaling gate exists: a complexity change
-is invisible to a benchmark that only ever measures one size.
+The third one moved. It used to be caught by the `scale_failing_freeze` and
+`scale_explain_missing_key` curves, and both were retired once the repair left
+their paths dominated by a size-independent constant —
+`benchmarks/harness/unmeasured.py` carries that record. Re-running the seed
+against the retired curves is what showed the replacement was not yet in place:
+the wall-clock budget that stood in for them passed the seeded cubic walk at
+0.42 s against half a second, on a host faster than the one it was written on.
+Both checks now compare two sizes, which cancels the host and the constant
+together, and both fail on the seed by a factor of two or more.
 
 ## Applying one
 

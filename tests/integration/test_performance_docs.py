@@ -11,26 +11,21 @@ from pathlib import Path
 import pytest
 
 from benchmarks.contracts import Metric, Workload
+from benchmarks.harness import published
 from benchmarks.harness.pairs import split_size
 from benchmarks.harness.report import render
 from benchmarks.workloads import WORKLOADS
 
-ROOT = Path(__file__).resolve().parents[2]
-RESULTS = ROOT / 'benchmarks' / 'results'
-PAGE = ROOT / 'docs' / 'performance' / 'results.md'
-
-
-def _datasets() -> list[Path]:
-    return sorted(path for path in RESULTS.iterdir() if path.is_dir())
+PAGE = Path(__file__).resolve().parents[2] / 'docs' / 'performance' / 'results.md'
 
 
 def test_one_dataset_is_accepted() -> None:
     """Exactly one, because the page renders one and history lives in git."""
-    assert len(_datasets()) == 1, [path.name for path in _datasets()]
+    assert published.accepted().is_dir()
 
 
 def test_the_page_is_the_render_of_the_accepted_dataset() -> None:
-    assert PAGE.read_text(encoding='utf-8') == render(_datasets()[0])
+    assert PAGE.read_text(encoding='utf-8') == render(published.accepted())
 
 
 def _published_name(workload: Workload) -> str:

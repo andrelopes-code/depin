@@ -22,7 +22,6 @@ import contextlib
 from benchmarks.contracts import (
     Claim,
     Metric,
-    NoiseClass,
     Observation,
     Tier,
     Workload,
@@ -111,7 +110,6 @@ def _allocation_claim(
         concurrency=CONCURRENCY,
         metric=Metric.ALLOCATIONS,
         unit=ALLOCATION_UNIT,
-        noise=NoiseClass.LOW,
         valid=valid,
         invalid=(BLOCKS_ARE_NOT_BYTES, NOT_RESIDENT_MEMORY, SNAPSHOT_FLOOR, *invalid),
     )
@@ -138,7 +136,6 @@ def _retention_claim(
         concurrency=CONCURRENCY,
         metric=Metric.RETAINED,
         unit=RETENTION_UNIT,
-        noise=NoiseClass.LOW,
         valid=valid,
         invalid=(RETENTION_IS_NOT_A_PEAK, NOT_RESIDENT_MEMORY, SNAPSHOT_FLOOR, *invalid),
     )

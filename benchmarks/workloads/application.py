@@ -31,7 +31,16 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient, Response
 from starlette.routing import Route
 
-from benchmarks.contracts import Claim, Implementation, Metric, NoiseClass, Observation, Prepared, Tier, Workload
+from benchmarks.contracts import (
+    Claim,
+    Cost,
+    Implementation,
+    Metric,
+    Observation,
+    Prepared,
+    Tier,
+    Workload,
+)
 from depin import Container, Scope
 from depin.ext.fastapi import Inject, RequestScope
 
@@ -91,18 +100,6 @@ class TraceSink:
     @property
     def disposed(self) -> tuple[str, ...]:
         return tuple(self._closed)
-
-
-@dataclass(frozen=True, slots=True)
-class Cost:
-    """What one timed call consumed, so throughput is never reported without CPU beside it.
-
-    `pytest-benchmark` records wall time; the process CPU time a call spent is
-    returned from the call itself, because a higher request rate bought with more
-    CPU is not an improvement.
-    """
-
-    cpu_nanoseconds: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -564,7 +561,6 @@ _STATUS_CLAIM = Claim(
     concurrency=_REQUEST_CONCURRENCY,
     metric=Metric.LATENCY,
     unit='seconds per operation',
-    noise=NoiseClass.HIGH,
     valid=(
         'The largest share of a request that depin can account for in this suite, because the endpoint '
         'does no application work at all.',
@@ -586,7 +582,6 @@ _REPORT_CLAIM = Claim(
     concurrency=_REQUEST_CONCURRENCY,
     metric=Metric.LATENCY,
     unit='seconds per operation',
-    noise=NoiseClass.HIGH,
     valid=(
         'What per-request construction of a small scoped graph costs against writing the same three '
         'constructor calls in the handler.',
@@ -610,7 +605,6 @@ _PRICE_CLAIM = Claim(
     concurrency=_REQUEST_CONCURRENCY,
     metric=Metric.LATENCY,
     unit='seconds per operation',
-    noise=NoiseClass.HIGH,
     valid=(
         'The cost of the cache-hit path and the transient path in the same request, against the same two '
         'constructor calls written by hand.',
@@ -640,7 +634,6 @@ _LEDGER_CLAIM = Claim(
     concurrency=_REQUEST_CONCURRENCY,
     metric=Metric.LATENCY,
     unit='seconds per operation',
-    noise=NoiseClass.HIGH,
     valid=(
         'What registering and draining two async resources per request costs against a hand-written '
         'try/finally pair around the same two objects.',
@@ -670,7 +663,6 @@ _ORDER_CLAIM = Claim(
     concurrency=_REQUEST_CONCURRENCY,
     metric=Metric.LATENCY,
     unit='seconds per operation',
-    noise=NoiseClass.HIGH,
     valid=(
         'The relative overhead of depin once an endpoint performs an amount of work comparable to a small '
         'query and a small serialisation, read against the same endpoint with no simulated work.',
@@ -704,7 +696,6 @@ _STARTUP_CLAIM = Claim(
     concurrency='Single-threaded, no event loop.',
     metric=Metric.LATENCY,
     unit='seconds per operation',
-    noise=NoiseClass.MEDIUM,
     valid=(
         'The one-off cost of choosing depin over hand-wiring for an application of this size.',
         'A figure to compare against process start and framework import, both of which dominate it.',

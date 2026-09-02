@@ -17,7 +17,7 @@ import statistics
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from benchmarks.harness import HarnessError
+from benchmarks.harness import HarnessError, quantile
 
 DEFAULT_RESAMPLES = 2000
 LOWER_QUANTILE = 0.025
@@ -37,15 +37,6 @@ class Paired:
     low: float
     high: float
     n: int
-
-
-def _percentile(ordered: Sequence[float], quantile: float) -> float:
-    position = quantile * (len(ordered) - 1)
-    lower = math.floor(position)
-    upper = math.ceil(position)
-    if lower == upper:
-        return ordered[lower]
-    return ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower)
 
 
 def _positive(values: Sequence[float], side: str) -> None:
@@ -88,7 +79,7 @@ def paired_ratio(
     )
     return Paired(
         ratio=math.expm1(statistics.median(differences)),
-        low=math.expm1(_percentile(resampled, LOWER_QUANTILE)),
-        high=math.expm1(_percentile(resampled, UPPER_QUANTILE)),
+        low=math.expm1(quantile(resampled, LOWER_QUANTILE)),
+        high=math.expm1(quantile(resampled, UPPER_QUANTILE)),
         n=count,
     )

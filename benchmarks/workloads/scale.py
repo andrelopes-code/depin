@@ -9,6 +9,11 @@ rather than either point on its own.
 Nothing here declares `LATENCY`. A curve measured as if it were one operation says
 only that the largest size is slow, which is not a finding.
 
+The two curves over the error paths that motivated the tier are no longer here.
+Repairing the walks left both paths dominated by a size-independent constant, so
+neither curve tracked the quantity it named any more; `benchmarks.harness.unmeasured`
+carries the measurement that retired each one and names what covers those paths now.
+
 The module also carries the measured depth cliff. `FrozenContainer.resolve()`
 recurses about three stack frames per dependency, so a cold resolve dies at a
 chain of `DEPTH_CLIFF` providers on CPython's default limit — while `freeze()`
@@ -19,6 +24,7 @@ routed to Step 8. Pinning it here is what stops it moving unnoticed in the
 meantime.
 """
 
+import asyncio
 import contextlib
 import inspect
 import json
@@ -26,23 +32,31 @@ import os
 import subprocess
 import sys
 import types
-from collections.abc import Callable, Generator, Iterator, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Generator, Iterator, Sequence
 from functools import partial
 from pathlib import Path
 from typing import Protocol
 
-from benchmarks.contracts import Claim, Implementation, Metric, NoiseClass, Observation, Prepared, Tier, Workload
+from benchmarks.contracts import Claim, Implementation, Metric, Observation, Prepared, Tier, Workload
 from benchmarks.harness import HarnessError, is_object, require_integer, require_object
 from depin import Container, Scope
-from depin.errors import MissingProviderError
 
 FREEZE_SIZES = (100, 200, 400)
 DEPTH_SIZES = (10, 40, 160)
 FAN_OUT_SIZES = (10, 20, 40)
 COLLECTION_SIZES = (10, 100, 200)
 TEARDOWN_SIZES = (10, 20, 40)
-FAILING_FREEZE_SIZES = (25, 50, 100)
-EXPLAIN_SIZES = (10, 12, 14)
+ASYNC_TEARDOWN_SIZES = (10, 20, 40)
+OVERRIDE_NESTING_SIZES = (8, 32, 128)
+
+OVERRIDE_GRAPH = 1
+"""The graph the override curve resolves through.
+
+One provider, because the curve is about the override stack and a cached lookup
+is flat in graph size — the tier 1 baseline measured it within 3% over 1 to 300
+nodes. Anything larger would add setup cost to every size without moving the
+number.
+"""
 
 DEPTH_CLIFF = 332
 FRAMES_PER_PROVIDER = 3
@@ -78,10 +92,6 @@ class Element(Protocol):
 
 
 COLLECTION_KEY = list[Element]
-
-
-class Absent(Protocol):
-    """A key nothing binds. Both error-path curves are about what happens when it is asked for."""
 
 
 class Trace:
@@ -206,35 +216,6 @@ def _resources(size: int, trace: Trace) -> Container:
     return container.collect(Element, members)
 
 
-def _unsatisfiable_chain(size: int) -> Container:
-    """A chain of `size` providers whose deepest node requires a key nothing binds."""
-    trace = Trace(recording=False)
-    container = Container()
-    previous: type[object] = object
-    for index in range(size):
-        node = _node(index)
-        provider = _link(node, Absent if index == 0 else previous, trace)
-        container = container.bind(provider, provides=node, scope=Scope.SINGLETON)
-        previous = node
-    return container
-
-
-def _layered(size: int, trace: Trace) -> Container:
-    """A fan-in-2 layered DAG: node `i` depends on `i-1` and `i-2`.
-
-    The number of simple paths through it is Fibonacci in `size`, which is what
-    makes it — and not a linear chain — the shape the missing-key walk blows up on.
-    """
-    container = Container()
-    nodes: list[type[object]] = []
-    for index in range(size):
-        node = _node(index)
-        provider = _source(node, trace) if index < 2 else _joiner(node, nodes[index - 2 : index], trace)
-        container = container.bind(provider, provides=node, scope=Scope.TRANSIENT)
-        nodes.append(node)
-    return container
-
-
 def _claim(
     *,
     question: str,
@@ -256,7 +237,6 @@ def _claim(
         concurrency='single-threaded, no event loop, no scope shared between operations',
         metric=Metric.SCALING,
         unit='seconds per operation',
-        noise=NoiseClass.LOW,
         valid=valid,
         invalid=invalid,
     )
@@ -439,35 +419,120 @@ def _direct_teardown_observe(size: int) -> Observation:
     return Observation(result=result, constructed=opened, closed=closed)
 
 
-def _failing_freeze_call(size: int) -> Callable[[], str]:
-    container = _unsatisfiable_chain(size)
+def _async_resource(node: type[object], trace: Trace) -> Callable[..., object]:
+    async def make() -> AsyncIterator[object]:
+        trace.record(node.__name__)
+        yield node()
+        trace.record(f'close {node.__name__}')
 
-    def run() -> str:
-        try:
-            _ = container.freeze()
-        except MissingProviderError as error:
-            return type(error).__name__
-        raise HarnessError(f'the chain of {size} providers froze; the workload requires it to be unsatisfiable')
-
-    return run
+    make.__annotations__ = {'return': types.GenericAlias(AsyncIterator, (node,))}
+    return make
 
 
-def _failing_freeze_prepare(size: int) -> Prepared:
-    return Prepared(call=_failing_freeze_call(size))
+def _async_resources(size: int, trace: Trace) -> Container:
+    container = Container()
+    members: list[type[object]] = []
+    for index in range(size):
+        member = _node(index)
+        container = container.bind(_async_resource(member, trace), provides=member, scope=Scope.SCOPED)
+        members.append(member)
+    return container.collect(Element, members)
 
 
-def _failing_freeze_observe(size: int) -> Observation:
-    return Observation(result='', constructed=(), closed=(), error=_failing_freeze_call(size)())
+def _async_teardown_session(size: int, trace: Trace) -> tuple[Callable[[], str], Callable[[], None]]:
+    """One async scope cycle, and the loop release that has to happen outside the timed region."""
+    frozen = _async_resources(size, trace).freeze()
+    loop = asyncio.new_event_loop()
+
+    async def cycle() -> str:
+        async with frozen.ascope():
+            return _members(await frozen.aresolve(COLLECTION_KEY))
+
+    return lambda: loop.run_until_complete(cycle()), loop.close
 
 
-def _explain_prepare(size: int) -> Prepared:
-    frozen = _layered(size, Trace(recording=False)).freeze()
-    return Prepared(call=partial(frozen.explain, Absent))
+def _async_teardown_prepare(size: int) -> Prepared:
+    call, close = _async_teardown_session(size, Trace(recording=False))
+    return Prepared(call=call, close=close)
 
 
-def _explain_observe(size: int) -> Observation:
-    frozen = _layered(size, Trace(recording=False)).freeze()
-    return Observation(result=frozen.explain(Absent), constructed=(), closed=())
+def _async_teardown_observe(size: int) -> Observation:
+    trace = Trace(recording=True)
+    call, close = _async_teardown_session(size, trace)
+    try:
+        result = call()
+    finally:
+        close()
+    opened, closed = _split_events(trace)
+    return Observation(result=result, constructed=opened, closed=closed)
+
+
+def _direct_async_teardown_session(size: int, trace: Trace) -> tuple[Callable[[], str], Callable[[], None]]:
+    members = tuple(_node(index) for index in range(size))
+    loop = asyncio.new_event_loop()
+
+    @contextlib.asynccontextmanager
+    async def hold(member: type[object]) -> AsyncGenerator[object]:
+        trace.record(member.__name__)
+        yield member()
+        trace.record(f'close {member.__name__}')
+
+    async def cycle() -> str:
+        async with contextlib.AsyncExitStack() as stack:
+            return _members([await stack.enter_async_context(hold(member)) for member in members])
+
+    return lambda: loop.run_until_complete(cycle()), loop.close
+
+
+def _direct_async_teardown_prepare(size: int) -> Prepared:
+    call, close = _direct_async_teardown_session(size, Trace(recording=False))
+    return Prepared(call=call, close=close)
+
+
+def _direct_async_teardown_observe(size: int) -> Observation:
+    trace = Trace(recording=True)
+    call, close = _direct_async_teardown_session(size, trace)
+    try:
+        result = call()
+    finally:
+        close()
+    opened, closed = _split_events(trace)
+    return Observation(result=result, constructed=opened, closed=closed)
+
+
+def _override_nesting_session(size: int) -> tuple[Callable[[], object], Callable[[], None]]:
+    """A warm singleton behind `size` nested override frames, none of which name its key.
+
+    The frames are entered in setup and left standing for the whole measurement,
+    because entering and leaving them is a different operation from resolving
+    through them. Each names a key of its own that nothing binds, so the lookup
+    walks the whole stack and then reads the plan — the shape a resolution takes
+    inside a test that has overridden something else.
+    """
+    container, leaf = _chain(OVERRIDE_GRAPH, Scope.SINGLETON, Trace(recording=False))
+    frozen = container.freeze()
+    _ = frozen.resolve(leaf)
+    stack = contextlib.ExitStack()
+    try:
+        for index in range(size):
+            _ = stack.enter_context(frozen.override(type(f'Unrelated{index}', (), {}), object()))
+    except BaseException:
+        stack.close()
+        raise
+    return partial(frozen.resolve, leaf), stack.close
+
+
+def _override_nesting_prepare(size: int) -> Prepared:
+    call, close = _override_nesting_session(size)
+    return Prepared(call=call, close=close)
+
+
+def _override_nesting_observe(size: int) -> Observation:
+    call, close = _override_nesting_session(size)
+    try:
+        return Observation(result=type(call()).__name__, constructed=(), closed=())
+    finally:
+        close()
 
 
 def _workload(
@@ -579,44 +644,50 @@ TEARDOWN_CLAIM = _claim(
     ),
 )
 
-FAILING_FREEZE_CLAIM = _claim(
-    question='How does the cost of reporting an unsatisfiable graph scale with the size of that graph?',
-    work=(
-        'Validate a chain whose deepest node requires a key nothing binds, and build the error naming the longest '
-        'chain that reaches it. There is no direct baseline: hand-wiring has no validation step, so nothing outside '
-        'depin performs this work.'
+ASYNC_TEARDOWN_CLAIM = _claim(
+    question='How does closing an asynchronous scope scale with the number of resources opened in it?',
+    work='Open an async scope, construct n async-generator resources, and close them in reverse order.',
+    included=(
+        'One run_until_complete of an already created loop, scope entry, one aresolve() of the collection, '
+        'and the teardown every resource runs on exit.'
     ),
-    included='Container.freeze() up to and including the MissingProviderError it raises.',
-    excluded='Declaring the bindings.',
-    semantics='Nothing is constructed; the operation ends in an error by design.',
-    shape='A chain of n providers whose root requires one unbound key.',
+    excluded='Declaring the bindings, freezing the container, and creating the event loop.',
+    semantics='Every member is scoped, so it is constructed once per scope and torn down when that scope closes.',
+    shape='n scoped async-generator providers gathered under one list key.',
     valid=(
-        'The complexity class of the failing-freeze path.',
-        'Whether a graph that fails validation costs more than one that passes it at the same size.',
+        'Whether async teardown is linear in the number of resources held.',
+        'The overhead depin adds over contextlib.AsyncExitStack over the same async generators.',
     ),
     invalid=(
-        'Anything about the successful freeze path, which does not walk for a chain to report.',
-        'The wall-clock cost a user sees: a failing freeze happens once, at startup, and then the process stops.',
+        'Not comparable with the sync teardown curve as a ratio: the async side carries a loop boundary '
+        'the sync side does not, and that boundary is a constant of both implementations here.',
+        'Anything about teardown after a failure: this curve measures the path where every resource closes cleanly.',
     ),
 )
 
-EXPLAIN_CLAIM = _claim(
-    question='How does explaining an unbound key scale with the size of the graph it is asked about?',
+OVERRIDE_NESTING_CLAIM = _claim(
+    question='How does one resolution scale with the number of overrides standing over it?',
     work=(
-        'Walk the graph for the longest chain reaching an unbound key and render the explanation. There is no direct '
-        'baseline: the explanation is a diagnostic depin produces about its own graph.'
+        'Resolve a warm singleton with n nested override frames active, none of which names the key being '
+        'resolved. There is no direct baseline: hand-wiring has no override stack, so the curve is read '
+        'against itself at two depths rather than against another implementation.'
     ),
-    included='One explain() call, including the walk and the rendering of its result.',
-    excluded='Declaring the bindings and freezing the container.',
-    semantics='Nothing is constructed; explain() reads the validated plan.',
-    shape='A fan-in-2 layered DAG of n nodes, where the number of simple paths is Fibonacci in n.',
+    included=(
+        'The whole resolution: the override lookup that walks the n frames, and the cached read it falls through to.'
+    ),
+    excluded='Declaring the bindings, freezing, entering the override frames, and the first construction.',
+    semantics='Singleton, warm before the first timed call. The frames are entered once, in setup, and stand.',
+    shape=f'A chain of {OVERRIDE_GRAPH} provider(s) under n nested override frames.',
     valid=(
-        'The complexity class of the missing-key walk.',
-        'Why a linear chain is the wrong shape to measure this on: it carries one path.',
+        'Whether the override stack is walked linearly in its depth rather than worse.',
+        'What an override left standing costs every unrelated resolution under it.',
     ),
     invalid=(
-        'The cost of explain() for a key the graph does binds, which does not walk for a missing one.',
-        'Any absolute diagnostic cost: sizes here are chosen to stay measurable, not to be realistic.',
+        'Not the cost of installing or removing an override, which happens once per frame and is in setup.',
+        'Not a per-frame cost read off a single size: the fixed resolution cost sits under the curve, so '
+        'each growth ratio understates the linear term rather than isolating it.',
+        'Not a realistic nesting depth. The sizes are chosen to put the walk above the fixed cost, not to '
+        'describe a test suite, which nests one or two frames.',
     ),
 )
 
@@ -662,12 +733,18 @@ WORKLOADS: tuple[Workload, ...] = (
         (_direct_teardown_prepare, _direct_teardown_observe),
     ),
     *_curve(
-        'scale_failing_freeze',
-        FAILING_FREEZE_SIZES,
-        FAILING_FREEZE_CLAIM,
-        (_failing_freeze_prepare, _failing_freeze_observe),
+        'scale_async_teardown',
+        ASYNC_TEARDOWN_SIZES,
+        ASYNC_TEARDOWN_CLAIM,
+        (_async_teardown_prepare, _async_teardown_observe),
+        (_direct_async_teardown_prepare, _direct_async_teardown_observe),
     ),
-    *_curve('scale_explain_missing_key', EXPLAIN_SIZES, EXPLAIN_CLAIM, (_explain_prepare, _explain_observe)),
+    *_curve(
+        'scale_override_nesting',
+        OVERRIDE_NESTING_SIZES,
+        OVERRIDE_NESTING_CLAIM,
+        (_override_nesting_prepare, _override_nesting_observe),
+    ),
 )
 
 

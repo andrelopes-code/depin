@@ -14,9 +14,11 @@ from pathlib import Path
 
 import pytest
 
+from benchmarks import test_latency
 from benchmarks.contracts import Metric, NoiseClass, Tier, Workload
 from benchmarks.harness import (
     HarnessError,
+    calibrate,
     environment,
     gate,
     is_object,
@@ -27,10 +29,11 @@ from benchmarks.harness import (
     require_object,
     scaling,
     stats,
+    unmeasured,
     work,
 )
 from benchmarks.harness import budgets as budget_module
-from benchmarks.workloads import scale
+from benchmarks.workloads import WORKLOADS, scale
 
 ROOT = Path(__file__).resolve().parents[2]
 SEED = 20260902
@@ -796,6 +799,7 @@ def _smallest(curve: str) -> Workload:
         'scale_resolve_fan_out',
         'scale_resolve_collection',
         'scale_scope_teardown',
+        'scale_async_teardown',
     ],
 )
 def test_the_subject_and_its_direct_baseline_do_the_same_work(curve: str) -> None:
@@ -806,7 +810,7 @@ def test_the_subject_and_its_direct_baseline_do_the_same_work(curve: str) -> Non
     assert workload.subject.observe() == baseline.observe()
 
 
-@pytest.mark.parametrize('curve', ['scale_freeze_graph_size', 'scale_failing_freeze', 'scale_explain_missing_key'])
+@pytest.mark.parametrize('curve', ['scale_freeze_graph_size', 'scale_override_nesting'])
 def test_a_workload_without_a_baseline_says_why_in_its_claim(curve: str) -> None:
     workload = _smallest(curve)
 
@@ -814,16 +818,8 @@ def test_a_workload_without_a_baseline_says_why_in_its_claim(curve: str) -> None
     assert 'no direct baseline' in workload.claim.work
 
 
-def test_the_error_path_workloads_end_in_the_error_they_measure() -> None:
-    failing = _smallest('scale_failing_freeze').subject.observe()
-    explained = _smallest('scale_explain_missing_key').subject.observe()
-
-    assert failing.error == 'MissingProviderError'
-    assert 'no provider for Absent' in explained.result
-
-
 def test_a_scaling_workload_prepares_a_callable_that_can_be_measured() -> None:
-    for curve in ('scale_freeze_graph_size', 'scale_failing_freeze', 'scale_explain_missing_key'):
+    for curve in ('scale_freeze_graph_size', 'scale_override_nesting', 'scale_async_teardown'):
         prepared = _smallest(curve).subject.prepare()
         try:
             assert prepared.call() is not None
@@ -852,3 +848,331 @@ def test_freeze_accepts_and_warmup_survives_a_graph_a_cold_resolve_cannot(tmp_pa
 
     assert frozen.warmup().constructed
     assert frozen.resolve(leaf) is not None
+
+
+@pytest.mark.parametrize('median', [1e-8, 1e-6, 1e-4, 3.4e-3, 5.9e-3, 8.9e-2])
+def test_the_derived_rounds_floor_makes_a_repetition_of_that_cost_qualify(median: float) -> None:
+    """The floor exists to satisfy `qualifies`, so it has to satisfy it at every scale."""
+    floored = reduce.Aggregate(
+        name='probe',
+        rounds=reduce.rounds_for(median),
+        minimum=median,
+        median=median,
+        mean=median,
+        stddev=0.0,
+        iqr=0.0,
+    )
+
+    assert reduce.qualifies(floored)
+
+
+@pytest.mark.parametrize('median', [1e-6, 1e-4, 3.4e-3, 5.9e-3, 8.9e-2])
+def test_the_derived_rounds_floor_survives_a_host_faster_by_its_stated_margin(median: float) -> None:
+    """A floor derived on the reference host is applied on the runner, which is not always slower.
+
+    This is the failure the fixed count produced: `build_the_graph_view` was
+    floored at 120 rounds from a 5.9 ms reference cost and ran 3.4 ms on the
+    runner, which bought 0.408 s of a rule that asks for half a second.
+    """
+    faster = median / reduce.HOST_MARGIN
+    floored = reduce.Aggregate(
+        name='probe',
+        rounds=reduce.rounds_for(median),
+        minimum=faster,
+        median=faster,
+        mean=faster,
+        stddev=0.0,
+        iqr=0.0,
+    )
+
+    assert reduce.qualifies(floored)
+
+
+def test_a_fixed_rounds_floor_does_not_carry_the_rule_at_every_cost() -> None:
+    """The defect the derivation replaces, stated as a test rather than as a comment."""
+    fixed = 120
+    slow, fast = 5.9e-3 / 1.7, 1.4e-5
+
+    assert not reduce.qualifies(_aggregate_of(rounds=fixed, mean=slow))
+    assert not reduce.qualifies(_aggregate_of(rounds=fixed, mean=fast))
+    assert reduce.qualifies(_aggregate_of(rounds=reduce.rounds_for(slow), mean=slow))
+    assert reduce.qualifies(_aggregate_of(rounds=reduce.rounds_for(fast), mean=fast))
+
+
+@pytest.mark.parametrize('median', [0.0, -1.0, float('inf'), float('nan')])
+def test_a_rounds_floor_cannot_be_derived_from_a_cost_that_is_not_one(median: float) -> None:
+    with pytest.raises(HarnessError, match='finite and positive'):
+        _ = reduce.rounds_for(median)
+
+
+def test_a_case_the_published_dataset_does_not_cover_falls_back_to_the_round_count() -> None:
+    """A workload added since the dataset was published still has to be measurable."""
+    assert test_latency.floor('a_workload_no_dataset_has_ever_carried-depin') == reduce.MINIMUM_ROUNDS
+
+
+def test_a_published_case_takes_its_floor_from_the_cost_the_dataset_recorded() -> None:
+    published = dict(sorted(test_latency._PUBLISHED.items()))  # pyright: ignore[reportPrivateUsage]
+
+    assert published, 'the accepted dataset carries no latency case to derive a floor from'
+    for case, median in published.items():
+        assert test_latency.floor(case) == reduce.rounds_for(median)
+
+
+def _aggregate_of(*, rounds: int, mean: float) -> reduce.Aggregate:
+    return reduce.Aggregate(name='probe', rounds=rounds, minimum=mean, median=mean, mean=mean, stddev=0.0, iqr=0.0)
+
+
+def test_the_tail_quantiles_are_computed_from_the_round_array(tmp_path: Path) -> None:
+    """pytest-benchmark reports a median and an interquartile range; a p99 exists only in the data."""
+    entry = _entry('probe')
+    require_object(entry['stats'], 'stats')['data'] = [float(value) for value in range(1, 101)]
+
+    reduced = reduce.load(_write(tmp_path / 'report.json', _benchmark_report([entry])))['probe']
+
+    assert reduced.p95 == pytest.approx(95.05)
+    assert reduced.p99 == pytest.approx(99.01)
+
+
+def test_an_entry_with_no_round_array_carries_no_quantiles(tmp_path: Path) -> None:
+    reduced = reduce.load(_write(tmp_path / 'report.json', _benchmark_report([_entry('probe')])))['probe']
+
+    assert reduced.p95 is None
+    assert reduced.p99 is None
+
+
+def test_the_cpu_reading_and_the_tier_are_read_from_extra_info(tmp_path: Path) -> None:
+    entry = _entry('probe')
+    entry['extra_info'] = {'cpu_nanoseconds': 4321, 'tier': Tier.APPLICATION.value}
+
+    reduced = reduce.load(_write(tmp_path / 'report.json', _benchmark_report([entry])))['probe']
+
+    assert reduced.cpu == 4321
+    assert reduced.tier == Tier.APPLICATION.value
+
+
+def test_an_aggregate_carrying_no_optional_reading_stores_none_of_them() -> None:
+    stored = reduce.encode(_aggregate_of(rounds=10, mean=1e-6))
+
+    assert set(stored) == {'rounds', 'minimum', 'median', 'mean', 'stddev', 'iqr'}
+
+
+def test_every_reading_survives_the_round_trip_the_dataset_is_stored_through() -> None:
+    measured = reduce.Aggregate(
+        name='probe',
+        rounds=10,
+        minimum=1e-6,
+        median=2e-6,
+        mean=3e-6,
+        stddev=4e-6,
+        iqr=5e-6,
+        p95=6e-6,
+        p99=7e-6,
+        cpu=8.0,
+        tier=Tier.APPLICATION.value,
+    )
+
+    assert reduce.decode('probe', reduce.encode(measured), 'round trip') == measured
+
+
+def test_the_published_page_separates_the_application_tier_and_gives_it_quantiles(tmp_path: Path) -> None:
+    dataset = tmp_path / 'dataset'
+    _write(dataset / pairs.ENVIRONMENT_FILE, {'environment': environment.capture(), 'repetitions': 1, 'seed': SEED})
+    _write(
+        dataset / 'rep0.json',
+        {
+            'repetition': 0,
+            'first': 'head',
+            'aggregates': {
+                'test_latency[an_endpoint-depin]': {
+                    'rounds': 1000,
+                    'minimum': 1e-3,
+                    'median': 1e-3,
+                    'mean': 1e-3,
+                    'stddev': 0.0,
+                    'iqr': 0.0,
+                    'p95': 2e-3,
+                    'p99': 3e-3,
+                    'cpu': 900000.0,
+                    'tier': Tier.APPLICATION.value,
+                },
+                'test_latency[a_lookup-depin]': {
+                    'rounds': 1000,
+                    'minimum': 1e-6,
+                    'median': 1e-6,
+                    'mean': 1e-6,
+                    'stddev': 0.0,
+                    'iqr': 0.0,
+                    'p95': 2e-6,
+                    'p99': 3e-6,
+                    'tier': Tier.ISOLATED.value,
+                },
+            },
+        },
+    )
+
+    rendered = report.render(dataset)
+    latency, application = rendered.split('## Application tier')
+
+    assert 'a_lookup' in latency
+    assert 'an_endpoint' not in latency
+    assert 'an_endpoint' in application
+    assert '3.000 ms' in application
+    assert '900.000 µs' in application
+
+
+def test_the_published_page_states_every_retired_and_refused_measurement(tmp_path: Path) -> None:
+    _write(tmp_path / pairs.ENVIRONMENT_FILE, {'environment': environment.capture(), 'repetitions': 1, 'seed': SEED})
+
+    rendered = report.render(tmp_path)
+
+    for retirement in unmeasured.RETIRED:
+        assert retirement.workload in rendered
+        assert retirement.covered_by in rendered
+    for refusal in unmeasured.REFUSED:
+        assert refusal.case in rendered
+        assert refusal.needed in rendered
+
+
+def test_no_retired_workload_is_still_in_the_inventory() -> None:
+    """Retirement is a decision, and a decision that the tree quietly reverses is not one."""
+    declared = {workload.name for workload in WORKLOADS} | {
+        pairs.split_size(workload.name)[0] for workload in WORKLOADS if workload.claim.metric is Metric.SCALING
+    }
+
+    for retirement in unmeasured.RETIRED:
+        assert retirement.workload not in declared
+
+
+def test_no_retired_workload_still_carries_a_budget() -> None:
+    available = budget_module.load(ROOT / 'benchmarks' / 'budgets.toml')
+    retired = {retirement.workload for retirement in unmeasured.RETIRED}
+
+    assert not {workload for workload, _ in available} & retired
+
+
+@pytest.mark.parametrize(
+    ('p99', 'noise', 'limit'),
+    [
+        (0.0, NoiseClass.LOW, 0.05),
+        (0.0192, NoiseClass.LOW, 0.05),
+        (0.0299, NoiseClass.LOW, 0.06),
+        (0.0438, NoiseClass.MEDIUM, 0.09),
+        (0.0528, NoiseClass.MEDIUM, 0.11),
+        (0.0601, NoiseClass.HIGH, 0.15),
+        (0.1000, NoiseClass.HIGH, 0.20),
+    ],
+)
+def test_a_budget_is_twice_its_measured_null_p99_floored_by_the_band_it_falls_in(
+    p99: float,
+    noise: NoiseClass,
+    limit: float,
+) -> None:
+    assert calibrate.derive(p99) == (noise, limit)
+
+
+def test_a_dispersion_cannot_be_negative() -> None:
+    with pytest.raises(HarnessError, match='cannot be negative'):
+        _ = calibrate.derive(-0.01)
+
+
+def test_identical_runs_produce_no_excursion_at_all() -> None:
+    """The null of the null: ten measurements of the same number differ by nothing."""
+    assert set(calibrate.excursions([1e-6] * 10)) == {0.0}
+
+
+def test_the_trial_count_is_every_split_of_the_runs_times_the_orderings() -> None:
+    """Exchangeability is what makes ten runs carry 1512 trials rather than five."""
+    assert len(calibrate.excursions([1e-6 + index * 1e-9 for index in range(10)])) == 252 * calibrate.SPLITS
+
+
+def test_a_calibration_is_reproducible_from_its_seed() -> None:
+    runs = [1e-6 + index * 1e-9 for index in range(10)]
+
+    assert calibrate.excursions(runs) == calibrate.excursions(runs)
+    assert calibrate.excursions(runs, seed=1) != calibrate.excursions(runs)
+
+
+@pytest.mark.parametrize(
+    ('runs', 'message'),
+    [([1e-6, 1e-6, 1e-6], 'at least four'), ([1e-6, 0.0, 1e-6, 1e-6], 'finite and positive')],
+)
+def test_a_calibration_refuses_data_it_cannot_split(runs: list[float], message: str) -> None:
+    with pytest.raises(HarnessError, match=message):
+        _ = calibrate.excursions(runs)
+
+
+def test_a_calibration_needs_at_least_one_ordering_per_split() -> None:
+    with pytest.raises(HarnessError, match='at least one is needed per split'):
+        _ = calibrate.excursions([1e-6] * 10, orderings=0)
+
+
+def _null_collection(directory: Path) -> Path:
+    """Five repetitions of two sides carrying the same code, which is what a calibration reads."""
+    medians = [1.00e-6, 1.02e-6, 0.99e-6, 1.01e-6, 1.03e-6]
+    _dataset(
+        directory,
+        base=[{'test_latency[probe-depin]': median} for median in medians],
+        head=[{'test_latency[probe-depin]': median} for median in reversed(medians)],
+        deterministic={
+            'base': {'work': {'probe': 13}, 'scaling': {'scale_probe': {'sizes': [1, 2], 'costs': [1.0, 2.0]}}},
+            'head': {'work': {'probe': 13}, 'scaling': {'scale_probe': {'sizes': [1, 2], 'costs': [1.0, 2.0]}}},
+        },
+    )
+    return directory
+
+
+def test_a_calibration_covers_only_the_depin_subject(tmp_path: Path) -> None:
+    calibrated = calibrate.calibrate(_null_collection(tmp_path / 'null'))
+
+    assert [entry.workload for entry in calibrated] == ['probe']
+    assert calibrated[0].trials == 252 * calibrate.SPLITS
+
+
+def test_the_generated_budget_file_is_one_the_gate_accepts(tmp_path: Path) -> None:
+    """The output is the file, not a suggestion for one: a budget is generated, never typed."""
+    generated = tmp_path / 'budgets.toml'
+    _ = generated.write_text(calibrate.render(_null_collection(tmp_path / 'null')), encoding='utf-8')
+
+    available = budget_module.load(generated)
+
+    assert available[('probe', Metric.LATENCY.value)].limit >= budget_module.CLASS_FLOORS[NoiseClass.LOW]
+    assert available[('probe', budget_module.WORK)].limit == 0.0
+    assert available[('scale_probe', Metric.SCALING.value)].limit == 0.15
+
+
+def test_a_generated_budget_carries_the_measurement_that_justifies_it(tmp_path: Path) -> None:
+    available = budget_module.load(
+        _budget_file(tmp_path / 'budgets.toml', [calibrate.render(_null_collection(tmp_path / 'null'))])
+    )
+
+    assert 'paired null p99' in available[('probe', Metric.LATENCY.value)].justification
+
+
+def test_the_calibration_summary_names_every_workload_it_measured(tmp_path: Path) -> None:
+    printed = calibrate.summary(calibrate.calibrate(_null_collection(tmp_path / 'null')))
+
+    assert printed.startswith('probe')
+    assert 'p99' in printed
+
+
+def test_calibrating_a_collection_with_one_side_missing_is_refused(tmp_path: Path) -> None:
+    (tmp_path / 'base').mkdir(parents=True)
+
+    with pytest.raises(HarnessError, match='a null collection measures both sides'):
+        _ = calibrate.calibrate(tmp_path)
+
+
+def test_the_calibration_command_writes_a_budget_file_to_stdout(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert calibrate.main([str(_null_collection(tmp_path / 'null'))]) == 0
+    assert '[[budget]]' in capsys.readouterr().out
+
+
+def test_the_calibration_command_reports_a_collection_it_cannot_read(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert calibrate.main([str(tmp_path / 'absent')]) == 2
+    assert 'null collection' in capsys.readouterr().err

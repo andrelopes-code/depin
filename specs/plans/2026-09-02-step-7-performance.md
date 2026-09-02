@@ -6,7 +6,8 @@ Derived from `specs/2026-09-02-step-7-performance-design.md`. Measurements come
 from `specs/evidence/2026-09-02-step-7-performance-baseline.md` and are not
 re-derived.
 
-Release: one squash-merged pull request titled with `perf:`, which cuts 0.18.0.
+Release: one squash-merged pull request titled with `perf:`. Pre-1.0 that cuts a
+patch, not the minor this step was planned under; see the roadmap.
 
 ## Global constraints
 

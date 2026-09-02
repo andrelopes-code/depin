@@ -62,6 +62,32 @@ over budget but its interval still spans it.
 Increase `--repetitions` to narrow the intervals. Five is the minimum at which
 the gate will reach a verdict at all.
 
+## Measure your own host's noise
+
+Budgets are generated from a collection in which both sides are the same code, so
+every difference in it is noise:
+
+```bash
+uv run --group bench python -m benchmarks.harness.pairs \
+    --base-dir . --head-dir . --repetitions 5 --out /tmp/nullrun
+
+uv run --group bench python -m benchmarks.harness.calibrate /tmp/nullrun --summary
+```
+
+That prints each workload's measured dispersion and the budget it would produce
+here. Drop `--summary` to write the budget file itself.
+
+The committed budgets are not produced this way. They come from the same command
+run on the pull-request runner, by the `Calibrate` workflow, because the gate they
+control runs there and a relative gate has to take its noise from the environment
+it runs in. What a local calibration is for is comparison: if your host's
+dispersion is far from the runner's, the difference is the host, not the code.
+
+Run it with nothing else executing either way. A collection taken while other
+work was running measured one workload's dispersion at 20.9% where the quiet
+figure was 4.9% — which by the formula would have produced a budget looser than
+the uniform one this system replaced.
+
 ## Confirm the gates actually fail
 
 The repository keeps three deliberate regressions, one per class of protection.
