@@ -6,6 +6,8 @@ import pytest
 import benchmarks.harness.comparison as comparison
 from benchmarks.harness import HarnessError
 
+EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
+
 
 def _child(path: Path) -> Path:
     script = path / 'write_report.py'
@@ -16,17 +18,31 @@ import sys
 
 report = sys.argv[1]
 order = os.environ['DEPIN_COMPARISON_ORDER']
+mutation = os.environ.get('REPORT_MUTATION')
+benchmarks = [
+    {'name': 'test_comparison[resolve-depin]', 'stats': {
+        'rounds': 1000, 'min': 1.0, 'median': 2.0, 'mean': 2.5, 'stddev': 0.3, 'iqr': 0.4,
+        'data': [1.0, 2.0, 3.0, 4.0],
+    }, 'extra_info': {'cpu_nanoseconds': 7.0, 'tier': 'component'}},
+    {'name': 'test_comparison[resolve-wireup-2.12.0]', 'stats': {
+        'rounds': 1000, 'min': 3.0, 'median': 4.0, 'mean': 4.5, 'stddev': 0.6, 'iqr': 0.8,
+        'data': [3.0, 4.0, 5.0, 6.0],
+    }, 'extra_info': {'cpu_nanoseconds': 11.0, 'tier': 'application'}},
+]
+if mutation == 'missing':
+    benchmarks.pop()
+elif mutation == 'extra':
+    benchmarks.append({'name': 'test_comparison[unexpected]', 'stats': benchmarks[0]['stats']})
+elif mutation == 'fractional_rounds':
+    benchmarks[0]['stats']['rounds'] = 1.5
+elif mutation == 'negative_minimum':
+    benchmarks[0]['stats']['min'] = -1.0
+elif mutation == 'nan_median':
+    benchmarks[0]['stats']['median'] = float('nan')
+elif mutation == 'infinite_mean':
+    benchmarks[0]['stats']['mean'] = float('inf')
 with open(report, 'w', encoding='utf-8') as stream:
-    json.dump({'benchmarks': [
-        {'name': 'test_comparison[resolve-depin]', 'stats': {
-            'rounds': 1000, 'min': 1.0, 'median': 2.0, 'mean': 2.5, 'stddev': 0.3, 'iqr': 0.4,
-            'data': [1.0, 2.0, 3.0, 4.0],
-        }, 'extra_info': {'cpu_nanoseconds': 7.0, 'tier': 'component'}},
-        {'name': 'test_comparison[resolve-wireup-2.12.0]', 'stats': {
-            'rounds': 1000, 'min': 3.0, 'median': 4.0, 'mean': 4.5, 'stddev': 0.6, 'iqr': 0.8,
-            'data': [3.0, 4.0, 5.0, 6.0],
-        }, 'extra_info': {'cpu_nanoseconds': 11.0, 'tier': 'application'}},
-    ]}, stream)
+    json.dump({'benchmarks': benchmarks}, stream)
 with open(os.environ['CALL_LOG'], 'a', encoding='utf-8') as stream:
     stream.write(order + '\\n')
 """,
@@ -45,6 +61,7 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
+    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
     monkeypatch.setattr(comparison, '_environment', lambda: {'host': 'synthetic'})
     monkeypatch.setattr(comparison, '_descriptions', lambda: {'resolve': {'target': {'seconds': 0.1}}})
 
@@ -140,6 +157,7 @@ def test_dirty_collection_is_diagnostic_evidence_when_explicitly_allowed(
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: False)
+    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
     monkeypatch.setattr(comparison, '_environment', lambda: {'host': 'synthetic'})
     monkeypatch.setattr(comparison, '_descriptions', lambda: dict[str, object]())
 
@@ -167,8 +185,89 @@ raise SystemExit(23)
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
+    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
 
     with pytest.raises(HarnessError, match='exited 23'):
         _ = comparison.collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'))
 
     assert not list(tmp_path.rglob('report.json'))
+
+
+@pytest.mark.parametrize(
+    ('mutation', 'message'),
+    [
+        ('missing', 'missing'),
+        ('extra', 'unexpected'),
+        ('fractional_rounds', 'rounds'),
+        ('negative_minimum', 'stats.min'),
+        ('nan_median', 'median'),
+        ('infinite_mean', 'mean'),
+    ],
+)
+def test_collection_refuses_malformed_or_incomplete_raw_reports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str, message: str
+) -> None:
+    child = _child(tmp_path)
+    monkeypatch.setenv('CALL_LOG', str(tmp_path / 'calls.txt'))
+    monkeypatch.setenv('REPORT_MUTATION', mutation)
+    monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
+    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
+    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+
+    with pytest.raises(HarnessError, match=message):
+        _ = comparison.collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'))
+
+
+def test_collection_times_out_a_blocked_child_and_cleans_up(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    child = tmp_path / 'blocked.py'
+    child.write_text('import signal\nsignal.pause()\n', encoding='utf-8')
+    monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
+    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
+    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+
+    with pytest.raises(HarnessError, match='timed out'):
+        _ = comparison.collect(
+            repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'), timeout_seconds=0.01
+        )
+
+    assert not list(tmp_path.rglob('report.json'))
+
+
+@pytest.mark.parametrize('failure', ['write', 'replace'])
+def test_atomic_collection_preserves_existing_evidence_when_finalization_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    child = _child(tmp_path)
+    destination = tmp_path / 'out' / 'comparison.json'
+    destination.parent.mkdir()
+    destination.write_text('{"existing": true}\n', encoding='utf-8')
+    monkeypatch.setenv('CALL_LOG', str(tmp_path / 'calls.txt'))
+    monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
+    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
+    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+    if failure == 'write':
+
+        def fail_write(_: Path, __: dict[str, object]) -> None:
+            raise OSError('write failure')
+
+        monkeypatch.setattr(comparison, 'write_json', fail_write)
+    else:
+        original_replace = Path.replace
+
+        def fail_temporary_replace(path: Path, target: Path) -> Path:
+            if path.name.endswith('.tmp'):
+                raise OSError('replace failure')
+            return original_replace(path, target)
+
+        monkeypatch.setattr(Path, 'replace', fail_temporary_replace)
+
+    with pytest.raises(HarnessError, match=failure):
+        _ = comparison.collect(repetitions=5, out=destination.parent, command=(str(child), '{report}'))
+
+    assert destination.read_text(encoding='utf-8') == '{"existing": true}\n'

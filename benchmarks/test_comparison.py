@@ -13,7 +13,7 @@ from benchmarks.comparison.adapters.dependency_injector import ADAPTER, warm_cha
 from benchmarks.comparison.contracts import Candidate, Competitor, Equivalence
 from benchmarks.comparison.inventory import build
 from benchmarks.comparison.shapes import Chain, chain, observation
-from benchmarks.contracts import Implementation, Observation, Prepared, Workload
+from benchmarks.contracts import Cost, Implementation, Observation, Prepared, Workload
 from benchmarks.harness import HarnessError, reduce
 from benchmarks.workloads import WORKLOADS
 from benchmarks.workloads.micro import CHAIN_DEPTH, HOT_GRAPH
@@ -564,6 +564,16 @@ _CASES: tuple[tuple[str, Workload, Implementation, Candidate | None], ...] = tup
         (f'{comparative.workload.name}-depin', comparative.workload, comparative.workload.subject, None),
         *(
             (
+                f'{comparative.workload.name}-{comparative.workload.baseline.label}',
+                comparative.workload,
+                comparative.workload.baseline,
+                None,
+            )
+            for _ in (0,)
+            if comparative.workload.baseline is not None
+        ),
+        *(
+            (
                 f'{comparative.workload.name}-{candidate.implementation.label}',
                 comparative.workload,
                 candidate.implementation,
@@ -611,9 +621,32 @@ def test_comparison(
         )
     prepared = implementation.prepare()
     try:
-        _ = benchmark(prepared.call)
+        outcome = benchmark(prepared.call)
     finally:
         if prepared.close is not None:
             prepared.close()
     benchmark.extra_info['equivalence'] = 'subject' if candidate is None else candidate.equivalence.value
     benchmark.extra_info['reason'] = 'depin subject' if candidate is None else candidate.reason
+    benchmark.extra_info['tier'] = workload.tier.value
+    if isinstance(outcome, Cost):
+        benchmark.extra_info['cpu_nanoseconds'] = outcome.cpu_nanoseconds
+
+
+def test_comparison_files_tier_and_cpu_for_cost_outcomes() -> None:
+    class CapturingBenchmark:
+        def __init__(self) -> None:
+            self.extra_info: dict[str, object] = {}
+
+        def __call__[T](self, function: Callable[[], T]) -> T:
+            return function()
+
+    workload = WORKLOADS[0]
+    implementation = Implementation(
+        'cost', lambda: Prepared(call=lambda: Cost(cpu_nanoseconds=17)), workload.subject.observe
+    )
+    benchmark = CapturingBenchmark()
+
+    test_comparison(benchmark, workload, implementation, None)
+
+    assert benchmark.extra_info['tier'] == workload.tier.value
+    assert benchmark.extra_info['cpu_nanoseconds'] == 17

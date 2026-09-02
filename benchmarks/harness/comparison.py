@@ -1,6 +1,7 @@
 """Collect counterbalanced competitor benchmark samples."""
 
 import argparse
+import math
 import os
 import subprocess
 import sys
@@ -9,13 +10,25 @@ from collections.abc import Sequence
 from importlib import metadata
 from pathlib import Path
 
-from benchmarks.harness import HarnessError, memory, reduce, require_integer, require_text, write_json
+from benchmarks.harness import (
+    HarnessError,
+    memory,
+    read_json,
+    reduce,
+    require_array,
+    require_integer,
+    require_number,
+    require_object,
+    require_text,
+    write_json,
+)
 from benchmarks.harness import environment as environment_module
 
 DEFAULT_REPETITIONS = 5
 REPORT_PLACEHOLDER = '{report}'
 COMPARISON_FILE = 'comparison.json'
 COMMAND = ('-m', 'pytest', 'benchmarks/test_comparison.py', '--benchmark-only', '-q', '--benchmark-json={report}')
+DEFAULT_TIMEOUT_SECONDS = 5400
 
 
 def _revision() -> str:
@@ -77,6 +90,21 @@ def _descriptions() -> dict[str, object]:
     return descriptions
 
 
+def _expected_ids() -> set[str]:
+    from benchmarks.comparison.inventory import build
+
+    expected: set[str] = set()
+    for comparative in build():
+        workload = comparative.workload
+        expected.add(f'{workload.name}-{workload.subject.label}')
+        if workload.baseline is not None:
+            expected.add(f'{workload.name}-{workload.baseline.label}')
+        for candidate in comparative.candidates:
+            if candidate.implementation is not None:
+                expected.add(f'{workload.name}-{candidate.implementation.label}')
+    return expected
+
+
 def _environment() -> dict[str, object]:
     return environment_module.capture()
 
@@ -96,15 +124,116 @@ def _preflight(*, allow_dirty: bool) -> tuple[str, dict[str, str]]:
     return _revision(), pins
 
 
-def _run(command: Sequence[str], report: Path, order: str) -> dict[str, reduce.Aggregate]:
+def _case_id(name: str, *, repetition: int, order: str) -> str:
+    marker = 'test_comparison['
+    start = name.find(marker)
+    if start < 0 or not name.endswith(']'):
+        raise HarnessError(
+            f'repetition {repetition} ({order}) has benchmark {name!r}, not a test_comparison case; '
+            'run the comparison shell without changing its IDs'
+        )
+    return name[start + len(marker) : -1]
+
+
+def _finite(value: object, *, where: str, positive: bool = False) -> None:
+    number = require_number(value, where)
+    if not math.isfinite(number) or number < 0.0 or (positive and number <= 0.0):
+        expectation = 'finite and positive' if positive else 'finite and non-negative'
+        raise HarnessError(f'{where}: {number!r} must be {expectation}; repair the pytest-benchmark report')
+
+
+def _validate_raw(report: Path, *, repetition: int, order: str, expected: set[str]) -> None:
+    payload = read_json(report)
+    entries = require_array(payload.get('benchmarks'), f'{report}.benchmarks')
+    names: set[str] = set()
+    for index, entry in enumerate(entries):
+        where = f'{report}.benchmarks[{index}]'
+        fields = require_object(entry, where)
+        name = require_text(fields.get('name'), f'{where}.name')
+        case = _case_id(name, repetition=repetition, order=order)
+        if case in names:
+            raise HarnessError(
+                f'repetition {repetition} ({order}) has duplicate benchmark ID {case!r}; repair the report'
+            )
+        names.add(case)
+        stats = require_object(fields.get('stats'), f'{where}.stats')
+        rounds = require_number(stats.get('rounds'), f'{where}.stats.rounds')
+        if not math.isfinite(rounds) or rounds <= 0.0 or not rounds.is_integer():
+            raise HarnessError(
+                f'{where}.stats.rounds: {rounds!r} must be a finite positive integer; '
+                'repair the pytest-benchmark report'
+            )
+        for field in ('min', 'median', 'mean'):
+            _finite(stats.get(field), where=f'{where}.stats.{field}', positive=True)
+        for field in ('stddev', 'iqr', 'max', 'total', 'duration'):
+            if field in stats:
+                _finite(stats[field], where=f'{where}.stats.{field}')
+        if 'duration' in fields:
+            _finite(fields['duration'], where=f'{where}.duration')
+    missing = sorted(expected - names)
+    unexpected = sorted(names - expected)
+    if missing or unexpected:
+        detail: list[str] = []
+        if missing:
+            detail.append(f'missing {missing}')
+        if unexpected:
+            detail.append(f'unexpected {unexpected}')
+        raise HarnessError(
+            f'repetition {repetition} ({order}) benchmark IDs differ from the expected matrix: {"; ".join(detail)}. '
+            'Run the unmodified comparison shell and inspect its parametrization.'
+        )
+
+
+def _timeout_text(value: str | bytes | None) -> str:
+    if value is None:
+        return ''
+    return value.decode() if isinstance(value, bytes) else value
+
+
+def _run(
+    command: Sequence[str],
+    report: Path,
+    order: str,
+    *,
+    repetition: int,
+    timeout_seconds: int | float,
+    expected: set[str],
+) -> dict[str, reduce.Aggregate]:
     argv = [sys.executable, *(part.replace(REPORT_PLACEHOLDER, str(report)) for part in command)]
     child = os.environ | {'DEPIN_COMPARISON_ORDER': order, 'PYTHONHASHSEED': memory.HASH_SEED}
-    completed = subprocess.run(argv, env=child, capture_output=True, text=True, check=False)
+    try:
+        completed = subprocess.run(
+            argv, env=child, capture_output=True, text=True, check=False, timeout=timeout_seconds
+        )
+    except subprocess.TimeoutExpired as error:
+        raise HarnessError(
+            f'repetition {repetition} ({order}) timed out after {timeout_seconds} seconds: {" ".join(argv)}\n'
+            f'{_timeout_text(error.stdout)}{_timeout_text(error.stderr)}'
+        ) from error
     if completed.returncode != 0:
         raise HarnessError(
-            f'comparison child exited {completed.returncode}: {" ".join(argv)}\n{completed.stdout}{completed.stderr}'
+            f'repetition {repetition} ({order}) child exited {completed.returncode}: '
+            f'{" ".join(argv)}\n{completed.stdout}{completed.stderr}'
         )
+    _validate_raw(report, repetition=repetition, order=order, expected=expected)
     return reduce.load(report)
+
+
+def _write_atomic(path: Path, payload: dict[str, object]) -> None:
+    temporary = path.with_name(f'.{path.name}.tmp')
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(temporary, payload)
+        temporary.replace(path)
+    except OSError as error:
+        if temporary.exists():
+            try:
+                temporary.unlink()
+            except OSError as cleanup_error:
+                raise HarnessError(
+                    f'{temporary}: cannot clean failed atomic write ({cleanup_error}); original failure was {error}'
+                ) from cleanup_error
+        raise HarnessError(f'{path}: cannot atomically write comparison evidence ({error})') from error
 
 
 def collect(
@@ -113,18 +242,29 @@ def collect(
     out: Path,
     allow_dirty: bool = False,
     command: Sequence[str] = COMMAND,
+    timeout_seconds: int | float = DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
     """Run the protocol and write its reduced evidence dataset."""
     if repetitions < DEFAULT_REPETITIONS:
         raise HarnessError(f'{repetitions} repetitions; the protocol needs at least five')
+    if timeout_seconds <= 0:
+        raise HarnessError(f'{timeout_seconds} timeout seconds; the child timeout must be positive')
     revision, pins = _preflight(allow_dirty=allow_dirty)
+    expected = _expected_ids()
     repetitions_data: list[dict[str, object]] = []
     scratch_parent = out.parent
     scratch_parent.mkdir(parents=True, exist_ok=True)
     for index in range(repetitions):
         order = 'forward' if index % 2 == 0 else 'reverse'
         with tempfile.TemporaryDirectory(dir=scratch_parent, prefix=f'.{out.name}-') as scratch:
-            aggregates = _run(command, Path(scratch) / 'report.json', order)
+            aggregates = _run(
+                command,
+                Path(scratch) / 'report.json',
+                order,
+                repetition=index,
+                timeout_seconds=timeout_seconds,
+                expected=expected,
+            )
         medians = {name: aggregate.median for name, aggregate in sorted(aggregates.items())}
         rounds = {name: aggregate.rounds for name, aggregate in sorted(aggregates.items())}
         repetitions_data.append(
@@ -145,7 +285,7 @@ def collect(
         'source_revision': revision,
         'targets': _descriptions(),
     }
-    write_json(out / COMPARISON_FILE, dataset)
+    _write_atomic(out / COMPARISON_FILE, dataset)
     return dataset
 
 
@@ -155,6 +295,7 @@ def _arguments(argv: Sequence[str] | None) -> dict[str, object]:
     parser.add_argument('--repetitions', type=int, default=DEFAULT_REPETITIONS)
     parser.add_argument('--out', required=True)
     parser.add_argument('--allow-dirty', action='store_true')
+    parser.add_argument('--timeout-seconds', type=int, default=DEFAULT_TIMEOUT_SECONDS)
     parsed = parser.parse_args(argv)
     return vars(parsed)
 
@@ -166,6 +307,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             repetitions=require_integer(chosen['repetitions'], '--repetitions'),
             out=Path(require_text(chosen['out'], '--out')),
             allow_dirty=bool(chosen['allow_dirty']),
+            timeout_seconds=require_integer(chosen['timeout_seconds'], '--timeout-seconds'),
         )
     except HarnessError as error:
         _ = sys.stderr.write(f'{error}\n')
