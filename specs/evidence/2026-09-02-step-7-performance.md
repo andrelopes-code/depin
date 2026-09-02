@@ -444,6 +444,14 @@ Measured on the delivered tree, at the reference host recorded in the dataset.
 | ty, source | 45 diagnostics, 31 registered |
 | Pyrefly, source | 2 diagnostics, 2 registered |
 | `mkdocs build --strict` | built |
+| mutation, `depin/_core/` | 97.6% (2530 killed, 62 survived) against a 95% floor |
+
+Every one of the 26 pull-request checks passed. The mutation score moved from
+97.7% to 97.6%: `longest_chain` contributed 10 of the 62 surviving mutants, which
+is within the floor and is left as available follow-up rather than presented as
+complete. The `benchmarks` job skipped its gate, correctly — the base branch
+predates the harness, so there was nothing to compare against, and the gate
+engages from the next pull request onward.
 
 ## What this step did not do
 
