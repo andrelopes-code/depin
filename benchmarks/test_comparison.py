@@ -1,6 +1,7 @@
 import pytest
 
 import benchmarks.comparison.adapters.dependency_injector as dependency_injector_adapter
+import benchmarks.comparison.adapters.dishka as dishka_adapter
 from benchmarks.comparison.adapters.dependency_injector import ADAPTER, warm_chain
 from benchmarks.comparison.contracts import Competitor, Equivalence
 from benchmarks.comparison.shapes import chain, observation
@@ -170,3 +171,46 @@ def test_dependency_injector_candidates_cover_workloads_in_order_with_expected_f
     assert by_name['resolve_with_no_active_override'].reason == (
         'Dependency Injector provider overrides are not depin context-local override frames'
     )
+
+
+def test_dishka_singleton_transient_and_scoped_observations_match_depin() -> None:
+    candidates = {candidate.workload: candidate for candidate in dishka_adapter.ADAPTER.candidates(WORKLOADS)}
+    subjects = {workload.name: workload.subject for workload in WORKLOADS}
+
+    for name in ('resolve_cached_singleton', 'resolve_a_transient_chain', 'open_and_close_a_scope'):
+        implementation = candidates[name].implementation
+        assert implementation is not None
+        assert implementation.observe() == subjects[name].observe()
+
+
+def test_dishka_scoped_leaf_is_reused_within_one_request_scope() -> None:
+    prepared = dishka_adapter.scoped_chain(1)
+    try:
+        with prepared.container() as request_container:
+            first = request_container.get(prepared.shape.leaf)
+            second = request_container.get(prepared.shape.leaf)
+    finally:
+        prepared.close()
+
+    assert first is second
+
+
+def test_dishka_candidates_cover_workloads_in_order_with_three_equivalent_shapes() -> None:
+    candidates = dishka_adapter.ADAPTER.candidates(WORKLOADS)
+    subjects = {workload.name: workload.subject for workload in WORKLOADS}
+    by_name = {candidate.workload: candidate for candidate in candidates}
+
+    assert tuple(candidate.workload for candidate in candidates) == tuple(workload.name for workload in WORKLOADS)
+    assert all(candidate.competitor == Competitor('dishka', '1.10.1') for candidate in candidates)
+    assert tuple(candidate.workload for candidate in candidates if candidate.equivalence is Equivalence.EQUIVALENT) == (
+        'resolve_cached_singleton',
+        'resolve_a_transient_chain',
+        'open_and_close_a_scope',
+    )
+    for name in ('resolve_cached_singleton', 'resolve_a_transient_chain', 'open_and_close_a_scope'):
+        implementation = by_name[name].implementation
+        assert implementation is not None
+        assert implementation.label == 'dishka-1.10.1'
+        assert implementation.observe() == subjects[name].observe()
+
+    assert all(candidate.reason for candidate in candidates if candidate.equivalence is not Equivalence.EQUIVALENT)
