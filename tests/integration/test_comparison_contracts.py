@@ -112,6 +112,97 @@ def test_an_unknown_target_field_is_rejected(tmp_path: Path) -> None:
         load(path)
 
 
+def test_invalid_utf8_target_file_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / 'targets.toml'
+    path.write_bytes(b'[case]\njustification = "\xff"\n')
+    with pytest.raises(HarnessError, match=f'{path}.*invalid start byte'):
+        load(path)
+
+
+@pytest.mark.parametrize(
+    'contents',
+    [
+        '[case\nfixed_seconds = 0.1\njustification = "reason"\n',
+        '[case]\nfixed_seconds = 0.1\nfixed_seconds = 0.2\njustification = "reason"\n',
+        '[case]\nfixed_seconds = 0.1\njustification = "reason"\n[case]\n',
+    ],
+)
+def test_malformed_or_duplicate_target_toml_is_rejected(tmp_path: Path, contents: str) -> None:
+    path = tmp_path / 'targets.toml'
+    path.write_text(contents, encoding='utf-8')
+    with pytest.raises(HarnessError, match=f'{path}.*cannot load targets'):
+        load(path)
+
+
+def test_an_unreadable_target_path_is_rejected(tmp_path: Path) -> None:
+    with pytest.raises(HarnessError, match=f'{tmp_path}.*cannot load targets'):
+        load(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ('field', 'value'),
+    [('fixed_seconds', '"not-a-number"'), ('fraction_of_direct', '"not-a-number"'), ('justification', '1')],
+)
+def test_target_fields_use_strict_narrowing_helpers(tmp_path: Path, field: str, value: str) -> None:
+    path = tmp_path / 'targets.toml'
+    fixed = value if field == 'fixed_seconds' else '0.1'
+    fraction = f'fraction_of_direct = {value}\n' if field == 'fraction_of_direct' else ''
+    justification = value if field == 'justification' else '"reason"'
+    path.write_text(
+        f'[case]\nfixed_seconds = {fixed}\n{fraction}justification = {justification}\n',
+        encoding='utf-8',
+    )
+    with pytest.raises(HarnessError, match=f'case.{field}'):
+        load(path)
+
+
+def test_fraction_of_direct_is_materialized() -> None:
+    target = load(Path('benchmarks/leadership-targets.toml'))['fastapi_cpu_light_endpoint']
+    assert target.fraction_of_direct == 0.1
+
+
+def test_authored_targets_match_the_versioned_oracle() -> None:
+    expected = {
+        'resolve_cached_singleton': 0.0000005,
+        'resolve_cached_singleton_through_an_alias': 0.000001,
+        'resolve_singleton_through_a_two_deep_decoration_chain': 0.0000015,
+        'resolve_a_collection_of_10': 0.000005,
+        'resolve_a_collection_of_100': 0.00005,
+        'resolve_a_transient_chain': 0.00001,
+        'open_and_close_a_scope': 0.000012,
+        'call_through_an_inject_wrapper': 0.000001,
+        'call_through_an_inject_wrapper_with_explicit_arguments': 0.000001,
+        'resolve_an_async_singleton': 0.0000005,
+        'resolve_with_no_active_override': 0.0000005,
+        'resolve_through_an_active_override': 0.000001,
+        'resolve_a_generic_key': 0.0000005,
+        'construct_a_singleton_for_the_first_time': 0.0000005,
+        'resolve_a_sync_resource_with_teardown': 0.000003,
+        'warmup_a_cold_singleton_graph': 0.0005,
+        'open_a_request_shaped_scope': 0.0000035,
+        'fastapi_cpu_light_endpoint': 0.000012,
+        'fastapi_request_scoped_graph': 0.000016,
+        'fastapi_singletons_and_transients': 0.000016,
+        'fastapi_async_resource_teardown': 0.000018,
+        'fastapi_endpoint_with_work': 0.000012,
+        'fastapi_application_startup': 0.00003,
+    }
+    targets = load(Path('benchmarks/leadership-targets.toml'))
+    assert {name: target.fixed_seconds for name, target in targets.items()} == expected
+    assert {name: target.fraction_of_direct for name, target in targets.items() if name.startswith('fastapi_')} == {
+        'fastapi_cpu_light_endpoint': 0.1,
+        'fastapi_request_scoped_graph': 0.1,
+        'fastapi_singletons_and_transients': 0.1,
+        'fastapi_async_resource_teardown': 0.1,
+        'fastapi_endpoint_with_work': 0.1,
+        'fastapi_application_startup': 0.1,
+    }
+    assert all(
+        target.justification and target.justification.strip() == target.justification for target in targets.values()
+    )
+    assert all('formula' in target.justification for target in targets.values())
+
+
 def test_a_non_positive_target_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / 'targets.toml'
     path.write_text('[case]\nfixed_seconds = 0\njustification = "reason"\n', encoding='utf-8')

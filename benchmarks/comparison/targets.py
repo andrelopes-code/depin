@@ -17,7 +17,7 @@ def load(path: Path) -> dict[str, AbsoluteTarget]:
     try:
         contents = path.read_text(encoding='utf-8')
         decoded = tomllib.loads(contents)
-    except (tomllib.TOMLDecodeError, OSError) as error:
+    except (tomllib.TOMLDecodeError, UnicodeDecodeError, OSError) as error:
         raise HarnessError(f'{path}: cannot load targets ({error})') from error
 
     allowed = {'fixed_seconds', 'fraction_of_direct', 'justification'}
