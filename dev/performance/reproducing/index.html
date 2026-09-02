@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/operations/">
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/performance/reproducing/">
       
       
-        <link rel="prev" href="../diagnostics/">
+        <link rel="prev" href="../results/">
       
       
-        <link rel="next" href="../hosting/">
+        <link rel="next" href="../../support-policy/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Warmup and health - depin</title>
+        <title>Reproducing - depin</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#warmup-and-health" class="md-skip">
+        <a href="#reproducing-these-numbers" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Warmup and health
+              Reproducing
             
           </span>
         </div>
@@ -601,8 +601,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -613,11 +615,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -638,7 +640,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -656,7 +658,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -684,7 +686,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/methodology/" class="md-nav__link">
+      <a href="../methodology/" class="md-nav__link">
         
   
   
@@ -712,7 +714,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/results/" class="md-nav__link">
+      <a href="../results/" class="md-nav__link">
         
   
   
@@ -737,10 +739,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../performance/reproducing/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducing
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -756,6 +785,92 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-the-suite-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run the suite once
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-that-the-workloads-still-mean-what-they-claim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check that the workloads still mean what they claim
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compare-two-revisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compare two revisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#confirm-the-gates-actually-fail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confirm the gates actually fail
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#regenerate-the-results-page" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Regenerate the results page
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -799,8 +914,6 @@
       
   
   
-    
-  
   
   
     
@@ -813,11 +926,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -838,7 +951,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -856,7 +969,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../reference/" class="md-nav__link">
         
   
   
@@ -884,7 +997,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../container/" class="md-nav__link">
+      <a href="../../reference/container/" class="md-nav__link">
         
   
   
@@ -912,7 +1025,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../frozen/" class="md-nav__link">
+      <a href="../../reference/frozen/" class="md-nav__link">
         
   
   
@@ -940,7 +1053,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../scope/" class="md-nav__link">
+      <a href="../../reference/scope/" class="md-nav__link">
         
   
   
@@ -968,7 +1081,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../markers/" class="md-nav__link">
+      <a href="../../reference/markers/" class="md-nav__link">
         
   
   
@@ -996,7 +1109,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../errors/" class="md-nav__link">
+      <a href="../../reference/errors/" class="md-nav__link">
         
   
   
@@ -1024,7 +1137,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../diagnostics/" class="md-nav__link">
+      <a href="../../reference/diagnostics/" class="md-nav__link">
         
   
   
@@ -1049,37 +1162,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Warmup and health
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/operations/" class="md-nav__link">
         
   
   
@@ -1095,87 +1181,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#depin.WarmupReport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        WarmupReport
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthCheck" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthCheck
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthResult" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthResult
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthReport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthReport
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="HealthReport">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#depin.HealthReport.healthy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        healthy
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1188,7 +1193,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../hosting/" class="md-nav__link">
+      <a href="../../reference/hosting/" class="md-nav__link">
         
   
   
@@ -1216,7 +1221,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../asgi/" class="md-nav__link">
+      <a href="../../reference/asgi/" class="md-nav__link">
         
   
   
@@ -1244,7 +1249,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../wsgi/" class="md-nav__link">
+      <a href="../../reference/wsgi/" class="md-nav__link">
         
   
   
@@ -1272,7 +1277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -1300,7 +1305,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../starlette/" class="md-nav__link">
+      <a href="../../reference/starlette/" class="md-nav__link">
         
   
   
@@ -1328,7 +1333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../fastapi/" class="md-nav__link">
+      <a href="../../reference/fastapi/" class="md-nav__link">
         
   
   
@@ -1356,7 +1361,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../litestar/" class="md-nav__link">
+      <a href="../../reference/litestar/" class="md-nav__link">
         
   
   
@@ -1384,7 +1389,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../flask/" class="md-nav__link">
+      <a href="../../reference/flask/" class="md-nav__link">
         
   
   
@@ -1412,7 +1417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../click/" class="md-nav__link">
+      <a href="../../reference/click/" class="md-nav__link">
         
   
   
@@ -1440,7 +1445,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../typer/" class="md-nav__link">
+      <a href="../../reference/typer/" class="md-nav__link">
         
   
   
@@ -1468,7 +1473,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../taskiq/" class="md-nav__link">
+      <a href="../../reference/taskiq/" class="md-nav__link">
         
   
   
@@ -1496,7 +1501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pytest/" class="md-nav__link">
+      <a href="../../reference/pytest/" class="md-nav__link">
         
   
   
@@ -1551,10 +1556,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#depin.WarmupReport" class="md-nav__link">
+  <a href="#setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        WarmupReport
+        Setup
       
     </span>
   </a>
@@ -1562,10 +1567,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#depin.HealthCheck" class="md-nav__link">
+  <a href="#run-the-suite-once" class="md-nav__link">
     <span class="md-ellipsis">
       
-        HealthCheck
+        Run the suite once
       
     </span>
   </a>
@@ -1573,10 +1578,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#depin.HealthResult" class="md-nav__link">
+  <a href="#check-that-the-workloads-still-mean-what-they-claim" class="md-nav__link">
     <span class="md-ellipsis">
       
-        HealthResult
+        Check that the workloads still mean what they claim
       
     </span>
   </a>
@@ -1584,30 +1589,35 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#depin.HealthReport" class="md-nav__link">
+  <a href="#compare-two-revisions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        HealthReport
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="HealthReport">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#depin.HealthReport.healthy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        healthy
+        Compare two revisions
       
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#confirm-the-gates-actually-fail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confirm the gates actually fail
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#regenerate-the-results-page" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Regenerate the results page
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1631,443 +1641,62 @@
   
 
 
-<h1 id="warmup-and-health">Warmup and health<a class="headerlink" href="#warmup-and-health" title="Permanent link">&para;</a></h1>
-<p>The data behind <code>FrozenContainer.warmup()</code> / <code>awarmup()</code> and
-<code>FrozenContainer.checks()</code> / <code>health()</code> / <code>ahealth()</code>.</p>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.WarmupReport" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">WarmupReport</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.WarmupReport" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>What a <code>FrozenContainer.warmup</code> call did, node by node.</p>
-<p>Both tuples are in resolution order, and both hold the same <code>GraphNode</code> the
-dependency graph exposes, so a caller reads a warmed provider's key, scope,
-shape, and dependencies off the node it already has.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.WarmupReport.constructed">constructed</span></code></td>
-            <td>
-                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="GraphNode
-
-
-  
-      dataclass
-   (depin._core.diagnostics.GraphNode)" href="../diagnostics/#depin.GraphNode">GraphNode</a>, ...]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Singletons this call built.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.WarmupReport.cached">cached</span></code></td>
-            <td>
-                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="GraphNode
-
-
-  
-      dataclass
-   (depin._core.diagnostics.GraphNode)" href="../diagnostics/#depin.GraphNode">GraphNode</a>, ...]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Singletons that were already built when the call began.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">warmup</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">constructed</span><span class="p">]</span>
-<span class="go">['Config']</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">warmup</span><span class="p">()</span><span class="o">.</span><span class="n">cached</span> <span class="o">==</span> <span class="n">report</span><span class="o">.</span><span class="n">constructed</span>
-<span class="go">True</span>
+<h1 id="reproducing-these-numbers">Reproducing these numbers<a class="headerlink" href="#reproducing-these-numbers" title="Permanent link">&para;</a></h1>
+<p>Everything on these pages is produced by code in the repository. Your absolute
+figures will differ from the published ones — different CPU, different kernel,
+different background load — and that is expected. What should reproduce is the
+shape: the ratio between <code>depin</code> and its direct baseline, the scaling curves, and
+the deterministic counts, which do not depend on the host at all.</p>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/andrelopes-code/depin
+<span class="nb">cd</span><span class="w"> </span>depin
+uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>bench
 </code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthCheck" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthCheck</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthCheck" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>A verification callable a binding declared, as data.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.key">key</span></code></td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The provider whose value the check verifies.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.tag">tag</span></code></td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>That provider's tag, when it has one.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.needs_async">needs_async</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Whether running it requires an event loop, because the
-provider needs async resolution or the check is a coroutine
-function.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">check</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">checks</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">check</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">needs_async</span>
-<span class="go">('Database', None, False)</span>
+<p><code>benchmarks/</code> sits outside <code>testpaths</code>, so an ordinary <code>uv run pytest</code> does not
+collect it.</p>
+<h2 id="run-the-suite-once">Run the suite once<a class="headerlink" href="#run-the-suite-once" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>bench<span class="w"> </span>pytest<span class="w"> </span>benchmarks<span class="w"> </span>--benchmark-only
 </code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthResult" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthResult</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthResult" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>What one check said.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.key">key</span></code></td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The provider whose value was verified.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.tag">tag</span></code></td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>That provider's tag, when it has one.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.healthy">healthy</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>False when the check raised or returned <code>False</code>.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.error">error</span></code></td>
-            <td>
-                  <code><span title="Exception">Exception</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The exception the check raised, when it raised one.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="n">ready</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">ready</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">health</span><span class="p">()</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">healthy</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">error</span>
-<span class="go">('Database', False, None)</span>
+<p>This prints the usual <code>pytest-benchmark</code> table, with one row per workload per
+implementation — the <code>depin</code> subject and its direct baseline side by side. It is
+the quickest way to see the overhead ratio on your own machine.</p>
+<h2 id="check-that-the-workloads-still-mean-what-they-claim">Check that the workloads still mean what they claim<a class="headerlink" href="#check-that-the-workloads-still-mean-what-they-claim" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/integration/test_workload_contracts.py<span class="w"> </span>tests/integration/test_workload_equivalence.py
 </code></pre></div>
-</details>
+<p>These carry no timing. They assert that every workload states its claim in full,
+and that each <code>depin</code> implementation and its direct baseline observably do the
+same thing: same result, same objects constructed in the same order, same
+resources closed in the same order. A benchmark whose baseline has drifted fails
+here, before any number is produced.</p>
+<h2 id="compare-two-revisions">Compare two revisions<a class="headerlink" href="#compare-two-revisions" title="Permanent link">&para;</a></h2>
+<p>The same measurement the pull-request gate runs. Point it at two checkouts:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>worktree<span class="w"> </span>add<span class="w"> </span>/tmp/base<span class="w"> </span>main
 
+uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>bench<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmarks.harness.pairs<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--base-dir<span class="w"> </span>/tmp/base<span class="w"> </span>--head-dir<span class="w"> </span>.<span class="w"> </span>--repetitions<span class="w"> </span><span class="m">5</span><span class="w"> </span>--out<span class="w"> </span>/tmp/measurements
 
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthReport" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthReport</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthReport" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>Every check's outcome, in resolution order.</p>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="n">ready</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">ready</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">health</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span><span class="o">.</span><span class="n">healthy</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">results</span><span class="p">)</span>
-<span class="go">(True, 1)</span>
+uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>bench<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmarks.harness.gate<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>/tmp/measurements<span class="w"> </span>--budgets<span class="w"> </span>benchmarks/budgets.toml
 </code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="depin.HealthReport.healthy" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">healthy</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#depin.HealthReport.healthy" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="n">healthy</span><span class="p">:</span> <span class="nb">bool</span>
+<p><code>pairs</code> measures both revisions in independent processes across five
+repetitions, alternating which side runs first. <code>gate</code> applies each workload's
+budget and exits 0 when everything passed, 1 on a regression, 2 on a malformed
+report, and 3 when a result was inconclusive — the case where the estimate is
+over budget but its interval still spans it.</p>
+<p>Increase <code>--repetitions</code> to narrow the intervals. Five is the minimum at which
+the gate will reach a verdict at all.</p>
+<h2 id="confirm-the-gates-actually-fail">Confirm the gates actually fail<a class="headerlink" href="#confirm-the-gates-actually-fail" title="Permanent link">&para;</a></h2>
+<p>The repository keeps three deliberate regressions, one per class of protection.
+<code>benchmarks/seeds/README.md</code> explains each and how to apply it to a scratch
+worktree. Applying one and re-running the comparison above should fail the gate
+it targets — and, for the allocation and scaling seeds, should leave the latency
+gate green, which is why those gates exist.</p>
+<h2 id="regenerate-the-results-page">Regenerate the results page<a class="headerlink" href="#regenerate-the-results-page" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>bench<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmarks.harness.report<span class="w"> </span>benchmarks/results/&lt;dataset&gt;
 </code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Whether every check passed. An empty report is healthy.</p>
-
-    </div>
-
-</div>
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
+<p>The published <a href="../results/">results</a> page is exactly this output for the dataset
+committed alongside it, and a test asserts they match. A number on that page
+cannot have been typed by hand.</p>
 
 
 

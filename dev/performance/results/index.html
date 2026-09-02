@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/operations/">
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/performance/results/">
       
       
-        <link rel="prev" href="../diagnostics/">
+        <link rel="prev" href="../methodology/">
       
       
-        <link rel="next" href="../hosting/">
+        <link rel="next" href="../reproducing/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Warmup and health - depin</title>
+        <title>Results - depin</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#warmup-and-health" class="md-skip">
+        <a href="#measured-results" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Warmup and health
+              Results
             
           </span>
         </div>
@@ -601,8 +601,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -613,11 +615,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -638,7 +640,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -656,7 +658,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -684,7 +686,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/methodology/" class="md-nav__link">
+      <a href="../methodology/" class="md-nav__link">
         
   
   
@@ -709,10 +711,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../performance/results/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Results
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -728,6 +757,92 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Latency
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#allocations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Allocations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retained-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retained memory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaling
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -740,7 +855,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/reproducing/" class="md-nav__link">
+      <a href="../reproducing/" class="md-nav__link">
         
   
   
@@ -799,8 +914,6 @@
       
   
   
-    
-  
   
   
     
@@ -813,11 +926,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -838,7 +951,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -856,7 +969,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../reference/" class="md-nav__link">
         
   
   
@@ -884,7 +997,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../container/" class="md-nav__link">
+      <a href="../../reference/container/" class="md-nav__link">
         
   
   
@@ -912,7 +1025,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../frozen/" class="md-nav__link">
+      <a href="../../reference/frozen/" class="md-nav__link">
         
   
   
@@ -940,7 +1053,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../scope/" class="md-nav__link">
+      <a href="../../reference/scope/" class="md-nav__link">
         
   
   
@@ -968,7 +1081,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../markers/" class="md-nav__link">
+      <a href="../../reference/markers/" class="md-nav__link">
         
   
   
@@ -996,7 +1109,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../errors/" class="md-nav__link">
+      <a href="../../reference/errors/" class="md-nav__link">
         
   
   
@@ -1024,7 +1137,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../diagnostics/" class="md-nav__link">
+      <a href="../../reference/diagnostics/" class="md-nav__link">
         
   
   
@@ -1049,37 +1162,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Warmup and health
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/operations/" class="md-nav__link">
         
   
   
@@ -1095,87 +1181,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#depin.WarmupReport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        WarmupReport
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthCheck" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthCheck
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthResult" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthResult
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthReport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthReport
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="HealthReport">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#depin.HealthReport.healthy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        healthy
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1188,7 +1193,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../hosting/" class="md-nav__link">
+      <a href="../../reference/hosting/" class="md-nav__link">
         
   
   
@@ -1216,7 +1221,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../asgi/" class="md-nav__link">
+      <a href="../../reference/asgi/" class="md-nav__link">
         
   
   
@@ -1244,7 +1249,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../wsgi/" class="md-nav__link">
+      <a href="../../reference/wsgi/" class="md-nav__link">
         
   
   
@@ -1272,7 +1277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -1300,7 +1305,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../starlette/" class="md-nav__link">
+      <a href="../../reference/starlette/" class="md-nav__link">
         
   
   
@@ -1328,7 +1333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../fastapi/" class="md-nav__link">
+      <a href="../../reference/fastapi/" class="md-nav__link">
         
   
   
@@ -1356,7 +1361,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../litestar/" class="md-nav__link">
+      <a href="../../reference/litestar/" class="md-nav__link">
         
   
   
@@ -1384,7 +1389,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../flask/" class="md-nav__link">
+      <a href="../../reference/flask/" class="md-nav__link">
         
   
   
@@ -1412,7 +1417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../click/" class="md-nav__link">
+      <a href="../../reference/click/" class="md-nav__link">
         
   
   
@@ -1440,7 +1445,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../typer/" class="md-nav__link">
+      <a href="../../reference/typer/" class="md-nav__link">
         
   
   
@@ -1468,7 +1473,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../taskiq/" class="md-nav__link">
+      <a href="../../reference/taskiq/" class="md-nav__link">
         
   
   
@@ -1496,7 +1501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pytest/" class="md-nav__link">
+      <a href="../../reference/pytest/" class="md-nav__link">
         
   
   
@@ -1551,10 +1556,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#depin.WarmupReport" class="md-nav__link">
+  <a href="#environment" class="md-nav__link">
     <span class="md-ellipsis">
       
-        WarmupReport
+        Environment
       
     </span>
   </a>
@@ -1562,10 +1567,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#depin.HealthCheck" class="md-nav__link">
+  <a href="#latency" class="md-nav__link">
     <span class="md-ellipsis">
       
-        HealthCheck
+        Latency
       
     </span>
   </a>
@@ -1573,10 +1578,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#depin.HealthResult" class="md-nav__link">
+  <a href="#work" class="md-nav__link">
     <span class="md-ellipsis">
       
-        HealthResult
+        Work
       
     </span>
   </a>
@@ -1584,30 +1589,35 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#depin.HealthReport" class="md-nav__link">
+  <a href="#allocations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        HealthReport
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="HealthReport">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#depin.HealthReport.healthy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        healthy
+        Allocations
       
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#retained-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retained memory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaling
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1631,443 +1641,704 @@
   
 
 
-<h1 id="warmup-and-health">Warmup and health<a class="headerlink" href="#warmup-and-health" title="Permanent link">&para;</a></h1>
-<p>The data behind <code>FrozenContainer.warmup()</code> / <code>awarmup()</code> and
-<code>FrozenContainer.checks()</code> / <code>health()</code> / <code>ahealth()</code>.</p>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.WarmupReport" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">WarmupReport</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.WarmupReport" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>What a <code>FrozenContainer.warmup</code> call did, node by node.</p>
-<p>Both tuples are in resolution order, and both hold the same <code>GraphNode</code> the
-dependency graph exposes, so a caller reads a warmed provider's key, scope,
-shape, and dependencies off the node it already has.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.WarmupReport.constructed">constructed</span></code></td>
-            <td>
-                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="GraphNode
-
-
-  
-      dataclass
-   (depin._core.diagnostics.GraphNode)" href="../diagnostics/#depin.GraphNode">GraphNode</a>, ...]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Singletons this call built.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.WarmupReport.cached">cached</span></code></td>
-            <td>
-                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="GraphNode
-
-
-  
-      dataclass
-   (depin._core.diagnostics.GraphNode)" href="../diagnostics/#depin.GraphNode">GraphNode</a>, ...]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Singletons that were already built when the call began.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">warmup</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">constructed</span><span class="p">]</span>
-<span class="go">['Config']</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">warmup</span><span class="p">()</span><span class="o">.</span><span class="n">cached</span> <span class="o">==</span> <span class="n">report</span><span class="o">.</span><span class="n">constructed</span>
-<span class="go">True</span>
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthCheck" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthCheck</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthCheck" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>A verification callable a binding declared, as data.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.key">key</span></code></td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The provider whose value the check verifies.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.tag">tag</span></code></td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>That provider's tag, when it has one.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.needs_async">needs_async</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Whether running it requires an event loop, because the
-provider needs async resolution or the check is a coroutine
-function.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">check</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">checks</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">check</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">needs_async</span>
-<span class="go">('Database', None, False)</span>
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthResult" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthResult</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthResult" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>What one check said.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.key">key</span></code></td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The provider whose value was verified.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.tag">tag</span></code></td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>That provider's tag, when it has one.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.healthy">healthy</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>False when the check raised or returned <code>False</code>.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.error">error</span></code></td>
-            <td>
-                  <code><span title="Exception">Exception</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The exception the check raised, when it raised one.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="n">ready</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">ready</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">health</span><span class="p">()</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">healthy</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">error</span>
-<span class="go">('Database', False, None)</span>
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthReport" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthReport</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthReport" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>Every check's outcome, in resolution order.</p>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="n">ready</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">ready</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">health</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span><span class="o">.</span><span class="n">healthy</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">results</span><span class="p">)</span>
-<span class="go">(True, 1)</span>
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="depin.HealthReport.healthy" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">healthy</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#depin.HealthReport.healthy" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="n">healthy</span><span class="p">:</span> <span class="nb">bool</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Whether every check passed. An empty report is healthy.</p>
-
-    </div>
-
-</div>
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
+<h1 id="measured-results">Measured results<a class="headerlink" href="#measured-results" title="Permanent link">&para;</a></h1>
+<h2 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>distributions.pydepin</td>
+<td>0.17.0</td>
+</tr>
+<tr>
+<td>distributions.pytest</td>
+<td>9.1.1</td>
+</tr>
+<tr>
+<td>distributions.pytest-benchmark</td>
+<td>5.3.0</td>
+</tr>
+<tr>
+<td>host.available_processors</td>
+<td>4</td>
+</tr>
+<tr>
+<td>host.cpu_model</td>
+<td>Intel(R) Xeon(R) CPU E5-2683 v4 @ 2.10GHz</td>
+</tr>
+<tr>
+<td>host.load_average</td>
+<td>2.43, 2.73, 2.47</td>
+</tr>
+<tr>
+<td>host.machine</td>
+<td>x86_64</td>
+</tr>
+<tr>
+<td>host.processor</td>
+<td>x86_64</td>
+</tr>
+<tr>
+<td>host.processors</td>
+<td>4</td>
+</tr>
+<tr>
+<td>host.release</td>
+<td>6.8.0-138-generic</td>
+</tr>
+<tr>
+<td>host.system</td>
+<td>Linux</td>
+</tr>
+<tr>
+<td>interpreter.compiler</td>
+<td>Clang 22.1.3</td>
+</tr>
+<tr>
+<td>interpreter.free_threading</td>
+<td>no</td>
+</tr>
+<tr>
+<td>interpreter.hash_randomization</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>interpreter.implementation</td>
+<td>CPython</td>
+</tr>
+<tr>
+<td>interpreter.recursion_limit</td>
+<td>1000</td>
+</tr>
+<tr>
+<td>interpreter.version</td>
+<td>3.12.13</td>
+</tr>
+</tbody>
+</table>
+<h2 id="latency">Latency<a class="headerlink" href="#latency" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Repetitions</th>
+<th>Rounds</th>
+<th>Median</th>
+<th>Spread across repetitions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>test_latency[build_the_graph_view-depin]</td>
+<td>5</td>
+<td>179</td>
+<td>4.280 ms</td>
+<td>3.1%</td>
+</tr>
+<tr>
+<td>test_latency[call_through_an_inject_wrapper-depin]</td>
+<td>5</td>
+<td>24213</td>
+<td>5.570 µs</td>
+<td>7.9%</td>
+</tr>
+<tr>
+<td>test_latency[call_through_an_inject_wrapper-direct]</td>
+<td>5</td>
+<td>79473</td>
+<td>119.030 ns</td>
+<td>3.3%</td>
+</tr>
+<tr>
+<td>test_latency[explain_a_deep_chain-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>6.584 ms</td>
+<td>2.9%</td>
+</tr>
+<tr>
+<td>test_latency[explain_a_deep_chain_with_every_node_decorated-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>16.584 ms</td>
+<td>3.2%</td>
+</tr>
+<tr>
+<td>test_latency[explain_a_layered_dag-depin]</td>
+<td>5</td>
+<td>149</td>
+<td>4.961 ms</td>
+<td>3.8%</td>
+</tr>
+<tr>
+<td>test_latency[explain_an_unbound_key_of_16-depin]</td>
+<td>5</td>
+<td>125</td>
+<td>7.357 ms</td>
+<td>2.1%</td>
+</tr>
+<tr>
+<td>test_latency[explain_an_unbound_key_of_20-depin]</td>
+<td>5</td>
+<td>131</td>
+<td>7.432 ms</td>
+<td>2.5%</td>
+</tr>
+<tr>
+<td>test_latency[export_a_large_graph_as_dot-depin]</td>
+<td>5</td>
+<td>380</td>
+<td>2.449 ms</td>
+<td>3.4%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_application_startup-depin]</td>
+<td>5</td>
+<td>324</td>
+<td>2.445 ms</td>
+<td>3.5%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_application_startup-direct]</td>
+<td>5</td>
+<td>505</td>
+<td>1.633 ms</td>
+<td>3.9%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_async_resource_teardown-depin]</td>
+<td>5</td>
+<td>1154</td>
+<td>776.438 µs</td>
+<td>2.9%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_async_resource_teardown-direct]</td>
+<td>5</td>
+<td>1390</td>
+<td>653.256 µs</td>
+<td>6.0%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_cpu_light_endpoint-depin]</td>
+<td>5</td>
+<td>1114</td>
+<td>729.435 µs</td>
+<td>4.5%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_cpu_light_endpoint-direct]</td>
+<td>5</td>
+<td>1317</td>
+<td>647.650 µs</td>
+<td>4.3%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_endpoint_with_work-depin]</td>
+<td>5</td>
+<td>931</td>
+<td>1.005 ms</td>
+<td>4.1%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_endpoint_with_work-direct]</td>
+<td>5</td>
+<td>1063</td>
+<td>882.937 µs</td>
+<td>5.7%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_request_scoped_graph-depin]</td>
+<td>5</td>
+<td>1137</td>
+<td>779.516 µs</td>
+<td>4.2%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_request_scoped_graph-direct]</td>
+<td>5</td>
+<td>1001</td>
+<td>654.946 µs</td>
+<td>5.7%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_singletons_and_transients-depin]</td>
+<td>5</td>
+<td>1210</td>
+<td>760.037 µs</td>
+<td>4.7%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_singletons_and_transients-direct]</td>
+<td>5</td>
+<td>1075</td>
+<td>654.150 µs</td>
+<td>4.4%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_chain_missing_a_provider_of_100-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>10.960 ms</td>
+<td>4.2%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_chain_missing_a_provider_of_50-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>9.175 ms</td>
+<td>1.7%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_chain_of_10-depin]</td>
+<td>5</td>
+<td>1638</td>
+<td>385.197 µs</td>
+<td>4.3%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_chain_of_100-depin]</td>
+<td>5</td>
+<td>258</td>
+<td>3.552 ms</td>
+<td>3.9%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_chain_of_1000-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>35.862 ms</td>
+<td>5.5%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_decorated_chain_of_10-depin]</td>
+<td>5</td>
+<td>934</td>
+<td>928.047 µs</td>
+<td>2.5%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_decorated_chain_of_100-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>8.659 ms</td>
+<td>3.2%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_decorated_chain_of_1000-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>88.759 ms</td>
+<td>4.7%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_generic_key_chain_of_10-depin]</td>
+<td>5</td>
+<td>860</td>
+<td>694.034 µs</td>
+<td>8.9%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_generic_key_chain_of_100-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>6.660 ms</td>
+<td>3.8%</td>
+</tr>
+<tr>
+<td>test_latency[freeze_a_generic_key_chain_of_1000-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>84.266 ms</td>
+<td>4.2%</td>
+</tr>
+<tr>
+<td>test_latency[open_a_request_shaped_scope-depin]</td>
+<td>5</td>
+<td>10459</td>
+<td>26.723 µs</td>
+<td>6.9%</td>
+</tr>
+<tr>
+<td>test_latency[open_a_request_shaped_scope-direct]</td>
+<td>5</td>
+<td>181227</td>
+<td>776.141 ns</td>
+<td>12.1%</td>
+</tr>
+<tr>
+<td>test_latency[open_and_close_a_scope-depin]</td>
+<td>5</td>
+<td>2806</td>
+<td>325.633 µs</td>
+<td>4.2%</td>
+</tr>
+<tr>
+<td>test_latency[open_and_close_a_scope-direct]</td>
+<td>5</td>
+<td>93756</td>
+<td>2.948 µs</td>
+<td>7.1%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_collection_of_10-depin]</td>
+<td>5</td>
+<td>17504</td>
+<td>18.164 µs</td>
+<td>4.1%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_collection_of_10-direct]</td>
+<td>5</td>
+<td>49841</td>
+<td>196.417 ns</td>
+<td>6.3%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_collection_of_100-depin]</td>
+<td>5</td>
+<td>4968</td>
+<td>133.030 µs</td>
+<td>1.9%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_collection_of_100-direct]</td>
+<td>5</td>
+<td>43347</td>
+<td>416.097 ns</td>
+<td>3.2%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_transient_chain-depin]</td>
+<td>5</td>
+<td>9337</td>
+<td>34.548 µs</td>
+<td>4.2%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_transient_chain-direct]</td>
+<td>5</td>
+<td>134626</td>
+<td>2.179 µs</td>
+<td>6.1%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_an_async_singleton-depin]</td>
+<td>5</td>
+<td>17988</td>
+<td>16.837 µs</td>
+<td>16.4%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_an_async_singleton-direct]</td>
+<td>5</td>
+<td>31781</td>
+<td>13.291 µs</td>
+<td>12.9%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_cached_singleton-depin]</td>
+<td>5</td>
+<td>107969</td>
+<td>1.759 µs</td>
+<td>4.9%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_cached_singleton-direct]</td>
+<td>5</td>
+<td>43445</td>
+<td>92.580 ns</td>
+<td>1.8%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_cached_singleton_through_an_alias-depin]</td>
+<td>5</td>
+<td>34005</td>
+<td>3.657 µs</td>
+<td>5.9%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_cached_singleton_through_an_alias-direct]</td>
+<td>5</td>
+<td>101896</td>
+<td>92.190 ns</td>
+<td>1.1%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_singleton_through_a_two_deep_decoration_chain-depin]</td>
+<td>5</td>
+<td>112537</td>
+<td>1.766 µs</td>
+<td>5.4%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_singleton_through_a_two_deep_decoration_chain-direct]</td>
+<td>5</td>
+<td>102512</td>
+<td>92.880 ns</td>
+<td>4.9%</td>
+</tr>
+<tr>
+<td>test_latency[warmup_a_cold_singleton_graph-depin]</td>
+<td>5</td>
+<td>120</td>
+<td>11.956 ms</td>
+<td>4.1%</td>
+</tr>
+<tr>
+<td>test_latency[warmup_a_cold_singleton_graph-direct]</td>
+<td>5</td>
+<td>2961</td>
+<td>262.731 µs</td>
+<td>7.5%</td>
+</tr>
+</tbody>
+</table>
+<h2 id="work">Work<a class="headerlink" href="#work" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Python calls per operation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>allocations_of_a_cached_singleton_resolution</td>
+<td>9</td>
+</tr>
+<tr>
+<td>allocations_of_a_request_shaped_scope</td>
+<td>105</td>
+</tr>
+<tr>
+<td>allocations_of_a_scope_cycle</td>
+<td>396</td>
+</tr>
+<tr>
+<td>allocations_of_a_transient_chain</td>
+<td>202</td>
+</tr>
+<tr>
+<td>allocations_of_an_inject_call</td>
+<td>29</td>
+</tr>
+</tbody>
+</table>
+<h2 id="allocations">Allocations<a class="headerlink" href="#allocations" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Blocks per operation</th>
+<th>Bytes per operation</th>
+<th>Peak bytes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>allocations_of_a_cached_singleton_resolution</td>
+<td>13</td>
+<td>1168</td>
+<td>2056</td>
+</tr>
+<tr>
+<td>allocations_of_a_request_shaped_scope</td>
+<td>27</td>
+<td>2360</td>
+<td>4360</td>
+</tr>
+<tr>
+<td>allocations_of_a_scope_cycle</td>
+<td>76</td>
+<td>6240</td>
+<td>14496</td>
+</tr>
+<tr>
+<td>allocations_of_a_transient_chain</td>
+<td>53</td>
+<td>4968</td>
+<td>5752</td>
+</tr>
+<tr>
+<td>allocations_of_an_inject_call</td>
+<td>17</td>
+<td>1360</td>
+<td>2064</td>
+</tr>
+</tbody>
+</table>
+<h2 id="retained-memory">Retained memory<a class="headerlink" href="#retained-memory" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Bytes held</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>retained_by_a_frozen_container_of_100</td>
+<td>34568</td>
+</tr>
+<tr>
+<td>retained_by_a_frozen_container_of_1000</td>
+<td>326000</td>
+</tr>
+<tr>
+<td>retained_by_a_warm_singleton_cache_of_1000</td>
+<td>397560</td>
+</tr>
+<tr>
+<td>retained_by_an_open_scope_of_20</td>
+<td>10512</td>
+</tr>
+</tbody>
+</table>
+<h2 id="scaling">Scaling<a class="headerlink" href="#scaling" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Curve</th>
+<th>Size</th>
+<th>Cost per operation</th>
+<th>Growth over the previous size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>scale_explain_missing_key</td>
+<td>10</td>
+<td>5.479 ms</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_explain_missing_key</td>
+<td>12</td>
+<td>5.503 ms</td>
+<td>1.00x</td>
+</tr>
+<tr>
+<td>scale_explain_missing_key</td>
+<td>14</td>
+<td>5.444 ms</td>
+<td>0.99x</td>
+</tr>
+<tr>
+<td>scale_failing_freeze</td>
+<td>25</td>
+<td>6.332 ms</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_failing_freeze</td>
+<td>50</td>
+<td>7.197 ms</td>
+<td>1.14x</td>
+</tr>
+<tr>
+<td>scale_failing_freeze</td>
+<td>100</td>
+<td>9.035 ms</td>
+<td>1.26x</td>
+</tr>
+<tr>
+<td>scale_freeze_graph_size</td>
+<td>100</td>
+<td>3.487 ms</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_freeze_graph_size</td>
+<td>200</td>
+<td>6.858 ms</td>
+<td>1.97x</td>
+</tr>
+<tr>
+<td>scale_freeze_graph_size</td>
+<td>400</td>
+<td>13.787 ms</td>
+<td>2.01x</td>
+</tr>
+<tr>
+<td>scale_resolve_collection</td>
+<td>10</td>
+<td>23.673 µs</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_resolve_collection</td>
+<td>100</td>
+<td>190.198 µs</td>
+<td>8.03x</td>
+</tr>
+<tr>
+<td>scale_resolve_collection</td>
+<td>200</td>
+<td>383.158 µs</td>
+<td>2.01x</td>
+</tr>
+<tr>
+<td>scale_resolve_fan_out</td>
+<td>10</td>
+<td>19.584 µs</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_resolve_fan_out</td>
+<td>20</td>
+<td>37.330 µs</td>
+<td>1.91x</td>
+</tr>
+<tr>
+<td>scale_resolve_fan_out</td>
+<td>40</td>
+<td>70.684 µs</td>
+<td>1.89x</td>
+</tr>
+<tr>
+<td>scale_resolve_transient_depth</td>
+<td>10</td>
+<td>19.068 µs</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_resolve_transient_depth</td>
+<td>40</td>
+<td>197.115 µs</td>
+<td>10.34x</td>
+</tr>
+<tr>
+<td>scale_resolve_transient_depth</td>
+<td>160</td>
+<td>764.523 µs</td>
+<td>3.88x</td>
+</tr>
+<tr>
+<td>scale_scope_teardown</td>
+<td>10</td>
+<td>102.169 µs</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_scope_teardown</td>
+<td>20</td>
+<td>184.875 µs</td>
+<td>1.81x</td>
+</tr>
+<tr>
+<td>scale_scope_teardown</td>
+<td>40</td>
+<td>351.049 µs</td>
+<td>1.90x</td>
+</tr>
+</tbody>
+</table>
 
 
 

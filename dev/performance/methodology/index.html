@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/operations/">
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/performance/methodology/">
       
       
-        <link rel="prev" href="../diagnostics/">
+        <link rel="prev" href="../">
       
       
-        <link rel="next" href="../hosting/">
+        <link rel="next" href="../results/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Warmup and health - depin</title>
+        <title>Methodology - depin</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#warmup-and-health" class="md-skip">
+        <a href="#methodology" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Warmup and health
+              Methodology
             
           </span>
         </div>
@@ -601,8 +601,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -613,11 +615,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -638,7 +640,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -656,7 +658,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -681,10 +683,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../performance/methodology/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methodology
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -700,6 +729,136 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a-result-is-not-a-measurement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A result is not a measurement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#direct-python-is-the-mandatory-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct Python is the mandatory baseline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#startup-and-recurring-costs-are-never-combined" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Startup and recurring costs are never combined
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#five-metrics-because-latency-alone-hides-things" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Five metrics, because latency alone hides things
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-environments-doing-different-jobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two environments, doing different jobs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#repetitions-are-paired-and-their-order-is-alternated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repetitions are paired, and their order is alternated
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-verdict-is-refused" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a verdict is refused
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#budgets-come-from-measured-noise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Budgets come from measured noise
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-checks-are-proven-to-fail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The checks are proven to fail
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-these-pages-will-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What these pages will not do
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -712,7 +871,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/results/" class="md-nav__link">
+      <a href="../results/" class="md-nav__link">
         
   
   
@@ -740,7 +899,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/reproducing/" class="md-nav__link">
+      <a href="../reproducing/" class="md-nav__link">
         
   
   
@@ -799,8 +958,6 @@
       
   
   
-    
-  
   
   
     
@@ -813,11 +970,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -838,7 +995,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -856,7 +1013,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../reference/" class="md-nav__link">
         
   
   
@@ -884,7 +1041,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../container/" class="md-nav__link">
+      <a href="../../reference/container/" class="md-nav__link">
         
   
   
@@ -912,7 +1069,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../frozen/" class="md-nav__link">
+      <a href="../../reference/frozen/" class="md-nav__link">
         
   
   
@@ -940,7 +1097,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../scope/" class="md-nav__link">
+      <a href="../../reference/scope/" class="md-nav__link">
         
   
   
@@ -968,7 +1125,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../markers/" class="md-nav__link">
+      <a href="../../reference/markers/" class="md-nav__link">
         
   
   
@@ -996,7 +1153,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../errors/" class="md-nav__link">
+      <a href="../../reference/errors/" class="md-nav__link">
         
   
   
@@ -1024,7 +1181,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../diagnostics/" class="md-nav__link">
+      <a href="../../reference/diagnostics/" class="md-nav__link">
         
   
   
@@ -1049,37 +1206,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Warmup and health
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/operations/" class="md-nav__link">
         
   
   
@@ -1095,87 +1225,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#depin.WarmupReport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        WarmupReport
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthCheck" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthCheck
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthResult" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthResult
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.HealthReport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HealthReport
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="HealthReport">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#depin.HealthReport.healthy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        healthy
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1188,7 +1237,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../hosting/" class="md-nav__link">
+      <a href="../../reference/hosting/" class="md-nav__link">
         
   
   
@@ -1216,7 +1265,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../asgi/" class="md-nav__link">
+      <a href="../../reference/asgi/" class="md-nav__link">
         
   
   
@@ -1244,7 +1293,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../wsgi/" class="md-nav__link">
+      <a href="../../reference/wsgi/" class="md-nav__link">
         
   
   
@@ -1272,7 +1321,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -1300,7 +1349,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../starlette/" class="md-nav__link">
+      <a href="../../reference/starlette/" class="md-nav__link">
         
   
   
@@ -1328,7 +1377,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../fastapi/" class="md-nav__link">
+      <a href="../../reference/fastapi/" class="md-nav__link">
         
   
   
@@ -1356,7 +1405,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../litestar/" class="md-nav__link">
+      <a href="../../reference/litestar/" class="md-nav__link">
         
   
   
@@ -1384,7 +1433,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../flask/" class="md-nav__link">
+      <a href="../../reference/flask/" class="md-nav__link">
         
   
   
@@ -1412,7 +1461,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../click/" class="md-nav__link">
+      <a href="../../reference/click/" class="md-nav__link">
         
   
   
@@ -1440,7 +1489,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../typer/" class="md-nav__link">
+      <a href="../../reference/typer/" class="md-nav__link">
         
   
   
@@ -1468,7 +1517,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../taskiq/" class="md-nav__link">
+      <a href="../../reference/taskiq/" class="md-nav__link">
         
   
   
@@ -1496,7 +1545,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pytest/" class="md-nav__link">
+      <a href="../../reference/pytest/" class="md-nav__link">
         
   
   
@@ -1551,10 +1600,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#depin.WarmupReport" class="md-nav__link">
+  <a href="#a-result-is-not-a-measurement" class="md-nav__link">
     <span class="md-ellipsis">
       
-        WarmupReport
+        A result is not a measurement
       
     </span>
   </a>
@@ -1562,10 +1611,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#depin.HealthCheck" class="md-nav__link">
+  <a href="#direct-python-is-the-mandatory-baseline" class="md-nav__link">
     <span class="md-ellipsis">
       
-        HealthCheck
+        Direct Python is the mandatory baseline
       
     </span>
   </a>
@@ -1573,10 +1622,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#depin.HealthResult" class="md-nav__link">
+  <a href="#startup-and-recurring-costs-are-never-combined" class="md-nav__link">
     <span class="md-ellipsis">
       
-        HealthResult
+        Startup and recurring costs are never combined
       
     </span>
   </a>
@@ -1584,30 +1633,79 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#depin.HealthReport" class="md-nav__link">
+  <a href="#five-metrics-because-latency-alone-hides-things" class="md-nav__link">
     <span class="md-ellipsis">
       
-        HealthReport
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="HealthReport">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#depin.HealthReport.healthy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        healthy
+        Five metrics, because latency alone hides things
       
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#two-environments-doing-different-jobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two environments, doing different jobs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#repetitions-are-paired-and-their-order-is-alternated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repetitions are paired, and their order is alternated
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-verdict-is-refused" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a verdict is refused
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#budgets-come-from-measured-noise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Budgets come from measured noise
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-checks-are-proven-to-fail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The checks are proven to fail
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-these-pages-will-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What these pages will not do
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1631,443 +1729,155 @@
   
 
 
-<h1 id="warmup-and-health">Warmup and health<a class="headerlink" href="#warmup-and-health" title="Permanent link">&para;</a></h1>
-<p>The data behind <code>FrozenContainer.warmup()</code> / <code>awarmup()</code> and
-<code>FrozenContainer.checks()</code> / <code>health()</code> / <code>ahealth()</code>.</p>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.WarmupReport" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">WarmupReport</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.WarmupReport" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>What a <code>FrozenContainer.warmup</code> call did, node by node.</p>
-<p>Both tuples are in resolution order, and both hold the same <code>GraphNode</code> the
-dependency graph exposes, so a caller reads a warmed provider's key, scope,
-shape, and dependencies off the node it already has.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.WarmupReport.constructed">constructed</span></code></td>
-            <td>
-                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="GraphNode
-
-
-  
-      dataclass
-   (depin._core.diagnostics.GraphNode)" href="../diagnostics/#depin.GraphNode">GraphNode</a>, ...]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Singletons this call built.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.WarmupReport.cached">cached</span></code></td>
-            <td>
-                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="GraphNode
-
-
-  
-      dataclass
-   (depin._core.diagnostics.GraphNode)" href="../diagnostics/#depin.GraphNode">GraphNode</a>, ...]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Singletons that were already built when the call began.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Config</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">warmup</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">constructed</span><span class="p">]</span>
-<span class="go">['Config']</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="o">.</span><span class="n">warmup</span><span class="p">()</span><span class="o">.</span><span class="n">cached</span> <span class="o">==</span> <span class="n">report</span><span class="o">.</span><span class="n">constructed</span>
-<span class="go">True</span>
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthCheck" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthCheck</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthCheck" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>A verification callable a binding declared, as data.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.key">key</span></code></td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The provider whose value the check verifies.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.tag">tag</span></code></td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>That provider's tag, when it has one.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthCheck.needs_async">needs_async</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Whether running it requires an event loop, because the
-provider needs async resolution or the check is a coroutine
-function.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">check</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">checks</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">check</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">needs_async</span>
-<span class="go">('Database', None, False)</span>
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthResult" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthResult</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthResult" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>What one check said.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.key">key</span></code></td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="ProviderKey (depin._core.spec.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The provider whose value was verified.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.tag">tag</span></code></td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>That provider's tag, when it has one.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.healthy">healthy</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>False when the check raised or returned <code>False</code>.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="depin.HealthResult.error">error</span></code></td>
-            <td>
-                  <code><span title="Exception">Exception</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The exception the check raised, when it raised one.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="n">ready</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">ready</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">health</span><span class="p">()</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">key</span><span class="o">.</span><span class="vm">__qualname__</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">healthy</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">error</span>
-<span class="go">('Database', False, None)</span>
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.HealthReport" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">HealthReport</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-<a href="#depin.HealthReport" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>Every check's outcome, in resolution order.</p>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="n">ready</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">ping</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="n">Database</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">ready</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Database</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="n">ping</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span> <span class="o">=</span> <span class="n">di</span><span class="o">.</span><span class="n">health</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">report</span><span class="o">.</span><span class="n">healthy</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">results</span><span class="p">)</span>
-<span class="go">(True, 1)</span>
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="depin.HealthReport.healthy" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">healthy</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#depin.HealthReport.healthy" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="n">healthy</span><span class="p">:</span> <span class="nb">bool</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Whether every check passed. An empty report is healthy.</p>
-
-    </div>
-
-</div>
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
+<h1 id="methodology">Methodology<a class="headerlink" href="#methodology" title="Permanent link">&para;</a></h1>
+<p>How the numbers on these pages are produced, and what would make them wrong.</p>
+<h2 id="a-result-is-not-a-measurement">A result is not a measurement<a class="headerlink" href="#a-result-is-not-a-measurement" title="Permanent link">&para;</a></h2>
+<p>A benchmark that runs is not yet evidence. Every published result on this site
+has passed through the same chain, and a number that has not is not published.</p>
+<ol>
+<li><strong>A claim contract</strong>, written before the workload is measured. It states the
+   user question, the useful work performed, what the timed region includes and
+   excludes, the lifetime and caching semantics, the graph shape, the concurrency
+   model, the metric and its unit, the expected noise, and — the part that
+   matters most — the readings the result does <strong>not</strong> support.</li>
+<li><strong>Semantic validation</strong>, by an ordinary test with no timing in it. Two
+   implementations of a workload are comparable only when they observably do the
+   same thing: same result, same objects constructed in the same order, same
+   resources closed in the same order, same failure behaviour. The test compares
+   those observations directly.</li>
+<li><strong>Measurement</strong>, collecting raw samples with environment metadata.</li>
+<li><strong>Statistical validation</strong>, over independent repetitions rather than over
+   samples inside one process.</li>
+<li><strong>Regression evaluation</strong>, against a per-workload budget derived from that
+   workload's measured noise.</li>
+<li><strong>Diagnosis</strong> before remedy: a profile identifies the responsible call paths
+   before anything is changed.</li>
+<li><strong>Optimisation validation</strong> across the whole suite, both type checkers, the
+   concurrency tests and the teardown tests — not only the workload that
+   motivated the change.</li>
+<li><strong>Publication</strong> with raw artifacts, environment, methodology and limitations.</li>
+</ol>
+<h2 id="direct-python-is-the-mandatory-baseline">Direct Python is the mandatory baseline<a class="headerlink" href="#direct-python-is-the-mandatory-baseline" title="Permanent link">&para;</a></h2>
+<p>Every workload is paired with the simplest honest Python that does the same
+useful work without a container: direct attribute access for a cached singleton,
+explicit construction for a dependency chain, a handwritten context manager for
+a resource with teardown, the same framework application wired by hand for an
+endpoint.</p>
+<p>The baseline must perform the work. An empty function is not a baseline for a
+provider that constructs objects.</p>
+<p>Results show both the total cost and the difference from the baseline. Where the
+difference sits inside the measurement noise, the conclusion recorded is that the
+overhead was not resolved reliably — never that it was zero.</p>
+<p>One workload class has no baseline: validating a dependency graph at build time
+has no hand-wired counterpart, because hand-wiring has no validation step. Those
+results are absolute costs and are labelled as such.</p>
+<h2 id="startup-and-recurring-costs-are-never-combined">Startup and recurring costs are never combined<a class="headerlink" href="#startup-and-recurring-costs-are-never-combined" title="Permanent link">&para;</a></h2>
+<p><code>freeze()</code>, graph validation, warmup and diagnostic rendering happen once.
+Cached resolution, scoped construction, injection and teardown happen per
+request. They have different production consequences, so they are reported
+separately and never summed into one score.</p>
+<h2 id="five-metrics-because-latency-alone-hides-things">Five metrics, because latency alone hides things<a class="headerlink" href="#five-metrics-because-latency-alone-hides-things" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>What it answers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Latency</td>
+<td>what one operation costs</td>
+</tr>
+<tr>
+<td>Work — Python calls per operation</td>
+<td>whether the code path grew, with no timing noise at all</td>
+</tr>
+<tr>
+<td>Allocations per operation</td>
+<td>whether the path started allocating more</td>
+</tr>
+<tr>
+<td>Retained memory</td>
+<td>what a frozen graph, a singleton cache or an open scope holds</td>
+</tr>
+<tr>
+<td>Scaling</td>
+<td>whether cost grows with graph size, depth or fan-out, and where it cliffs</td>
+</tr>
+</tbody>
+</table>
+<p>The last four matter because latency measurement has a noise floor, and the floor
+differs by workload — measurably, by several times over. <code>benchmarks/budgets.toml</code>
+records each workload's measured floor beside the budget derived from it. A change
+that adds one dictionary copy to the resolution path can sit under that floor and
+be invisible to a timing gate. Calls per operation and allocations per operation are
+deterministic: they carry no noise, so the same change is caught exactly, on one
+run, by a check that cannot produce a false alarm. They are proxies for cost
+rather than cost itself, which is why they supplement latency instead of
+replacing it.</p>
+<h2 id="two-environments-doing-different-jobs">Two environments, doing different jobs<a class="headerlink" href="#two-environments-doing-different-jobs" title="Permanent link">&para;</a></h2>
+<p><strong>The pull-request environment</strong> measures the base commit and the proposed commit
+on the same machine, in the same job. It exists to detect regressions. It never
+produces a published absolute number, because a shared runner is not a benchmark
+machine.</p>
+<p><strong>The reference environment</strong> produces the absolute numbers on these pages. It is
+a documented developer workstation, not a dedicated benchmark machine — the
+project does not own one, and says so rather than implying a controlled lab. Its
+CPU, kernel, interpreter and load average at measurement time are recorded with
+every dataset.</p>
+<p>What transfers from one host to another is the ratio to the direct baseline, the
+complexity class, and the deterministic counts. The absolute microsecond figures
+do not, and are labelled host-specific wherever they appear.</p>
+<h2 id="repetitions-are-paired-and-their-order-is-alternated">Repetitions are paired, and their order is alternated<a class="headerlink" href="#repetitions-are-paired-and-their-order-is-alternated" title="Permanent link">&para;</a></h2>
+<p>A relative comparison uses several independent repetitions. Each repetition
+measures both revisions in separate processes, and the order within a repetition
+alternates between repetitions.</p>
+<p>This matters more than the sample count inside any one process. Thermal
+behaviour, frequency scaling and background load drift over the minutes a job
+takes, and one complete run of the base followed by one complete run of the head
+turns that drift into a systematic bias favouring whichever ran first.
+Alternating the order spreads it across both sides.</p>
+<p>The statistic is the median of the paired log ratios; its uncertainty is a
+percentile bootstrap over the paired differences, from a fixed seed, so a verdict
+can be recomputed from the same data.</p>
+<h2 id="when-a-verdict-is-refused">When a verdict is refused<a class="headerlink" href="#when-a-verdict-is-refused" title="Permanent link">&para;</a></h2>
+<p>A repetition counts only if it accumulated enough rounds or enough measured time.
+Below five valid repetitions the check reports no verdict rather than a pass.</p>
+<p>A workload fails only when the <em>lower</em> bound of its interval exceeds its budget —
+that is, when the regression is larger than the budget with confidence. A point
+estimate over budget whose interval still spans it is inconclusive, and triggers
+exactly one re-measurement at double the repetitions. The second verdict is final.
+There is no unlimited retry, because unlimited retries are how a real regression
+eventually lands in a green run.</p>
+<h2 id="budgets-come-from-measured-noise">Budgets come from measured noise<a class="headerlink" href="#budgets-come-from-measured-noise" title="Permanent link">&para;</a></h2>
+<p>Each workload's budget is twice its measured noise under the null hypothesis —
+repeated runs of identical code — with a floor set by the band its noise falls
+in. Every budget is stored beside the measurement that justifies it, and a budget
+below its workload's floor is rejected, so a failing change cannot be made green
+by editing a number.</p>
+<p>For the deterministic metrics the budget is exact: calls and allocations per
+operation may not increase at all.</p>
+<h2 id="the-checks-are-proven-to-fail">The checks are proven to fail<a class="headerlink" href="#the-checks-are-proven-to-fail" title="Permanent link">&para;</a></h2>
+<p>A gate that has never failed is not known to work. Three seeded regressions are
+kept in the repository as patches — one on a frequent resolution path, one on
+scaling behaviour, one on allocation behaviour — each applied to a scratch
+worktree, shown to fail the check it targets, removed, and shown to pass. A
+workload is not described as regression-protected until its class of failure has
+been demonstrated.</p>
+<h2 id="what-these-pages-will-not-do">What these pages will not do<a class="headerlink" href="#what-these-pages-will-not-do" title="Permanent link">&para;</a></h2>
+<ul>
+<li>No aggregate score, league table, or claim to be the fastest library.</li>
+<li>No comparison between operations whose observable semantics differ.</li>
+<li>No competitor result that has not passed eligibility, semantic equivalence,
+  configuration fairness and freshness. Where equivalent semantics cannot be
+  expressed, the workload is labelled incomparable — it is never converted into a
+  win.</li>
+<li>No prediction that a benchmark result determines what any particular
+  application will do.</li>
+</ul>
+<p>Unfavourable results are published under exactly these rules. Removing or
+correcting a misleading result is preferred to keeping a favourable one.</p>
 
 
 

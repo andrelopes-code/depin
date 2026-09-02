@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/reference/litestar/">
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/performance/">
       
       
-        <link rel="prev" href="../fastapi/">
+        <link rel="prev" href="../guide/fastapi/">
       
       
-        <link rel="next" href="../flask/">
+        <link rel="next" href="methodology/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Litestar - depin</title>
+        <title>Overview - depin</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#litestar-integration" class="md-skip">
+        <a href="#performance" class="md-skip">
           Skip to content
         </a>
       
@@ -100,7 +100,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="depin" class="md-header__button md-logo" aria-label="depin" data-md-component="logo">
+    <a href=".." title="depin" class="md-header__button md-logo" aria-label="depin" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Litestar
+              Overview
             
           </span>
         </div>
@@ -236,7 +236,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="depin" class="md-nav__button md-logo" aria-label="depin" data-md-component="logo">
+    <a href=".." title="depin" class="md-nav__button md-logo" aria-label="depin" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -266,7 +266,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -345,7 +345,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/" class="md-nav__link">
+      <a href="../guide/" class="md-nav__link">
         
   
   
@@ -373,7 +373,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/lifetimes/" class="md-nav__link">
+      <a href="../guide/lifetimes/" class="md-nav__link">
         
   
   
@@ -401,7 +401,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/composition/" class="md-nav__link">
+      <a href="../guide/composition/" class="md-nav__link">
         
   
   
@@ -429,7 +429,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/resolution/" class="md-nav__link">
+      <a href="../guide/resolution/" class="md-nav__link">
         
   
   
@@ -457,7 +457,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/testing/" class="md-nav__link">
+      <a href="../guide/testing/" class="md-nav__link">
         
   
   
@@ -485,7 +485,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/diagnostics/" class="md-nav__link">
+      <a href="../guide/diagnostics/" class="md-nav__link">
         
   
   
@@ -513,7 +513,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/operations/" class="md-nav__link">
+      <a href="../guide/operations/" class="md-nav__link">
         
   
   
@@ -541,7 +541,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/integrations/" class="md-nav__link">
+      <a href="../guide/integrations/" class="md-nav__link">
         
   
   
@@ -569,7 +569,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/fastapi/" class="md-nav__link">
+      <a href="../guide/fastapi/" class="md-nav__link">
         
   
   
@@ -601,8 +601,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -613,11 +615,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -638,7 +640,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -653,10 +655,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../performance/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -672,6 +701,70 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-numbers-are" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the numbers are
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-read-any-figure-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to read any figure here
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#estimating-your-own-case" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Estimating your own case
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-section-will-not-claim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this section will not claim
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -684,7 +777,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/methodology/" class="md-nav__link">
+      <a href="methodology/" class="md-nav__link">
         
   
   
@@ -712,7 +805,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/results/" class="md-nav__link">
+      <a href="results/" class="md-nav__link">
         
   
   
@@ -740,7 +833,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../performance/reproducing/" class="md-nav__link">
+      <a href="reproducing/" class="md-nav__link">
         
   
   
@@ -775,7 +868,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../support-policy/" class="md-nav__link">
+      <a href="../support-policy/" class="md-nav__link">
         
   
   
@@ -799,8 +892,6 @@
       
   
   
-    
-  
   
   
     
@@ -813,11 +904,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -838,7 +929,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -856,7 +947,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../reference/" class="md-nav__link">
         
   
   
@@ -884,7 +975,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../container/" class="md-nav__link">
+      <a href="../reference/container/" class="md-nav__link">
         
   
   
@@ -912,7 +1003,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../frozen/" class="md-nav__link">
+      <a href="../reference/frozen/" class="md-nav__link">
         
   
   
@@ -940,7 +1031,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../scope/" class="md-nav__link">
+      <a href="../reference/scope/" class="md-nav__link">
         
   
   
@@ -968,7 +1059,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../markers/" class="md-nav__link">
+      <a href="../reference/markers/" class="md-nav__link">
         
   
   
@@ -996,7 +1087,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../errors/" class="md-nav__link">
+      <a href="../reference/errors/" class="md-nav__link">
         
   
   
@@ -1024,7 +1115,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../diagnostics/" class="md-nav__link">
+      <a href="../reference/diagnostics/" class="md-nav__link">
         
   
   
@@ -1052,7 +1143,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operations/" class="md-nav__link">
+      <a href="../reference/operations/" class="md-nav__link">
         
   
   
@@ -1080,7 +1171,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../hosting/" class="md-nav__link">
+      <a href="../reference/hosting/" class="md-nav__link">
         
   
   
@@ -1108,7 +1199,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../asgi/" class="md-nav__link">
+      <a href="../reference/asgi/" class="md-nav__link">
         
   
   
@@ -1136,7 +1227,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../wsgi/" class="md-nav__link">
+      <a href="../reference/wsgi/" class="md-nav__link">
         
   
   
@@ -1164,7 +1255,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+      <a href="../reference/cli/" class="md-nav__link">
         
   
   
@@ -1192,7 +1283,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../starlette/" class="md-nav__link">
+      <a href="../reference/starlette/" class="md-nav__link">
         
   
   
@@ -1220,7 +1311,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../fastapi/" class="md-nav__link">
+      <a href="../reference/fastapi/" class="md-nav__link">
         
   
   
@@ -1245,37 +1336,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Litestar
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../reference/litestar/" class="md-nav__link">
         
   
   
@@ -1291,48 +1355,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#depin.ext.litestar.RequestScope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RequestScope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#depin.ext.litestar.seed_request" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        seed_request
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1345,7 +1367,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../flask/" class="md-nav__link">
+      <a href="../reference/flask/" class="md-nav__link">
         
   
   
@@ -1373,7 +1395,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../click/" class="md-nav__link">
+      <a href="../reference/click/" class="md-nav__link">
         
   
   
@@ -1401,7 +1423,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../typer/" class="md-nav__link">
+      <a href="../reference/typer/" class="md-nav__link">
         
   
   
@@ -1429,7 +1451,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../taskiq/" class="md-nav__link">
+      <a href="../reference/taskiq/" class="md-nav__link">
         
   
   
@@ -1457,7 +1479,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pytest/" class="md-nav__link">
+      <a href="../reference/pytest/" class="md-nav__link">
         
   
   
@@ -1512,10 +1534,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#depin.ext.litestar.RequestScope" class="md-nav__link">
+  <a href="#where-the-numbers-are" class="md-nav__link">
     <span class="md-ellipsis">
       
-        RequestScope
+        Where the numbers are
       
     </span>
   </a>
@@ -1523,10 +1545,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#depin.ext.litestar.seed_request" class="md-nav__link">
+  <a href="#how-to-read-any-figure-here" class="md-nav__link">
     <span class="md-ellipsis">
       
-        seed_request
+        How to read any figure here
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#estimating-your-own-case" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Estimating your own case
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-section-will-not-claim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this section will not claim
       
     </span>
   </a>
@@ -1553,265 +1597,60 @@
   
 
 
-<h1 id="litestar-integration">Litestar integration<a class="headerlink" href="#litestar-integration" title="Permanent link">&para;</a></h1>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="depin.ext.litestar.RequestScope" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">RequestScope</span>
-
-
-<a href="#depin.ext.litestar.RequestScope" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="RequestScope (depin.ext.asgi.RequestScope)" href="../asgi/#depin.ext.asgi.RequestScope">RequestScope</a>[<span title="litestar.types.Scope">Scope</span>, <span title="litestar.types.Receive">Receive</span>, <span title="litestar.types.Send">Send</span>]</code></p>
-
-
-
-        <p>ASGI middleware that opens a depin async scope around every Litestar request.</p>
-<p>Implemented directly against the ASGI protocol (not a Litestar middleware
-base class) so streaming responses, server-sent events, and WebSockets pass
-through without buffering.</p>
-<p>The container is published to the connection's context for the duration of
-the scope, so <code>depin.hosted_container()</code> reaches it from anywhere inside
-the request.</p>
-<p>Only <code>http</code> and <code>websocket</code> connections reach it. Litestar answers the
-lifespan scope inside <code>Litestar.__call__</code>, above its middleware stack, so
-unlike the Starlette integration this one is never handed one — which is
-why the connection triple it is typed against is <code>Scope</code>, Litestar's
-union of the two connection scopes, and a lifespan scope would not
-type-check as an argument to it. A websocket is scoped and hosted exactly
-like an HTTP request, but it is not seeded, because it has no request-body
-semantics and <code>litestar.Request</code> is HTTP-shaped.</p>
-<p>For HTTP requests it places a <code>litestar.Request</code> into the active scope
-frame, under the key <code>Request[object, object, State]</code>, so scoped
-providers can read headers, URL, cookies, and state.</p>
-<p>Do not read the body through that request. It carries no receive channel,
-so it can never take the body from the route handler — but unlike the
-Starlette seed it does not reliably raise either, because
-<code>litestar.Request</code> caches the body on <code>ScopeState</code>, which belongs to the
-connection scope and is therefore shared with the request Litestar builds
-for the handler. A read before anything has parsed the body raises
-<code>RuntimeError</code> from <code>empty_receive</code>; a read from a handler that declares
-a <code>data</code> parameter returns the body Litestar has already parsed, with no
-error at all. Treat the body as a typed route parameter, not a provider
-input.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>app</code>
-            </td>
-            <td>
-                  <code><span title="litestar.types.ASGIApp">ASGIApp</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The downstream ASGI application this middleware wraps. Litestar
-supplies it by keyword, so the parameter must stay keyword-usable.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>container</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="FrozenContainer (depin.FrozenContainer)" href="../frozen/#depin.FrozenContainer">FrozenContainer</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The frozen container to host for the duration of each
-request.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>One or more teardowns failed when the request's scope
-closed. Every failure is included; one does not hide another.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <p>Install the middleware once, wrapped so the container reaches the
-constructor Litestar calls with <code>app=</code>::</p>
-<div class="highlight"><pre><span></span><code>app = Litestar(
-    route_handlers=[handler],
-    middleware=[DefineMiddleware(RequestScope, container=di)],
-)
-</code></pre></div>
-</details>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h2 id="depin.ext.litestar.seed_request" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">seed_request</span>
-
-
-<a href="#depin.ext.litestar.seed_request" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">seed_request</span><span class="p">(</span><span class="n">scope</span><span class="p">:</span> <span class="n">Scope</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">ProviderKey</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span>
-</code></pre></div>
-
-    <div class="doc doc-contents first">
-
-        <p>Build the <code>litestar.Request</code> that <code>RequestScope</code> places into each HTTP frame.</p>
-<p>The request is constructed from the connection scope alone, so the body
-must not be read through it: see <code>RequestScope</code> for what such a read does
-and why.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>scope</code>
-            </td>
-            <td>
-                  <code><span title="litestar.types.Scope">Scope</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The ASGI connection scope of the request being opened.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="ProviderKey (depin.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a>, <span title="object">object</span>]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The key to bind the request under, and the request itself.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>scope = {
-...     'type': 'http',
-...     'method': 'POST',
-...     'path': '/orders',
-...     'headers': [(b'x-tenant', b'acme')],
-... }
-key, request = seed_request(scope)
-key == Request[object, object, State]
-True
-request.headers['x-tenant']
-'acme'</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
-
-    </div>
-
-</div>
+<h1 id="performance">Performance<a class="headerlink" href="#performance" title="Permanent link">&para;</a></h1>
+<p><code>depin</code> sits on application construction and resolution paths. Some of those run
+once at startup; others run on every request. Whether that matters depends on
+what your providers do and how often you resolve, and no benchmark can answer
+that for your application.</p>
+<p>What this section can do is make the cost knowable: what each operation costs
+here, how much of that is <code>depin</code> rather than the work it was asked to do, how it
+scales, and where it stops being measurable at all.</p>
+<h2 id="where-the-numbers-are">Where the numbers are<a class="headerlink" href="#where-the-numbers-are" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href="results/">Results</a></strong> — the measured figures, separated into startup and
+  recurring costs, each against a direct-Python baseline. That page is generated
+  from the committed dataset, so it cannot drift from its evidence.</li>
+<li><strong><a href="methodology/">Methodology</a></strong> — how the numbers are produced, and what
+  would make them wrong.</li>
+<li><strong><a href="reproducing/">Reproducing</a></strong> — the commands to run all of it yourself.</li>
+</ul>
+<h2 id="how-to-read-any-figure-here">How to read any figure here<a class="headerlink" href="#how-to-read-any-figure-here" title="Permanent link">&para;</a></h2>
+<p><strong>Absolute times are host-specific.</strong> They were measured on a documented
+developer workstation, not a dedicated benchmark machine, because the project
+does not own one. What transfers to your hardware is the ratio to the direct
+baseline, the shape of the scaling curves, and the deterministic counts — not the
+microseconds.</p>
+<p><strong>Startup and per-request costs are different things.</strong> Validating a graph
+happens once per process. Resolving a cached singleton can happen thousands of
+times per second. They are never combined into one score, and a number from one
+says nothing about the other.</p>
+<p><strong>Overhead is the difference from doing the same work by hand.</strong> Every workload
+is paired with the simplest honest Python that produces the same result — direct
+attribute access, explicit construction, a handwritten context manager, the same
+FastAPI application wired manually. The pair is proved to do the same thing by an
+ordinary test before either side is timed.</p>
+<p><strong>Where the overhead is smaller than the measurement noise, that is what is
+reported</strong> — not that it was zero.</p>
+<h2 id="estimating-your-own-case">Estimating your own case<a class="headerlink" href="#estimating-your-own-case" title="Permanent link">&para;</a></h2>
+<p>The useful question is not what a resolution costs but whether that cost is
+visible next to your provider work. The per-operation figures on the results page
+can be turned into a rate: an operation costing <em>c</em> microseconds, performed <em>n</em>
+times per request at <em>r</em> requests per second, consumes <code>c × n × r</code> microseconds of
+CPU per second — divide by a million for the fraction of one core.</p>
+<p>That arithmetic is honest only as far as its assumptions. Provider work, graph
+shape, contention, hardware, interpreter version and framework behaviour all move
+the result, and an application whose endpoints touch a database or a network is
+usually dominated by that rather than by wiring.</p>
+<h2 id="what-this-section-will-not-claim">What this section will not claim<a class="headerlink" href="#what-this-section-will-not-claim" title="Permanent link">&para;</a></h2>
+<p>There is no overall score here, no league table, and no claim that <code>depin</code> is the
+fastest dependency-injection library for Python. Results are per workload,
+carrying their baseline and their uncertainty. Where two libraries cannot be made
+to do observably the same thing, the workload is labelled incomparable rather than
+counted as a win — and unfavourable <code>depin</code> results are published under exactly
+the same rules as favourable ones.</p>
+<p>Comparisons with other libraries are not published yet. The eligibility screen has
+been run and recorded; the comparison page is deliberately left until the
+methodology has been exercised on <code>depin</code> alone.</p>
 
 
 
@@ -1867,10 +1706,10 @@ request.headers['x-tenant']
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
