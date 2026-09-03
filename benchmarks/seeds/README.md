@@ -45,23 +45,29 @@ verdict each seed produced, and the verdict after it was removed.
 ## Competitive cached lookup
 
 `competitive-cached-lookup.patch` adds one container-owned dictionary allocation
-and lookup on the warm cached singleton path. A focused five-repetition collection
-reported `loss` for `resolve_cached_singleton`; the unseeded accepted comparison
-also reports `loss`, because competitive loss takes precedence over the absolute
-and secondary decisions. The seed still changed the measured median from
-1.804 microseconds after removal to 1.867 microseconds while applied. Removing it
-reduced the median by 3.379% and the ratio to Dependency Injector by 3.820%, both
-above the calibrated 2.0% allowance.
+and lookup on every warm cached singleton hit. It was measured in a temporary
+clone at `2daaf7ceb82764a0ba44e5ef4c4b4c39048b0a25`, using CPU 0, the v3 archived
+baseline, and the v3 calibration (schema 1, provenance fingerprint
+`643844979a968bf143d3686a5f53bd842e0f71295e8f6f4873dbfd9116579405`).
 
-The temporary clone commands were `git apply benchmarks/seeds/competitive-cached-lookup.patch`,
-the focused `benchmarks.harness.comparison collect --workload resolve_cached_singleton`
-command with five repetitions, and `git revert 81dff6a09dca2819d3903216b7df9f65485ff551`.
+The seeded collector was `PYTHONPATH=/tmp/task12-seed-v3c.9sWpLf/seed taskset
+-c 0 timeout 1200s /home/dreco/.config/superpowers/worktrees/depin/
+performance-leadership-execution/.venv/bin/python -m
+benchmarks.harness.comparison collect --workload resolve_cached_singleton
+--repetitions 5 --timeout-seconds 1200 --out
+/tmp/task12-seed-v3c.9sWpLf/seed-result --baseline-dir
+/tmp/task12-v3.l6PIqv/baseline --baseline-revision
+4ad63e77bd21eefab15f1dde44c7e62460533da7 --budgets benchmarks/budgets.toml`
+(exit 0). The evaluator against
+`/tmp/task12-v3.l6PIqv/calibration-pinned.json` and the same budgets exited 3
+because focused evidence omits other target rows; the cached verdict itself was
+`loss`.
 
-The seeded collector command was
-`timeout 1260s python -m benchmarks.harness.comparison collect --workload resolve_cached_singleton --repetitions 5 --timeout-seconds 1200 --out /tmp/tmp.2VTkNB1dtZ/seed-result-2 --baseline-dir /tmp/tmp.UlAiP8fmyT/baseline --baseline-revision 4ad63e77bd21eefab15f1dde44c7e62460533da7 --budgets benchmarks/budgets.toml` (exit 0).
-Its evaluator command was `timeout 120s python -m benchmarks.harness.leadership evaluate /tmp/tmp.2VTkNB1dtZ/seed-result-2/comparison.json --calibration /tmp/tmp.UlAiP8fmyT/calibration.json --budgets benchmarks/budgets.toml` (exit 3 because focused evidence omits other targets; cached verdict `loss`).
-After removal, the same collector with `--out /tmp/tmp.2VTkNB1dtZ/seed-removed-result`
-exited 0; its evaluator command, with that dataset path, exited 3 and restored the
-cached verdict to the original unseeded `loss`. The seeded category is also `loss`
-because competitive loss has precedence; the restoration proof is the >2% median
-and ratio reduction, not a nonexistent categorical transition.
+The post-removal collector at
+`/tmp/task12-seed-v3.cPvvkW/removed-result-v2/comparison.json` also exited 0,
+and its focused evaluator exited 3 with cached verdict `loss`. Removing the seed
+reduced the depin median from 1.88406556845 to 1.73703301698 microseconds
+(8.465%) and reduced the excess ratio to Dependency Injector by 119.616
+percentage points. Both exceed the calibrated 1.5% allowance. The unchanged
+`loss` category is expected: competitive loss has precedence, so the proof is
+the reversible measured degradation rather than a nonexistent category change.

@@ -148,8 +148,7 @@ def test_published_comparison_page_is_the_exact_render_of_its_dataset() -> None:
     dataset = json.loads(PUBLISHED_DATASET.read_text(encoding='utf-8'))
     calibration = json.loads(PUBLISHED_CALIBRATION.read_text(encoding='utf-8'))
 
-    with pytest.raises(HarnessError, match='schema_version'):
-        _ = render(dataset, calibration, BUDGETS)
+    assert render(dataset, calibration, BUDGETS) == PUBLISHED_PAGE.read_text(encoding='utf-8')
 
 
 def test_comparison_report_cli_writes_only_markdown_to_stdout(capsys: pytest.CaptureFixture[str]) -> None:
