@@ -334,7 +334,12 @@ def collect(
         budget_digest = hashlib.sha256(budgets.read_bytes()).hexdigest()
     except OSError as error:
         raise HarnessError(f'{budgets}: cannot read deterministic budget contract ({error})') from error
-    expected = expected_ids(null=null, focus=focus)
+    if focus:
+        expected = expected_ids(null=null, focus=focus)
+    elif null:
+        expected = expected_ids(null=True)
+    else:
+        expected = expected_ids()
     repetitions_data: list[dict[str, object]] = []
     scratch_parent = out.parent
     scratch_parent.mkdir(parents=True, exist_ok=True)
@@ -347,7 +352,7 @@ def collect(
                 'increase --timeout-seconds or reduce the collection workload'
             )
         with tempfile.TemporaryDirectory(dir=scratch_parent, prefix=f'.{out.name}-') as scratch:
-            if null:
+            if null and focus:
                 aggregates = _run(
                     command,
                     Path(scratch) / 'report.json',
@@ -358,7 +363,17 @@ def collect(
                     null=True,
                     focus=focus,
                 )
-            else:
+            elif null:
+                aggregates = _run(
+                    command,
+                    Path(scratch) / 'report.json',
+                    order,
+                    repetition=index,
+                    timeout_seconds=remaining,
+                    expected=expected,
+                    null=True,
+                )
+            elif focus:
                 aggregates = _run(
                     command,
                     Path(scratch) / 'report.json',
@@ -367,6 +382,15 @@ def collect(
                     timeout_seconds=remaining,
                     expected=expected,
                     focus=focus,
+                )
+            else:
+                aggregates = _run(
+                    command,
+                    Path(scratch) / 'report.json',
+                    order,
+                    repetition=index,
+                    timeout_seconds=remaining,
+                    expected=expected,
                 )
         medians = {name: aggregate.median for name, aggregate in sorted(aggregates.items())}
         rounds = {name: aggregate.rounds for name, aggregate in sorted(aggregates.items())}
