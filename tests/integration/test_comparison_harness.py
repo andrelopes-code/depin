@@ -245,7 +245,7 @@ def test_calibration_entries_fail_closed_on_invalid_or_inconsistent_values(
     entry: dict[str, object], message: str
 ) -> None:
     with pytest.raises(HarnessError, match=message):
-        _ = leadership._calibration_entry(entry, 'resolve')
+        _ = leadership.evaluate(_leadership_dataset(), {'workloads': {'resolve': entry}}, BUDGETS)
 
 
 @pytest.mark.parametrize(
@@ -350,6 +350,26 @@ def test_comparison_descriptions_serialize_declared_secondary_metrics() -> None:
         for comparative in COMPARATIVE_WORKLOADS
         if comparative.workload.claim.metric is not Metric.LATENCY
     }
+
+
+def test_collector_output_flows_directly_into_leadership_evaluation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    child = _child(tmp_path)
+    monkeypatch.setenv('CALL_LOG', str(tmp_path / 'calls.txt'))
+    monkeypatch.setattr(comparison, '_revision', lambda: 'head-revision')
+    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
+    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+    monkeypatch.setattr(comparison, 'descriptions', lambda: _leadership_dataset()['targets'])
+
+    dataset = _collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'))
+
+    verdict = leadership.evaluate(dataset, leadership.calibrate(dataset), BUDGETS)[0]
+
+    assert dataset['seed'] == 20260902
+    assert verdict.status is leadership.Status.UNSTABLE
 
 
 def _child(path: Path) -> Path:
