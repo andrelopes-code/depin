@@ -238,7 +238,7 @@ used for this execution's evidence, not a value built into the protocol.
 
 ```bash
 uv sync --locked --no-default-groups --group bench
-BASELINE_REVISION=4ad63e7
+BASELINE_REVISION=4ad63e77bd21eefab15f1dde44c7e62460533da7
 BASELINE_DIR="$(mktemp -d)"
 git archive "$BASELINE_REVISION" | tar -x -C "$BASELINE_DIR"
 uv run --no-sync pytest benchmarks/test_comparison.py -q

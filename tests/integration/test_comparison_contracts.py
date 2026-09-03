@@ -1,4 +1,5 @@
 import math
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -78,6 +79,17 @@ def test_source_checking_syncs_the_locked_benchmark_group() -> None:
     workflow = Path('.github/workflows/ci.yml').read_text(encoding='utf-8')
 
     assert 'uv sync --locked --all-extras --group bench' in workflow
+
+
+def test_documented_competitive_baseline_is_a_full_sha_used_by_archive_and_collections() -> None:
+    contributing = Path('CONTRIBUTING.md').read_text(encoding='utf-8')
+    match = re.search(r'^BASELINE_REVISION=([0-9a-f]+)$', contributing, flags=re.MULTILINE)
+
+    assert match is not None
+    revision = match.group(1)
+    assert re.fullmatch(r'[0-9a-f]{40}', revision)
+    assert 'git archive "$BASELINE_REVISION"' in contributing
+    assert contributing.count('--baseline-revision "$BASELINE_REVISION"') == 2
 
 
 def _implementation() -> Implementation:
