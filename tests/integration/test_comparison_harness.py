@@ -14,6 +14,18 @@ EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
 BUDGETS = Path('benchmarks/budgets.toml')
 
 
+@pytest.fixture(autouse=True)
+def deterministic_children(monkeypatch: pytest.MonkeyPatch) -> None:
+    def baseline(directory: Path) -> str:
+        return 'baseline-revision'
+
+    def deterministic(directory: Path, report: Path, *, side: str, timeout_seconds: float) -> dict[str, object]:
+        return {}
+
+    monkeypatch.setattr(comparison, '_baseline_preflight', baseline)
+    monkeypatch.setattr(comparison, '_deterministic', deterministic)
+
+
 def _leadership_dataset(
     *,
     depin: tuple[float, ...] = (0.9, 0.9, 0.9, 0.9, 0.9),
@@ -395,6 +407,15 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
             for order in ('forward', 'reverse', 'forward', 'reverse', 'forward')
         ],
         'source_revision': 'source-revision',
+        'seed': 20260902,
+        'deterministic': {
+            'budget_contract': {
+                'path': 'benchmarks/budgets.toml',
+                'sha256': hashlib.sha256(BUDGETS.read_bytes()).hexdigest(),
+            },
+            'base': {'source_revision': 'baseline-revision', 'readings': {}},
+            'head': {'source_revision': 'source-revision', 'readings': {}},
+        },
         'targets': {'resolve': {'target': {'seconds': 0.1}}},
     }
     assert json.loads((tmp_path / 'out' / 'comparison.json').read_text(encoding='utf-8')) == dataset

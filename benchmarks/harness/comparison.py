@@ -1,6 +1,7 @@
 """Collect counterbalanced competitor benchmark samples."""
 
 import argparse
+import hashlib
 import math
 import os
 import subprocess
@@ -24,6 +25,7 @@ from benchmarks.harness import (
     write_json,
 )
 from benchmarks.harness import environment as environment_module
+from benchmarks.harness.pairs import DEFAULT_SEED, DETERMINISTIC_COMMAND
 
 DEFAULT_REPETITIONS = 5
 REPORT_PLACEHOLDER = '{report}'
@@ -32,15 +34,17 @@ COMMAND = ('-m', 'pytest', 'benchmarks/test_comparison.py', '--benchmark-only', 
 DEFAULT_TIMEOUT_SECONDS = 5400
 
 
-def _revision() -> str:
-    completed = subprocess.run(('git', 'rev-parse', 'HEAD'), capture_output=True, text=True, check=False)
+def _revision(directory: Path | None = None) -> str:
+    completed = subprocess.run(('git', 'rev-parse', 'HEAD'), cwd=directory, capture_output=True, text=True, check=False)
     if completed.returncode != 0:
         raise HarnessError('cannot determine the source revision; run collection from a Git checkout')
     return completed.stdout.strip()
 
 
-def _clean_tree() -> bool:
-    completed = subprocess.run(('git', 'status', '--porcelain'), capture_output=True, text=True, check=False)
+def _clean_tree(directory: Path | None = None) -> bool:
+    completed = subprocess.run(
+        ('git', 'status', '--porcelain'), cwd=directory, capture_output=True, text=True, check=False
+    )
     if completed.returncode != 0:
         raise HarnessError('cannot inspect the Git worktree; run collection from a Git checkout')
     return not completed.stdout
@@ -124,6 +128,12 @@ def _preflight(*, allow_dirty: bool) -> tuple[str, dict[str, str]]:
                 'Recreate the bench environment before collecting.'
             )
     return _revision(), pins
+
+
+def _baseline_preflight(directory: Path) -> str:
+    if not _clean_tree(directory):
+        raise HarnessError(f'{directory}: baseline checkout is dirty; materialize a clean baseline revision')
+    return _revision(directory)
 
 
 def _case_id(name: str, *, repetition: int, order: str) -> str:
@@ -231,6 +241,26 @@ def _run(
     return reduce.load(report)
 
 
+def _deterministic(directory: Path, report: Path, *, side: str, timeout_seconds: float) -> dict[str, object]:
+    argv = [sys.executable, *(part.replace('{report}', str(report)) for part in DETERMINISTIC_COMMAND)]
+    environment = os.environ | {'PYTHONHASHSEED': memory.HASH_SEED, 'PYTHONPATH': str(directory)}
+    try:
+        completed = subprocess.run(
+            argv, cwd=directory, env=environment, capture_output=True, text=True, check=False, timeout=timeout_seconds
+        )
+    except subprocess.TimeoutExpired as error:
+        raise HarnessError(
+            f'{side} deterministic child timed out after {timeout_seconds} seconds: {" ".join(argv)}\n'
+            f'{_timeout_text(error.stdout)}{_timeout_text(error.stderr)}'
+        ) from error
+    if completed.returncode != 0:
+        raise HarnessError(
+            f'{side} deterministic child exited {completed.returncode}: {" ".join(argv)}\n'
+            f'{completed.stdout}{completed.stderr}'
+        )
+    return read_json(report)
+
+
 def _write_atomic(path: Path, payload: dict[str, object]) -> None:
     temporary = path.with_name(f'.{path.name}.tmp')
     try:
@@ -252,6 +282,8 @@ def collect(
     *,
     repetitions: int,
     out: Path,
+    baseline_dir: Path = Path('.'),
+    budgets: Path = Path('benchmarks/budgets.toml'),
     allow_dirty: bool = False,
     command: Sequence[str] = COMMAND,
     timeout_seconds: int | float = DEFAULT_TIMEOUT_SECONDS,
@@ -263,6 +295,11 @@ def collect(
         raise HarnessError(f'{timeout_seconds} timeout seconds; the child timeout must be finite and positive')
     deadline = _monotonic() + timeout_seconds
     revision, pins = _preflight(allow_dirty=allow_dirty)
+    baseline_revision = _baseline_preflight(baseline_dir)
+    try:
+        budget_digest = hashlib.sha256(budgets.read_bytes()).hexdigest()
+    except OSError as error:
+        raise HarnessError(f'{budgets}: cannot read deterministic budget contract ({error})') from error
     expected = _expected_ids()
     repetitions_data: list[dict[str, object]] = []
     scratch_parent = out.parent
@@ -295,6 +332,21 @@ def collect(
                 'duration': sum(aggregate.measured for aggregate in aggregates.values()),
             }
         )
+    deterministic: dict[str, object] = {
+        'budget_contract': {'path': os.path.relpath(budgets, Path.cwd()), 'sha256': budget_digest}
+    }
+    for side, directory, source_revision in (
+        ('base', baseline_dir, baseline_revision),
+        ('head', Path.cwd(), revision),
+    ):
+        remaining = deadline - _monotonic()
+        if remaining <= 0.0:
+            raise HarnessError(f'{side} deterministic child reached the total collection deadline before spawn')
+        with tempfile.TemporaryDirectory(dir=scratch_parent, prefix=f'.{out.name}-{side}-') as scratch:
+            readings = _deterministic(
+                directory, Path(scratch) / 'deterministic.json', side=side, timeout_seconds=remaining
+            )
+        deterministic[side] = {'source_revision': source_revision, 'readings': readings}
     dataset: dict[str, object] = {
         'accepted': not allow_dirty,
         'environment': _environment() | {'python_hash_seed': memory.HASH_SEED},
@@ -302,6 +354,8 @@ def collect(
         'pins': pins,
         'repetitions': repetitions_data,
         'source_revision': revision,
+        'seed': DEFAULT_SEED,
+        'deterministic': deterministic,
         'targets': descriptions(),
     }
     _write_atomic(out / COMPARISON_FILE, dataset)
@@ -313,6 +367,8 @@ def _arguments(argv: Sequence[str] | None) -> dict[str, object]:
     parser.add_argument('command', choices=('collect',))
     parser.add_argument('--repetitions', type=int, default=DEFAULT_REPETITIONS)
     parser.add_argument('--out', required=True)
+    parser.add_argument('--baseline-dir', required=True)
+    parser.add_argument('--budgets', required=True)
     parser.add_argument('--allow-dirty', action='store_true')
     parser.add_argument('--timeout-seconds', type=int, default=DEFAULT_TIMEOUT_SECONDS)
     parsed = parser.parse_args(argv)
@@ -325,6 +381,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         collect(
             repetitions=require_integer(chosen['repetitions'], '--repetitions'),
             out=Path(require_text(chosen['out'], '--out')),
+            baseline_dir=Path(require_text(chosen['baseline_dir'], '--baseline-dir')),
+            budgets=Path(require_text(chosen['budgets'], '--budgets')),
             allow_dirty=bool(chosen['allow_dirty']),
             timeout_seconds=require_integer(chosen['timeout_seconds'], '--timeout-seconds'),
         )
