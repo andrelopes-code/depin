@@ -2,10 +2,13 @@
 
 import argparse
 import hashlib
+import io
 import math
 import os
+import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 from collections.abc import Sequence
@@ -13,6 +16,7 @@ from importlib import metadata
 from pathlib import Path
 
 from benchmarks.harness import (
+    COMPARISON_SCHEMA_VERSION,
     HarnessError,
     memory,
     read_json,
@@ -25,6 +29,7 @@ from benchmarks.harness import (
     write_json,
 )
 from benchmarks.harness import environment as environment_module
+from benchmarks.harness.leadership import COMPARISON_PROTOCOL
 from benchmarks.harness.pairs import DEFAULT_SEED, DETERMINISTIC_COMMAND
 
 DEFAULT_REPETITIONS = 5
@@ -139,7 +144,7 @@ def _preflight(*, allow_dirty: bool) -> tuple[str, dict[str, str]]:
     return _revision(), pins
 
 
-def _baseline_preflight(directory: Path, revision: str) -> str:
+def baseline_preflight(directory: Path, revision: str) -> str:
     if not directory.is_dir():
         raise HarnessError(f'{directory}: baseline directory does not exist; materialize the requested revision')
     if (
@@ -157,7 +162,88 @@ def _baseline_preflight(directory: Path, revision: str) -> str:
         raise HarnessError(f'{marker}: baseline marker is missing or unreadable ({error})') from error
     if contents != f'{revision}\n':
         raise HarnessError(f'{marker}: baseline marker must exactly match the claimed baseline revision')
+    validate_baseline_archive(directory, revision)
     return revision
+
+
+def archive_entries(revision: str) -> dict[str, tuple[str, int, bytes]]:
+    completed = subprocess.run(('git', 'archive', '--format=tar', revision), capture_output=True, check=False)
+    if completed.returncode != 0:
+        message = completed.stderr.decode('utf-8', errors='replace')
+        raise HarnessError(f'baseline archive {revision}: cannot read the Git archive ({message})')
+    entries: dict[str, tuple[str, int, bytes]] = {}
+    try:
+        with tarfile.open(fileobj=io.BytesIO(completed.stdout), mode='r:') as archive:
+            for member in archive:
+                name = member.name.rstrip('/')
+                if not name:
+                    continue
+                if member.isdir():
+                    entries[name] = ('directory', member.mode, b'')
+                elif member.isfile():
+                    stream = archive.extractfile(member)
+                    if stream is None:
+                        raise HarnessError(f'baseline archive {revision}: cannot read {name}')
+                    entries[name] = ('file', member.mode, stream.read())
+                elif member.issym():
+                    entries[name] = ('symlink', member.mode, member.linkname.encode('utf-8'))
+                else:
+                    raise HarnessError(f'baseline archive {revision}: unsupported entry {name!r}')
+    except tarfile.TarError as error:
+        raise HarnessError(f'baseline archive {revision}: is not a readable tar stream ({error})') from error
+    return entries
+
+
+def _directory_entries(directory: Path) -> dict[str, tuple[str, int, bytes]]:
+    entries: dict[str, tuple[str, int, bytes]] = {}
+    pending = [directory]
+    while pending:
+        current = pending.pop()
+        for entry in current.iterdir():
+            relative = entry.relative_to(directory).as_posix()
+            if relative == '.depin-baseline-revision':
+                continue
+            try:
+                details = entry.stat(follow_symlinks=False)
+            except OSError as error:
+                raise HarnessError(f'baseline archive directory: cannot inspect {relative} ({error})') from error
+            mode = stat.S_IMODE(details.st_mode)
+            if stat.S_ISDIR(details.st_mode):
+                entries[relative] = ('directory', mode, b'')
+                pending.append(entry)
+            elif stat.S_ISREG(details.st_mode):
+                try:
+                    contents = entry.read_bytes()
+                except OSError as error:
+                    raise HarnessError(f'baseline archive directory: cannot read {relative} ({error})') from error
+                entries[relative] = ('file', mode, contents)
+            elif stat.S_ISLNK(details.st_mode):
+                try:
+                    target = os.readlink(entry).encode('utf-8')
+                except OSError as error:
+                    raise HarnessError(
+                        f'baseline archive directory: cannot read symlink {relative} ({error})'
+                    ) from error
+                entries[relative] = ('symlink', mode, target)
+            else:
+                raise HarnessError(f'baseline archive directory: unsupported entry {relative!r}')
+    return entries
+
+
+def validate_baseline_archive(directory: Path, revision: str) -> None:
+    expected = archive_entries(revision)
+    actual = _directory_entries(directory)
+    if actual == expected:
+        return
+    missing = sorted(set(expected) - set(actual))
+    extra = sorted(set(actual) - set(expected))
+    changed = sorted(name for name in set(expected) & set(actual) if expected[name] != actual[name])
+    details = [
+        *(f'missing {name}' for name in missing),
+        *(f'extra {name}' for name in extra),
+        *(f'different {name}' for name in changed),
+    ]
+    raise HarnessError(f'baseline archive {revision} does not match {directory}: {"; ".join(details)}')
 
 
 def _case_id(name: str, *, repetition: int, order: str) -> str:
@@ -328,7 +414,7 @@ def collect(
     if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
         raise HarnessError(f'{timeout_seconds} timeout seconds; the child timeout must be finite and positive')
     deadline = _monotonic() + timeout_seconds
-    baseline_revision = _baseline_preflight(baseline_dir, baseline_revision)
+    baseline_revision = baseline_preflight(baseline_dir, baseline_revision)
     revision, pins = _preflight(allow_dirty=allow_dirty)
     try:
         budget_digest = hashlib.sha256(budgets.read_bytes()).hexdigest()
@@ -424,9 +510,11 @@ def collect(
         'environment': _environment() | {'python_hash_seed': memory.HASH_SEED},
         'harness_revision': revision,
         'pins': pins,
+        'protocol': COMPARISON_PROTOCOL,
         'repetitions': repetitions_data,
         'source_revision': revision,
         'seed': DEFAULT_SEED,
+        'schema_version': COMPARISON_SCHEMA_VERSION,
         'deterministic': deterministic,
         'targets': descriptions(),
     }

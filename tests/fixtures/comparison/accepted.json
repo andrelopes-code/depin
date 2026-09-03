@@ -25,9 +25,25 @@
       "source_revision": "head-revision"
     }
   },
-  "environment": {"host": "synthetic-host", "python": "3.12.0"},
+  "environment": {
+    "host": {
+      "available_processors": 1,
+      "cpu_model": "synthetic-cpu",
+      "machine": "synthetic-machine",
+      "processor": "synthetic-processor",
+      "system": "synthetic-system"
+    },
+    "interpreter": {
+      "free_threading": false,
+      "hash_randomization": true,
+      "implementation": "CPython",
+      "version": "3.12.0"
+    },
+    "python_hash_seed": "0"
+  },
   "harness_revision": "harness-revision",
   "pins": {"dependency-injector": "4.49.1", "pydepin": "0.17.1"},
+  "protocol": "counterbalanced-comparison-v1",
   "repetitions": [
     {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}},
     {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}},
@@ -36,6 +52,7 @@
     {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}}
   ],
   "seed": 17,
+  "schema_version": 1,
   "source_revision": "head-revision",
   "targets": {
     "allocations_of_a_cached_singleton_resolution": {

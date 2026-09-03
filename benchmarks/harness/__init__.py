@@ -20,6 +20,9 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TypeGuard
 
+COMPARISON_SCHEMA_VERSION = 1
+CALIBRATION_SCHEMA_VERSION = 1
+
 
 class HarnessError(Exception):
     """An input the harness will not proceed on.
@@ -126,6 +129,13 @@ def require_integer(value: object, where: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise HarnessError(f'{where}: expected an integer, found {value!r}')
     return value
+
+
+def require_schema_version(payload: dict[str, object], where: str, supported: int) -> None:
+    """Require the one schema version a reader can safely interpret."""
+    version = require_integer(payload.get('schema_version'), f'{where}.schema_version')
+    if version != supported:
+        raise HarnessError(f'{where}.schema_version: unsupported version {version}; expected {supported}')
 
 
 def write_json(path: Path, payload: dict[str, object]) -> None:

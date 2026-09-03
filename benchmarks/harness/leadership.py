@@ -2,6 +2,7 @@
 
 import argparse
 import hashlib
+import json
 import math
 import statistics
 import sys
@@ -11,13 +12,19 @@ from enum import Enum
 from pathlib import Path
 
 from benchmarks.harness import (
+    CALIBRATION_SCHEMA_VERSION,
+    COMPARISON_SCHEMA_VERSION,
     HarnessError,
     gate,
+    is_array,
+    is_object,
     quantile,
     read_json,
     require_array,
+    require_integer,
     require_number,
     require_object,
+    require_schema_version,
     require_text,
     stats,
     write_json,
@@ -31,6 +38,8 @@ EXIT_PASS = 0
 EXIT_FAILURE = 1
 EXIT_MALFORMED = 2
 EXIT_UNSTABLE = 3
+CALIBRATION_PROVENANCE_VERSION = 1
+COMPARISON_PROTOCOL = 'counterbalanced-comparison-v1'
 
 
 class Status(Enum):
@@ -91,6 +100,128 @@ def _accepted(dataset: dict[str, object]) -> None:
         raise HarnessError(
             'dataset.accepted must be true; --allow-dirty is diagnostic evidence and requires clean collection'
         )
+
+
+def _schema(dataset: dict[str, object]) -> None:
+    require_schema_version(dataset, 'dataset', COMPARISON_SCHEMA_VERSION)
+
+
+def _optional_text(value: object, where: str) -> str | None:
+    if value is None:
+        return None
+    return require_text(value, where)
+
+
+def _digest(value: object, where: str) -> str:
+    digest = require_text(value, where)
+    if len(digest) != 64 or any(character not in '0123456789abcdef' for character in digest):
+        raise HarnessError(f'{where}: expected a lower-case SHA-256 digest')
+    return digest
+
+
+def protocol_material(dataset: dict[str, object]) -> dict[str, object]:
+    _schema(dataset)
+    protocol = require_text(dataset.get('protocol'), 'dataset.protocol')
+    if protocol != COMPARISON_PROTOCOL:
+        raise HarnessError(f'dataset.protocol: unsupported protocol {protocol!r}')
+    targets = require_object(dataset.get('targets'), 'dataset.targets')
+    pins = require_object(dataset.get('pins'), 'dataset.pins')
+    for distribution, version in pins.items():
+        _ = require_text(distribution, 'dataset.pins key')
+        _ = require_text(version, f'dataset.pins.{distribution}')
+    environment = require_object(dataset.get('environment'), 'dataset.environment')
+    interpreter = require_object(environment.get('interpreter'), 'dataset.environment.interpreter')
+    host = require_object(environment.get('host'), 'dataset.environment.host')
+    budget_contract = require_object(
+        require_object(dataset.get('deterministic'), 'dataset.deterministic').get('budget_contract'),
+        'dataset.deterministic.budget_contract',
+    )
+    return {
+        'budget_contract_sha256': _digest(
+            budget_contract.get('sha256'), 'dataset.deterministic.budget_contract.sha256'
+        ),
+        'environment': {
+            'host': {
+                'available_processors': require_integer(
+                    host.get('available_processors'), 'dataset.environment.host.available_processors'
+                ),
+                'cpu_model': _optional_text(host.get('cpu_model'), 'dataset.environment.host.cpu_model'),
+                'machine': require_text(host.get('machine'), 'dataset.environment.host.machine'),
+                'processor': require_text(host.get('processor'), 'dataset.environment.host.processor'),
+                'system': require_text(host.get('system'), 'dataset.environment.host.system'),
+            },
+            'interpreter': {
+                'free_threading': _boolean(
+                    interpreter.get('free_threading'), 'dataset.environment.interpreter.free_threading'
+                ),
+                'hash_randomization': _boolean(
+                    interpreter.get('hash_randomization'), 'dataset.environment.interpreter.hash_randomization'
+                ),
+                'implementation': require_text(
+                    interpreter.get('implementation'), 'dataset.environment.interpreter.implementation'
+                ),
+                'version': require_text(interpreter.get('version'), 'dataset.environment.interpreter.version'),
+            },
+            'python_hash_seed': require_text(
+                environment.get('python_hash_seed'), 'dataset.environment.python_hash_seed'
+            ),
+        },
+        'minimum_repetitions': MINIMUM_REPETITIONS,
+        'pins': pins,
+        'protocol': protocol,
+        'schema_version': COMPARISON_SCHEMA_VERSION,
+        'targets': targets,
+    }
+
+
+def protocol_fingerprint(dataset: dict[str, object]) -> str:
+    """Return the stable comparison protocol identity, excluding measured source revisions."""
+    encoded = json.dumps(protocol_material(dataset), ensure_ascii=False, separators=(',', ':'), sort_keys=True)
+    return hashlib.sha256(encoded.encode('utf-8')).hexdigest()
+
+
+def _protocol_digest(protocol: dict[str, object]) -> str:
+    encoded = json.dumps(protocol, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
+    return hashlib.sha256(encoded.encode('utf-8')).hexdigest()
+
+
+def _protocol_difference(expected: object, actual: object, where: str = '') -> str | None:
+    if is_object(expected) and is_object(actual):
+        for key in sorted(set(expected) | set(actual)):
+            nested = f'{where}.{key}' if where else key
+            if key not in expected or key not in actual:
+                return nested
+            difference = _protocol_difference(expected[key], actual[key], nested)
+            if difference is not None:
+                return difference
+        return None
+    if is_array(expected) and is_array(actual):
+        if len(expected) != len(actual):
+            return where
+        for index, (left, right) in enumerate(zip(expected, actual, strict=True)):
+            difference = _protocol_difference(left, right, f'{where}[{index}]')
+            if difference is not None:
+                return difference
+        return None
+    return None if expected == actual else where
+
+
+def _calibration_provenance(calibration: dict[str, object]) -> dict[str, object]:
+    require_schema_version(calibration, 'calibration', CALIBRATION_SCHEMA_VERSION)
+    provenance = require_object(calibration.get('provenance'), 'calibration.provenance')
+    version = require_integer(provenance.get('version'), 'calibration.provenance.version')
+    if version != CALIBRATION_PROVENANCE_VERSION:
+        raise HarnessError(
+            f'calibration.provenance.version: unsupported version {version}; expected {CALIBRATION_PROVENANCE_VERSION}'
+        )
+    _ = _digest(provenance.get('null_dataset_sha256'), 'calibration.provenance.null_dataset_sha256')
+    fingerprint = _digest(provenance.get('protocol_fingerprint'), 'calibration.provenance.protocol_fingerprint')
+    protocol = require_object(provenance.get('protocol'), 'calibration.provenance.protocol')
+    if _protocol_digest(protocol) != fingerprint:
+        raise HarnessError('calibration.provenance.protocol does not match its protocol_fingerprint')
+    _ = require_text(provenance.get('source_revision'), 'calibration.provenance.source_revision')
+    _ = require_text(provenance.get('harness_revision'), 'calibration.provenance.harness_revision')
+    return provenance
 
 
 def workloads(dataset: dict[str, object]) -> dict[str, dict[str, object]]:
@@ -170,6 +301,7 @@ def calibration_entry(value: object, workload: str) -> tuple[float | None, bool]
 
 def calibrate(dataset: dict[str, object]) -> dict[str, object]:
     """Derive deterministic per-workload allowances from a null comparison dataset."""
+    _schema(dataset)
     _accepted(dataset)
     random_seed = seed(dataset)
     collected = repetitions(dataset)
@@ -183,7 +315,19 @@ def calibrate(dataset: dict[str, object]) -> dict[str, object]:
         p99 = quantile(sorted(abs(math.expm1(value)) for value in distribution), 0.99)
         allowance = math.ceil(p99 / CALIBRATION_INCREMENT) * CALIBRATION_INCREMENT
         calibrated[workload] = {'allowance': allowance, 'eligible': allowance <= MAXIMUM_ALLOWANCE, 'p99': p99}
-    return {'workloads': calibrated}
+    canonical = json.dumps(dataset, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
+    return {
+        'provenance': {
+            'harness_revision': require_text(dataset.get('harness_revision'), 'dataset.harness_revision'),
+            'null_dataset_sha256': hashlib.sha256(canonical.encode('utf-8')).hexdigest(),
+            'protocol': protocol_material(dataset),
+            'protocol_fingerprint': protocol_fingerprint(dataset),
+            'source_revision': require_text(dataset.get('source_revision'), 'dataset.source_revision'),
+            'version': CALIBRATION_PROVENANCE_VERSION,
+        },
+        'schema_version': CALIBRATION_SCHEMA_VERSION,
+        'workloads': calibrated,
+    }
 
 
 def _candidates(description: dict[str, object], workload: str) -> list[tuple[str, str]]:
@@ -231,6 +375,8 @@ def _secondary(
         raise HarnessError(f'{budget_file}: cannot read deterministic budget contract ({error})') from error
     if actual_digest != expected_digest:
         raise HarnessError(f'{workload}: deterministic budget contract digest differs from --budgets')
+    if 'base' not in evidence or 'head' not in evidence:
+        raise HarnessError(f'{workload}: missing secondary deterministic evidence; recollect the comparison dataset')
     readings: dict[str, dict[str, object]] = {}
     for side in ('base', 'head'):
         side_evidence = require_object(evidence.get(side), f'dataset.deterministic.{side}')
@@ -272,7 +418,16 @@ def evaluate(
     dataset: dict[str, object], calibration: dict[str, object], budget_file: Path
 ) -> tuple[WorkloadVerdict, ...]:
     """Evaluate all workloads from decoded comparison and calibration JSON."""
+    _schema(dataset)
     _accepted(dataset)
+    provenance = _calibration_provenance(calibration)
+    expected_protocol = protocol_material(dataset)
+    recorded_protocol = require_object(provenance['protocol'], 'calibration.provenance.protocol')
+    difference = _protocol_difference(expected_protocol, recorded_protocol)
+    if difference is not None:
+        raise HarnessError(f'calibration.provenance.protocol.{difference} differs from the comparison dataset')
+    if provenance['protocol_fingerprint'] != _protocol_digest(expected_protocol):
+        raise HarnessError('calibration.provenance.protocol_fingerprint differs from the comparison dataset')
     random_seed = seed(dataset)
     collected = repetitions(dataset)
     calibration_entries = require_object(calibration.get('workloads'), 'calibration.workloads')

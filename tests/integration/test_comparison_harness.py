@@ -1,8 +1,10 @@
 import hashlib
 import inspect
+import io
 import json
 import math
 import subprocess
+import tarfile
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -19,6 +21,31 @@ EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
 BUDGETS = Path('benchmarks/budgets.toml')
 BASELINE_REVISION = 'a' * 40
 REAL_DETERMINISTIC = comparison.collect_deterministic
+REAL_BASELINE_VALIDATION = comparison.validate_baseline_archive
+
+
+def _skip_baseline_validation(directory: Path, revision: str) -> None:
+    _ = directory, revision
+
+
+def _expected_file(revision: str) -> dict[str, tuple[str, int, bytes]]:
+    _ = revision
+    return {'expected.py': ('file', 0o644, b'expected\n')}
+
+
+def _no_expected_entries(revision: str) -> dict[str, tuple[str, int, bytes]]:
+    _ = revision
+    return {}
+
+
+def _expected_symlink(revision: str) -> dict[str, tuple[str, int, bytes]]:
+    _ = revision
+    return {'link': ('symlink', 0o777, b'expected-target')}
+
+
+def _expected_mode(revision: str) -> dict[str, tuple[str, int, bytes]]:
+    _ = revision
+    return {'mode.py': ('file', 0o644, b'content\n')}
 
 
 @pytest.fixture(autouse=True)
@@ -27,6 +54,7 @@ def deterministic_children(monkeypatch: pytest.MonkeyPatch) -> None:
         return {}
 
     monkeypatch.setattr(comparison, 'collect_deterministic', deterministic)
+    monkeypatch.setattr(comparison, 'validate_baseline_archive', _skip_baseline_validation)
 
 
 def _collect(
@@ -178,6 +206,32 @@ def _leadership_dataset(
         )
     return {
         'accepted': True,
+        'deterministic': {
+            'budget_contract': {
+                'path': str(BUDGETS),
+                'sha256': hashlib.sha256(BUDGETS.read_bytes()).hexdigest(),
+            }
+        },
+        'environment': {
+            'host': {
+                'available_processors': 1,
+                'cpu_model': 'synthetic-cpu',
+                'machine': 'synthetic-machine',
+                'processor': 'synthetic-processor',
+                'system': 'synthetic-system',
+            },
+            'interpreter': {
+                'free_threading': False,
+                'hash_randomization': True,
+                'implementation': 'CPython',
+                'version': '3.12.0',
+            },
+            'python_hash_seed': '0',
+        },
+        'harness_revision': 'harness-revision',
+        'pins': {'pydepin': '0.17.1', 'wireup': '2.12.0'},
+        'protocol': leadership.COMPARISON_PROTOCOL,
+        'schema_version': 1,
         'source_revision': 'head-revision',
         'repetitions': repetitions,
         'seed': 17,
@@ -193,8 +247,11 @@ def _leadership_dataset(
     }
 
 
-def _calibration(*, allowance: float = 0.01, eligible: bool = True) -> dict[str, object]:
-    return {'workloads': {'resolve': {'allowance': allowance, 'eligible': eligible, 'p99': allowance}}}
+def _calibration(dataset: dict[str, object], *, allowance: float = 0.01, eligible: bool = True) -> dict[str, object]:
+    calibration = leadership.calibrate(dataset)
+    workloads = require_object(calibration['workloads'], 'calibration.workloads')
+    workloads['resolve'] = {'allowance': allowance, 'eligible': eligible, 'p99': allowance}
+    return calibration
 
 
 def _deterministic_budget(path: Path) -> Path:
@@ -233,36 +290,30 @@ def _allocation_evidence(budgets: Path, *, head_work: int = 12) -> dict[str, obj
 
 
 @pytest.mark.parametrize(
-    ('dataset', 'calibration', 'status'),
+    ('dataset', 'status'),
     [
-        (_leadership_dataset(), _calibration(), 'leader'),
+        (_leadership_dataset(), 'leader'),
         (
             _leadership_dataset(depin=(1.0,) * 5),
-            _calibration(),
             'shared-leader',
         ),
         (
             _leadership_dataset(depin=(1.2,) * 5),
-            _calibration(),
             'loss',
         ),
         (
             _leadership_dataset(target={'fixed_seconds': 0.5, 'fraction_of_direct': 0.5}),
-            _calibration(),
             'absolute-failure',
         ),
-        (_leadership_dataset(qualified=False), _calibration(), 'unstable'),
+        (_leadership_dataset(qualified=False), 'unstable'),
         (
             _leadership_dataset(competitors={'wireup-2.12.0': ('partial', (0.1,) * 5)}),
-            _calibration(),
             'no-equivalent-competitor',
         ),
     ],
 )
-def test_leadership_evaluates_each_workload_status(
-    dataset: dict[str, object], calibration: dict[str, object], status: str
-) -> None:
-    verdict = leadership.evaluate(dataset, calibration, BUDGETS)[0]
+def test_leadership_evaluates_each_workload_status(dataset: dict[str, object], status: str) -> None:
+    verdict = leadership.evaluate(dataset, _calibration(dataset), BUDGETS)[0]
 
     assert verdict.status.value == status
 
@@ -276,7 +327,7 @@ def test_leadership_selects_the_fastest_equivalent_and_excludes_partial_candidat
         }
     )
 
-    verdict = leadership.evaluate(dataset, _calibration(), BUDGETS)[0]
+    verdict = leadership.evaluate(dataset, _calibration(dataset), BUDGETS)[0]
 
     assert verdict.competitor is not None
     assert verdict.competitor.label == 'fast-1'
@@ -286,7 +337,7 @@ def test_leadership_selects_the_fastest_equivalent_and_excludes_partial_candidat
 def test_leadership_uses_the_confidence_upper_bound_against_the_allowance() -> None:
     dataset = _leadership_dataset(depin=(1.01,) * 5)
 
-    verdict = leadership.evaluate(dataset, _calibration(allowance=0.005), BUDGETS)[0]
+    verdict = leadership.evaluate(dataset, _calibration(dataset, allowance=0.005), BUDGETS)[0]
 
     assert verdict.status is leadership.Status.LOSS
     assert verdict.competitor is not None
@@ -296,7 +347,7 @@ def test_leadership_uses_the_confidence_upper_bound_against_the_allowance() -> N
 def test_leadership_direct_overhead_uses_the_lower_target_ceiling() -> None:
     dataset = _leadership_dataset(target={'fixed_seconds': 0.9, 'fraction_of_direct': 0.5})
 
-    verdict = leadership.evaluate(dataset, _calibration(), BUDGETS)[0]
+    verdict = leadership.evaluate(dataset, _calibration(dataset), BUDGETS)[0]
 
     assert verdict.absolute_ceiling == 0.2
     assert verdict.absolute_overhead == 0.5
@@ -354,25 +405,29 @@ def test_calibration_marks_four_qualified_pairs_as_insufficient_and_evaluation_u
 def test_calibration_entries_fail_closed_on_invalid_or_inconsistent_values(
     entry: dict[str, object], message: str
 ) -> None:
+    dataset = _leadership_dataset()
+    calibration = _calibration(dataset)
+    require_object(calibration['workloads'], 'calibration.workloads')['resolve'] = entry
+
     with pytest.raises(HarnessError, match=message):
-        _ = leadership.evaluate(_leadership_dataset(), {'workloads': {'resolve': entry}}, BUDGETS)
+        _ = leadership.evaluate(dataset, calibration, BUDGETS)
 
 
 @pytest.mark.parametrize(
-    ('dataset', 'calibration', 'expected'),
+    ('dataset', 'expected'),
     [
-        (_leadership_dataset(), _calibration(), 0),
-        (_leadership_dataset(depin=(1.2,) * 5), _calibration(), 1),
-        (_leadership_dataset(qualified=False), _calibration(), 3),
+        (_leadership_dataset(), 0),
+        (_leadership_dataset(depin=(1.2,) * 5), 1),
+        (_leadership_dataset(qualified=False), 3),
     ],
 )
 def test_leadership_evaluate_cli_returns_the_documented_exit_status(
-    tmp_path: Path, dataset: dict[str, object], calibration: dict[str, object], expected: int
+    tmp_path: Path, dataset: dict[str, object], expected: int
 ) -> None:
     dataset_path = tmp_path / 'comparison.json'
     calibration_path = tmp_path / 'calibration.json'
     dataset_path.write_text(json.dumps(dataset), encoding='utf-8')
-    calibration_path.write_text(json.dumps(calibration), encoding='utf-8')
+    calibration_path.write_text(json.dumps(_calibration(dataset)), encoding='utf-8')
 
     assert (
         leadership.main(
@@ -400,7 +455,7 @@ def test_leadership_refuses_diagnostic_or_missing_acceptance(accepted: object) -
     with pytest.raises(HarnessError, match='allow-dirty'):
         _ = leadership.calibrate(dataset)
     with pytest.raises(HarnessError, match='allow-dirty'):
-        _ = leadership.evaluate(dataset, _calibration(), BUDGETS)
+        _ = leadership.evaluate(dataset, _calibration(_leadership_dataset()), BUDGETS)
 
 
 @pytest.mark.parametrize(
@@ -420,7 +475,7 @@ def test_leadership_refuses_invalid_candidate_contracts(label: str, classificati
     )
 
     with pytest.raises(HarnessError, match=message):
-        _ = leadership.evaluate(dataset, _calibration(), BUDGETS)
+        _ = leadership.evaluate(dataset, _calibration(dataset), BUDGETS)
 
 
 def test_leadership_refuses_a_required_secondary_metric_without_its_reading() -> None:
@@ -430,7 +485,7 @@ def test_leadership_refuses_a_required_secondary_metric_without_its_reading() ->
     description['secondary_metrics'] = ['allocations']
 
     with pytest.raises(HarnessError, match='secondary'):
-        _ = leadership.evaluate(dataset, _calibration(), BUDGETS)
+        _ = leadership.evaluate(dataset, _calibration(dataset), BUDGETS)
 
 
 def test_leadership_evaluates_all_outcomes_expanded_from_allocations(tmp_path: Path) -> None:
@@ -440,7 +495,7 @@ def test_leadership_evaluates_all_outcomes_expanded_from_allocations(tmp_path: P
     description['secondary_metrics'] = ['allocations']
     dataset['deterministic'] = _allocation_evidence(budgets)
 
-    verdict = leadership.evaluate(dataset, _calibration(), budgets)[0]
+    verdict = leadership.evaluate(dataset, _calibration(dataset), budgets)[0]
 
     assert verdict.secondary_passed is True
     assert [(outcome.metric, outcome.outcome.value) for outcome in verdict.secondary_verdicts] == [
@@ -459,7 +514,7 @@ def test_leadership_refuses_a_divergent_deterministic_budget_digest(tmp_path: Pa
     dataset['deterministic'] = evidence
 
     with pytest.raises(HarnessError, match='digest'):
-        _ = leadership.evaluate(dataset, _calibration(), budgets)
+        _ = leadership.evaluate(dataset, _calibration(dataset), budgets)
 
 
 def test_leadership_refuses_a_head_deterministic_revision_that_differs_from_the_dataset(tmp_path: Path) -> None:
@@ -471,7 +526,7 @@ def test_leadership_refuses_a_head_deterministic_revision_that_differs_from_the_
     dataset['source_revision'] = 'other-head'
 
     with pytest.raises(HarnessError, match=r'head\.source_revision'):
-        _ = leadership.evaluate(dataset, _calibration(), budgets)
+        _ = leadership.evaluate(dataset, _calibration(dataset), budgets)
 
 
 def test_leadership_fails_an_allocations_claim_when_the_expanded_work_outcome_grows(tmp_path: Path) -> None:
@@ -481,7 +536,7 @@ def test_leadership_fails_an_allocations_claim_when_the_expanded_work_outcome_gr
     description['secondary_metrics'] = ['allocations']
     dataset['deterministic'] = _allocation_evidence(budgets, head_work=13)
 
-    verdict = leadership.evaluate(dataset, _calibration(), budgets)[0]
+    verdict = leadership.evaluate(dataset, _calibration(dataset), budgets)[0]
 
     assert verdict.status is leadership.Status.REGRESSION
     assert verdict.secondary_passed is False
@@ -649,6 +704,7 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
         'environment': {'host': 'synthetic', 'python_hash_seed': '0'},
         'harness_revision': 'source-revision',
         'pins': {'pydepin': '0.17.1', 'wireup': '2.12.0'},
+        'protocol': leadership.COMPARISON_PROTOCOL,
         'repetitions': [
             {
                 'duration': 7000.0,
@@ -686,6 +742,7 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
         ],
         'source_revision': 'source-revision',
         'seed': 20260902,
+        'schema_version': 1,
         'deterministic': {
             'budget_contract': {
                 'path': 'benchmarks/budgets.toml',
@@ -728,6 +785,135 @@ def test_collection_refuses_an_archive_marker_that_does_not_match_the_claimed_re
             baseline_revision=BASELINE_REVISION,
             budgets=BUDGETS,
         )
+
+
+def test_calibration_writes_a_versioned_protocol_provenance() -> None:
+    dataset = _leadership_dataset()
+
+    calibration = leadership.calibrate(dataset)
+
+    assert calibration['schema_version'] == 1
+    provenance = require_object(calibration['provenance'], 'calibration.provenance')
+    assert provenance['version'] == 1
+    assert isinstance(provenance['null_dataset_sha256'], str)
+    assert isinstance(provenance['protocol_fingerprint'], str)
+
+
+@pytest.mark.parametrize('version', [None, True, 0, 2])
+def test_calibration_rejects_an_unsupported_comparison_schema_version(version: object) -> None:
+    dataset = _leadership_dataset()
+    if version is None:
+        del dataset['schema_version']
+    else:
+        dataset['schema_version'] = version
+
+    with pytest.raises(HarnessError, match='schema_version'):
+        _ = leadership.calibrate(dataset)
+
+
+@pytest.mark.parametrize('version', [None, True, 0, 2])
+def test_evaluation_rejects_an_unsupported_calibration_schema_version(version: object) -> None:
+    dataset = _leadership_dataset()
+    calibration = leadership.calibrate(dataset)
+    if version is None:
+        del calibration['schema_version']
+    else:
+        calibration['schema_version'] = version
+
+    with pytest.raises(HarnessError, match='schema_version'):
+        _ = leadership.evaluate(dataset, calibration, BUDGETS)
+
+
+def test_evaluation_rejects_a_calibration_from_a_different_protocol() -> None:
+    dataset = _leadership_dataset()
+    dataset['schema_version'] = 1
+    calibration = leadership.calibrate(dataset)
+    changed = json.loads(json.dumps(dataset))
+    changed_pins = require_object(changed.setdefault('pins', {}), 'changed.pins')
+    changed_pins['wireup'] = 'different'
+
+    with pytest.raises(HarnessError, match=r'protocol\.pins\.wireup'):
+        _ = leadership.evaluate(changed, calibration, BUDGETS)
+
+
+def test_evaluation_accepts_seed_shaped_source_and_harness_revisions() -> None:
+    dataset = _leadership_dataset()
+    null = _leadership_dataset(direct=(0.9,) * 5, depin=(0.9,) * 5)
+    calibration = leadership.calibrate(null)
+    seed = json.loads(json.dumps(dataset))
+    seed['source_revision'] = 'seed-source-revision'
+    seed['harness_revision'] = 'seed-harness-revision'
+
+    assert leadership.evaluate(seed, calibration, BUDGETS)[0].status is leadership.Status.LEADER
+
+
+def test_baseline_preflight_rejects_marker_matched_but_wrong_archive_contents(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    baseline = tmp_path / 'baseline'
+    baseline.mkdir()
+    (baseline / '.depin-baseline-revision').write_text(f'{BASELINE_REVISION}\n', encoding='utf-8')
+    (baseline / 'wrong.py').write_text('wrong\n', encoding='utf-8')
+    monkeypatch.setattr(comparison, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
+    monkeypatch.setattr(comparison, 'archive_entries', _expected_file)
+
+    with pytest.raises(HarnessError, match='baseline archive'):
+        _ = comparison.baseline_preflight(baseline, BASELINE_REVISION)
+
+
+def test_baseline_preflight_rejects_an_extra_file_even_with_a_matched_marker(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    baseline = tmp_path / 'baseline'
+    baseline.mkdir()
+    (baseline / '.depin-baseline-revision').write_text(f'{BASELINE_REVISION}\n', encoding='utf-8')
+    (baseline / 'extra.py').write_text('extra\n', encoding='utf-8')
+    monkeypatch.setattr(comparison, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
+    monkeypatch.setattr(comparison, 'archive_entries', _no_expected_entries)
+
+    with pytest.raises(HarnessError, match='baseline archive'):
+        _ = comparison.baseline_preflight(baseline, BASELINE_REVISION)
+
+
+def test_baseline_preflight_rejects_a_symlink_with_the_wrong_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    baseline = tmp_path / 'baseline'
+    baseline.mkdir()
+    (baseline / '.depin-baseline-revision').write_text(f'{BASELINE_REVISION}\n', encoding='utf-8')
+    (baseline / 'link').symlink_to('actual-target')
+    monkeypatch.setattr(comparison, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
+    monkeypatch.setattr(comparison, 'archive_entries', _expected_symlink)
+
+    with pytest.raises(HarnessError, match='baseline archive'):
+        _ = comparison.baseline_preflight(baseline, BASELINE_REVISION)
+
+
+def test_baseline_preflight_rejects_a_file_with_the_wrong_mode(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    baseline = tmp_path / 'baseline'
+    baseline.mkdir()
+    (baseline / '.depin-baseline-revision').write_text(f'{BASELINE_REVISION}\n', encoding='utf-8')
+    executable = baseline / 'mode.py'
+    executable.write_text('content\n', encoding='utf-8')
+    executable.chmod(0o755)
+    monkeypatch.setattr(comparison, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
+    monkeypatch.setattr(comparison, 'archive_entries', _expected_mode)
+
+    with pytest.raises(HarnessError, match='baseline archive'):
+        _ = comparison.baseline_preflight(baseline, BASELINE_REVISION)
+
+
+def test_baseline_preflight_accepts_a_real_git_archive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    revision = subprocess.run(('git', 'rev-parse', 'HEAD'), capture_output=True, text=True, check=True).stdout.strip()
+    archive = subprocess.run(('git', 'archive', '--format=tar', revision), capture_output=True, check=True).stdout
+    baseline = tmp_path / 'baseline'
+    baseline.mkdir()
+    with tarfile.open(fileobj=io.BytesIO(archive), mode='r:') as stream:
+        stream.extractall(baseline, filter='fully_trusted')
+    (baseline / '.depin-baseline-revision').write_text(f'{revision}\n', encoding='utf-8')
+    monkeypatch.setattr(comparison, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
+
+    assert comparison.baseline_preflight(baseline, revision) == revision
 
 
 @pytest.mark.parametrize(

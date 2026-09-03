@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 import benchmarks.harness.comparison_report as comparison_report
-from benchmarks.harness import HarnessError, require_array, require_object
+from benchmarks.harness import HarnessError, leadership, require_array, require_object
 from benchmarks.harness.comparison_report import main, render
 
 FIXTURE = Path(__file__).parents[1] / 'fixtures' / 'comparison'
@@ -24,6 +24,12 @@ def _evidence() -> tuple[dict[str, object], dict[str, object]]:
         json.loads((FIXTURE / 'accepted.json').read_text(encoding='utf-8')),
         json.loads((FIXTURE / 'calibration.json').read_text(encoding='utf-8')),
     )
+
+
+def _refresh_protocol_fingerprint(dataset: dict[str, object], calibration: dict[str, object]) -> None:
+    provenance = require_object(calibration['provenance'], 'fixture.calibration.provenance')
+    provenance['protocol'] = leadership.protocol_material(dataset)
+    provenance['protocol_fingerprint'] = leadership.protocol_fingerprint(dataset)
 
 
 def _target(dataset: dict[str, object]) -> dict[str, object]:
@@ -123,7 +129,7 @@ def test_comparison_report_renders_evidence_without_aggregate_ranking() -> None:
         'leader',
         'head-revision',
         'harness-revision',
-        'synthetic-host',
+        'synthetic-system synthetic-machine synthetic-cpu',
     ):
         assert expected in rendered
     assert rendered.count('—') >= 4
@@ -142,7 +148,8 @@ def test_published_comparison_page_is_the_exact_render_of_its_dataset() -> None:
     dataset = json.loads(PUBLISHED_DATASET.read_text(encoding='utf-8'))
     calibration = json.loads(PUBLISHED_CALIBRATION.read_text(encoding='utf-8'))
 
-    assert PUBLISHED_PAGE.read_text(encoding='utf-8') == render(dataset, calibration, BUDGETS)
+    with pytest.raises(HarnessError, match='schema_version'):
+        _ = render(dataset, calibration, BUDGETS)
 
 
 def test_comparison_report_cli_writes_only_markdown_to_stdout(capsys: pytest.CaptureFixture[str]) -> None:
@@ -167,6 +174,32 @@ def test_comparison_report_reports_malformed_evidence(capsys: pytest.CaptureFixt
     assert status == 2
     assert captured.out == ''
     assert 'missing.json: cannot be read' in captured.err
+
+
+@pytest.mark.parametrize(
+    ('artifact', 'version'),
+    [('dataset', value) for value in (None, True, 0, 2)] + [('calibration', value) for value in (None, True, 0, 2)],
+)
+def test_comparison_report_rejects_an_unsupported_schema_version(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], artifact: str, version: object
+) -> None:
+    dataset, calibration = _evidence()
+    selected = dataset if artifact == 'dataset' else calibration
+    if version is None:
+        del selected['schema_version']
+    else:
+        selected['schema_version'] = version
+    dataset_path = tmp_path / 'comparison.json'
+    calibration_path = tmp_path / 'calibration.json'
+    dataset_path.write_text(json.dumps(dataset), encoding='utf-8')
+    calibration_path.write_text(json.dumps(calibration), encoding='utf-8')
+
+    status = main((str(dataset_path), '--calibration', str(calibration_path), '--budgets', str(BUDGETS)))
+
+    captured = capsys.readouterr()
+    assert status == 2
+    assert captured.out == ''
+    assert 'schema_version' in captured.err
 
 
 def test_comparison_report_raises_harness_error_for_invalid_render_input() -> None:
@@ -195,6 +228,8 @@ def test_comparison_report_rejects_unsafe_dynamic_markdown_text(mutate: Mutation
     dataset, calibration = _evidence()
     altered = deepcopy(dataset)
     mutate(altered)
+    if mutate in {_claim_newline, _reason_control, _label_newline, _pin_key_newline, _pin_value_control}:
+        _refresh_protocol_fingerprint(altered, calibration)
 
     with pytest.raises(HarnessError, match=where):
         _ = render(altered, calibration, BUDGETS)
@@ -204,6 +239,7 @@ def test_comparison_report_uses_an_inventory_claim_over_dataset_text(monkeypatch
     dataset, calibration = _evidence()
     workload = WORKLOAD
     _target(dataset)['claim'] = 'fastest library overall winner'
+    _refresh_protocol_fingerprint(dataset, calibration)
     inventory = (
         SimpleNamespace(workload=SimpleNamespace(name=workload, claim=SimpleNamespace(question='Authoritative claim'))),
     )
@@ -263,6 +299,7 @@ def test_comparison_report_rejects_non_text_provenance(mutate: Mutation, where: 
 def test_comparison_report_escapes_markdown_structure_in_dynamic_text() -> None:
     dataset, calibration = _evidence()
     _candidate(dataset)['reason'] = r'one\two|`three`'
+    _refresh_protocol_fingerprint(dataset, calibration)
 
     rendered = render(dataset, calibration, BUDGETS)
 
