@@ -1,6 +1,7 @@
 """Calibrate comparison noise and evaluate per-workload leadership evidence."""
 
 import argparse
+import hashlib
 import math
 import statistics
 import sys
@@ -11,6 +12,7 @@ from pathlib import Path
 
 from benchmarks.harness import (
     HarnessError,
+    gate,
     read_json,
     require_array,
     require_number,
@@ -19,6 +21,7 @@ from benchmarks.harness import (
     stats,
     write_json,
 )
+from benchmarks.harness import budgets as budget_module
 
 MINIMUM_REPETITIONS = 5
 MAXIMUM_ALLOWANCE = 0.05
@@ -55,7 +58,11 @@ class WorkloadVerdict:
     absolute_overhead: float | None
     absolute_ceiling: float | None
     absolute_passed: bool | None
-    secondary_passed: bool
+    secondary_verdicts: tuple[gate.Verdict, ...]
+
+    @property
+    def secondary_passed(self) -> bool:
+        return all(verdict.outcome is budget_module.Outcome.PASS for verdict in self.secondary_verdicts)
 
 
 def _boolean(value: object, where: str) -> bool:
@@ -183,12 +190,38 @@ def _candidates(description: dict[str, object], workload: str) -> list[tuple[str
     return candidates
 
 
-def _secondary(description: dict[str, object], workload: str) -> bool:
-    encoded = description.get('secondary')
+def _secondary(
+    description: dict[str, object], dataset: dict[str, object], workload: str, budget_file: Path
+) -> tuple[gate.Verdict, ...]:
+    metrics = require_array(description.get('secondary_metrics', []), f'dataset.targets.{workload}.secondary_metrics')
+    if not metrics:
+        return ()
+    declared: list[str] = []
+    for index, metric in enumerate(metrics):
+        declared.append(require_text(metric, f'dataset.targets.{workload}.secondary_metrics[{index}]'))
+    encoded = dataset.get('deterministic')
     if encoded is None:
-        return True
-    fields = require_object(encoded, f'dataset.targets.{workload}.secondary')
-    return _boolean(fields.get('passed'), f'dataset.targets.{workload}.secondary.passed')
+        raise HarnessError(f'{workload}: missing secondary deterministic evidence; recollect the comparison dataset')
+    evidence = require_object(encoded, 'dataset.deterministic')
+    contract = require_object(evidence.get('budget_contract'), 'dataset.deterministic.budget_contract')
+    expected_digest = require_text(contract.get('sha256'), 'dataset.deterministic.budget_contract.sha256')
+    if len(expected_digest) != 64 or any(character not in '0123456789abcdef' for character in expected_digest):
+        raise HarnessError('dataset.deterministic.budget_contract.sha256: expected a lower-case SHA-256 digest')
+    _ = require_text(contract.get('path'), 'dataset.deterministic.budget_contract.path')
+    try:
+        actual_digest = hashlib.sha256(budget_file.read_bytes()).hexdigest()
+    except OSError as error:
+        raise HarnessError(f'{budget_file}: cannot read deterministic budget contract ({error})') from error
+    if actual_digest != expected_digest:
+        raise HarnessError(f'{workload}: deterministic budget contract digest differs from --budgets')
+    readings: dict[str, dict[str, object]] = {}
+    for side in ('base', 'head'):
+        side_evidence = require_object(evidence.get(side), f'dataset.deterministic.{side}')
+        _ = require_text(side_evidence.get('source_revision'), f'dataset.deterministic.{side}.source_revision')
+        readings[side] = require_object(side_evidence.get('readings'), f'dataset.deterministic.{side}.readings')
+    return gate.deterministic_verdicts(
+        workload, declared, readings['base'], readings['head'], budget_module.load(budget_file)
+    )
 
 
 def _absolute(
@@ -212,7 +245,9 @@ def _absolute(
     return overhead, ceiling, overhead <= ceiling
 
 
-def evaluate(dataset: dict[str, object], calibration: dict[str, object]) -> tuple[WorkloadVerdict, ...]:
+def evaluate(
+    dataset: dict[str, object], calibration: dict[str, object], budget_file: Path
+) -> tuple[WorkloadVerdict, ...]:
     """Evaluate all workloads from decoded comparison and calibration JSON."""
     seed = _seed(dataset)
     repetitions = _repetitions(dataset)
@@ -226,7 +261,7 @@ def evaluate(dataset: dict[str, object], calibration: dict[str, object]) -> tupl
         if eligible and allowance is None:
             raise HarnessError(f'{workload}: eligible calibration has no allowance; recalibrate the null evidence')
         direct, depin = _paired_medians(repetitions, workload, 'direct', 'depin')
-        secondary = _secondary(description, workload)
+        secondary = _secondary(description, dataset, workload, budget_file)
         overhead, ceiling, absolute = (
             _absolute(description, workload, depin, direct)
             if len(direct) >= MINIMUM_REPETITIONS
@@ -261,7 +296,7 @@ def evaluate(dataset: dict[str, object], calibration: dict[str, object]) -> tupl
                 status = Status.LOSS
             elif absolute is False:
                 status = Status.ABSOLUTE_FAILURE
-            elif not secondary:
+            elif not all(verdict.outcome is budget_module.Outcome.PASS for verdict in secondary):
                 status = Status.REGRESSION
         verdicts.append(
             WorkloadVerdict(workload, status, competitor, competitive, overhead, ceiling, absolute, secondary)
@@ -294,6 +329,7 @@ def _arguments(argv: Sequence[str] | None) -> argparse.Namespace:
     evaluation = commands.add_parser('evaluate')
     evaluation.add_argument('dataset')
     evaluation.add_argument('--calibration', required=True)
+    evaluation.add_argument('--budgets', required=True)
     return parser.parse_args(argv)
 
 
@@ -316,7 +352,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return EXIT_PASS
         dataset = read_json(_path(require_text(arguments.dataset, 'DATASET')))
         calibration = read_json(Path(require_text(arguments.calibration, '--calibration')))
-        verdicts = evaluate(dataset, calibration)
+        verdicts = evaluate(dataset, calibration, Path(require_text(arguments.budgets, '--budgets')))
         for verdict in verdicts:
             _ = sys.stdout.write(f'{verdict.status.value:<25} {verdict.workload}\n')
         return _exit(verdicts)

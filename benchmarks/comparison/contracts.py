@@ -78,3 +78,9 @@ class ComparativeWorkload:
     candidates: tuple[Candidate, ...]
     target: AbsoluteTarget | None
     secondary_metrics: tuple[Metric, ...] = ()
+
+    def __post_init__(self) -> None:
+        if Metric.LATENCY in self.secondary_metrics:
+            raise HarnessError(f'{self.workload.name}: latency cannot be a secondary deterministic metric')
+        if len(self.secondary_metrics) != len(set(self.secondary_metrics)):
+            raise HarnessError(f'{self.workload.name}: secondary deterministic metrics must not repeat')

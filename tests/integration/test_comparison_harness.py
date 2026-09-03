@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 
@@ -5,9 +6,12 @@ import pytest
 
 import benchmarks.harness.comparison as comparison
 import benchmarks.harness.leadership as leadership
-from benchmarks.harness import HarnessError, reduce, require_number, require_object
+from benchmarks.comparison import WORKLOADS as COMPARATIVE_WORKLOADS
+from benchmarks.contracts import Metric
+from benchmarks.harness import HarnessError, reduce, require_array, require_number, require_object
 
 EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
+BUDGETS = Path('benchmarks/budgets.toml')
 
 
 def _leadership_dataset(
@@ -16,7 +20,6 @@ def _leadership_dataset(
     direct: tuple[float, ...] = (0.4, 0.4, 0.4, 0.4, 0.4),
     competitors: dict[str, tuple[str, tuple[float, ...]]] | None = None,
     target: dict[str, float] | None = None,
-    secondary: bool = True,
     qualified: bool = True,
 ) -> dict[str, object]:
     candidates = competitors or {'wireup-2.12.0': ('equivalent', (1.0, 1.0, 1.0, 1.0, 1.0))}
@@ -48,7 +51,6 @@ def _leadership_dataset(
                     {'classification': classification, 'label': label, 'reason': 'synthetic'}
                     for label, (classification, _) in candidates.items()
                 ],
-                'secondary': {'passed': secondary},
                 'target': target or {'fixed_seconds': 1.0, 'fraction_of_direct': None},
             }
         },
@@ -57,6 +59,41 @@ def _leadership_dataset(
 
 def _calibration(*, allowance: float = 0.01, eligible: bool = True) -> dict[str, object]:
     return {'workloads': {'resolve': {'allowance': allowance, 'eligible': eligible, 'p99': allowance}}}
+
+
+def _deterministic_budget(path: Path) -> Path:
+    path.write_text(
+        """[[budget]]
+workload = "resolve"
+metric = "allocations"
+limit = 0.0
+noise = "low"
+justification = "deterministic"
+
+[[budget]]
+workload = "resolve"
+metric = "work"
+limit = 0.0
+noise = "low"
+justification = "deterministic"
+""",
+        encoding='utf-8',
+    )
+    return path
+
+
+def _allocation_evidence(budgets: Path, *, head_work: int = 12) -> dict[str, object]:
+    return {
+        'budget_contract': {'path': str(budgets), 'sha256': hashlib.sha256(budgets.read_bytes()).hexdigest()},
+        'base': {
+            'source_revision': 'base-revision',
+            'readings': {'allocations': {'resolve': {'blocks': 4, 'size': 320}}, 'work': {'resolve': 12}},
+        },
+        'head': {
+            'source_revision': 'head-revision',
+            'readings': {'allocations': {'resolve': {'blocks': 4, 'size': 320}}, 'work': {'resolve': head_work}},
+        },
+    }
 
 
 @pytest.mark.parametrize(
@@ -78,7 +115,6 @@ def _calibration(*, allowance: float = 0.01, eligible: bool = True) -> dict[str,
             _calibration(),
             'absolute-failure',
         ),
-        (_leadership_dataset(secondary=False), _calibration(), 'regression'),
         (_leadership_dataset(qualified=False), _calibration(), 'unstable'),
         (
             _leadership_dataset(competitors={'wireup-2.12.0': ('partial', (0.1,) * 5)}),
@@ -90,7 +126,7 @@ def _calibration(*, allowance: float = 0.01, eligible: bool = True) -> dict[str,
 def test_leadership_evaluates_each_workload_status(
     dataset: dict[str, object], calibration: dict[str, object], status: str
 ) -> None:
-    verdict = leadership.evaluate(dataset, calibration)[0]
+    verdict = leadership.evaluate(dataset, calibration, BUDGETS)[0]
 
     assert verdict.status.value == status
 
@@ -104,7 +140,7 @@ def test_leadership_selects_the_fastest_equivalent_and_excludes_partial_candidat
         }
     )
 
-    verdict = leadership.evaluate(dataset, _calibration())[0]
+    verdict = leadership.evaluate(dataset, _calibration(), BUDGETS)[0]
 
     assert verdict.competitor is not None
     assert verdict.competitor.label == 'fast-1'
@@ -114,7 +150,7 @@ def test_leadership_selects_the_fastest_equivalent_and_excludes_partial_candidat
 def test_leadership_uses_the_confidence_upper_bound_against_the_allowance() -> None:
     dataset = _leadership_dataset(depin=(1.01,) * 5)
 
-    verdict = leadership.evaluate(dataset, _calibration(allowance=0.005))[0]
+    verdict = leadership.evaluate(dataset, _calibration(allowance=0.005), BUDGETS)[0]
 
     assert verdict.status is leadership.Status.LOSS
     assert verdict.competitor is not None
@@ -124,7 +160,7 @@ def test_leadership_uses_the_confidence_upper_bound_against_the_allowance() -> N
 def test_leadership_direct_overhead_uses_the_lower_target_ceiling() -> None:
     dataset = _leadership_dataset(target={'fixed_seconds': 0.9, 'fraction_of_direct': 0.5})
 
-    verdict = leadership.evaluate(dataset, _calibration())[0]
+    verdict = leadership.evaluate(dataset, _calibration(), BUDGETS)[0]
 
     assert verdict.absolute_ceiling == 0.2
     assert verdict.absolute_overhead == 0.5
@@ -136,7 +172,7 @@ def test_leadership_marks_a_null_p99_above_five_percent_unstable_without_clampin
     null = _leadership_dataset(depin=(1.0, 1.0, 1.0, 1.0, 1.0), direct=(0.9, 1.1, 0.9, 1.1, 0.9))
 
     calibration = leadership.calibrate(null)
-    verdict = leadership.evaluate(dataset, calibration)[0]
+    verdict = leadership.evaluate(dataset, calibration, BUDGETS)[0]
 
     workloads = require_object(calibration['workloads'], 'calibration.workloads')
     resolve = require_object(workloads['resolve'], 'calibration.workloads.resolve')
@@ -161,7 +197,12 @@ def test_leadership_evaluate_cli_returns_the_documented_exit_status(
     dataset_path.write_text(json.dumps(dataset), encoding='utf-8')
     calibration_path.write_text(json.dumps(calibration), encoding='utf-8')
 
-    assert leadership.main(('evaluate', str(dataset_path), '--calibration', str(calibration_path))) == expected
+    assert (
+        leadership.main(
+            ('evaluate', str(dataset_path), '--calibration', str(calibration_path), '--budgets', str(BUDGETS))
+        )
+        == expected
+    )
 
 
 def test_leadership_cli_returns_two_for_malformed_input(tmp_path: Path) -> None:
@@ -169,6 +210,79 @@ def test_leadership_cli_returns_two_for_malformed_input(tmp_path: Path) -> None:
     malformed.write_text('{}', encoding='utf-8')
 
     assert leadership.main(('calibrate', str(malformed), '--out', str(tmp_path / 'calibration.json'))) == 2
+
+
+def test_leadership_refuses_a_required_secondary_metric_without_its_reading() -> None:
+    dataset = _leadership_dataset()
+    target = require_object(dataset['targets'], 'dataset.targets')['resolve']
+    description = require_object(target, 'dataset.targets.resolve')
+    description['secondary_metrics'] = ['allocations']
+
+    with pytest.raises(HarnessError, match='secondary'):
+        _ = leadership.evaluate(dataset, _calibration(), BUDGETS)
+
+
+def test_leadership_evaluates_all_outcomes_expanded_from_allocations(tmp_path: Path) -> None:
+    budgets = _deterministic_budget(tmp_path / 'budgets.toml')
+    dataset = _leadership_dataset()
+    description = require_object(require_object(dataset['targets'], 'targets')['resolve'], 'resolve')
+    description['secondary_metrics'] = ['allocations']
+    dataset['deterministic'] = _allocation_evidence(budgets)
+
+    verdict = leadership.evaluate(dataset, _calibration(), budgets)[0]
+
+    assert verdict.secondary_passed is True
+    assert [(outcome.metric, outcome.outcome.value) for outcome in verdict.secondary_verdicts] == [
+        ('allocations', 'pass'),
+        ('work', 'pass'),
+    ]
+
+
+def test_leadership_refuses_a_divergent_deterministic_budget_digest(tmp_path: Path) -> None:
+    budgets = _deterministic_budget(tmp_path / 'budgets.toml')
+    dataset = _leadership_dataset()
+    description = require_object(require_object(dataset['targets'], 'targets')['resolve'], 'resolve')
+    description['secondary_metrics'] = ['allocations']
+    evidence = _allocation_evidence(budgets)
+    require_object(evidence['budget_contract'], 'budget_contract')['sha256'] = '0' * 64
+    dataset['deterministic'] = evidence
+
+    with pytest.raises(HarnessError, match='digest'):
+        _ = leadership.evaluate(dataset, _calibration(), budgets)
+
+
+def test_leadership_fails_an_allocations_claim_when_the_expanded_work_outcome_grows(tmp_path: Path) -> None:
+    budgets = _deterministic_budget(tmp_path / 'budgets.toml')
+    dataset = _leadership_dataset()
+    description = require_object(require_object(dataset['targets'], 'targets')['resolve'], 'resolve')
+    description['secondary_metrics'] = ['allocations']
+    dataset['deterministic'] = _allocation_evidence(budgets, head_work=13)
+
+    verdict = leadership.evaluate(dataset, _calibration(), budgets)[0]
+
+    assert verdict.status is leadership.Status.REGRESSION
+    assert verdict.secondary_passed is False
+
+
+def test_comparison_descriptions_serialize_declared_secondary_metrics() -> None:
+    descriptions = comparison.descriptions()
+
+    assert set(descriptions) == {comparative.workload.name for comparative in COMPARATIVE_WORKLOADS}
+    assert all(
+        require_object(description, 'description').get('secondary_metrics') is not None
+        for description in descriptions.values()
+    )
+    assert {
+        name
+        for name, description in descriptions.items()
+        if require_array(
+            require_object(description, f'descriptions.{name}').get('secondary_metrics'), f'{name}.metrics'
+        )
+    } == {
+        comparative.workload.name
+        for comparative in COMPARATIVE_WORKLOADS
+        if comparative.workload.claim.metric is not Metric.LATENCY
+    }
 
 
 def _child(path: Path) -> Path:
@@ -231,7 +345,7 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
     monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
     monkeypatch.setattr(comparison, '_environment', lambda: {'host': 'synthetic'})
-    monkeypatch.setattr(comparison, '_descriptions', lambda: {'resolve': {'target': {'seconds': 0.1}}})
+    monkeypatch.setattr(comparison, 'descriptions', lambda: {'resolve': {'target': {'seconds': 0.1}}})
 
     dataset = comparison.collect(
         repetitions=5,
@@ -327,7 +441,7 @@ def test_dirty_collection_is_diagnostic_evidence_when_explicitly_allowed(
     monkeypatch.setattr(comparison, '_clean_tree', lambda: False)
     monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
     monkeypatch.setattr(comparison, '_environment', lambda: {'host': 'synthetic'})
-    monkeypatch.setattr(comparison, '_descriptions', lambda: dict[str, object]())
+    monkeypatch.setattr(comparison, 'descriptions', lambda: dict[str, object]())
 
     dataset = comparison.collect(
         repetitions=5, out=tmp_path / 'out', allow_dirty=True, command=(str(child), '{report}')

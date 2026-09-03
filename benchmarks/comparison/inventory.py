@@ -77,5 +77,11 @@ def build() -> tuple[ComparativeWorkload, ...]:
                     f'{workload.name}: {candidate.competitor.label} claims equivalence with a different observation; '
                     'classify it as partial or fix its implementation'
                 )
-        comparative.append(ComparativeWorkload(workload, candidates, targets.get(workload.name)))
+        secondary = {
+            Metric.LATENCY: (),
+            Metric.ALLOCATIONS: (Metric.ALLOCATIONS,),
+            Metric.RETAINED: (Metric.RETAINED,),
+            Metric.SCALING: (Metric.SCALING,),
+        }[workload.claim.metric]
+        comparative.append(ComparativeWorkload(workload, candidates, targets.get(workload.name), secondary))
     return tuple(comparative)

@@ -65,7 +65,7 @@ def _pins() -> dict[str, str]:
     return pins
 
 
-def _descriptions() -> dict[str, object]:
+def descriptions() -> dict[str, object]:
     from benchmarks.comparison.inventory import build
 
     descriptions: dict[str, object] = {}
@@ -79,6 +79,7 @@ def _descriptions() -> dict[str, object]:
             }
         descriptions[comparative.workload.name] = {
             'target': target,
+            'secondary_metrics': [metric.value for metric in comparative.secondary_metrics],
             'candidates': [
                 {
                     'classification': candidate.equivalence.value,
@@ -301,7 +302,7 @@ def collect(
         'pins': pins,
         'repetitions': repetitions_data,
         'source_revision': revision,
-        'targets': _descriptions(),
+        'targets': descriptions(),
     }
     _write_atomic(out / COMPARISON_FILE, dataset)
     return dataset
