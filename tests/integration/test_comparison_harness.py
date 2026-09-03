@@ -14,7 +14,7 @@ from benchmarks.harness import HarnessError, reduce, require_array, require_numb
 
 EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
 BUDGETS = Path('benchmarks/budgets.toml')
-REAL_DETERMINISTIC = comparison.deterministic
+REAL_DETERMINISTIC = comparison.collect_deterministic
 
 
 @pytest.fixture(autouse=True)
@@ -26,7 +26,7 @@ def deterministic_children(monkeypatch: pytest.MonkeyPatch) -> None:
         return {}
 
     monkeypatch.setattr(comparison, '_baseline_preflight', baseline)
-    monkeypatch.setattr(comparison, '_deterministic', deterministic)
+    monkeypatch.setattr(comparison, 'collect_deterministic', deterministic)
 
 
 def _collect(

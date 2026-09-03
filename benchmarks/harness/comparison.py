@@ -241,7 +241,7 @@ def _run(
     return reduce.load(report)
 
 
-def _deterministic(directory: Path, report: Path, *, side: str, timeout_seconds: float) -> dict[str, object]:
+def collect_deterministic(directory: Path, report: Path, *, side: str, timeout_seconds: float) -> dict[str, object]:
     argv = [sys.executable, *(part.replace('{report}', str(report)) for part in DETERMINISTIC_COMMAND)]
     environment = os.environ | {'PYTHONHASHSEED': memory.HASH_SEED, 'PYTHONPATH': str(directory)}
     try:
@@ -259,9 +259,6 @@ def _deterministic(directory: Path, report: Path, *, side: str, timeout_seconds:
             f'{completed.stdout}{completed.stderr}'
         )
     return read_json(report)
-
-
-deterministic = _deterministic
 
 
 def _write_atomic(path: Path, payload: dict[str, object]) -> None:
@@ -346,7 +343,7 @@ def collect(
         if remaining <= 0.0:
             raise HarnessError(f'{side} deterministic child reached the total collection deadline before spawn')
         with tempfile.TemporaryDirectory(dir=scratch_parent, prefix=f'.{out.name}-{side}-') as scratch:
-            readings = _deterministic(
+            readings = collect_deterministic(
                 directory, Path(scratch) / 'deterministic.json', side=side, timeout_seconds=remaining
             )
         deterministic[side] = {'source_revision': source_revision, 'readings': readings}
