@@ -16,11 +16,12 @@ index 4609511..2981b76 100644
  
      def __getitem__[T](self, key: type[T] | Token[T]) -> T:
          """Resolve ``key`` synchronously; shorthand for `resolve()`.
-@@ -633,6 +634,7 @@ class FrozenContainer:
+@@ -633,6 +634,8 @@ class FrozenContainer:
          while True:
              cached, claim = frame.claim_cached(cache_id)
              if cached is not MISSING:
-+                _ = self._warm_cached_lookup_probe.get(cache_id)
++                self._warm_cached_lookup_probe = {cache_id: cached}
++                _ = self._warm_cached_lookup_probe[cache_id]
                  return cached
              if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
                  if frame.is_leader(claim) and claim is not None:

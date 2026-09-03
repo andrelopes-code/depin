@@ -1180,15 +1180,14 @@ def test_the_calibration_command_reports_a_collection_it_cannot_read(
 
 def test_competitive_cached_lookup_seed_applies_only_to_the_cached_resolution_path() -> None:
     patch = ROOT / 'benchmarks' / 'seeds' / 'competitive-cached-lookup.patch'
+    rendered = patch.read_text(encoding='utf-8')
 
     checked = subprocess.run(
         ('git', 'apply', '--check', str(patch)), cwd=ROOT, capture_output=True, text=True, check=False
     )
 
     assert checked.returncode == 0, checked.stderr
-    changed = [
-        line.removeprefix('+++ b/')
-        for line in patch.read_text(encoding='utf-8').splitlines()
-        if line.startswith('+++ b/')
-    ]
+    changed = [line.removeprefix('+++ b/') for line in rendered.splitlines() if line.startswith('+++ b/')]
     assert changed == ['depin/_core/frozen.py']
+    assert '+                self._warm_cached_lookup_probe = {cache_id: cached}' in rendered
+    assert '+                _ = self._warm_cached_lookup_probe[cache_id]' in rendered
