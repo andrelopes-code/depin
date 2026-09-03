@@ -514,7 +514,7 @@ def test_deterministic_child_forwards_its_timeout_and_names_the_failed_side(
         observed.append(timeout)
         raise subprocess.TimeoutExpired(argv, timeout, output='child-output', stderr='child-error')
 
-    monkeypatch.setattr(comparison.subprocess, 'run', run)
+    monkeypatch.setattr(subprocess, 'run', run)
 
     with pytest.raises(HarnessError, match=r'(?s)base deterministic child timed out.*child-output'):
         _ = REAL_DETERMINISTIC(tmp_path, tmp_path / 'report.json', side='base', timeout_seconds=0.125)
