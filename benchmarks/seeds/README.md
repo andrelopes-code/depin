@@ -56,3 +56,12 @@ above the calibrated 2.0% allowance.
 The temporary clone commands were `git apply benchmarks/seeds/competitive-cached-lookup.patch`,
 the focused `benchmarks.harness.comparison collect --workload resolve_cached_singleton`
 command with five repetitions, and `git revert 81dff6a09dca2819d3903216b7df9f65485ff551`.
+
+The seeded collector command was
+`timeout 1260s python -m benchmarks.harness.comparison collect --workload resolve_cached_singleton --repetitions 5 --timeout-seconds 1200 --out /tmp/tmp.2VTkNB1dtZ/seed-result-2 --baseline-dir /tmp/tmp.UlAiP8fmyT/baseline --baseline-revision 4ad63e77bd21eefab15f1dde44c7e62460533da7 --budgets benchmarks/budgets.toml` (exit 0).
+Its evaluator command was `timeout 120s python -m benchmarks.harness.leadership evaluate /tmp/tmp.2VTkNB1dtZ/seed-result-2/comparison.json --calibration /tmp/tmp.UlAiP8fmyT/calibration.json --budgets benchmarks/budgets.toml` (exit 3 because focused evidence omits other targets; cached verdict `loss`).
+After removal, the same collector with `--out /tmp/tmp.2VTkNB1dtZ/seed-removed-result`
+exited 0; its evaluator command, with that dataset path, exited 3 and restored the
+cached verdict to the original unseeded `loss`. The seeded category is also `loss`
+because competitive loss has precedence; the restoration proof is the >2% median
+and ratio reduction, not a nonexistent categorical transition.

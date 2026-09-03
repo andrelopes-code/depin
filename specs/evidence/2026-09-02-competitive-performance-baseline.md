@@ -13,7 +13,7 @@ object records all five installed distributions and their exact versions.
 
 The evaluator found losses for warm cached singleton lookup, transient-chain
 resolution, and scope open/close. The compiled-resolution runtime proposal owns
-the first two; the optional native-accelerator proposal is a later alternative.
+all three core gaps; the optional native-accelerator proposal is a later alternative.
 The FastAPI minimum-overhead proposal owns the FastAPI residuals. Singleton cold
 construction also failed its absolute target and belongs to compiled resolution.
 There is no aggregate performance claim.
