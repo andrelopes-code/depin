@@ -1,0 +1,5 @@
+{
+  "workloads": {
+    "allocations_of_a_cached_singleton_resolution": {"allowance": 0.01, "eligible": true, "p99": 0.01}
+  }
+}

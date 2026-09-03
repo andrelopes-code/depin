@@ -1,0 +1,51 @@
+{
+  "accepted": true,
+  "deterministic": {
+    "base": {
+      "readings": {
+        "allocations": {
+          "allocations_of_a_cached_singleton_resolution": {"blocks": 4, "size": 320}
+        },
+        "work": {"allocations_of_a_cached_singleton_resolution": 12}
+      },
+      "source_revision": "base-revision"
+    },
+    "budget_contract": {
+      "path": "benchmarks/budgets.toml",
+      "sha256": "8142bcee8b717d86184c7c6daff05d5b521a26d0850d0d6f94c848d08cd17a6b"
+    },
+    "head": {
+      "readings": {
+        "allocations": {
+          "allocations_of_a_cached_singleton_resolution": {"blocks": 4, "size": 320}
+        },
+        "work": {"allocations_of_a_cached_singleton_resolution": 12}
+      },
+      "source_revision": "head-revision"
+    }
+  },
+  "environment": {"host": "synthetic-host", "python": "3.12.0"},
+  "harness_revision": "harness-revision",
+  "pins": {"dependency-injector": "4.49.1", "pydepin": "0.17.1"},
+  "repetitions": [
+    {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}},
+    {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}},
+    {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}},
+    {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}},
+    {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}}
+  ],
+  "seed": 17,
+  "source_revision": "head-revision",
+  "targets": {
+    "allocations_of_a_cached_singleton_resolution": {
+      "claim": "A cached singleton resolution allocates no additional Python objects.",
+      "candidates": [
+        {"classification": "equivalent", "label": "dependency-injector-4.49.1", "reason": "same observed cached resolution"},
+        {"classification": "partial", "label": "dishka-1.10.1", "reason": "does not preserve the complete observation"},
+        {"classification": "incomparable", "label": "wireup-2.12.0", "reason": "cannot express this cache lifecycle"}
+      ],
+      "secondary_metrics": ["allocations"],
+      "target": {"fixed_seconds": 1.0, "fraction_of_direct": null}
+    }
+  }
+}

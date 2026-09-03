@@ -79,7 +79,7 @@ def _finite_positive(value: object, where: str) -> float:
     return number
 
 
-def _seed(dataset: dict[str, object]) -> int:
+def seed(dataset: dict[str, object]) -> int:
     value = require_number(dataset.get('seed'), 'dataset.seed')
     if not value.is_integer():
         raise HarnessError(f'dataset.seed: expected an integer, found {value!r}')
@@ -93,14 +93,14 @@ def _accepted(dataset: dict[str, object]) -> None:
         )
 
 
-def _workloads(dataset: dict[str, object]) -> dict[str, dict[str, object]]:
+def workloads(dataset: dict[str, object]) -> dict[str, dict[str, object]]:
     targets = require_object(dataset.get('targets'), 'dataset.targets')
     if not targets:
         raise HarnessError('dataset.targets: no workload descriptions; recollect the comparison dataset')
     return {name: require_object(value, f'dataset.targets.{name}') for name, value in targets.items()}
 
 
-def _repetitions(dataset: dict[str, object]) -> list[dict[str, object]]:
+def repetitions(dataset: dict[str, object]) -> list[dict[str, object]]:
     repetitions = require_array(dataset.get('repetitions'), 'dataset.repetitions')
     if len(repetitions) < MINIMUM_REPETITIONS:
         raise HarnessError(
@@ -127,7 +127,7 @@ def _qualified(sample: dict[str, object], where: str) -> float | None:
     return median if rounds >= 1000.0 or mean * rounds >= 0.5 else None
 
 
-def _paired_medians(
+def paired_medians(
     repetitions: Sequence[dict[str, object]], workload: str, base: str, head: str
 ) -> tuple[list[float], list[float]]:
     before: list[float] = []
@@ -145,7 +145,7 @@ def _paired_medians(
     return before, after
 
 
-def _calibration_entry(value: object, workload: str) -> tuple[float | None, bool]:
+def calibration_entry(value: object, workload: str) -> tuple[float | None, bool]:
     fields = require_object(value, f'calibration.workloads.{workload}')
     eligible = _boolean(fields.get('eligible'), f'calibration.workloads.{workload}.eligible')
     p99_value = fields.get('p99')
@@ -171,15 +171,15 @@ def _calibration_entry(value: object, workload: str) -> tuple[float | None, bool
 def calibrate(dataset: dict[str, object]) -> dict[str, object]:
     """Derive deterministic per-workload allowances from a null comparison dataset."""
     _accepted(dataset)
-    seed = _seed(dataset)
-    repetitions = _repetitions(dataset)
+    random_seed = seed(dataset)
+    collected = repetitions(dataset)
     calibrated: dict[str, object] = {}
-    for workload in sorted(_workloads(dataset)):
-        direct, depin = _paired_medians(repetitions, workload, 'direct', 'depin')
+    for workload in sorted(workloads(dataset)):
+        direct, depin = paired_medians(collected, workload, 'direct', 'depin')
         if len(direct) < MINIMUM_REPETITIONS:
             calibrated[workload] = {'allowance': None, 'eligible': False, 'p99': None}
             continue
-        distribution = stats.bootstrap_paired_log_ratios(direct, depin, seed=seed)
+        distribution = stats.bootstrap_paired_log_ratios(direct, depin, seed=random_seed)
         p99 = quantile(sorted(abs(math.expm1(value)) for value in distribution), 0.99)
         allowance = math.ceil(p99 / CALIBRATION_INCREMENT) * CALIBRATION_INCREMENT
         calibrated[workload] = {'allowance': allowance, 'eligible': allowance <= MAXIMUM_ALLOWANCE, 'p99': p99}
@@ -273,18 +273,18 @@ def evaluate(
 ) -> tuple[WorkloadVerdict, ...]:
     """Evaluate all workloads from decoded comparison and calibration JSON."""
     _accepted(dataset)
-    seed = _seed(dataset)
-    repetitions = _repetitions(dataset)
+    random_seed = seed(dataset)
+    collected = repetitions(dataset)
     calibration_entries = require_object(calibration.get('workloads'), 'calibration.workloads')
     verdicts: list[WorkloadVerdict] = []
-    for workload, description in sorted(_workloads(dataset).items()):
+    for workload, description in sorted(workloads(dataset).items()):
         calibration_value = calibration_entries.get(workload)
         if calibration_value is None:
             raise HarnessError(f'{workload}: calibration is missing; run calibrate against a null collection')
-        allowance, eligible = _calibration_entry(calibration_value, workload)
+        allowance, eligible = calibration_entry(calibration_value, workload)
         if eligible and allowance is None:
             raise HarnessError(f'{workload}: eligible calibration has no allowance; recalibrate the null evidence')
-        direct, depin = _paired_medians(repetitions, workload, 'direct', 'depin')
+        direct, depin = paired_medians(collected, workload, 'direct', 'depin')
         secondary = _secondary(description, dataset, workload, budget_file)
         overhead, ceiling, absolute = (
             _absolute(description, workload, depin, direct)
@@ -297,10 +297,10 @@ def evaluate(
         if eligible and allowance is not None and len(depin) >= MINIMUM_REPETITIONS and equivalents:
             measured: list[tuple[float, str, stats.Paired]] = []
             for label, _ in equivalents:
-                candidate, subject = _paired_medians(repetitions, workload, label, 'depin')
+                candidate, subject = paired_medians(collected, workload, label, 'depin')
                 if len(candidate) < MINIMUM_REPETITIONS or len(subject) < MINIMUM_REPETITIONS:
                     continue
-                paired = stats.paired_ratio(candidate, subject, seed=seed)
+                paired = stats.paired_ratio(candidate, subject, seed=random_seed)
                 measured.append((statistics.median(candidate), label, paired))
             if len(measured) != len(equivalents):
                 status = Status.UNSTABLE
