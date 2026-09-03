@@ -1,0 +1,26 @@
+diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
+index 4609511..2981b76 100644
+--- a/depin/_core/frozen.py
++++ b/depin/_core/frozen.py
+@@ -68,11 +68,12 @@ class FrozenContainer:
+         ```
+     """
+ 
+-    __slots__ = ('_plan', '_root')
++    __slots__ = ('_plan', '_root', '_warm_cached_lookup_probe')
+ 
+     def __init__(self, plan: ResolutionPlan) -> None:
+         self._plan = plan
+         self._root = ScopeFrame()
++        self._warm_cached_lookup_probe: dict[object, object] = {}
+ 
+     def __getitem__[T](self, key: type[T] | Token[T]) -> T:
+         """Resolve ``key`` synchronously; shorthand for `resolve()`.
+@@ -633,6 +634,7 @@ class FrozenContainer:
+         while True:
+             cached, claim = frame.claim_cached(cache_id)
+             if cached is not MISSING:
++                _ = self._warm_cached_lookup_probe.get(cache_id)
+                 return cached
+             if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
+                 if frame.is_leader(claim) and claim is not None:
