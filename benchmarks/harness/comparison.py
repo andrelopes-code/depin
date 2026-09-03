@@ -96,12 +96,19 @@ def descriptions() -> dict[str, object]:
     return descriptions
 
 
-def expected_ids(*, null: bool = False) -> set[str]:
+def expected_ids(*, null: bool = False, focus: Sequence[str] = ()) -> set[str]:
     from benchmarks.comparison.inventory import build
 
     expected: set[str] = set()
+    selected = set(focus)
+    available = {comparative.workload.name for comparative in build()}
+    unknown = sorted(selected - available)
+    if unknown:
+        raise HarnessError(f'{unknown[0]}: focused workload is not in the comparison inventory')
     for comparative in build():
         workload = comparative.workload
+        if selected and workload.name not in selected:
+            continue
         expected.add(f'{workload.name}-{workload.subject.label}')
         if workload.baseline is not None:
             expected.add(f'{workload.name}-{workload.baseline.label}')
@@ -237,8 +244,11 @@ def _run(
     timeout_seconds: int | float,
     expected: set[str],
     null: bool = False,
+    focus: Sequence[str] = (),
 ) -> dict[str, reduce.Aggregate]:
     argv = [sys.executable, *(part.replace(REPORT_PLACEHOLDER, str(report)) for part in command)]
+    if focus:
+        argv.extend(('-k', ' or '.join(focus)))
     child = os.environ | {
         'DEPIN_COMPARISON_ORDER': order,
         'DEPIN_COMPARISON_NULL': '1' if null else '0',
@@ -307,6 +317,7 @@ def collect(
     baseline_revision: str,
     budgets: Path,
     null: bool = False,
+    focus: Sequence[str] = (),
     allow_dirty: bool = False,
     command: Sequence[str] = COMMAND,
     timeout_seconds: int | float = DEFAULT_TIMEOUT_SECONDS,
@@ -323,7 +334,7 @@ def collect(
         budget_digest = hashlib.sha256(budgets.read_bytes()).hexdigest()
     except OSError as error:
         raise HarnessError(f'{budgets}: cannot read deterministic budget contract ({error})') from error
-    expected = expected_ids(null=True) if null else expected_ids()
+    expected = expected_ids(null=null, focus=focus)
     repetitions_data: list[dict[str, object]] = []
     scratch_parent = out.parent
     scratch_parent.mkdir(parents=True, exist_ok=True)
@@ -345,6 +356,7 @@ def collect(
                     timeout_seconds=remaining,
                     expected=expected,
                     null=True,
+                    focus=focus,
                 )
             else:
                 aggregates = _run(
@@ -354,6 +366,7 @@ def collect(
                     repetition=index,
                     timeout_seconds=remaining,
                     expected=expected,
+                    focus=focus,
                 )
         medians = {name: aggregate.median for name, aggregate in sorted(aggregates.items())}
         rounds = {name: aggregate.rounds for name, aggregate in sorted(aggregates.items())}
@@ -407,6 +420,7 @@ def _arguments(argv: Sequence[str] | None) -> dict[str, object]:
     parser.add_argument('--budgets', required=True)
     parser.add_argument('--allow-dirty', action='store_true')
     parser.add_argument('--null', action='store_true')
+    parser.add_argument('--workload', action='append', default=[])
     parser.add_argument('--timeout-seconds', type=int, default=DEFAULT_TIMEOUT_SECONDS)
     parsed = parser.parse_args(argv)
     return vars(parsed)
@@ -422,6 +436,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             baseline_revision=require_text(chosen['baseline_revision'], '--baseline-revision'),
             budgets=Path(require_text(chosen['budgets'], '--budgets')),
             null=bool(chosen['null']),
+            focus=tuple(require_text(value, '--workload') for value in require_array(chosen['workload'], '--workload')),
             allow_dirty=bool(chosen['allow_dirty']),
             timeout_seconds=require_integer(chosen['timeout_seconds'], '--timeout-seconds'),
         )

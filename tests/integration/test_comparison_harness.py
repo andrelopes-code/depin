@@ -73,6 +73,19 @@ def test_null_collection_expects_only_direct_and_depin_report_ids() -> None:
     assert comparison.expected_ids(null=True) < comparison.expected_ids()
 
 
+def test_focused_collection_limits_the_expected_matrix_to_one_declared_workload() -> None:
+    expected = {
+        'resolve_cached_singleton-depin',
+        'resolve_cached_singleton-direct',
+        'resolve_cached_singleton-dependency-injector-4.49.1',
+        'resolve_cached_singleton-dishka-1.10.1',
+        'resolve_cached_singleton-wireup-2.12.0',
+        'resolve_cached_singleton-svcs-26.1.0',
+    }
+
+    assert comparison.expected_ids(focus=('resolve_cached_singleton',)) == expected
+
+
 def test_collection_cli_passes_an_explicit_null_mode_to_the_collector(monkeypatch: pytest.MonkeyPatch) -> None:
     collected: list[bool] = []
 
@@ -84,11 +97,12 @@ def test_collection_cli_passes_an_explicit_null_mode_to_the_collector(monkeypatc
         baseline_revision: str,
         budgets: Path,
         null: bool = False,
+        focus: Sequence[str] = (),
         allow_dirty: bool = False,
         command: Sequence[str] = comparison.COMMAND,
         timeout_seconds: int | float = comparison.DEFAULT_TIMEOUT_SECONDS,
     ) -> dict[str, object]:
-        _ = repetitions, out, baseline_dir, baseline_revision, budgets, allow_dirty, command, timeout_seconds
+        _ = repetitions, out, baseline_dir, baseline_revision, budgets, focus, allow_dirty, command, timeout_seconds
         collected.append(null)
         return {}
 
