@@ -119,8 +119,19 @@ No native-only provider shape or reduced-semantics fast mode is allowed.
 
 ## Performance adoption threshold
 
-The experiment runs against the optimized Python engine, direct Python, and the
-current eligible competitors. Native adoption requires all of the following:
+Before native implementation proceeds beyond a bounded feasibility spike, the
+optimized Python profile must attribute a material residual to work that can stay
+inside the native execution-program boundary. The attribution separates
+interpreter dispatch, reference-counting and argument assembly from Python
+provider execution and framework overhead. If provider calls, application code,
+or Python/native crossings dominate, the experiment closes without building a
+larger native engine.
+
+The experiment publishes one decision table over identical workload contracts
+and environments. It compares the original Python interpreter, the selected
+optimized Python engine, the native prototype when the residual justifies one,
+direct Python, and the current eligible competitors. Native adoption requires all
+of the following:
 
 - at least a 30% reduction in incremental core time on two recurring workloads,
   one of which constructs a multi-provider graph;
@@ -244,7 +255,10 @@ maintenance needs a deliberately high adoption threshold.
 - an installed-wheel Rust prototype and pure-Python fallback;
 - differential correctness, concurrency, leak, and failure evidence;
 - accepted core and application performance datasets; and
-- a written adopt-or-close decision against the thresholds above.
+- a current-Python versus optimized-Python versus native decision table with
+  percentage changes, boundary attribution, and maintenance cost; and
+- a written recommendation to keep the optimized pure-Python engine, ship the
+  optional native accelerator, or close native work without adoption.
 
 ## Primary references
 

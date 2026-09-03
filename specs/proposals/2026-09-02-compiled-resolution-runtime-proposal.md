@@ -86,6 +86,14 @@ For every resolvable key, the executable representation fixes:
 - teardown registration behavior; and
 - the stable dependency-chain metadata required for errors.
 
+The selection experiment includes a dense private provider-ID representation as
+either a shared representation or a controlled sub-variant. `freeze()` assigns
+integer IDs and cache slots, and the recurring path reads immutable tuple- or
+array-backed tables instead of resolving `(key, tag)` pairs again. The IDs remain
+private: diagnostics, errors, and the public API continue to use the original
+typed keys. The experiment must measure this layout against a keyed control
+rather than assuming integer indexing is faster.
+
 Public diagnostics never reverse-engineer generated code. They continue to read
 the validated declarative plan.
 
@@ -98,15 +106,37 @@ the same immutable execution model:
 2. provider-specific closure composition; and
 3. an iterative typed instruction program.
 
-The experiment measures warm hits, transient chains, scoped DAGs, async
-providers, active overrides, startup cost, memory, traceback quality, and cold
-depth. Generated source is acceptable only when it contains fixed project-owned
+Every prototype is compared with the current interpreter, direct Python, and the
+eligible competitors under the accepted equivalence contracts. The experiment
+matrix includes:
+
+- warm and cold singleton resolution;
+- transient chains at multiple depths and fan-out/shared DAGs;
+- collections of 10 and 100 providers;
+- empty, light, and resource-owning scope entry and exit;
+- inactive and active overrides;
+- positional and keyword parameter resolution;
+- synchronous and asynchronous providers; and
+- startup cost, traceback quality, and cold depth.
+
+Each row records latency, Python-call count and call-graph attribution,
+allocations per resolution, peak and retained memory, freeze-time cost, and the
+size of the executable representation per provider. Allocation evidence must
+identify temporary argument dictionaries and other per-node objects; a prototype
+may retain them only where Python call semantics require them and the measured
+trade-off is accepted. Diagnostic call or allocation reductions do not substitute
+for latency, absolute-overhead, or application evidence.
+
+Generated source is acceptable only when it contains fixed project-owned
 templates and refers to user objects through a namespace; user names and reprs
 must never be interpolated as executable text.
 
 The fastest strategy that passes all correctness and maintainability gates wins.
 A hybrid is allowed when, for example, a compact iterative program solves deep
 graphs while a generated leaf resolver produces a materially faster cache hit.
+Before selection, the representative FastAPI application workloads must also
+remain within their existing regression budgets. A core strategy is not accepted
+solely because it wins isolated microbenchmarks.
 
 ### Fast path and override path
 
@@ -196,6 +226,11 @@ behavioral implementation.
 - No required core workload regresses beyond its existing budget.
 - Startup and memory costs remain within newly declared budgets justified by the
   selected compiler strategy.
+- The selected strategy publishes a current-interpreter versus optimized-Python
+  table covering latency, Python calls, allocations, retained memory, freeze cost,
+  and executable size for the required experiment matrix.
+- Representative FastAPI application workloads do not regress beyond their
+  calibrated budgets.
 - All current observable construction, override, concurrency, cancellation,
   teardown, and error contracts pass differential tests.
 - Core still has zero runtime dependencies and all supported installations have a

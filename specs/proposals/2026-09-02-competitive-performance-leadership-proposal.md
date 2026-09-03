@@ -150,8 +150,12 @@ The leadership suite covers:
 - concurrent first use, concurrent scope use, and free-threaded execution where
   the interpreter supports it;
 - memory, allocations, scaling, and the maximum supported cold depth.
+- Python-call count and call-graph attribution for runtime-strategy diagnosis.
 
 Direct Python remains mandatory beside every accepted comparison.
+Python-call counts are diagnostic evidence, not a leadership metric. Reducing
+calls cannot replace competitive latency, absolute overhead, secondary budgets,
+or representative application results.
 
 ### Statistical decision
 
