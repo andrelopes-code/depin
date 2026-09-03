@@ -437,19 +437,26 @@ class FrozenContainer:
     @overload
     def inject[**P, R](self, fn: Callable[P, R]) -> Callable[P, R]: ...
     def inject(self, fn: Callable[..., object]) -> Callable[..., object]:
-        """Wrap a function so parameters defaulting to ``injected(...)`` are filled.
+        """Wrap a function so parameters defaulting to ``injected`` are filled.
 
         Returns a wrapper that, on each call, resolves every parameter whose
-        default is `injected()` and leaves the rest to the caller.
+        default is `injected` and leaves the rest to the caller. The key comes
+        from the parameter's annotation, in the same grammar a provider's
+        parameters use: a class, ``Annotated[T, Tag(...)]``,
+        ``Annotated[T, Named(...)]``, or ``T | None`` for a dependency that may
+        be absent, which is filled with ``None`` when nothing provides it.
         Already-supplied arguments are never overridden, so an injected parameter
         can still be passed explicitly (handy in tests). The wrapper preserves the
         sync/async nature of ``fn``. Injected keys are validated at decoration
         time, not call time: decorating raises immediately if a marked key is
-        unregistered. Because the markers sit in default position, injected
+        unregistered. Because the marker sits in default position, injected
         parameters must follow non-default ones or be keyword-only.
 
         Raises:
-            MissingProviderError: A parameter requests an unregistered key.
+            InvalidProviderError: A marked parameter carries no annotation, or
+                one whose names do not resolve.
+            MissingProviderError: A parameter requests an unregistered key and
+                its annotation does not admit ``None``.
 
         Example:
             ```pycon
@@ -459,7 +466,7 @@ class FrozenContainer:
             ...         return 3
             >>> di = Container().bind(Repo).freeze()
             >>> @di.inject
-            ... def handler(label: str, repo: Repo = injected(Repo)) -> str:
+            ... def handler(label: str, repo: Repo = injected) -> str:
             ...     return f'{label}={repo.count()}'
             >>> handler(label='n')
             'n=3'
@@ -467,7 +474,7 @@ class FrozenContainer:
             ```
         """
         sig = inspect.signature(fn)
-        injectables = injection.collect(sig, self._is_registered)
+        injectables = injection.collect(fn, sig, self._is_registered)
         return injection.wrap(fn, sig, injectables, self._resolve_any, self._aresolve_any)
 
     @contextlib.contextmanager

@@ -1,4 +1,3 @@
-import dataclasses
 import typing
 from collections.abc import Callable
 
@@ -78,28 +77,8 @@ def test_get_provides_returns_none_when_absent() -> None:
     assert get_provides(Plain) is None
 
 
-def test_injected_returns_marker_with_class_key() -> None:
-    class Svc: ...
-
-    marker = injected(Svc)
-    assert is_inject_marker(marker)
-    assert marker.key is Svc
-    assert marker.tag is None
-
-
-def test_injected_carries_tag() -> None:
-    class Svc: ...
-
-    result = injected(Svc, tag='primary')
-    assert is_inject_marker(result)
-    assert result.tag == 'primary'
-
-
-def test_injected_accepts_token_key() -> None:
-    tok = Token[str]('db.url')
-    result = injected(tok)
-    assert is_inject_marker(result)
-    assert result.key == tok
+def test_injected_is_a_marker() -> None:
+    assert is_inject_marker(injected)
 
 
 def test_is_inject_marker_false_for_other_values() -> None:
@@ -107,35 +86,25 @@ def test_is_inject_marker_false_for_other_values() -> None:
     assert not is_inject_marker(object())
 
 
-def test_inject_marker_leaked_value_raises_clear_error() -> None:
-    marker = injected(object)
-    assert is_inject_marker(marker)
-    with pytest.raises(DepinError, match='injection marker'):
-        _ = marker.connection
+def test_injected_repr_names_the_public_symbol() -> None:
+    assert repr(injected) == 'depin.injected'
 
 
-def test_inject_marker_dunder_access_falls_through() -> None:
-    marker = injected(object)
-    assert is_inject_marker(marker)
+def test_injected_called_reports_the_marker_is_not_a_function() -> None:
+    class Svc: ...
+
+    with pytest.raises(DepinError, match='not a function'):
+        injected(Svc, tag='primary')
+
+
+def test_injected_leaked_value_raises_clear_error() -> None:
+    with pytest.raises(DepinError, match='accessed as a value'):
+        _ = injected.connection
+
+
+def test_injected_dunder_access_falls_through() -> None:
     with pytest.raises(AttributeError, match='__wrapped__'):
-        _ = marker.__wrapped__
-
-
-def test_injected_token_with_tag() -> None:
-    tok = Token[int]('n')
-    marker = injected(tok, tag='primary')
-    assert is_inject_marker(marker)
-    assert marker.key == tok
-    assert marker.tag == 'primary'
-
-
-def test_inject_marker_is_frozen() -> None:
-    marker = injected(object)
-    # Indirect attribute name: a direct `marker.tag = ...` is a static error on a
-    # frozen dataclass, and setattr with a literal name trips ruff B010.
-    field = 'tag'
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        setattr(marker, field, 'mutated')
+        _ = injected.__wrapped__
 
 
 def test_provides_returns_the_decorated_class_unchanged() -> None:

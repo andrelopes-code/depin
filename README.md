@@ -32,7 +32,7 @@ Type-first dependency injection for Python 3.12+.
   scope per CLI invocation, built on the framework-free `depin.ext.cli` seam any
   other command framework can drive, and one scope per Taskiq message seeded
   with the `TaskiqMessage` being executed.
-- No `# type: ignore` at call sites: `resolve()`, `frozen[key]`, `injected()`,
+- No `# type: ignore` at call sites: `resolve()`, `frozen[key]`, `injected`,
   and `Inject[T]` are all precisely typed under `basedpyright --strict` and
   `mypy --strict`.
 
@@ -148,12 +148,12 @@ suite.
   `frame.provide(Request, request)`.
 - **Overrides** for tests: `with di.override(Database, FakeDB()): ...`.
 - **Function injection** with `@di.inject`: parameters whose default is
-  `injected(...)` are filled from the container, the rest are passed by the
+  `injected` are filled from the container, the rest are passed by the
   caller:
 
   ```python
   @di.inject
-  def handler(uid: int, repo: UserRepo = injected(UserRepo)) -> User:
+  def handler(uid: int, repo: UserRepo = injected) -> User:
       return repo.get(uid)
 
 
@@ -201,10 +201,11 @@ Full walkthrough: [FastAPI guide](https://andrelopes-code.github.io/depin/latest
   replaces the key immediately, even for a singleton already built — but a
   consumer resolved earlier keeps the instance it was given. Call `reset()` to
   evict it, or use the `depin.ext.pytest` fixtures, which call `reset()` for you.
-- **`@di.inject` uses default-position markers.** An injected parameter carries
-  an `injected(...)` default, so it must follow non-default parameters or be
-  keyword-only (a normal Python rule). Unlike provider constructors, which
-  resolve from type hints and `Annotated[...]`, `@inject` fills *only* marked
+- **`@di.inject` uses a default-position marker.** An injected parameter carries
+  the `injected` default, so it must follow non-default parameters or be
+  keyword-only (a normal Python rule). The key comes from the annotation, in the
+  same grammar provider constructors use — a class, `Annotated[T, Tag(...)]`,
+  `Annotated[T, Named(...)]`, `T | None`. `@inject` fills *only* marked
   parameters and validates them at decoration time, raising
   `MissingProviderError` immediately if a marked key is unregistered.
 

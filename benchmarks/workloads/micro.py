@@ -498,7 +498,7 @@ def _call_through_an_inject_wrapper() -> Workload:
         frozen = Container().bind(Repo).freeze()
 
         @frozen.inject
-        def handler(repo: Repo = injected(Repo)) -> int:
+        def handler(repo: Repo = injected) -> int:
             return repo.count()
 
         _ = handler()
@@ -944,7 +944,7 @@ def _call_through_an_inject_wrapper_with_explicit_arguments() -> Workload:
         frozen = Container().bind(Repo).freeze()
 
         @frozen.inject
-        def handler(offset: int, repo: Repo = injected(Repo)) -> int:
+        def handler(offset: int, repo: Repo = injected) -> int:
             return repo.count() + offset
 
         _ = handler(1)

@@ -1,7 +1,7 @@
 """Public marker types and decorators for keys, tags, and injection."""
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeGuard, final, override
+from typing import TYPE_CHECKING, Never, final, override
 
 from depin.errors import DepinError, InvalidProviderError
 
@@ -115,50 +115,59 @@ class Tag:
 
 
 @final
-@dataclass(frozen=True, slots=True)
-class _InjectMarker:
-    """Default-value marker produced by `injected()`.
+class _Injected:
+    """The value `injected` holds: a parameter default that `inject` replaces.
 
-    Carries the provider key (and optional tag) for a parameter that
-    `FrozenContainer.inject()` fills. It stands in for the parameter's
-    declared type at the type level; ``inject`` replaces it with the resolved
-    value before the wrapped function body runs.
+    Attribute access raises rather than returning something meaningless: a
+    marked parameter still holding this value inside the function body means the
+    function was called without ``@container.inject`` wrapping it.
     """
 
-    key: 'type[object] | TokenKey'
-    tag: str | None = None
+    __slots__ = ()
+
+    @override
+    def __repr__(self) -> str:
+        return 'depin.injected'
+
+    def __call__(self, *args: object, **kwargs: object) -> Never:
+        del args, kwargs
+        raise DepinError(
+            'depin.injected is a marker value, not a function: write '
+            '`svc: Svc = injected`. The key comes from the annotation, and '
+            'Annotated[Svc, Tag(...)] or Annotated[str, Named(...)] selects a '
+            'tag or a named key.'
+        )
 
     def __getattr__(self, name: str) -> object:
         if name.startswith('__') and name.endswith('__'):
             raise AttributeError(name)
         raise DepinError(
-            f'depin injection marker for {self.key!r} was accessed as a value. '
-            'A parameter defaulting to injected(...) must be filled by '
-            '@container.inject; wrap the function with the inject decorator.'
+            'a parameter defaulting to depin.injected was accessed as a value. '
+            'Such a parameter must be filled by @container.inject; wrap the '
+            'function with the inject decorator.'
         )
 
 
-def is_inject_marker(value: object) -> TypeGuard[_InjectMarker]:
-    return isinstance(value, _InjectMarker)
+if TYPE_CHECKING:
+    # A default must be assignable to the parameter it stands in for, whatever
+    # that parameter's type is. `Never` is the one type that is, and unlike
+    # `Any` it erases nothing: a checker configured with `reportAny` stays
+    # silent, and the parameter keeps its declared type. The declaration is
+    # type-only because no value of type `Never` exists to write.
+    injected: Never
+    """Parameter default marking a parameter that `FrozenContainer.inject` fills.
 
-
-def injected[T](key: type[T] | Token[T], *, tag: str | None = None) -> T:
-    """Mark a parameter for injection by `FrozenContainer.inject()`.
-
-    Use as the parameter default::
-
-        @container.inject
-        def handler(prefix: str, svc: Svc = injected(Svc)) -> ...: ...
-
-    Because the marker is a default, a marked parameter must follow non-default
-    parameters or be keyword-only. ``key`` may be a class or a ``Token``; ``tag``
-    selects among tagged providers.
+    The parameter's annotation carries the key: a class,
+    ``Annotated[T, Tag(...)]``, ``Annotated[T, Named(...)]``, or ``T | None``
+    for a dependency that may be absent. Because it is a default, a marked
+    parameter follows the non-default parameters or is keyword-only.
     """
-    # Python's type system has no opaque/branded generics: a function cannot
-    # declare it returns T while producing an unrelated _InjectMarker. This is the
-    # narrowest possible boundary; inject() substitutes the resolved value before
-    # any caller observes the default.
-    return _InjectMarker(key, tag)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
+else:
+    injected = _Injected()
+
+
+def is_inject_marker(value: object) -> bool:
+    return isinstance(value, _Injected)
 
 
 _PROVIDES_ATTR = '__depin_provides__'
