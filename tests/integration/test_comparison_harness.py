@@ -2,6 +2,7 @@ import hashlib
 import inspect
 import json
 import math
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -493,6 +494,25 @@ def test_deterministic_child_uses_the_side_directory_environment_and_timeout(
     readings = REAL_DETERMINISTIC(tmp_path, tmp_path / 'deterministic.json', side='base', timeout_seconds=0.25)
 
     assert readings == {'cwd': str(tmp_path), 'pythonpath': str(tmp_path)}
+
+
+def test_deterministic_child_forwards_its_timeout_and_names_the_failed_side(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    observed: list[float] = []
+
+    def run(
+        argv: list[str], *, cwd: Path, env: dict[str, str], capture_output: bool, text: bool, check: bool, timeout: float
+    ) -> subprocess.CompletedProcess[str]:
+        observed.append(timeout)
+        raise subprocess.TimeoutExpired(argv, timeout, output='child-output', stderr='child-error')
+
+    monkeypatch.setattr(comparison.subprocess, 'run', run)
+
+    with pytest.raises(HarnessError, match=r'(?s)base deterministic child timed out.*child-output'):
+        _ = REAL_DETERMINISTIC(tmp_path, tmp_path / 'report.json', side='base', timeout_seconds=0.125)
+
+    assert observed == [0.125]
 
 
 def test_collection_counterbalances_children_and_reduces_their_reports(
