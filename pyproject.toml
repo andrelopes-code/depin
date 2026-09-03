@@ -156,11 +156,6 @@ case-sensitive = true
 "scripts/forward.py" = ["T20"]
 "benchmarks/harness/*.py" = ["T20"]
 
-[tool.ruff.lint.flake8-bugbear]
-# injected() is designed to sit in default-value position; it returns a fresh
-# marker each call with no shared mutable state, so B008 does not apply to it.
-extend-immutable-calls = ["depin.injected", "depin._core.markers.injected"]
-
 [tool.basedpyright]
 include = ["depin", "tests", "examples", "scripts", "benchmarks"]
 exclude = ["**/__pycache__", ".venv"]

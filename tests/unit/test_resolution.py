@@ -404,7 +404,7 @@ async def test_async_injection_preserves_a_dependency_tag() -> None:
     )
 
     @frozen.inject
-    async def handler(store: Annotated[Store, Tag('primary')] = injected(Store, tag='primary')) -> str:
+    async def handler(store: Annotated[Store, Tag('primary')] = injected) -> str:
         return store.label
 
     assert await handler() == 'primary'

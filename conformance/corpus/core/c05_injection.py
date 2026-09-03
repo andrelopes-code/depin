@@ -1,4 +1,4 @@
-"""`@inject` and `injected()`, from the call site.
+"""`@inject` and `injected`, from the call site.
 
 The wrapper's own type is not asserted anywhere in this file, and that is
 deliberate. An injected parameter survives into the wrapper's signature carrying
@@ -16,9 +16,9 @@ survives that choice. It takes a typed witness.
 """
 
 from collections.abc import Awaitable
-from typing import Protocol, assert_type
+from typing import Annotated, Protocol, assert_type
 
-from depin import Container, FrozenContainer, Token, injected
+from depin import Container, FrozenContainer, Tag, Token, injected
 
 
 class Config:
@@ -39,14 +39,22 @@ port = Token[int]('port')
 
 
 def build() -> FrozenContainer:
-    return Container().bind(Config).bind(Email).collect(Handler, [Email]).value(port, 8080).freeze()
+    return (
+        Container()
+        .bind(Config)
+        .bind(Config, tag='primary')
+        .bind(Email)
+        .collect(Handler, [Email])
+        .value(port, 8080)
+        .freeze()
+    )
 
 
 def a_sync_wrapper_keeps_its_return_type() -> None:
     di = build()
 
     @di.inject
-    def handler(label: str, config: Config = injected(Config)) -> str:
+    def handler(label: str, config: Config = injected) -> str:
         return f'{label}={config.value}'
 
     assert_type(handler('n'), str)
@@ -56,7 +64,7 @@ def a_sync_wrapper_keeps_the_parameters_the_caller_still_passes() -> None:
     di = build()
 
     @di.inject
-    def handler(label: str, retries: int, config: Config = injected(Config)) -> str:
+    def handler(label: str, retries: int, config: Config = injected) -> str:
         return f'{label}={config.value}:{retries}'
 
     assert_type(handler('n', 3), str)
@@ -67,7 +75,7 @@ def an_injected_parameter_may_still_be_passed_explicitly() -> None:
     di = build()
 
     @di.inject
-    def handler(label: str, config: Config = injected(Config)) -> str:
+    def handler(label: str, config: Config = injected) -> str:
         return f'{label}={config.value}'
 
     assert_type(handler('n', Config(2)), str)
@@ -78,7 +86,7 @@ def a_wrapper_returning_a_container_type_keeps_it() -> None:
     di = build()
 
     @di.inject
-    def pick(config: Config = injected(Config)) -> Config:
+    def pick(config: Config = injected) -> Config:
         return config
 
     assert_type(pick(), Config)
@@ -88,7 +96,7 @@ def an_async_wrapper_stays_awaitable_at_its_return_type() -> None:
     di = build()
 
     @di.inject
-    async def handler(label: str, config: Config = injected(Config)) -> str:
+    async def handler(label: str, config: Config = injected) -> str:
         return f'{label}={config.value}'
 
     # Nested and never called: the promise is checked statically, and calling
@@ -104,20 +112,41 @@ async def an_awaited_wrapper_yields_its_return_type() -> None:
     di = build()
 
     @di.inject
-    async def handler(label: str, config: Config = injected(Config)) -> str:
+    async def handler(label: str, config: Config = injected) -> str:
         return f'{label}={config.value}'
 
     assert_type(await handler('n'), str)
 
 
-def injected_takes_the_type_of_its_key() -> None:
-    assert_type(injected(Config), Config)
-    assert_type(injected(port), int)
+def an_injected_parameter_keeps_its_declared_type() -> None:
+    di = build()
+
+    @di.inject
+    def handler(config: Config = injected, number: Annotated[int, port] = injected) -> str:
+        assert_type(config, Config)
+        assert_type(number, int)
+        return f'{config.value}:{number}'
+
+    assert_type(handler(), str)
 
 
-def injected_takes_the_type_of_a_parameterised_key() -> None:
-    assert_type(injected(list[Handler]), list[Handler])
+def an_injected_parameter_keeps_a_parameterised_type() -> None:
+    di = build()
+
+    @di.inject
+    def handler(handlers: list[Handler] = injected) -> int:
+        assert_type(handlers, list[Handler])
+        return len(handlers)
+
+    assert_type(handler(), int)
 
 
-def injected_carries_a_tag_without_changing_its_type() -> None:
-    assert_type(injected(Config, tag='primary'), Config)
+def a_tag_does_not_change_the_declared_type() -> None:
+    di = build()
+
+    @di.inject
+    def handler(config: Annotated[Config, Tag('primary')] = injected) -> Config:
+        assert_type(config, Config)
+        return config
+
+    assert_type(handler(), Config)

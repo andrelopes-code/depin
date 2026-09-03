@@ -16,7 +16,7 @@ the opposite of what a negative fixture should do.
 
 import contextlib
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
-from typing import Protocol, assert_type
+from typing import Annotated, Protocol, assert_type
 
 from depin import (
     CONTRACT_VERSION,
@@ -74,7 +74,7 @@ def test_inject_preserves_the_wrapped_signature() -> None:
     di = Container().bind(Config).freeze()
 
     @di.inject
-    def handler(label: str, config: Config = injected(Config)) -> str:
+    def handler(label: str, config: Config = injected) -> str:
         return f'{label}={config.value}'
 
     assert_type(handler(label='n'), str)
@@ -84,7 +84,7 @@ def test_inject_preserves_an_async_signature() -> None:
     di = Container().bind(Config).freeze()
 
     @di.inject
-    async def handler(label: str, config: Config = injected(Config)) -> str:
+    async def handler(label: str, config: Config = injected) -> str:
         return f'{label}={config.value}'
 
     # A typed witness rather than `assert_type`: both `inject` overloads match
@@ -101,9 +101,16 @@ def test_inject_preserves_an_async_signature() -> None:
     _ = call_site
 
 
-def test_injected_takes_the_type_of_its_key() -> None:
-    assert_type(injected(Config), Config)
-    assert_type(injected(port), int)
+def test_an_injected_parameter_keeps_its_declared_type() -> None:
+    di = Container().bind(Config).value(port, 8080).freeze()
+
+    @di.inject
+    def handler(config: Config = injected, number: Annotated[int, port] = injected) -> str:
+        assert_type(config, Config)
+        assert_type(number, int)
+        return f'{config.value}:{number}'
+
+    assert_type(handler(), str)
 
 
 def test_scope_yields_a_frame() -> None:
@@ -215,7 +222,13 @@ def test_a_collection_key_keeps_its_element_type() -> None:
     di = builder.freeze()
     assert_type(di.resolve(list[Handler]), list[Handler])
     assert_type(di[list[Handler]], list[Handler])
-    assert_type(injected(list[Handler]), list[Handler])
+
+    @di.inject
+    def handler(handlers: list[Handler] = injected) -> int:
+        assert_type(handlers, list[Handler])
+        return len(handlers)
+
+    assert_type(handler(), int)
 
 
 def test_a_generic_key_keeps_its_parameterisation() -> None:

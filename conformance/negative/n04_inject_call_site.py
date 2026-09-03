@@ -16,7 +16,7 @@ def main() -> None:
     di = Container().bind(Config).freeze()
 
     @di.inject
-    def handler(label: str, config: Config = injected(Config)) -> str:
+    def handler(label: str, config: Config = injected) -> str:
         return f'{label}={config.value}'
 
     _ = handler(42)

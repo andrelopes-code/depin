@@ -195,7 +195,7 @@ This keeps the production graph untouched and still exercises the real
 
 ## Wiring a function under test
 
-`@inject` fills only the parameters whose default is `injected(...)`, and leaves
+`@inject` fills only the parameters whose default is `injected`, and leaves
 everything else to the caller — including those same parameters, if the caller
 passes them:
 
@@ -209,7 +209,7 @@ passes them:
 ...         return 99
 >>> di = Container().bind(Repo).freeze()
 >>> @di.inject
-... def summary(label: str, repo: Repo = injected(Repo)) -> str:
+... def summary(label: str, repo: Repo = injected) -> str:
 ...     return f'{label}={repo.count()}'
 >>> summary(label='n')
 'n=3'
@@ -217,6 +217,12 @@ passes them:
 'n=99'
 
 ```
+
+The key comes from the parameter's annotation, in the grammar a provider's
+parameters already use: `Annotated[Cache, Tag('primary')]` selects a
+[tagged](composition.md#tags) binding, `Annotated[str, Named(db_url)]` a named
+one, and `Metrics | None` an [optional](resolution.md#optional-dependencies)
+dependency, filled with `None` when nothing provides it.
 
 Injected keys are validated when the decorator runs, not when the function is
 called: decorating a function that asks for an unregistered key raises

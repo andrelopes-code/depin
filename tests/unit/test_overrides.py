@@ -73,7 +73,7 @@ def test_override_applies_through_inject_decorator() -> None:
     frozen = Container().bind(_Db, scope=Scope.SINGLETON).bind(_Repo, scope=Scope.TRANSIENT).freeze()
 
     @frozen.inject
-    def handler(repo: _Repo = injected(_Repo)) -> str:
+    def handler(repo: _Repo = injected) -> str:
         return repo.db.name
 
     with frozen.override(_Db, _FakeDb()):
