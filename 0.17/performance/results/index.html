@@ -796,6 +796,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#application-tier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Application tier
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#work" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -833,6 +844,28 @@
     <span class="md-ellipsis">
       
         Scaling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retired-measurements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retired measurements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#refused-measurements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refused measurements
       
     </span>
   </a>
@@ -1578,6 +1611,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#application-tier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Application tier
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#work" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1621,6 +1665,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#retired-measurements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retired measurements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#refused-measurements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refused measurements
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1653,7 +1719,7 @@
 <tbody>
 <tr>
 <td>distributions.pydepin</td>
-<td>0.17.0</td>
+<td>0.17.1</td>
 </tr>
 <tr>
 <td>distributions.pytest</td>
@@ -1673,7 +1739,7 @@
 </tr>
 <tr>
 <td>host.load_average</td>
-<td>2.43, 2.73, 2.47</td>
+<td>2.41, 2.91, 2.83</td>
 </tr>
 <tr>
 <td>host.machine</td>
@@ -1736,366 +1802,504 @@
 <tr>
 <td>test_latency[build_the_graph_view-depin]</td>
 <td>5</td>
-<td>179</td>
-<td>4.280 ms</td>
-<td>3.1%</td>
+<td>392</td>
+<td>4.232 ms</td>
+<td>6.0%</td>
 </tr>
 <tr>
 <td>test_latency[call_through_an_inject_wrapper-depin]</td>
 <td>5</td>
-<td>24213</td>
-<td>5.570 µs</td>
-<td>7.9%</td>
+<td>40729</td>
+<td>5.626 µs</td>
+<td>2.8%</td>
 </tr>
 <tr>
 <td>test_latency[call_through_an_inject_wrapper-direct]</td>
 <td>5</td>
-<td>79473</td>
-<td>119.030 ns</td>
-<td>3.3%</td>
+<td>76576</td>
+<td>122.610 ns</td>
+<td>0.5%</td>
+</tr>
+<tr>
+<td>test_latency[call_through_an_inject_wrapper_with_explicit_arguments-depin]</td>
+<td>5</td>
+<td>30824</td>
+<td>6.720 µs</td>
+<td>6.1%</td>
+</tr>
+<tr>
+<td>test_latency[call_through_an_inject_wrapper_with_explicit_arguments-direct]</td>
+<td>5</td>
+<td>197004</td>
+<td>176.795 ns</td>
+<td>0.8%</td>
+</tr>
+<tr>
+<td>test_latency[construct_a_singleton_for_the_first_time-depin]</td>
+<td>5</td>
+<td>44223</td>
+<td>5.417 µs</td>
+<td>5.9%</td>
+</tr>
+<tr>
+<td>test_latency[construct_a_singleton_for_the_first_time-direct]</td>
+<td>5</td>
+<td>36925</td>
+<td>296.300 ns</td>
+<td>4.9%</td>
 </tr>
 <tr>
 <td>test_latency[explain_a_deep_chain-depin]</td>
 <td>5</td>
-<td>120</td>
-<td>6.584 ms</td>
-<td>2.9%</td>
+<td>259</td>
+<td>6.457 ms</td>
+<td>4.7%</td>
 </tr>
 <tr>
 <td>test_latency[explain_a_deep_chain_with_every_node_decorated-depin]</td>
 <td>5</td>
-<td>120</td>
-<td>16.584 ms</td>
-<td>3.2%</td>
+<td>102</td>
+<td>16.902 ms</td>
+<td>7.5%</td>
 </tr>
 <tr>
 <td>test_latency[explain_a_layered_dag-depin]</td>
 <td>5</td>
-<td>149</td>
-<td>4.961 ms</td>
-<td>3.8%</td>
+<td>343</td>
+<td>5.003 ms</td>
+<td>3.2%</td>
 </tr>
 <tr>
 <td>test_latency[explain_an_unbound_key_of_16-depin]</td>
 <td>5</td>
-<td>125</td>
-<td>7.357 ms</td>
-<td>2.1%</td>
+<td>208</td>
+<td>7.408 ms</td>
+<td>3.7%</td>
 </tr>
 <tr>
 <td>test_latency[explain_an_unbound_key_of_20-depin]</td>
 <td>5</td>
-<td>131</td>
-<td>7.432 ms</td>
-<td>2.5%</td>
+<td>207</td>
+<td>7.387 ms</td>
+<td>2.6%</td>
 </tr>
 <tr>
 <td>test_latency[export_a_large_graph_as_dot-depin]</td>
 <td>5</td>
-<td>380</td>
-<td>2.449 ms</td>
-<td>3.4%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_application_startup-depin]</td>
-<td>5</td>
-<td>324</td>
-<td>2.445 ms</td>
-<td>3.5%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_application_startup-direct]</td>
-<td>5</td>
-<td>505</td>
-<td>1.633 ms</td>
-<td>3.9%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_async_resource_teardown-depin]</td>
-<td>5</td>
-<td>1154</td>
-<td>776.438 µs</td>
-<td>2.9%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_async_resource_teardown-direct]</td>
-<td>5</td>
-<td>1390</td>
-<td>653.256 µs</td>
-<td>6.0%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_cpu_light_endpoint-depin]</td>
-<td>5</td>
-<td>1114</td>
-<td>729.435 µs</td>
-<td>4.5%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_cpu_light_endpoint-direct]</td>
-<td>5</td>
-<td>1317</td>
-<td>647.650 µs</td>
-<td>4.3%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_endpoint_with_work-depin]</td>
-<td>5</td>
-<td>931</td>
-<td>1.005 ms</td>
-<td>4.1%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_endpoint_with_work-direct]</td>
-<td>5</td>
-<td>1063</td>
-<td>882.937 µs</td>
-<td>5.7%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_request_scoped_graph-depin]</td>
-<td>5</td>
-<td>1137</td>
-<td>779.516 µs</td>
-<td>4.2%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_request_scoped_graph-direct]</td>
-<td>5</td>
-<td>1001</td>
-<td>654.946 µs</td>
-<td>5.7%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_singletons_and_transients-depin]</td>
-<td>5</td>
-<td>1210</td>
-<td>760.037 µs</td>
-<td>4.7%</td>
-</tr>
-<tr>
-<td>test_latency[fastapi_singletons_and_transients-direct]</td>
-<td>5</td>
-<td>1075</td>
-<td>654.150 µs</td>
-<td>4.4%</td>
+<td>743</td>
+<td>2.452 ms</td>
+<td>5.3%</td>
 </tr>
 <tr>
 <td>test_latency[freeze_a_chain_missing_a_provider_of_100-depin]</td>
 <td>5</td>
-<td>120</td>
-<td>10.960 ms</td>
-<td>4.2%</td>
+<td>144</td>
+<td>11.115 ms</td>
+<td>4.9%</td>
 </tr>
 <tr>
 <td>test_latency[freeze_a_chain_missing_a_provider_of_50-depin]</td>
 <td>5</td>
-<td>120</td>
-<td>9.175 ms</td>
-<td>1.7%</td>
+<td>172</td>
+<td>9.183 ms</td>
+<td>4.3%</td>
 </tr>
 <tr>
 <td>test_latency[freeze_a_chain_of_10-depin]</td>
 <td>5</td>
-<td>1638</td>
-<td>385.197 µs</td>
-<td>4.3%</td>
+<td>1000</td>
+<td>379.478 µs</td>
+<td>3.3%</td>
 </tr>
 <tr>
 <td>test_latency[freeze_a_chain_of_100-depin]</td>
 <td>5</td>
-<td>258</td>
-<td>3.552 ms</td>
-<td>3.9%</td>
+<td>466</td>
+<td>3.546 ms</td>
+<td>2.3%</td>
 </tr>
 <tr>
 <td>test_latency[freeze_a_chain_of_1000-depin]</td>
 <td>5</td>
-<td>120</td>
-<td>35.862 ms</td>
-<td>5.5%</td>
+<td>46</td>
+<td>35.834 ms</td>
+<td>6.1%</td>
 </tr>
 <tr>
 <td>test_latency[freeze_a_decorated_chain_of_10-depin]</td>
 <td>5</td>
-<td>934</td>
-<td>928.047 µs</td>
+<td>1000</td>
+<td>922.849 µs</td>
 <td>2.5%</td>
 </tr>
 <tr>
 <td>test_latency[freeze_a_decorated_chain_of_100-depin]</td>
 <td>5</td>
-<td>120</td>
-<td>8.659 ms</td>
-<td>3.2%</td>
+<td>190</td>
+<td>8.699 ms</td>
+<td>2.9%</td>
 </tr>
 <tr>
 <td>test_latency[freeze_a_decorated_chain_of_1000-depin]</td>
 <td>5</td>
-<td>120</td>
-<td>88.759 ms</td>
-<td>4.7%</td>
+<td>19</td>
+<td>90.192 ms</td>
+<td>3.4%</td>
 </tr>
 <tr>
 <td>test_latency[freeze_a_generic_key_chain_of_10-depin]</td>
 <td>5</td>
-<td>860</td>
-<td>694.034 µs</td>
-<td>8.9%</td>
+<td>1000</td>
+<td>686.537 µs</td>
+<td>2.6%</td>
 </tr>
 <tr>
 <td>test_latency[freeze_a_generic_key_chain_of_100-depin]</td>
 <td>5</td>
-<td>120</td>
-<td>6.660 ms</td>
-<td>3.8%</td>
+<td>248</td>
+<td>6.688 ms</td>
+<td>7.0%</td>
 </tr>
 <tr>
 <td>test_latency[freeze_a_generic_key_chain_of_1000-depin]</td>
 <td>5</td>
-<td>120</td>
-<td>84.266 ms</td>
-<td>4.2%</td>
+<td>20</td>
+<td>85.924 ms</td>
+<td>17.6%</td>
 </tr>
 <tr>
 <td>test_latency[open_a_request_shaped_scope-depin]</td>
 <td>5</td>
-<td>10459</td>
-<td>26.723 µs</td>
-<td>6.9%</td>
+<td>8348</td>
+<td>27.704 µs</td>
+<td>2.1%</td>
 </tr>
 <tr>
 <td>test_latency[open_a_request_shaped_scope-direct]</td>
 <td>5</td>
-<td>181227</td>
-<td>776.141 ns</td>
-<td>12.1%</td>
+<td>180151</td>
+<td>796.863 ns</td>
+<td>12.4%</td>
 </tr>
 <tr>
 <td>test_latency[open_and_close_a_scope-depin]</td>
 <td>5</td>
-<td>2806</td>
-<td>325.633 µs</td>
-<td>4.2%</td>
+<td>2588</td>
+<td>326.873 µs</td>
+<td>4.9%</td>
 </tr>
 <tr>
 <td>test_latency[open_and_close_a_scope-direct]</td>
 <td>5</td>
-<td>93756</td>
-<td>2.948 µs</td>
-<td>7.1%</td>
+<td>88842</td>
+<td>3.133 µs</td>
+<td>6.2%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_a_collection_of_10-depin]</td>
 <td>5</td>
-<td>17504</td>
-<td>18.164 µs</td>
-<td>4.1%</td>
+<td>12440</td>
+<td>18.729 µs</td>
+<td>1.4%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_a_collection_of_10-direct]</td>
 <td>5</td>
-<td>49841</td>
-<td>196.417 ns</td>
-<td>6.3%</td>
+<td>193163</td>
+<td>202.132 ns</td>
+<td>1.0%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_a_collection_of_100-depin]</td>
 <td>5</td>
-<td>4968</td>
-<td>133.030 µs</td>
-<td>1.9%</td>
+<td>5980</td>
+<td>133.175 µs</td>
+<td>2.4%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_a_collection_of_100-direct]</td>
 <td>5</td>
-<td>43347</td>
-<td>416.097 ns</td>
-<td>3.2%</td>
+<td>47547</td>
+<td>417.099 ns</td>
+<td>0.7%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_generic_key-depin]</td>
+<td>5</td>
+<td>60321</td>
+<td>5.931 µs</td>
+<td>2.3%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_generic_key-direct]</td>
+<td>5</td>
+<td>101823</td>
+<td>95.370 ns</td>
+<td>1.4%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_sync_resource_with_teardown-depin]</td>
+<td>5</td>
+<td>10424</td>
+<td>12.901 µs</td>
+<td>3.4%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_a_sync_resource_with_teardown-direct]</td>
+<td>5</td>
+<td>149656</td>
+<td>1.577 µs</td>
+<td>1.3%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_a_transient_chain-depin]</td>
 <td>5</td>
-<td>9337</td>
-<td>34.548 µs</td>
-<td>4.2%</td>
+<td>9228</td>
+<td>34.752 µs</td>
+<td>2.9%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_a_transient_chain-direct]</td>
 <td>5</td>
-<td>134626</td>
-<td>2.179 µs</td>
-<td>6.1%</td>
+<td>165452</td>
+<td>2.275 µs</td>
+<td>2.7%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_an_async_singleton-depin]</td>
 <td>5</td>
-<td>17988</td>
-<td>16.837 µs</td>
-<td>16.4%</td>
+<td>17542</td>
+<td>16.582 µs</td>
+<td>6.6%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_an_async_singleton-direct]</td>
 <td>5</td>
-<td>31781</td>
-<td>13.291 µs</td>
-<td>12.9%</td>
+<td>21515</td>
+<td>13.499 µs</td>
+<td>3.0%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_cached_singleton-depin]</td>
 <td>5</td>
-<td>107969</td>
-<td>1.759 µs</td>
-<td>4.9%</td>
+<td>42635</td>
+<td>1.817 µs</td>
+<td>1.9%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_cached_singleton-direct]</td>
 <td>5</td>
-<td>43445</td>
-<td>92.580 ns</td>
-<td>1.8%</td>
+<td>102219</td>
+<td>96.030 ns</td>
+<td>0.2%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_cached_singleton_through_an_alias-depin]</td>
 <td>5</td>
-<td>34005</td>
-<td>3.657 µs</td>
+<td>71933</td>
+<td>3.747 µs</td>
 <td>5.9%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_cached_singleton_through_an_alias-direct]</td>
 <td>5</td>
-<td>101896</td>
-<td>92.190 ns</td>
-<td>1.1%</td>
+<td>102596</td>
+<td>95.180 ns</td>
+<td>1.7%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_singleton_through_a_two_deep_decoration_chain-depin]</td>
 <td>5</td>
-<td>112537</td>
-<td>1.766 µs</td>
-<td>5.4%</td>
+<td>130839</td>
+<td>1.781 µs</td>
+<td>4.6%</td>
 </tr>
 <tr>
 <td>test_latency[resolve_singleton_through_a_two_deep_decoration_chain-direct]</td>
 <td>5</td>
-<td>102512</td>
-<td>92.880 ns</td>
-<td>4.9%</td>
+<td>102187</td>
+<td>95.180 ns</td>
+<td>0.8%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_through_an_active_override-depin]</td>
+<td>5</td>
+<td>91711</td>
+<td>3.844 µs</td>
+<td>1.9%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_through_an_active_override-direct]</td>
+<td>5</td>
+<td>96759</td>
+<td>99.581 ns</td>
+<td>4.1%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_with_no_active_override-depin]</td>
+<td>5</td>
+<td>119561</td>
+<td>1.815 µs</td>
+<td>1.8%</td>
+</tr>
+<tr>
+<td>test_latency[resolve_with_no_active_override-direct]</td>
+<td>5</td>
+<td>23303</td>
+<td>95.030 ns</td>
+<td>1.0%</td>
 </tr>
 <tr>
 <td>test_latency[warmup_a_cold_singleton_graph-depin]</td>
 <td>5</td>
-<td>120</td>
-<td>11.956 ms</td>
-<td>4.1%</td>
+<td>142</td>
+<td>11.945 ms</td>
+<td>5.3%</td>
 </tr>
 <tr>
 <td>test_latency[warmup_a_cold_singleton_graph-direct]</td>
 <td>5</td>
-<td>2961</td>
-<td>262.731 µs</td>
-<td>7.5%</td>
+<td>2981</td>
+<td>262.381 µs</td>
+<td>10.1%</td>
+</tr>
+</tbody>
+</table>
+<h2 id="application-tier">Application tier<a class="headerlink" href="#application-tier" title="Permanent link">&para;</a></h2>
+<p>Tail quantiles and CPU time are published for the application tier only. An end-to-end request has a tail a caller meets; a microbenchmark round is a calibrated loop, so its p99 describes the calibration rather than the operation. CPU is reported and not gated: process CPU on a shared runner carries the runner's noise, and the deterministic metrics already carry what can be gated exactly.</p>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Repetitions</th>
+<th>Rounds</th>
+<th>Median</th>
+<th>p95</th>
+<th>p99</th>
+<th>CPU</th>
+<th>Spread across repetitions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>test_latency[fastapi_application_startup-depin]</td>
+<td>5</td>
+<td>751</td>
+<td>2.462 ms</td>
+<td>2.816 ms</td>
+<td>3.977 ms</td>
+<td>2.347 ms</td>
+<td>2.6%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_application_startup-direct]</td>
+<td>5</td>
+<td>1000</td>
+<td>1.611 ms</td>
+<td>1.907 ms</td>
+<td>3.047 ms</td>
+<td>1.554 ms</td>
+<td>4.6%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_async_resource_teardown-depin]</td>
+<td>5</td>
+<td>1281</td>
+<td>758.806 µs</td>
+<td>852.651 µs</td>
+<td>1.014 ms</td>
+<td>760.685 µs</td>
+<td>5.8%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_async_resource_teardown-direct]</td>
+<td>5</td>
+<td>1486</td>
+<td>642.123 µs</td>
+<td>709.753 µs</td>
+<td>869.443 µs</td>
+<td>640.911 µs</td>
+<td>2.4%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_cpu_light_endpoint-depin]</td>
+<td>5</td>
+<td>1127</td>
+<td>726.118 µs</td>
+<td>824.394 µs</td>
+<td>968.206 µs</td>
+<td>744.329 µs</td>
+<td>4.8%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_cpu_light_endpoint-direct]</td>
+<td>5</td>
+<td>1340</td>
+<td>646.634 µs</td>
+<td>733.901 µs</td>
+<td>885.088 µs</td>
+<td>634.950 µs</td>
+<td>3.5%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_endpoint_with_work-depin]</td>
+<td>5</td>
+<td>1000</td>
+<td>970.261 µs</td>
+<td>1.073 ms</td>
+<td>1.234 ms</td>
+<td>985.039 µs</td>
+<td>1.2%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_endpoint_with_work-direct]</td>
+<td>5</td>
+<td>1000</td>
+<td>867.000 µs</td>
+<td>963.845 µs</td>
+<td>1.119 ms</td>
+<td>854.845 µs</td>
+<td>2.9%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_request_scoped_graph-depin]</td>
+<td>5</td>
+<td>1000</td>
+<td>763.957 µs</td>
+<td>867.273 µs</td>
+<td>1.017 ms</td>
+<td>746.031 µs</td>
+<td>3.3%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_request_scoped_graph-direct]</td>
+<td>5</td>
+<td>1425</td>
+<td>648.046 µs</td>
+<td>739.813 µs</td>
+<td>889.659 µs</td>
+<td>642.627 µs</td>
+<td>4.7%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_singletons_and_transients-depin]</td>
+<td>5</td>
+<td>1288</td>
+<td>736.115 µs</td>
+<td>857.765 µs</td>
+<td>999.305 µs</td>
+<td>729.399 µs</td>
+<td>4.5%</td>
+</tr>
+<tr>
+<td>test_latency[fastapi_singletons_and_transients-direct]</td>
+<td>5</td>
+<td>1376</td>
+<td>642.044 µs</td>
+<td>728.115 µs</td>
+<td>884.272 µs</td>
+<td>657.609 µs</td>
+<td>3.6%</td>
 </tr>
 </tbody>
 </table>
@@ -2212,130 +2416,179 @@
 </thead>
 <tbody>
 <tr>
-<td>scale_explain_missing_key</td>
+<td>scale_async_teardown</td>
 <td>10</td>
-<td>5.479 ms</td>
+<td>171.166 µs</td>
 <td>—</td>
 </tr>
 <tr>
-<td>scale_explain_missing_key</td>
-<td>12</td>
-<td>5.503 ms</td>
-<td>1.00x</td>
+<td>scale_async_teardown</td>
+<td>20</td>
+<td>270.509 µs</td>
+<td>1.58x</td>
 </tr>
 <tr>
-<td>scale_explain_missing_key</td>
-<td>14</td>
-<td>5.444 ms</td>
-<td>0.99x</td>
-</tr>
-<tr>
-<td>scale_failing_freeze</td>
-<td>25</td>
-<td>6.332 ms</td>
-<td>—</td>
-</tr>
-<tr>
-<td>scale_failing_freeze</td>
-<td>50</td>
-<td>7.197 ms</td>
-<td>1.14x</td>
-</tr>
-<tr>
-<td>scale_failing_freeze</td>
-<td>100</td>
-<td>9.035 ms</td>
-<td>1.26x</td>
+<td>scale_async_teardown</td>
+<td>40</td>
+<td>467.681 µs</td>
+<td>1.73x</td>
 </tr>
 <tr>
 <td>scale_freeze_graph_size</td>
 <td>100</td>
-<td>3.487 ms</td>
+<td>3.557 ms</td>
 <td>—</td>
 </tr>
 <tr>
 <td>scale_freeze_graph_size</td>
 <td>200</td>
-<td>6.858 ms</td>
-<td>1.97x</td>
+<td>7.099 ms</td>
+<td>2.00x</td>
 </tr>
 <tr>
 <td>scale_freeze_graph_size</td>
 <td>400</td>
-<td>13.787 ms</td>
-<td>2.01x</td>
+<td>14.159 ms</td>
+<td>1.99x</td>
+</tr>
+<tr>
+<td>scale_override_nesting</td>
+<td>8</td>
+<td>2.299 µs</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_override_nesting</td>
+<td>32</td>
+<td>3.932 µs</td>
+<td>1.71x</td>
+</tr>
+<tr>
+<td>scale_override_nesting</td>
+<td>128</td>
+<td>10.834 µs</td>
+<td>2.76x</td>
 </tr>
 <tr>
 <td>scale_resolve_collection</td>
 <td>10</td>
-<td>23.673 µs</td>
+<td>23.939 µs</td>
 <td>—</td>
 </tr>
 <tr>
 <td>scale_resolve_collection</td>
 <td>100</td>
-<td>190.198 µs</td>
-<td>8.03x</td>
+<td>191.340 µs</td>
+<td>7.99x</td>
 </tr>
 <tr>
 <td>scale_resolve_collection</td>
 <td>200</td>
-<td>383.158 µs</td>
+<td>380.021 µs</td>
+<td>1.99x</td>
+</tr>
+<tr>
+<td>scale_resolve_fan_out</td>
+<td>10</td>
+<td>18.662 µs</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scale_resolve_fan_out</td>
+<td>20</td>
+<td>37.439 µs</td>
 <td>2.01x</td>
 </tr>
 <tr>
 <td>scale_resolve_fan_out</td>
-<td>10</td>
-<td>19.584 µs</td>
-<td>—</td>
-</tr>
-<tr>
-<td>scale_resolve_fan_out</td>
-<td>20</td>
-<td>37.330 µs</td>
-<td>1.91x</td>
-</tr>
-<tr>
-<td>scale_resolve_fan_out</td>
 <td>40</td>
-<td>70.684 µs</td>
-<td>1.89x</td>
+<td>71.075 µs</td>
+<td>1.90x</td>
 </tr>
 <tr>
 <td>scale_resolve_transient_depth</td>
 <td>10</td>
-<td>19.068 µs</td>
+<td>19.710 µs</td>
 <td>—</td>
 </tr>
 <tr>
 <td>scale_resolve_transient_depth</td>
 <td>40</td>
-<td>197.115 µs</td>
-<td>10.34x</td>
+<td>203.929 µs</td>
+<td>10.35x</td>
 </tr>
 <tr>
 <td>scale_resolve_transient_depth</td>
 <td>160</td>
-<td>764.523 µs</td>
-<td>3.88x</td>
+<td>768.570 µs</td>
+<td>3.77x</td>
 </tr>
 <tr>
 <td>scale_scope_teardown</td>
 <td>10</td>
-<td>102.169 µs</td>
+<td>101.862 µs</td>
 <td>—</td>
 </tr>
 <tr>
 <td>scale_scope_teardown</td>
 <td>20</td>
-<td>184.875 µs</td>
-<td>1.81x</td>
+<td>191.945 µs</td>
+<td>1.88x</td>
 </tr>
 <tr>
 <td>scale_scope_teardown</td>
 <td>40</td>
-<td>351.049 µs</td>
-<td>1.90x</td>
+<td>372.958 µs</td>
+<td>1.94x</td>
+</tr>
+</tbody>
+</table>
+<h2 id="retired-measurements">Retired measurements<a class="headerlink" href="#retired-measurements" title="Permanent link">&para;</a></h2>
+<p>Measured once, no longer measured. A workload withdrawn without a record is indistinguishable from one that was never written.</p>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>What it claimed</th>
+<th>Why it was retired</th>
+<th>What covers the path now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>scale_failing_freeze</td>
+<td>The complexity class of the failing-freeze path, as the growth ratio between graph sizes.</td>
+<td>The path is dominated by a constant that does not depend on graph size: <code>suggest_candidates</code> scans <code>sys.modules</code> when the error is built. Measured on the pull-request runner with both sides on identical code, the curve read 7.095, 7.021 and 7.026 ms at sizes 25, 50 and 100 — flat across a fourfold range — and the difference between the two identical revisions reached +23.61% against a 15% budget. The scan also depends on how many modules each process loaded, which is not a property of the revision under test. The curve was valid before the walk it watched was repaired; the repair is what left the constant in charge.</td>
+<td><code>tests/unit/test_longest_chain.py::test_failing_freeze_does_not_grow_cubically_with_the_chain_length</code>, which compares 200 providers against 400 — the sizes at which the walk overtakes the constant — and reads 1.80 repaired against 5.91 with the cubic walk restored. It replaced a half-second wall-clock budget that the same seeded walk passed at 0.42 s, on a host faster than the one that budget was written on. The fixed-size latency workloads <code>freeze_a_chain_missing_a_provider_of_50</code> and <code>_of_100</code> cover the path as well.</td>
+</tr>
+<tr>
+<td>scale_explain_missing_key</td>
+<td>The complexity class of the missing-key walk, as the growth ratio between graph sizes.</td>
+<td>The same constant, reached through <code>render</code>. The published reference-host dataset already recorded the curve as flat — 5.479, 5.503 and 5.444 ms at sizes 10, 12 and 14, growth 1.00x and 0.99x — while the number of simple paths through those graphs grows Fibonacci in the size. A curve that does not move where the quantity it claims to track quadruples is not measuring that quantity.</td>
+<td><code>tests/unit/test_longest_chain.py::test_explain_of_an_unbound_key_does_not_grow_with_the_path_count</code>, which compares a 16-node fan-in-2 DAG against a 24-node one — eighteen times the simple paths — and reads 1.00 repaired against 24.94 with the enumerating walk restored. The fixed-size latency workloads <code>explain_an_unbound_key_of_16</code> and <code>_of_20</code> cover the path as well.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="refused-measurements">Refused measurements<a class="headerlink" href="#refused-measurements" title="Permanent link">&para;</a></h2>
+<p>Asked for by the performance proposal and not measured here, with what an honest measurement would need in its place.</p>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Why it is refused</th>
+<th>What it would need</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Concurrent requests, active scopes, and singleton first-use contention.</td>
+<td>Timed sleeps are forbidden here, so contention has to be created with explicit synchronisation — a barrier, a reduced switch interval — and a benchmark built that way measures the synchronisation as much as it measures the lock. The invariants themselves are already tested for correctness under free-threading in <code>tests/unit/test_free_threading.py</code>, where the guarantee rather than the number is what matters.</td>
+<td>A design of its own, alongside the free-threading work that owns what the public surface commits to under concurrency. Routed to Step 8.</td>
+</tr>
+<tr>
+<td>Long-running allocation and retention drift.</td>
+<td>Retention here is a point-in-time reading. Drift is only visible over a soak, and how much runner time a soak may consume in a blocking pull-request gate is a budget decision rather than a methodological one.</td>
+<td>A scheduled job with its own time budget, not a check on the pull-request path.</td>
 </tr>
 </tbody>
 </table>

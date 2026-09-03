@@ -846,6 +846,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#measure-your-own-hosts-noise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measure your own host's noise
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#confirm-the-gates-actually-fail" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1600,6 +1611,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#measure-your-own-hosts-noise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measure your own host's noise
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#confirm-the-gates-actually-fail" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1685,6 +1707,25 @@ report, and 3 when a result was inconclusive — the case where the estimate is
 over budget but its interval still spans it.</p>
 <p>Increase <code>--repetitions</code> to narrow the intervals. Five is the minimum at which
 the gate will reach a verdict at all.</p>
+<h2 id="measure-your-own-hosts-noise">Measure your own host's noise<a class="headerlink" href="#measure-your-own-hosts-noise" title="Permanent link">&para;</a></h2>
+<p>Budgets are generated from a collection in which both sides are the same code, so
+every difference in it is noise:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>bench<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmarks.harness.pairs<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--base-dir<span class="w"> </span>.<span class="w"> </span>--head-dir<span class="w"> </span>.<span class="w"> </span>--repetitions<span class="w"> </span><span class="m">5</span><span class="w"> </span>--out<span class="w"> </span>/tmp/nullrun
+
+uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>bench<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmarks.harness.calibrate<span class="w"> </span>/tmp/nullrun<span class="w"> </span>--summary
+</code></pre></div>
+<p>That prints each workload's measured dispersion and the budget it would produce
+here. Drop <code>--summary</code> to write the budget file itself.</p>
+<p>The committed budgets are not produced this way. They come from the same command
+run on the pull-request runner, by the <code>Calibrate</code> workflow, because the gate they
+control runs there and a relative gate has to take its noise from the environment
+it runs in. What a local calibration is for is comparison: if your host's
+dispersion is far from the runner's, the difference is the host, not the code.</p>
+<p>Run it with nothing else executing either way. A collection taken while other
+work was running measured one workload's dispersion at 20.9% where the quiet
+figure was 4.9% — which by the formula would have produced a budget looser than
+the uniform one this system replaced.</p>
 <h2 id="confirm-the-gates-actually-fail">Confirm the gates actually fail<a class="headerlink" href="#confirm-the-gates-actually-fail" title="Permanent link">&para;</a></h2>
 <p>The repository keeps three deliberate regressions, one per class of protection.
 <code>benchmarks/seeds/README.md</code> explains each and how to apply it to a scratch
