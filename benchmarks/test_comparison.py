@@ -586,6 +586,12 @@ _CASES: tuple[tuple[str, Workload, Implementation, Candidate | None], ...] = tup
 )
 
 
+def _implementation_for_mode(name: str, workload: Workload, implementation: Implementation) -> Implementation:
+    if os.environ.get('DEPIN_COMPARISON_NULL') == '1' and name.endswith('-direct'):
+        return workload.subject
+    return implementation
+
+
 def _ordered_cases() -> tuple[tuple[str, Workload, Implementation, Candidate | None], ...]:
     if os.environ.get('DEPIN_COMPARISON_ORDER') == 'reverse':
         return tuple(reversed(_CASES))
@@ -597,7 +603,7 @@ def _ordered_cases() -> tuple[tuple[str, Workload, Implementation, Candidate | N
     [
         pytest.param(
             workload,
-            implementation,
+            _implementation_for_mode(name, workload, implementation),
             candidate,
             marks=pytest.mark.benchmark(min_rounds=reduce.MINIMUM_ROUNDS),
             id=name,
@@ -650,3 +656,18 @@ def test_comparison_files_tier_and_cpu_for_cost_outcomes() -> None:
 
     assert benchmark.extra_info['tier'] == workload.tier.value
     assert benchmark.extra_info['cpu_nanoseconds'] == 17
+
+
+def test_null_mode_runs_the_direct_label_with_the_depin_implementation(monkeypatch: pytest.MonkeyPatch) -> None:
+    workload = next(workload for workload in WORKLOADS if workload.baseline is not None)
+    baseline = workload.baseline
+    assert baseline is not None
+
+    monkeypatch.setenv('DEPIN_COMPARISON_NULL', '1')
+
+    assert _implementation_for_mode(f'{workload.name}-direct', workload, baseline) is workload.subject
+    assert _implementation_for_mode(f'{workload.name}-depin', workload, workload.subject) is workload.subject
+
+    monkeypatch.delenv('DEPIN_COMPARISON_NULL')
+
+    assert _implementation_for_mode(f'{workload.name}-direct', workload, baseline) is baseline

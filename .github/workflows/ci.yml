@@ -244,7 +244,7 @@ jobs:
       # `taskiq.TaskiqResult` through pydantic — so the extras are not optional
       # here.
       - name: Sync dependencies
-        run: uv sync --locked --all-extras
+        run: uv sync --locked --all-extras --group bench
 
       - name: Check the repository source
         run: uv run --locked python -m scripts.conformance --source --checker ${{ matrix.checker }}

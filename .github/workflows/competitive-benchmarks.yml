@@ -1,0 +1,103 @@
+name: Competitive benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline-revision:
+        description: 'Clean Git revision to compare with this checkout'
+        required: true
+      repetitions:
+        description: 'Counterbalanced repetitions per collection'
+        required: false
+        default: '5'
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: competitive-benchmarks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  collect:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'competitive-benchmark'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      BASELINE_DIR: ${{ runner.temp }}/depin-comparison-base
+      BASELINE_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || inputs.baseline-revision }}
+      REPETITIONS: ${{ inputs.repetitions || '5' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.12'
+          enable-cache: false
+
+      - name: Install the locked benchmark environment
+        run: uv sync --locked --no-default-groups --group bench
+
+      - name: Materialize the baseline revision
+        run: |
+          set -euo pipefail
+          mkdir -p "$BASELINE_DIR"
+          git archive "$BASELINE_REVISION" | tar -x -C "$BASELINE_DIR"
+
+      - name: Observe adapter equivalence before collection
+        run: uv run --no-sync pytest benchmarks/test_comparison.py -q
+
+      - name: Collect null evidence
+        run: >
+          uv run --no-sync python -m benchmarks.harness.comparison collect --null
+          --repetitions "$REPETITIONS" --out "${{ runner.temp }}/comparison-null"
+          --baseline-dir "$BASELINE_DIR" --budgets benchmarks/budgets.toml
+
+      - name: Calibrate null evidence
+        run: >
+          uv run --no-sync python -m benchmarks.harness.leadership calibrate
+          "${{ runner.temp }}/comparison-null" --out "${{ runner.temp }}/calibration.json"
+
+      - name: Collect competitive evidence
+        run: >
+          uv run --no-sync python -m benchmarks.harness.comparison collect
+          --repetitions "$REPETITIONS" --out "${{ runner.temp }}/comparison-real"
+          --baseline-dir "$BASELINE_DIR" --budgets benchmarks/budgets.toml
+
+      - name: Evaluate competitive evidence
+        run: >
+          uv run --no-sync python -m benchmarks.harness.leadership evaluate
+          "${{ runner.temp }}/comparison-real" --calibration "${{ runner.temp }}/calibration.json"
+          --budgets benchmarks/budgets.toml
+
+      - name: Render Markdown summary
+        if: always()
+        run: |
+          set +e
+          uv run --no-sync python -m benchmarks.harness.comparison_report \
+            "${{ runner.temp }}/comparison-real" --calibration "${{ runner.temp }}/calibration.json" \
+            --budgets benchmarks/budgets.toml > "${{ runner.temp }}/competitive-benchmarks.md"
+          command_result=$?
+          if [ "$command_result" -ne 0 ]; then
+            printf '# Comparative performance evidence unavailable\n' > "${{ runner.temp }}/competitive-benchmarks.md"
+          fi
+          cat "${{ runner.temp }}/competitive-benchmarks.md" >> "$GITHUB_STEP_SUMMARY"
+          exit "$command_result"
+
+      - name: Upload competitive benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: competitive-benchmark-evidence
+          path: |
+            ${{ runner.temp }}/comparison-null/comparison.json
+            ${{ runner.temp }}/comparison-real/comparison.json
+            ${{ runner.temp }}/calibration.json
+            ${{ runner.temp }}/competitive-benchmarks.md
+          if-no-files-found: ignore
+          retention-days: 14

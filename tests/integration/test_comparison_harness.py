@@ -3,6 +3,7 @@ import inspect
 import json
 import math
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -54,6 +55,35 @@ def test_collection_requires_explicit_baseline_and_budget_inputs() -> None:
 
     assert parameters['baseline_dir'].default is inspect.Parameter.empty
     assert parameters['budgets'].default is inspect.Parameter.empty
+
+
+def test_collection_cli_passes_an_explicit_null_mode_to_the_collector(monkeypatch: pytest.MonkeyPatch) -> None:
+    collected: list[bool] = []
+
+    def collect(
+        *,
+        repetitions: int,
+        out: Path,
+        baseline_dir: Path,
+        budgets: Path,
+        null: bool = False,
+        allow_dirty: bool = False,
+        command: Sequence[str] = comparison.COMMAND,
+        timeout_seconds: int | float = comparison.DEFAULT_TIMEOUT_SECONDS,
+    ) -> dict[str, object]:
+        _ = repetitions, out, baseline_dir, budgets, allow_dirty, command, timeout_seconds
+        collected.append(null)
+        return {}
+
+    monkeypatch.setattr(comparison, 'collect', collect)
+
+    assert (
+        comparison.main(
+            ('collect', '--null', '--out', '/tmp/null', '--baseline-dir', '/tmp/base', '--budgets', 'budgets.toml')
+        )
+        == 0
+    )
+    assert collected == [True]
 
 
 def _leadership_dataset(

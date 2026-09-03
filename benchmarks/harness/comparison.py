@@ -220,9 +220,14 @@ def _run(
     repetition: int,
     timeout_seconds: int | float,
     expected: set[str],
+    null: bool = False,
 ) -> dict[str, reduce.Aggregate]:
     argv = [sys.executable, *(part.replace(REPORT_PLACEHOLDER, str(report)) for part in command)]
-    child = os.environ | {'DEPIN_COMPARISON_ORDER': order, 'PYTHONHASHSEED': memory.HASH_SEED}
+    child = os.environ | {
+        'DEPIN_COMPARISON_ORDER': order,
+        'DEPIN_COMPARISON_NULL': '1' if null else '0',
+        'PYTHONHASHSEED': memory.HASH_SEED,
+    }
     try:
         completed = subprocess.run(
             argv, env=child, capture_output=True, text=True, check=False, timeout=timeout_seconds
@@ -284,6 +289,7 @@ def collect(
     out: Path,
     baseline_dir: Path,
     budgets: Path,
+    null: bool = False,
     allow_dirty: bool = False,
     command: Sequence[str] = COMMAND,
     timeout_seconds: int | float = DEFAULT_TIMEOUT_SECONDS,
@@ -313,14 +319,25 @@ def collect(
                 'increase --timeout-seconds or reduce the collection workload'
             )
         with tempfile.TemporaryDirectory(dir=scratch_parent, prefix=f'.{out.name}-') as scratch:
-            aggregates = _run(
-                command,
-                Path(scratch) / 'report.json',
-                order,
-                repetition=index,
-                timeout_seconds=remaining,
-                expected=expected,
-            )
+            if null:
+                aggregates = _run(
+                    command,
+                    Path(scratch) / 'report.json',
+                    order,
+                    repetition=index,
+                    timeout_seconds=remaining,
+                    expected=expected,
+                    null=True,
+                )
+            else:
+                aggregates = _run(
+                    command,
+                    Path(scratch) / 'report.json',
+                    order,
+                    repetition=index,
+                    timeout_seconds=remaining,
+                    expected=expected,
+                )
         medians = {name: aggregate.median for name, aggregate in sorted(aggregates.items())}
         rounds = {name: aggregate.rounds for name, aggregate in sorted(aggregates.items())}
         repetitions_data.append(
@@ -349,7 +366,7 @@ def collect(
         deterministic[side] = {'source_revision': source_revision, 'readings': readings}
     dataset: dict[str, object] = {
         'accepted': not allow_dirty,
-        'collection_command': f'python {" ".join(command)}',
+        'collection_command': f'python {" ".join(command)}' + (' --null' if null else ''),
         'environment': _environment() | {'python_hash_seed': memory.HASH_SEED},
         'harness_revision': revision,
         'pins': pins,
@@ -371,6 +388,7 @@ def _arguments(argv: Sequence[str] | None) -> dict[str, object]:
     parser.add_argument('--baseline-dir', required=True)
     parser.add_argument('--budgets', required=True)
     parser.add_argument('--allow-dirty', action='store_true')
+    parser.add_argument('--null', action='store_true')
     parser.add_argument('--timeout-seconds', type=int, default=DEFAULT_TIMEOUT_SECONDS)
     parsed = parser.parse_args(argv)
     return vars(parsed)
@@ -384,6 +402,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             out=Path(require_text(chosen['out'], '--out')),
             baseline_dir=Path(require_text(chosen['baseline_dir'], '--baseline-dir')),
             budgets=Path(require_text(chosen['budgets'], '--budgets')),
+            null=bool(chosen['null']),
             allow_dirty=bool(chosen['allow_dirty']),
             timeout_seconds=require_integer(chosen['timeout_seconds'], '--timeout-seconds'),
         )

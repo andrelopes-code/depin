@@ -21,6 +21,37 @@ from benchmarks.harness import HarnessError
 from benchmarks.workloads import WORKLOADS
 
 
+def test_competitive_workflow_is_locked_and_collects_separate_null_and_real_evidence() -> None:
+    workflow = Path('.github/workflows/competitive-benchmarks.yml').read_text(encoding='utf-8')
+
+    assert 'workflow_dispatch:' in workflow
+    assert "github.event.label.name == 'competitive-benchmark'" in workflow
+    assert 'contents: read' in workflow
+    assert 'timeout-minutes: 120' in workflow
+    assert "python-version: '3.12'" in workflow
+    assert 'uv sync --locked --no-default-groups --group bench' in workflow
+    assert 'pytest benchmarks/test_comparison.py -q' in workflow
+    assert 'comparison collect --null' in workflow
+    assert 'comparison collect' in workflow
+    assert '--baseline-dir' in workflow
+    assert '--budgets benchmarks/budgets.toml' in workflow
+    assert 'leadership calibrate' in workflow
+    assert 'leadership evaluate' in workflow
+    assert 'comparison_report' in workflow
+    assert '- name: Render Markdown summary\n        if: always()' in workflow
+    assert 'actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08' in workflow
+    assert 'if: always()' in workflow
+    assert 'git archive' in workflow
+    assert 'baseline-revision' in workflow
+    assert '\n  push:' not in workflow
+
+
+def test_source_checking_syncs_the_locked_benchmark_group() -> None:
+    workflow = Path('.github/workflows/ci.yml').read_text(encoding='utf-8')
+
+    assert 'uv sync --locked --all-extras --group bench' in workflow
+
+
 def _implementation() -> Implementation:
     return Implementation(
         label='candidate-1.0',
