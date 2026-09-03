@@ -63,9 +63,10 @@ def _text(value: object, where: str) -> str:
 def _workload_order(dataset: dict[str, object]) -> tuple[str, ...]:
     descriptions = leadership.workloads(dataset)
     inventory = [comparative.workload.name for comparative in INVENTORY]
-    known = [name for name in inventory if name in descriptions]
-    extra = sorted(set(descriptions) - set(inventory))
-    return tuple([*known, *extra])
+    unknown = sorted(set(descriptions) - set(inventory))
+    if unknown:
+        raise HarnessError(f'{unknown[0]}: dataset target is not in the authoritative comparison inventory')
+    return tuple(name for name in inventory if name in descriptions)
 
 
 def _candidate_rows(dataset: dict[str, object], workload: str, verdict: leadership.WorkloadVerdict) -> list[list[str]]:
@@ -179,9 +180,10 @@ def _provenance(dataset: dict[str, object]) -> list[list[str]]:
 
 def render(dataset: dict[str, object], calibration: dict[str, object], budgets: Path) -> str:
     """Render accepted comparison evidence using the leadership evaluator."""
+    ordered_workloads = _workload_order(dataset)
     verdicts = {verdict.workload: verdict for verdict in leadership.evaluate(dataset, calibration, budgets)}
     lines = ['# Comparative performance evidence', '']
-    for workload in _workload_order(dataset):
+    for workload in ordered_workloads:
         verdict = verdicts[workload]
         lines += [f'## {_text(workload, "dataset.targets workload")}', '']
         lines += _table(('Measure', 'Result'), _summary_rows(dataset, verdict, calibration))

@@ -203,6 +203,35 @@ def test_comparison_report_uses_an_inventory_claim_over_dataset_text(monkeypatch
         _ = render(dataset, calibration, BUDGETS)
 
 
+def test_comparison_report_rejects_an_unknown_workload_before_rendering(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    dataset, calibration = _evidence()
+    unknown = 'fastest_library_overall'
+    description = deepcopy(_target(dataset))
+    description['claim'] = 'fastest library overall winner'
+    description['secondary_metrics'] = []
+    targets = require_object(dataset['targets'], 'fixture.targets')
+    targets[unknown] = description
+    calibrations = require_object(calibration['workloads'], 'fixture.calibration')
+    calibrations[unknown] = deepcopy(calibrations[WORKLOAD])
+    dataset_path = tmp_path / 'dataset.json'
+    calibration_path = tmp_path / 'calibration.json'
+    dataset_path.write_text(json.dumps(dataset), encoding='utf-8')
+    calibration_path.write_text(json.dumps(calibration), encoding='utf-8')
+
+    with pytest.raises(HarnessError, match=unknown):
+        _ = render(dataset, calibration, BUDGETS)
+
+    status = main((str(dataset_path), '--calibration', str(calibration_path), '--budgets', str(BUDGETS)))
+
+    captured = capsys.readouterr()
+
+    assert status == 2
+    assert captured.out == ''
+    assert unknown in captured.err
+
+
 @pytest.mark.parametrize(
     ('mutate', 'where'),
     [
