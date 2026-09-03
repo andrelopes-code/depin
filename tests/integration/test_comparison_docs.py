@@ -13,6 +13,9 @@ from benchmarks.harness.comparison_report import main, render
 FIXTURE = Path(__file__).parents[1] / 'fixtures' / 'comparison'
 BUDGETS = Path('benchmarks/budgets.toml')
 WORKLOAD = 'allocations_of_a_cached_singleton_resolution'
+PUBLISHED_DATASET = Path('benchmarks/results/2026-09-02-competitive-baseline/comparison.json')
+PUBLISHED_CALIBRATION = Path('benchmarks/results/2026-09-02-competitive-baseline/calibration.json')
+PUBLISHED_PAGE = Path('docs/performance/comparison-baseline.md')
 Mutation = Callable[[dict[str, object]], None]
 
 
@@ -133,6 +136,13 @@ def test_comparison_report_matches_its_committed_fixture() -> None:
     dataset, calibration = _evidence()
 
     assert render(dataset, calibration, BUDGETS) == (FIXTURE / 'expected.md').read_text(encoding='utf-8')
+
+
+def test_published_comparison_page_is_the_exact_render_of_its_dataset() -> None:
+    dataset = json.loads(PUBLISHED_DATASET.read_text(encoding='utf-8'))
+    calibration = json.loads(PUBLISHED_CALIBRATION.read_text(encoding='utf-8'))
+
+    assert PUBLISHED_PAGE.read_text(encoding='utf-8') == render(dataset, calibration, BUDGETS)
 
 
 def test_comparison_report_cli_writes_only_markdown_to_stdout(capsys: pytest.CaptureFixture[str]) -> None:

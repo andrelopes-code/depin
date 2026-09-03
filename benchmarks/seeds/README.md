@@ -41,3 +41,18 @@ git worktree remove --force /tmp/seeded
 
 The evidence report `specs/evidence/2026-09-02-step-7-performance.md` records the
 verdict each seed produced, and the verdict after it was removed.
+
+## Competitive cached lookup
+
+`competitive-cached-lookup.patch` adds one container-owned dictionary allocation
+and lookup on the warm cached singleton path. A focused five-repetition collection
+reported `loss` for `resolve_cached_singleton`; the unseeded accepted comparison
+also reports `loss`, because competitive loss takes precedence over the absolute
+and secondary decisions. The seed still changed the measured median from
+1.804 microseconds after removal to 1.867 microseconds while applied. Removing it
+reduced the median by 3.379% and the ratio to Dependency Injector by 3.820%, both
+above the calibrated 2.0% allowance.
+
+The temporary clone commands were `git apply benchmarks/seeds/competitive-cached-lookup.patch`,
+the focused `benchmarks.harness.comparison collect --workload resolve_cached_singleton`
+command with five repetitions, and `git revert 81dff6a09dca2819d3903216b7df9f65485ff551`.

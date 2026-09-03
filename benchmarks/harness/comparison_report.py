@@ -166,6 +166,18 @@ def _summary_rows(
 def _provenance(dataset: dict[str, object]) -> list[list[str]]:
     environment = require_object(dataset.get('environment'), 'dataset.environment')
     pins = require_object(dataset.get('pins'), 'dataset.pins')
+    host_value = environment.get('host')
+    if not isinstance(host_value, str):
+        host = require_object(environment.get('host'), 'dataset.environment.host')
+        host_text = ' '.join(
+            (
+                _text(host.get('system'), 'dataset.environment.host.system'),
+                _text(host.get('machine'), 'dataset.environment.host.machine'),
+                _text(host.get('cpu_model'), 'dataset.environment.host.cpu_model'),
+            )
+        )
+    else:
+        host_text = _text(host_value, 'dataset.environment.host')
     versions = ', '.join(
         f'{_text(name, "dataset.pins key")} {_text(pins[name], f"dataset.pins.{name}")}' for name in sorted(pins)
     )
@@ -173,7 +185,7 @@ def _provenance(dataset: dict[str, object]) -> list[list[str]]:
         ['Source revision', _text(dataset.get('source_revision'), 'dataset.source_revision')],
         ['Harness revision', _text(dataset.get('harness_revision'), 'dataset.harness_revision')],
         ['Dependency versions', versions],
-        ['Host', _text(environment.get('host'), 'dataset.environment.host')],
+        ['Host', host_text],
         ['Collection command', _text(dataset.get('collection_command'), 'dataset.collection_command')],
     ]
 

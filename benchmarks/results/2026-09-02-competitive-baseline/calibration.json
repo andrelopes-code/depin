@@ -1,0 +1,119 @@
+{
+  "workloads": {
+    "call_through_an_inject_wrapper": {
+      "allowance": 0.02,
+      "eligible": true,
+      "p99": 0.019922444038655913
+    },
+    "call_through_an_inject_wrapper_with_explicit_arguments": {
+      "allowance": 0.023,
+      "eligible": true,
+      "p99": 0.022048739318493292
+    },
+    "construct_a_singleton_for_the_first_time": {
+      "allowance": 0.022,
+      "eligible": true,
+      "p99": 0.02113142979360518
+    },
+    "fastapi_application_startup": {
+      "allowance": 0.022,
+      "eligible": true,
+      "p99": 0.02177111217306596
+    },
+    "fastapi_async_resource_teardown": {
+      "allowance": 0.033,
+      "eligible": true,
+      "p99": 0.032611678715312724
+    },
+    "fastapi_cpu_light_endpoint": {
+      "allowance": 0.016,
+      "eligible": true,
+      "p99": 0.015895538404164623
+    },
+    "fastapi_endpoint_with_work": {
+      "allowance": 0.012,
+      "eligible": true,
+      "p99": 0.011491391110362353
+    },
+    "fastapi_request_scoped_graph": {
+      "allowance": 0.042,
+      "eligible": true,
+      "p99": 0.04192592327732525
+    },
+    "fastapi_singletons_and_transients": {
+      "allowance": 0.038,
+      "eligible": true,
+      "p99": 0.03726274123229632
+    },
+    "open_a_request_shaped_scope": {
+      "allowance": 0.031,
+      "eligible": true,
+      "p99": 0.030008083265971347
+    },
+    "open_and_close_a_scope": {
+      "allowance": 0.026000000000000002,
+      "eligible": true,
+      "p99": 0.025695000154941656
+    },
+    "resolve_a_collection_of_10": {
+      "allowance": 0.013000000000000001,
+      "eligible": true,
+      "p99": 0.012396085317485265
+    },
+    "resolve_a_collection_of_100": {
+      "allowance": 0.023,
+      "eligible": true,
+      "p99": 0.022918585115880043
+    },
+    "resolve_a_generic_key": {
+      "allowance": 0.01,
+      "eligible": true,
+      "p99": 0.009944881426413988
+    },
+    "resolve_a_sync_resource_with_teardown": {
+      "allowance": 0.045,
+      "eligible": true,
+      "p99": 0.04408794658999792
+    },
+    "resolve_a_transient_chain": {
+      "allowance": 0.023,
+      "eligible": true,
+      "p99": 0.022510174181995437
+    },
+    "resolve_an_async_singleton": {
+      "allowance": 0.024,
+      "eligible": true,
+      "p99": 0.023492381278001243
+    },
+    "resolve_cached_singleton": {
+      "allowance": 0.02,
+      "eligible": true,
+      "p99": 0.01965648854961923
+    },
+    "resolve_cached_singleton_through_an_alias": {
+      "allowance": 0.023,
+      "eligible": true,
+      "p99": 0.022493902255413784
+    },
+    "resolve_singleton_through_a_two_deep_decoration_chain": {
+      "allowance": 0.02,
+      "eligible": true,
+      "p99": 0.019940629839959274
+    },
+    "resolve_through_an_active_override": {
+      "allowance": 0.015,
+      "eligible": true,
+      "p99": 0.014739680691325164
+    },
+    "resolve_with_no_active_override": {
+      "allowance": 0.025,
+      "eligible": true,
+      "p99": 0.02421530161844095
+    },
+    "warmup_a_cold_singleton_graph": {
+      "allowance": 0.024,
+      "eligible": true,
+      "p99": 0.02319603664710805
+    }
+  }
+}
