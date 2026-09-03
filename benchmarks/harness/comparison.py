@@ -96,7 +96,7 @@ def descriptions() -> dict[str, object]:
     return descriptions
 
 
-def _expected_ids() -> set[str]:
+def expected_ids(*, null: bool = False) -> set[str]:
     from benchmarks.comparison.inventory import build
 
     expected: set[str] = set()
@@ -105,9 +105,10 @@ def _expected_ids() -> set[str]:
         expected.add(f'{workload.name}-{workload.subject.label}')
         if workload.baseline is not None:
             expected.add(f'{workload.name}-{workload.baseline.label}')
-        for candidate in comparative.candidates:
-            if candidate.implementation is not None:
-                expected.add(f'{workload.name}-{candidate.implementation.label}')
+        if not null:
+            for candidate in comparative.candidates:
+                if candidate.implementation is not None:
+                    expected.add(f'{workload.name}-{candidate.implementation.label}')
     return expected
 
 
@@ -141,6 +142,13 @@ def _baseline_preflight(directory: Path, revision: str) -> str:
         raise HarnessError(
             f'baseline revision {revision!r} must be an unpadded 40-character lower-case hexadecimal SHA'
         )
+    marker = directory / '.depin-baseline-revision'
+    try:
+        contents = marker.read_text(encoding='utf-8')
+    except OSError as error:
+        raise HarnessError(f'{marker}: baseline marker is missing or unreadable ({error})') from error
+    if contents != f'{revision}\n':
+        raise HarnessError(f'{marker}: baseline marker must exactly match the claimed baseline revision')
     return revision
 
 
@@ -315,7 +323,7 @@ def collect(
         budget_digest = hashlib.sha256(budgets.read_bytes()).hexdigest()
     except OSError as error:
         raise HarnessError(f'{budgets}: cannot read deterministic budget contract ({error})') from error
-    expected = _expected_ids()
+    expected = expected_ids(null=True) if null else expected_ids()
     repetitions_data: list[dict[str, object]] = []
     scratch_parent = out.parent
     scratch_parent.mkdir(parents=True, exist_ok=True)

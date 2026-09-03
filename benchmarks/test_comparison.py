@@ -593,9 +593,12 @@ def _implementation_for_mode(name: str, workload: Workload, implementation: Impl
 
 
 def _ordered_cases() -> tuple[tuple[str, Workload, Implementation, Candidate | None], ...]:
+    cases = _CASES
+    if os.environ.get('DEPIN_COMPARISON_NULL') == '1':
+        cases = tuple(case for case in cases if case[3] is None and case[0].endswith(('-depin', '-direct')))
     if os.environ.get('DEPIN_COMPARISON_ORDER') == 'reverse':
-        return tuple(reversed(_CASES))
-    return _CASES
+        return tuple(reversed(cases))
+    return cases
 
 
 @pytest.mark.parametrize(
@@ -671,3 +674,17 @@ def test_null_mode_runs_the_direct_label_with_the_depin_implementation(monkeypat
     monkeypatch.delenv('DEPIN_COMPARISON_NULL')
 
     assert _implementation_for_mode(f'{workload.name}-direct', workload, baseline) is baseline
+
+
+def test_null_mode_excludes_candidate_cases_while_real_mode_keeps_them(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv('DEPIN_COMPARISON_NULL', '1')
+
+    null_cases = _ordered_cases()
+
+    assert null_cases
+    assert all(candidate is None for _, _, _, candidate in null_cases)
+    assert all(name.endswith(('-depin', '-direct')) for name, _, _, _ in null_cases)
+
+    monkeypatch.delenv('DEPIN_COMPARISON_NULL')
+
+    assert any(candidate is not None for _, _, _, candidate in _ordered_cases())

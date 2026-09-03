@@ -11,6 +11,7 @@ import pytest
 import benchmarks.harness.comparison as comparison
 import benchmarks.harness.leadership as leadership
 from benchmarks.comparison import WORKLOADS as COMPARATIVE_WORKLOADS
+from benchmarks.comparison.inventory import build
 from benchmarks.contracts import Metric
 from benchmarks.harness import HarnessError, reduce, require_array, require_number, require_object
 
@@ -37,10 +38,13 @@ def _collect(
     command: tuple[str, ...] = comparison.COMMAND,
     timeout_seconds: int | float = comparison.DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
+    base = baseline_dir or out.parent
+    base.mkdir(parents=True, exist_ok=True)
+    (base / '.depin-baseline-revision').write_text(f'{BASELINE_REVISION}\n', encoding='utf-8')
     return comparison.collect(
         repetitions=repetitions,
         out=out,
-        baseline_dir=baseline_dir or out.parent,
+        baseline_dir=base,
         baseline_revision=BASELINE_REVISION,
         budgets=BUDGETS,
         allow_dirty=allow_dirty,
@@ -55,6 +59,18 @@ def test_collection_requires_explicit_baseline_revision_and_budget_inputs() -> N
     assert parameters['baseline_dir'].default is inspect.Parameter.empty
     assert parameters['baseline_revision'].default is inspect.Parameter.empty
     assert parameters['budgets'].default is inspect.Parameter.empty
+
+
+def test_null_collection_expects_only_direct_and_depin_report_ids() -> None:
+    expected = {
+        f'{comparative.workload.name}-{implementation.label}'
+        for comparative in build()
+        for implementation in (comparative.workload.subject, comparative.workload.baseline)
+        if implementation is not None
+    }
+
+    assert comparison.expected_ids(null=True) == expected
+    assert comparison.expected_ids(null=True) < comparison.expected_ids()
 
 
 def test_collection_cli_passes_an_explicit_null_mode_to_the_collector(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -478,7 +494,7 @@ def test_collector_output_flows_directly_into_leadership_evaluation(
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
-    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+    monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
     monkeypatch.setattr(comparison, 'descriptions', lambda: _leadership_dataset()['targets'])
 
     dataset = _collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'))
@@ -582,13 +598,14 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
     child = _child(tmp_path)
     archive = tmp_path / 'archive'
     archive.mkdir()
+    (archive / '.depin-baseline-revision').write_text(f'{BASELINE_REVISION}\n', encoding='utf-8')
     calls = tmp_path / 'calls.txt'
     monkeypatch.setenv('CALL_LOG', str(calls))
     monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
-    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+    monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
     monkeypatch.setattr(comparison, '_environment', lambda: {'host': 'synthetic'})
     monkeypatch.setattr(comparison, 'descriptions', lambda: {'resolve': {'target': {'seconds': 0.1}}})
 
@@ -657,6 +674,36 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
     assert not list(tmp_path.rglob('report.json'))
 
 
+@pytest.mark.parametrize('marker', [None, 'b' * 40, f'{BASELINE_REVISION}\nextra\n'])
+def test_collection_refuses_an_archive_marker_that_does_not_match_the_claimed_revision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, marker: str | None
+) -> None:
+    archive = tmp_path / 'archive'
+    archive.mkdir()
+    if marker is not None:
+        (archive / '.depin-baseline-revision').write_text(marker, encoding='utf-8')
+
+    def preflight(*, allow_dirty: bool) -> tuple[str, dict[str, str]]:
+        _ = allow_dirty
+        return 'head', {}
+
+    monkeypatch.setattr(comparison, '_preflight', preflight)
+
+    def child(*args: object, **kwargs: object) -> dict[str, reduce.Aggregate]:
+        raise AssertionError('the child must not run before baseline marker validation')
+
+    monkeypatch.setattr(comparison, '_run', child)
+
+    with pytest.raises(HarnessError, match='baseline marker'):
+        _ = comparison.collect(
+            repetitions=5,
+            out=tmp_path / 'out',
+            baseline_dir=archive,
+            baseline_revision=BASELINE_REVISION,
+            budgets=BUDGETS,
+        )
+
+
 @pytest.mark.parametrize(
     ('clean', 'pins', 'message'),
     [
@@ -695,7 +742,7 @@ def test_dirty_collection_is_diagnostic_evidence_when_explicitly_allowed(
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: False)
-    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+    monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
     monkeypatch.setattr(comparison, '_environment', lambda: {'host': 'synthetic'})
     monkeypatch.setattr(comparison, 'descriptions', lambda: dict[str, object]())
 
@@ -721,7 +768,7 @@ raise SystemExit(23)
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
-    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+    monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
 
     with pytest.raises(HarnessError, match='exited 23'):
         _ = _collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'))
@@ -753,7 +800,7 @@ def test_collection_refuses_malformed_or_incomplete_raw_reports(
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
-    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+    monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
 
     with pytest.raises(HarnessError, match=message):
         _ = _collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'))
@@ -766,7 +813,7 @@ def test_collection_times_out_a_blocked_child_and_cleans_up(tmp_path: Path, monk
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
-    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+    monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
 
     with pytest.raises(HarnessError, match='blocked-marker') as raised:
         _ = _collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'), timeout_seconds=1)
@@ -810,7 +857,7 @@ def test_collection_uses_one_total_deadline_and_refuses_a_second_spawn_after_exp
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
-    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+    monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
 
     with pytest.raises(HarnessError, match='before child'):
         _ = _collect(repetitions=5, out=tmp_path / 'out', timeout_seconds=10)
@@ -831,7 +878,7 @@ def test_atomic_collection_preserves_existing_evidence_when_finalization_fails(
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
-    monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
+    monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
     if failure == 'write':
 
         def fail_write(_: Path, __: dict[str, object]) -> None:

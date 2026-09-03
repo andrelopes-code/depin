@@ -241,6 +241,7 @@ uv sync --locked --no-default-groups --group bench
 BASELINE_REVISION=4ad63e77bd21eefab15f1dde44c7e62460533da7
 BASELINE_DIR="$(mktemp -d)"
 git archive "$BASELINE_REVISION" | tar -x -C "$BASELINE_DIR"
+printf '%s\n' "$BASELINE_REVISION" > "$BASELINE_DIR/.depin-baseline-revision"
 uv run --no-sync pytest benchmarks/test_comparison.py -q
 uv run --no-sync python -m benchmarks.harness.comparison collect --null \
   --out /tmp/depin-comparison-null --baseline-dir "$BASELINE_DIR" \

@@ -59,6 +59,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$BASELINE_DIR"
           git archive "$BASELINE_REVISION" | tar -x -C "$BASELINE_DIR"
+          printf '%s\n' "$BASELINE_REVISION" > "$BASELINE_DIR/.depin-baseline-revision"
 
       - name: Observe adapter equivalence before collection
         run: uv run --no-sync pytest benchmarks/test_comparison.py -q
@@ -68,6 +69,7 @@ jobs:
           uv run --no-sync python -m benchmarks.harness.comparison collect --null
           --repetitions "$REPETITIONS" --out "$ARTIFACT_DIR/null"
           --baseline-dir "$BASELINE_DIR" --baseline-revision "$BASELINE_REVISION" --budgets benchmarks/budgets.toml
+          --timeout-seconds 1500
 
       - name: Calibrate null evidence
         run: >
@@ -79,6 +81,7 @@ jobs:
           uv run --no-sync python -m benchmarks.harness.comparison collect
           --repetitions "$REPETITIONS" --out "$ARTIFACT_DIR/real"
           --baseline-dir "$BASELINE_DIR" --baseline-revision "$BASELINE_REVISION" --budgets benchmarks/budgets.toml
+          --timeout-seconds 4500
 
       - name: Evaluate competitive evidence
         run: >

@@ -81,6 +81,30 @@ def test_source_checking_syncs_the_locked_benchmark_group() -> None:
     assert 'uv sync --locked --all-extras --group bench' in workflow
 
 
+def _workflow_step(workflow: str, name: str) -> str:
+    marker = f'      - name: {name}\n'
+    start = workflow.index(marker)
+    end = workflow.find('\n      - name: ', start + len(marker))
+    return workflow[start:] if end < 0 else workflow[start:end]
+
+
+def test_competitive_workflow_bounds_collection_timeouts_and_keeps_step_arguments_isolated() -> None:
+    workflow = Path('.github/workflows/competitive-benchmarks.yml').read_text(encoding='utf-8')
+    null = _workflow_step(workflow, 'Collect null evidence')
+    real = _workflow_step(workflow, 'Collect competitive evidence')
+    upload = _workflow_step(workflow, 'Upload competitive benchmark evidence')
+    summary = _workflow_step(workflow, 'Render Markdown summary')
+
+    assert '--null' in null
+    assert '--timeout-seconds 1500' in null
+    assert '--null' not in real
+    assert '--timeout-seconds 4500' in real
+    assert 1500 + 4500 <= 6000
+    assert 'if: always()' in upload
+    assert 'if-no-files-found: error' in upload
+    assert 'if: always()' in summary
+
+
 def test_documented_competitive_baseline_is_a_full_sha_used_by_archive_and_collections() -> None:
     contributing = Path('CONTRIBUTING.md').read_text(encoding='utf-8')
     match = re.search(r'^BASELINE_REVISION=([0-9a-f]+)$', contributing, flags=re.MULTILINE)
