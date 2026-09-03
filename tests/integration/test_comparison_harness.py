@@ -1,4 +1,5 @@
 import hashlib
+import inspect
 import json
 from pathlib import Path
 
@@ -24,6 +25,32 @@ def deterministic_children(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(comparison, '_baseline_preflight', baseline)
     monkeypatch.setattr(comparison, '_deterministic', deterministic)
+
+
+def _collect(
+    *,
+    out: Path,
+    repetitions: int,
+    allow_dirty: bool = False,
+    command: tuple[str, ...] = comparison.COMMAND,
+    timeout_seconds: int | float = comparison.DEFAULT_TIMEOUT_SECONDS,
+) -> dict[str, object]:
+    return comparison.collect(
+        repetitions=repetitions,
+        out=out,
+        baseline_dir=out.parent,
+        budgets=BUDGETS,
+        allow_dirty=allow_dirty,
+        command=command,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+def test_collection_requires_explicit_baseline_and_budget_inputs() -> None:
+    parameters = inspect.signature(comparison.collect).parameters
+
+    assert parameters['baseline_dir'].default is inspect.Parameter.empty
+    assert parameters['budgets'].default is inspect.Parameter.empty
 
 
 def _leadership_dataset(
@@ -359,7 +386,7 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
     monkeypatch.setattr(comparison, '_environment', lambda: {'host': 'synthetic'})
     monkeypatch.setattr(comparison, 'descriptions', lambda: {'resolve': {'target': {'seconds': 0.1}}})
 
-    dataset = comparison.collect(
+    dataset = _collect(
         repetitions=5,
         out=tmp_path / 'out',
         command=(str(child), '{report}'),
@@ -441,14 +468,14 @@ def test_preflight_refuses_dirty_trees_and_pin_mismatches_before_spawning(
     monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
 
     with pytest.raises(HarnessError, match=message):
-        _ = comparison.collect(repetitions=5, out=tmp_path / 'out', command=('-c', 'raise SystemExit(3)'))
+        _ = _collect(repetitions=5, out=tmp_path / 'out', command=('-c', 'raise SystemExit(3)'))
 
     assert not (tmp_path / 'out').exists()
 
 
 def test_collection_requires_at_least_five_repetitions(tmp_path: Path) -> None:
     with pytest.raises(HarnessError, match='at least five'):
-        _ = comparison.collect(repetitions=4, out=tmp_path)
+        _ = _collect(repetitions=4, out=tmp_path)
 
 
 def test_dirty_collection_is_diagnostic_evidence_when_explicitly_allowed(
@@ -464,9 +491,7 @@ def test_dirty_collection_is_diagnostic_evidence_when_explicitly_allowed(
     monkeypatch.setattr(comparison, '_environment', lambda: {'host': 'synthetic'})
     monkeypatch.setattr(comparison, 'descriptions', lambda: dict[str, object]())
 
-    dataset = comparison.collect(
-        repetitions=5, out=tmp_path / 'out', allow_dirty=True, command=(str(child), '{report}')
-    )
+    dataset = _collect(repetitions=5, out=tmp_path / 'out', allow_dirty=True, command=(str(child), '{report}'))
 
     assert dataset['accepted'] is False
 
@@ -491,7 +516,7 @@ raise SystemExit(23)
     monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
 
     with pytest.raises(HarnessError, match='exited 23'):
-        _ = comparison.collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'))
+        _ = _collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'))
 
     assert not list(tmp_path.rglob('report.json'))
 
@@ -523,7 +548,7 @@ def test_collection_refuses_malformed_or_incomplete_raw_reports(
     monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
 
     with pytest.raises(HarnessError, match=message):
-        _ = comparison.collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'))
+        _ = _collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'))
 
 
 def test_collection_times_out_a_blocked_child_and_cleans_up(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -536,7 +561,7 @@ def test_collection_times_out_a_blocked_child_and_cleans_up(tmp_path: Path, monk
     monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
 
     with pytest.raises(HarnessError, match='blocked-marker') as raised:
-        _ = comparison.collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'), timeout_seconds=1)
+        _ = _collect(repetitions=5, out=tmp_path / 'out', command=(str(child), '{report}'), timeout_seconds=1)
 
     assert 'repetition 0 (forward)' in str(raised.value)
     assert str(child) in str(raised.value)
@@ -580,7 +605,7 @@ def test_collection_uses_one_total_deadline_and_refuses_a_second_spawn_after_exp
     monkeypatch.setattr(comparison, '_expected_ids', lambda: EXPECTED_IDS)
 
     with pytest.raises(HarnessError, match='before child'):
-        _ = comparison.collect(repetitions=5, out=tmp_path / 'out', timeout_seconds=10)
+        _ = _collect(repetitions=5, out=tmp_path / 'out', timeout_seconds=10)
 
     assert calls == [9.0]
 
@@ -616,7 +641,7 @@ def test_atomic_collection_preserves_existing_evidence_when_finalization_fails(
         monkeypatch.setattr(Path, 'replace', fail_temporary_replace)
 
     with pytest.raises(HarnessError, match=failure):
-        _ = comparison.collect(repetitions=5, out=destination.parent, command=(str(child), '{report}'))
+        _ = _collect(repetitions=5, out=destination.parent, command=(str(child), '{report}'))
 
     assert destination.read_text(encoding='utf-8') == '{"existing": true}\n'
     assert not (destination.parent / '.comparison.json.tmp').exists()
