@@ -83,6 +83,7 @@ def _leadership_dataset(
         )
     return {
         'accepted': True,
+        'source_revision': 'head-revision',
         'repetitions': repetitions,
         'seed': 17,
         'targets': {
@@ -291,6 +292,40 @@ def test_leadership_cli_returns_two_for_malformed_input(tmp_path: Path) -> None:
     malformed.write_text('{}', encoding='utf-8')
 
     assert leadership.main(('calibrate', str(malformed), '--out', str(tmp_path / 'calibration.json'))) == 2
+
+
+@pytest.mark.parametrize('accepted', [False, None, 'true'])
+def test_leadership_refuses_diagnostic_or_missing_acceptance(accepted: object) -> None:
+    dataset = _leadership_dataset()
+    if accepted is None:
+        dataset.pop('accepted')
+    else:
+        dataset['accepted'] = accepted
+
+    with pytest.raises(HarnessError, match='allow-dirty'):
+        _ = leadership.calibrate(dataset)
+    with pytest.raises(HarnessError, match='allow-dirty'):
+        _ = leadership.evaluate(dataset, _calibration(), BUDGETS)
+
+
+@pytest.mark.parametrize(
+    ('label', 'classification', 'message'),
+    [('other', 'typo', 'invalid'), ('direct', 'equivalent', 'reserved'), ('same', 'equivalent', 'duplicated')],
+)
+def test_leadership_refuses_invalid_candidate_contracts(label: str, classification: str, message: str) -> None:
+    dataset = _leadership_dataset()
+    description = require_object(require_object(dataset['targets'], 'targets')['resolve'], 'resolve')
+    description['candidates'] = (
+        [
+            {'label': label, 'classification': classification, 'reason': 'synthetic'},
+            {'label': label, 'classification': 'partial', 'reason': 'synthetic'},
+        ]
+        if message == 'duplicated'
+        else [{'label': label, 'classification': classification, 'reason': 'synthetic'}]
+    )
+
+    with pytest.raises(HarnessError, match=message):
+        _ = leadership.evaluate(dataset, _calibration(), BUDGETS)
 
 
 def test_leadership_refuses_a_required_secondary_metric_without_its_reading() -> None:

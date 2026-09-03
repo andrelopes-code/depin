@@ -86,6 +86,13 @@ def _seed(dataset: dict[str, object]) -> int:
     return int(value)
 
 
+def _accepted(dataset: dict[str, object]) -> None:
+    if dataset.get('accepted') is not True:
+        raise HarnessError(
+            'dataset.accepted must be true; --allow-dirty is diagnostic evidence and requires clean collection'
+        )
+
+
 def _workloads(dataset: dict[str, object]) -> dict[str, dict[str, object]]:
     targets = require_object(dataset.get('targets'), 'dataset.targets')
     if not targets:
@@ -163,6 +170,7 @@ def _calibration_entry(value: object, workload: str) -> tuple[float | None, bool
 
 def calibrate(dataset: dict[str, object]) -> dict[str, object]:
     """Derive deterministic per-workload allowances from a null comparison dataset."""
+    _accepted(dataset)
     seed = _seed(dataset)
     repetitions = _repetitions(dataset)
     calibrated: dict[str, object] = {}
@@ -181,16 +189,21 @@ def calibrate(dataset: dict[str, object]) -> dict[str, object]:
 def _candidates(description: dict[str, object], workload: str) -> list[tuple[str, str]]:
     encoded = require_array(description.get('candidates'), f'dataset.targets.{workload}.candidates')
     candidates: list[tuple[str, str]] = []
+    labels: set[str] = set()
     for index, value in enumerate(encoded):
         fields = require_object(value, f'dataset.targets.{workload}.candidates[{index}]')
-        candidates.append(
-            (
-                require_text(fields.get('label'), f'dataset.targets.{workload}.candidates[{index}].label'),
-                require_text(
-                    fields.get('classification'), f'dataset.targets.{workload}.candidates[{index}].classification'
-                ),
-            )
+        label = require_text(fields.get('label'), f'dataset.targets.{workload}.candidates[{index}].label')
+        classification = require_text(
+            fields.get('classification'), f'dataset.targets.{workload}.candidates[{index}].classification'
         )
+        if classification not in {'equivalent', 'partial', 'incomparable'}:
+            raise HarnessError(f'{workload}: candidate {label} has invalid classification {classification!r}')
+        if label in {'direct', 'depin'}:
+            raise HarnessError(f'{workload}: candidate label {label!r} is reserved')
+        if label in labels:
+            raise HarnessError(f'{workload}: candidate label {label!r} is duplicated')
+        labels.add(label)
+        candidates.append((label, classification))
     return candidates
 
 
@@ -221,7 +234,13 @@ def _secondary(
     readings: dict[str, dict[str, object]] = {}
     for side in ('base', 'head'):
         side_evidence = require_object(evidence.get(side), f'dataset.deterministic.{side}')
-        _ = require_text(side_evidence.get('source_revision'), f'dataset.deterministic.{side}.source_revision')
+        source_revision = require_text(
+            side_evidence.get('source_revision'), f'dataset.deterministic.{side}.source_revision'
+        )
+        if side == 'head' and source_revision != require_text(
+            dataset.get('source_revision'), 'dataset.source_revision'
+        ):
+            raise HarnessError('dataset.deterministic.head.source_revision must match dataset.source_revision')
         readings[side] = require_object(side_evidence.get('readings'), f'dataset.deterministic.{side}.readings')
     return gate.deterministic_verdicts(
         workload, declared, readings['base'], readings['head'], budget_module.load(budget_file)
@@ -253,6 +272,7 @@ def evaluate(
     dataset: dict[str, object], calibration: dict[str, object], budget_file: Path
 ) -> tuple[WorkloadVerdict, ...]:
     """Evaluate all workloads from decoded comparison and calibration JSON."""
+    _accepted(dataset)
     seed = _seed(dataset)
     repetitions = _repetitions(dataset)
     calibration_entries = require_object(calibration.get('workloads'), 'calibration.workloads')
