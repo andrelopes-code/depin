@@ -595,6 +595,9 @@ def _implementation_for_mode(name: str, workload: Workload, implementation: Impl
 
 def _ordered_cases() -> tuple[tuple[str, Workload, Implementation, Candidate | None], ...]:
     cases = _CASES
+    focus = frozenset(filter(None, os.environ.get('DEPIN_COMPARISON_FOCUS', '').split(',')))
+    if focus:
+        cases = tuple(case for case in cases if case[1].name in focus)
     if os.environ.get('DEPIN_COMPARISON_NULL') == '1':
         cases = tuple(case for case in cases if case[3] is None and case[0].endswith(('-depin', '-direct')))
     if os.environ.get('DEPIN_COMPARISON_ORDER') == 'reverse':
@@ -689,3 +692,12 @@ def test_null_mode_excludes_candidate_cases_while_real_mode_keeps_them(monkeypat
     monkeypatch.delenv('DEPIN_COMPARISON_NULL')
 
     assert any(candidate is not None for _, _, _, candidate in _ordered_cases())
+
+
+def test_focus_selects_only_the_exact_workload_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv('DEPIN_COMPARISON_FOCUS', 'resolve_cached_singleton')
+
+    cases = _ordered_cases()
+
+    assert cases
+    assert {workload.name for _, workload, _, _ in cases} == {'resolve_cached_singleton'}

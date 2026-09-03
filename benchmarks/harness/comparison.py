@@ -248,10 +248,9 @@ def _run(
     focus: Sequence[str] = (),
 ) -> dict[str, reduce.Aggregate]:
     argv = [sys.executable, *(part.replace(REPORT_PLACEHOLDER, str(report)) for part in command)]
-    if focus:
-        argv.extend(('-k', ' or '.join(focus)))
     child = os.environ | {
         'DEPIN_COMPARISON_ORDER': order,
+        'DEPIN_COMPARISON_FOCUS': ','.join(focus),
         'DEPIN_COMPARISON_NULL': '1' if null else '0',
         'PYTHONHASHSEED': memory.HASH_SEED,
     }
