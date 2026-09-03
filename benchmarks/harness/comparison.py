@@ -74,13 +74,13 @@ def descriptions() -> dict[str, object]:
 
     descriptions: dict[str, object] = {}
     for comparative in build():
-        target: dict[str, object] | None = None
-        if comparative.target is not None:
-            target = {
-                'fixed_seconds': comparative.target.fixed_seconds,
-                'fraction_of_direct': comparative.target.fraction_of_direct,
-                'justification': comparative.target.justification,
-            }
+        if comparative.target is None:
+            continue
+        target = {
+            'fixed_seconds': comparative.target.fixed_seconds,
+            'fraction_of_direct': comparative.target.fraction_of_direct,
+            'justification': comparative.target.justification,
+        }
         descriptions[comparative.workload.name] = {
             'target': target,
             'secondary_metrics': [metric.value for metric in comparative.secondary_metrics],
@@ -101,11 +101,12 @@ def expected_ids(*, null: bool = False, focus: Sequence[str] = ()) -> set[str]:
 
     expected: set[str] = set()
     selected = set(focus)
-    available = {comparative.workload.name for comparative in build()}
+    targeted = tuple(comparative for comparative in build() if comparative.target is not None)
+    available = {comparative.workload.name for comparative in targeted}
     unknown = sorted(selected - available)
     if unknown:
         raise HarnessError(f'{unknown[0]}: focused workload is not in the comparison inventory')
-    for comparative in build():
+    for comparative in targeted:
         workload = comparative.workload
         if selected and workload.name not in selected:
             continue

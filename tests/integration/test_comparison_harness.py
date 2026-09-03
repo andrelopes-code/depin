@@ -65,12 +65,21 @@ def test_null_collection_expects_only_direct_and_depin_report_ids() -> None:
     expected = {
         f'{comparative.workload.name}-{implementation.label}'
         for comparative in build()
+        if comparative.target is not None
         for implementation in (comparative.workload.subject, comparative.workload.baseline)
         if implementation is not None
     }
 
     assert comparison.expected_ids(null=True) == expected
     assert comparison.expected_ids(null=True) < comparison.expected_ids()
+
+
+def test_collector_limits_comparative_evidence_to_the_twenty_three_authored_targets() -> None:
+    targeted = tuple(comparative for comparative in COMPARATIVE_WORKLOADS if comparative.target is not None)
+
+    assert len(targeted) == 23
+    assert len(comparison.expected_ids(null=True)) == 46
+    assert set(comparison.descriptions()) == {comparative.workload.name for comparative in targeted}
 
 
 def test_focused_collection_limits_the_expected_matrix_to_one_declared_workload() -> None:
@@ -481,7 +490,9 @@ def test_leadership_fails_an_allocations_claim_when_the_expanded_work_outcome_gr
 def test_comparison_descriptions_serialize_declared_secondary_metrics() -> None:
     descriptions = comparison.descriptions()
 
-    assert set(descriptions) == {comparative.workload.name for comparative in COMPARATIVE_WORKLOADS}
+    assert set(descriptions) == {
+        comparative.workload.name for comparative in COMPARATIVE_WORKLOADS if comparative.target is not None
+    }
     assert all(
         require_object(description, 'description').get('secondary_metrics') is not None
         for description in descriptions.values()
@@ -495,6 +506,7 @@ def test_comparison_descriptions_serialize_declared_secondary_metrics() -> None:
     } == {
         comparative.workload.name
         for comparative in COMPARATIVE_WORKLOADS
+        if comparative.target is not None
         if comparative.workload.claim.metric is not Metric.LATENCY
     }
 

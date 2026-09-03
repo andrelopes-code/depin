@@ -560,6 +560,7 @@ class Benchmark(Protocol):
 _CASES: tuple[tuple[str, Workload, Implementation, Candidate | None], ...] = tuple(
     item
     for comparative in build()
+    if comparative.target is not None
     for item in (
         (f'{comparative.workload.name}-depin', comparative.workload, comparative.workload.subject, None),
         *(
