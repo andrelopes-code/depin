@@ -502,7 +502,14 @@ def test_deterministic_child_forwards_its_timeout_and_names_the_failed_side(
     observed: list[float] = []
 
     def run(
-        argv: list[str], *, cwd: Path, env: dict[str, str], capture_output: bool, text: bool, check: bool, timeout: float
+        argv: list[str],
+        *,
+        cwd: Path,
+        env: dict[str, str],
+        capture_output: bool,
+        text: bool,
+        check: bool,
+        timeout: float,
     ) -> subprocess.CompletedProcess[str]:
         observed.append(timeout)
         raise subprocess.TimeoutExpired(argv, timeout, output='child-output', stderr='child-error')
