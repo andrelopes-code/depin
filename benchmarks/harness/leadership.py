@@ -141,10 +141,16 @@ def _paired_medians(
 def _calibration_entry(value: object, workload: str) -> tuple[float | None, bool]:
     fields = require_object(value, f'calibration.workloads.{workload}')
     eligible = _boolean(fields.get('eligible'), f'calibration.workloads.{workload}.eligible')
-    p99 = require_number(fields.get('p99'), f'calibration.workloads.{workload}.p99')
+    p99_value = fields.get('p99')
+    allowance_value = fields.get('allowance')
+    if p99_value is None or allowance_value is None:
+        if p99_value is None and allowance_value is None and not eligible:
+            return None, False
+        raise HarnessError(f'calibration.workloads.{workload}: p99 and allowance must both be numeric or both be null')
+    p99 = require_number(p99_value, f'calibration.workloads.{workload}.p99')
     if not math.isfinite(p99) or p99 < 0.0:
         raise HarnessError(f'calibration.workloads.{workload}.p99: expected a finite non-negative number')
-    allowance = require_number(fields.get('allowance'), f'calibration.workloads.{workload}.allowance')
+    allowance = require_number(allowance_value, f'calibration.workloads.{workload}.allowance')
     if not math.isfinite(allowance) or allowance < 0.0:
         raise HarnessError(f'calibration.workloads.{workload}.allowance: expected a finite non-negative number')
     expected = math.ceil(p99 / CALIBRATION_INCREMENT) * CALIBRATION_INCREMENT
@@ -163,7 +169,7 @@ def calibrate(dataset: dict[str, object]) -> dict[str, object]:
     for workload in sorted(_workloads(dataset)):
         direct, depin = _paired_medians(repetitions, workload, 'direct', 'depin')
         if len(direct) < MINIMUM_REPETITIONS:
-            calibrated[workload] = {'allowance': 0.0, 'eligible': True, 'p99': 0.0}
+            calibrated[workload] = {'allowance': None, 'eligible': False, 'p99': None}
             continue
         distribution = stats.bootstrap_paired_log_ratios(direct, depin, seed=seed)
         p99 = quantile(sorted(abs(math.expm1(value)) for value in distribution), 0.99)

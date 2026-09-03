@@ -233,6 +233,20 @@ def test_calibration_preserves_raw_p99_before_rounding_to_the_next_milliunit() -
     assert allowance >= p99
 
 
+def test_calibration_marks_four_qualified_pairs_as_insufficient_and_evaluation_unstable() -> None:
+    dataset = _leadership_dataset()
+    repetitions = require_array(dataset['repetitions'], 'repetitions')
+    samples = require_object(require_object(repetitions[-1], 'repetition')['samples'], 'samples')
+    require_object(samples['test_comparison[resolve-depin]'], 'depin')['rounds'] = 1
+    require_object(samples['test_comparison[resolve-direct]'], 'direct')['rounds'] = 1
+
+    calibration = leadership.calibrate(dataset)
+    entry = require_object(require_object(calibration['workloads'], 'workloads')['resolve'], 'resolve')
+
+    assert entry == {'allowance': None, 'eligible': False, 'p99': None}
+    assert leadership.evaluate(dataset, calibration, BUDGETS)[0].status is leadership.Status.UNSTABLE
+
+
 @pytest.mark.parametrize(
     ('entry', 'message'),
     [
