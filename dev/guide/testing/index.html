@@ -1773,7 +1773,7 @@ database — swap the registry rather than each provider:</p>
 <p>This keeps the production graph untouched and still exercises the real
 <code>Container</code> / <code>FrozenContainer</code>, which is what you want a wiring test to prove.</p>
 <h2 id="wiring-a-function-under-test">Wiring a function under test<a class="headerlink" href="#wiring-a-function-under-test" title="Permanent link">&para;</a></h2>
-<p><code>@inject</code> fills only the parameters whose default is <code>injected(...)</code>, and leaves
+<p><code>@inject</code> fills only the parameters whose default is <code>injected</code>, and leaves
 everything else to the caller — including those same parameters, if the caller
 passes them:</p>
 <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">injected</span>
@@ -1785,13 +1785,18 @@ passes them:</p>
 <span class="gp">... </span>        <span class="k">return</span> <span class="mi">99</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Repo</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nd">@di</span><span class="o">.</span><span class="n">inject</span>
-<span class="gp">... </span><span class="k">def</span><span class="w"> </span><span class="nf">summary</span><span class="p">(</span><span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">repo</span><span class="p">:</span> <span class="n">Repo</span> <span class="o">=</span> <span class="n">injected</span><span class="p">(</span><span class="n">Repo</span><span class="p">))</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span><span class="k">def</span><span class="w"> </span><span class="nf">summary</span><span class="p">(</span><span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">repo</span><span class="p">:</span> <span class="n">Repo</span> <span class="o">=</span> <span class="n">injected</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="gp">... </span>    <span class="k">return</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s1">=</span><span class="si">{</span><span class="n">repo</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="si">}</span><span class="s1">'</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">summary</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">'n'</span><span class="p">)</span>
 <span class="go">'n=3'</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">summary</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">'n'</span><span class="p">,</span> <span class="n">repo</span><span class="o">=</span><span class="n">FakeRepo</span><span class="p">())</span>
 <span class="go">'n=99'</span>
 </code></pre></div>
+<p>The key comes from the parameter's annotation, in the grammar a provider's
+parameters already use: <code>Annotated[Cache, Tag('primary')]</code> selects a
+<a href="../composition/#tags">tagged</a> binding, <code>Annotated[str, Named(db_url)]</code> a named
+one, and <code>Metrics | None</code> an <a href="../resolution/#optional-dependencies">optional</a>
+dependency, filled with <code>None</code> when nothing provides it.</p>
 <p>Injected keys are validated when the decorator runs, not when the function is
 called: decorating a function that asks for an unregistered key raises
 <code>MissingProviderError</code> immediately, at import time, instead of on the first

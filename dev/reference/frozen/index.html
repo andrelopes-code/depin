@@ -2923,14 +2923,18 @@ same cached provider.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Wrap a function so parameters defaulting to <code>injected(...)</code> are filled.</p>
+        <p>Wrap a function so parameters defaulting to <code>injected</code> are filled.</p>
 <p>Returns a wrapper that, on each call, resolves every parameter whose
-default is <code>injected()</code> and leaves the rest to the caller.
+default is <code>injected</code> and leaves the rest to the caller. The key comes
+from the parameter's annotation, in the same grammar a provider's
+parameters use: a class, <code>Annotated[T, Tag(...)]</code>,
+<code>Annotated[T, Named(...)]</code>, or <code>T | None</code> for a dependency that may
+be absent, which is filled with <code>None</code> when nothing provides it.
 Already-supplied arguments are never overridden, so an injected parameter
 can still be passed explicitly (handy in tests). The wrapper preserves the
 sync/async nature of <code>fn</code>. Injected keys are validated at decoration
 time, not call time: decorating raises immediately if a marked key is
-unregistered. Because the markers sit in default position, injected
+unregistered. Because the marker sits in default position, injected
 parameters must follow non-default ones or be keyword-only.</p>
 
 
@@ -2945,11 +2949,23 @@ parameters must follow non-default ones or be keyword-only.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
+                  <code><span title="InvalidProviderError">InvalidProviderError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A marked parameter carries no annotation, or
+one whose names do not resolve.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                   <code><a class="autorefs autorefs-internal" title="MissingProviderError (depin.errors.MissingProviderError)" href="../errors/#depin.errors.MissingProviderError">MissingProviderError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A parameter requests an unregistered key.</p>
+                <p>A parameter requests an unregistered key and
+its annotation does not admit <code>None</code>.</p>
               </div>
             </td>
           </tr>
@@ -2965,7 +2981,7 @@ parameters must follow non-default ones or be keyword-only.</p>
 <span class="gp">... </span>        <span class="k">return</span> <span class="mi">3</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Repo</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nd">@di</span><span class="o">.</span><span class="n">inject</span>
-<span class="gp">... </span><span class="k">def</span><span class="w"> </span><span class="nf">handler</span><span class="p">(</span><span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">repo</span><span class="p">:</span> <span class="n">Repo</span> <span class="o">=</span> <span class="n">injected</span><span class="p">(</span><span class="n">Repo</span><span class="p">))</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span><span class="k">def</span><span class="w"> </span><span class="nf">handler</span><span class="p">(</span><span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">repo</span><span class="p">:</span> <span class="n">Repo</span> <span class="o">=</span> <span class="n">injected</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="gp">... </span>    <span class="k">return</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s1">=</span><span class="si">{</span><span class="n">repo</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="si">}</span><span class="s1">'</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">handler</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">'n'</span><span class="p">)</span>
 <span class="go">'n=3'</span>

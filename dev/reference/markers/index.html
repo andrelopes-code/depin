@@ -1887,30 +1887,29 @@ values), <code>Tag</code> picks one for a parameter::</p>
 
 </div>
 
-<div class="doc doc-object doc-function">
+<div class="doc doc-object doc-attribute">
+
 
 
 <h2 id="depin.injected" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">injected</span>
+            <span class="doc doc-object-name doc-attribute-name">injected</span>
 
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
 
 <a href="#depin.injected" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">injected</span><span class="p">(</span>
-    <span class="n">key</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">T</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">injected</span><span class="p">:</span> <span class="n">Never</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
 
-        <p>Mark a parameter for injection by <code>FrozenContainer.inject()</code>.</p>
-<p>Use as the parameter default::</p>
-<div class="highlight"><pre><span></span><code>@container.inject
-def handler(prefix: str, svc: Svc = injected(Svc)) -&gt; ...: ...
-</code></pre></div>
-<p>Because the marker is a default, a marked parameter must follow non-default
-parameters or be keyword-only. <code>key</code> may be a class or a <code>Token</code>; <code>tag</code>
-selects among tagged providers.</p>
-
+        <p>Parameter default marking a parameter that <code>FrozenContainer.inject</code> fills.</p>
+<p>The parameter's annotation carries the key: a class,
+<code>Annotated[T, Tag(...)]</code>, <code>Annotated[T, Named(...)]</code>, or <code>T | None</code>
+for a dependency that may be absent. Because it is a default, a marked
+parameter follows the non-default parameters or is keyword-only.</p>
 
     </div>
 
