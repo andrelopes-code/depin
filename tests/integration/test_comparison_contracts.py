@@ -69,9 +69,9 @@ def test_competitive_workflow_is_locked_and_collects_separate_null_and_real_evid
     )
     assert workflow.index('- name: Collect null evidence') < workflow.index('- name: Collect competitive evidence')
     assert 'requirements' not in workflow
-    assert all(
-        '@' in line and line.split('@', 1)[1].split()[0].isalnum() for line in workflow.splitlines() if 'uses:' in line
-    )
+    uses = [line.split('#', 1)[0].rstrip() for line in workflow.splitlines() if 'uses:' in line]
+    assert uses
+    assert all(re.fullmatch(r'\s*(?:- )?uses: \S+@[0-9a-f]{40}', line) for line in uses)
     assert '\n  push:' not in workflow
 
 
