@@ -545,6 +545,7 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
     assert calls.read_text(encoding='utf-8').splitlines() == ['forward', 'reverse', 'forward', 'reverse', 'forward']
     assert dataset == {
         'accepted': True,
+        'collection_command': f'python {child} {{report}}',
         'environment': {'host': 'synthetic', 'python_hash_seed': '0'},
         'harness_revision': 'source-revision',
         'pins': {'pydepin': '0.17.1', 'wireup': '2.12.0'},

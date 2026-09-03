@@ -349,6 +349,7 @@ def collect(
         deterministic[side] = {'source_revision': source_revision, 'readings': readings}
     dataset: dict[str, object] = {
         'accepted': not allow_dirty,
+        'collection_command': f'python {" ".join(command)}',
         'environment': _environment() | {'python_hash_seed': memory.HASH_SEED},
         'harness_revision': revision,
         'pins': pins,

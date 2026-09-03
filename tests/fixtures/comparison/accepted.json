@@ -1,5 +1,6 @@
 {
   "accepted": true,
+  "collection_command": "python -m benchmarks.harness.comparison collect --repetitions 5",
   "deterministic": {
     "base": {
       "readings": {
@@ -38,7 +39,7 @@
   "source_revision": "head-revision",
   "targets": {
     "allocations_of_a_cached_singleton_resolution": {
-      "claim": "A cached singleton resolution allocates no additional Python objects.",
+      "claim": "What does one resolution allocate once the value is already built?",
       "candidates": [
         {"classification": "equivalent", "label": "dependency-injector-4.49.1", "reason": "same observed cached resolution"},
         {"classification": "partial", "label": "dishka-1.10.1", "reason": "does not preserve the complete observation"},

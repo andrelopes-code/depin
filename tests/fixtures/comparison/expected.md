@@ -4,10 +4,10 @@
 
 | Measure | Result |
 | --- | --- |
-| Claim | A cached singleton resolution allocates no additional Python objects. |
+| Claim | What does one resolution allocate once the value is already built? |
 | Status | leader |
 | Noise allowance | 1.0% |
-| Direct overhead | +0.500 s |
+| Direct overhead | +500.000 ms |
 | Absolute target | 1.000 s |
 | Secondary verdict | allocations: pass, work: pass |
 
@@ -25,4 +25,4 @@
 | Harness revision | harness-revision |
 | Dependency versions | dependency-injector 4.49.1, pydepin 0.17.1 |
 | Host | synthetic-host |
-| Collection command | python -m pytest benchmarks/test_comparison.py --benchmark-only -q --benchmark-json={report} |
+| Collection command | python -m benchmarks.harness.comparison collect --repetitions 5 |
