@@ -13,6 +13,7 @@ from pathlib import Path
 from benchmarks.harness import (
     HarnessError,
     gate,
+    quantile,
     read_json,
     require_array,
     require_number,
@@ -140,21 +141,18 @@ def _paired_medians(
 def _calibration_entry(value: object, workload: str) -> tuple[float | None, bool]:
     fields = require_object(value, f'calibration.workloads.{workload}')
     eligible = _boolean(fields.get('eligible'), f'calibration.workloads.{workload}.eligible')
-    p99_value = fields.get('p99')
-    p99 = None if p99_value is None else require_number(p99_value, f'calibration.workloads.{workload}.p99')
-    if p99 is not None and (not math.isfinite(p99) or p99 < 0.0):
+    p99 = require_number(fields.get('p99'), f'calibration.workloads.{workload}.p99')
+    if not math.isfinite(p99) or p99 < 0.0:
         raise HarnessError(f'calibration.workloads.{workload}.p99: expected a finite non-negative number')
-    allowance = fields.get('allowance')
-    if eligible:
-        if p99 is None:
-            raise HarnessError(f'calibration.workloads.{workload}: eligible evidence needs a p99 allowance')
-        if allowance is None:
-            allowance = p99
-        calibrated = require_number(allowance, f'calibration.workloads.{workload}.allowance')
-        if calibrated > MAXIMUM_ALLOWANCE:
-            raise HarnessError(f'calibration.workloads.{workload}: allowance exceeds the 5% maximum; recalibrate')
-        return calibrated, True
-    return p99, False
+    allowance = require_number(fields.get('allowance'), f'calibration.workloads.{workload}.allowance')
+    if not math.isfinite(allowance) or allowance < 0.0:
+        raise HarnessError(f'calibration.workloads.{workload}.allowance: expected a finite non-negative number')
+    expected = math.ceil(p99 / CALIBRATION_INCREMENT) * CALIBRATION_INCREMENT
+    if not math.isclose(allowance, expected, rel_tol=0.0, abs_tol=1e-12):
+        raise HarnessError(f'calibration.workloads.{workload}: allowance must be p99 rounded up to 0.001')
+    if eligible != (allowance <= MAXIMUM_ALLOWANCE):
+        raise HarnessError(f'calibration.workloads.{workload}: eligible must match the 5% allowance boundary')
+    return allowance, eligible
 
 
 def calibrate(dataset: dict[str, object]) -> dict[str, object]:
@@ -165,12 +163,12 @@ def calibrate(dataset: dict[str, object]) -> dict[str, object]:
     for workload in sorted(_workloads(dataset)):
         direct, depin = _paired_medians(repetitions, workload, 'direct', 'depin')
         if len(direct) < MINIMUM_REPETITIONS:
-            calibrated[workload] = {'eligible': False, 'p99': None}
+            calibrated[workload] = {'allowance': 0.0, 'eligible': True, 'p99': 0.0}
             continue
-        paired = stats.paired_ratio(direct, depin, seed=seed)
-        p99 = max(abs(paired.low), abs(paired.high), abs(paired.ratio))
+        distribution = stats.bootstrap_paired_log_ratios(direct, depin, seed=seed)
+        p99 = quantile(sorted(abs(math.expm1(value)) for value in distribution), 0.99)
         allowance = math.ceil(p99 / CALIBRATION_INCREMENT) * CALIBRATION_INCREMENT
-        calibrated[workload] = {'allowance': allowance, 'eligible': allowance <= MAXIMUM_ALLOWANCE, 'p99': allowance}
+        calibrated[workload] = {'allowance': allowance, 'eligible': allowance <= MAXIMUM_ALLOWANCE, 'p99': p99}
     return {'workloads': calibrated}
 
 

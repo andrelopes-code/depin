@@ -1,6 +1,7 @@
 import hashlib
 import inspect
 import json
+import math
 from pathlib import Path
 
 import pytest
@@ -218,6 +219,33 @@ def test_leadership_marks_a_null_p99_above_five_percent_unstable_without_clampin
     assert require_number(resolve['p99'], 'calibration.workloads.resolve.p99') > 0.05
     assert resolve['eligible'] is False
     assert verdict.status is leadership.Status.UNSTABLE
+
+
+def test_calibration_preserves_raw_p99_before_rounding_to_the_next_milliunit() -> None:
+    dataset = _leadership_dataset(depin=(0.99, 1.01, 0.98, 1.02, 1.0))
+
+    calibration = leadership.calibrate(dataset)
+    entry = require_object(require_object(calibration['workloads'], 'workloads')['resolve'], 'resolve')
+    p99 = require_number(entry['p99'], 'p99')
+    allowance = require_number(entry['allowance'], 'allowance')
+
+    assert allowance == pytest.approx(math.ceil(p99 / 0.001) * 0.001)
+    assert allowance >= p99
+
+
+@pytest.mark.parametrize(
+    ('entry', 'message'),
+    [
+        ({'p99': -0.001, 'allowance': 0.0, 'eligible': True}, 'p99'),
+        ({'p99': 0.01, 'allowance': 0.011, 'eligible': True}, 'rounded'),
+        ({'p99': 0.05, 'allowance': 0.05, 'eligible': False}, 'eligible'),
+    ],
+)
+def test_calibration_entries_fail_closed_on_invalid_or_inconsistent_values(
+    entry: dict[str, object], message: str
+) -> None:
+    with pytest.raises(HarnessError, match=message):
+        _ = leadership._calibration_entry(entry, 'resolve')
 
 
 @pytest.mark.parametrize(
