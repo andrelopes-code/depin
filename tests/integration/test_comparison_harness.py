@@ -639,12 +639,29 @@ def test_deterministic_child_uses_the_side_directory_environment_and_timeout(
 ) -> None:
     script = (
         'import json, os, pathlib, sys; '
-        "pathlib.Path(sys.argv[1]).write_text(json.dumps({'cwd': os.getcwd(), 'pythonpath': os.environ['PYTHONPATH']}))"
+        "pathlib.Path(sys.argv[1]).write_text(json.dumps({'cwd': os.getcwd(), 'pythonpath': os.environ['PYTHONPATH'], "
+        "'write_bytecode': os.environ['PYTHONDONTWRITEBYTECODE']}))"
     )
     monkeypatch.setattr(comparison, 'DETERMINISTIC_COMMAND', ('-c', script, '{report}'))
     readings = REAL_DETERMINISTIC(tmp_path, tmp_path / 'deterministic.json', side='base', timeout_seconds=0.25)
 
-    assert readings == {'cwd': str(tmp_path), 'pythonpath': str(tmp_path)}
+    assert readings == {'cwd': str(tmp_path), 'pythonpath': str(tmp_path), 'write_bytecode': '1'}
+
+
+def test_deterministic_child_does_not_write_bytecode_into_an_archived_baseline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / 'archived_module.py').write_text('VALUE = 1\n', encoding='utf-8')
+    script = (
+        'import archived_module, json, pathlib, sys; '
+        "pathlib.Path(sys.argv[1]).write_text(json.dumps({'value': archived_module.VALUE}))"
+    )
+    monkeypatch.setattr(comparison, 'DETERMINISTIC_COMMAND', ('-c', script, '{report}'))
+
+    readings = REAL_DETERMINISTIC(tmp_path, tmp_path / 'deterministic.json', side='base', timeout_seconds=0.25)
+
+    assert readings == {'value': 1}
+    assert not list(tmp_path.rglob('__pycache__'))
 
 
 def test_deterministic_child_forwards_its_timeout_and_names_the_failed_side(

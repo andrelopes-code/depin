@@ -360,7 +360,11 @@ def _run(
 
 def collect_deterministic(directory: Path, report: Path, *, side: str, timeout_seconds: float) -> dict[str, object]:
     argv = [sys.executable, *(part.replace('{report}', str(report)) for part in DETERMINISTIC_COMMAND)]
-    environment = os.environ | {'PYTHONHASHSEED': memory.HASH_SEED, 'PYTHONPATH': str(directory)}
+    environment = os.environ | {
+        'PYTHONDONTWRITEBYTECODE': '1',
+        'PYTHONHASHSEED': memory.HASH_SEED,
+        'PYTHONPATH': str(directory),
+    }
     try:
         completed = subprocess.run(
             argv, cwd=directory, env=environment, capture_output=True, text=True, check=False, timeout=timeout_seconds
