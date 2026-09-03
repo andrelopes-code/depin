@@ -16,18 +16,15 @@ from benchmarks.harness import HarnessError, reduce, require_array, require_numb
 
 EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
 BUDGETS = Path('benchmarks/budgets.toml')
+BASELINE_REVISION = 'a' * 40
 REAL_DETERMINISTIC = comparison.collect_deterministic
 
 
 @pytest.fixture(autouse=True)
 def deterministic_children(monkeypatch: pytest.MonkeyPatch) -> None:
-    def baseline(directory: Path) -> str:
-        return 'baseline-revision'
-
     def deterministic(directory: Path, report: Path, *, side: str, timeout_seconds: float) -> dict[str, object]:
         return {}
 
-    monkeypatch.setattr(comparison, '_baseline_preflight', baseline)
     monkeypatch.setattr(comparison, 'collect_deterministic', deterministic)
 
 
@@ -35,6 +32,7 @@ def _collect(
     *,
     out: Path,
     repetitions: int,
+    baseline_dir: Path | None = None,
     allow_dirty: bool = False,
     command: tuple[str, ...] = comparison.COMMAND,
     timeout_seconds: int | float = comparison.DEFAULT_TIMEOUT_SECONDS,
@@ -42,7 +40,8 @@ def _collect(
     return comparison.collect(
         repetitions=repetitions,
         out=out,
-        baseline_dir=out.parent,
+        baseline_dir=baseline_dir or out.parent,
+        baseline_revision=BASELINE_REVISION,
         budgets=BUDGETS,
         allow_dirty=allow_dirty,
         command=command,
@@ -50,10 +49,11 @@ def _collect(
     )
 
 
-def test_collection_requires_explicit_baseline_and_budget_inputs() -> None:
+def test_collection_requires_explicit_baseline_revision_and_budget_inputs() -> None:
     parameters = inspect.signature(comparison.collect).parameters
 
     assert parameters['baseline_dir'].default is inspect.Parameter.empty
+    assert parameters['baseline_revision'].default is inspect.Parameter.empty
     assert parameters['budgets'].default is inspect.Parameter.empty
 
 
@@ -65,13 +65,14 @@ def test_collection_cli_passes_an_explicit_null_mode_to_the_collector(monkeypatc
         repetitions: int,
         out: Path,
         baseline_dir: Path,
+        baseline_revision: str,
         budgets: Path,
         null: bool = False,
         allow_dirty: bool = False,
         command: Sequence[str] = comparison.COMMAND,
         timeout_seconds: int | float = comparison.DEFAULT_TIMEOUT_SECONDS,
     ) -> dict[str, object]:
-        _ = repetitions, out, baseline_dir, budgets, allow_dirty, command, timeout_seconds
+        _ = repetitions, out, baseline_dir, baseline_revision, budgets, allow_dirty, command, timeout_seconds
         collected.append(null)
         return {}
 
@@ -79,11 +80,34 @@ def test_collection_cli_passes_an_explicit_null_mode_to_the_collector(monkeypatc
 
     assert (
         comparison.main(
-            ('collect', '--null', '--out', '/tmp/null', '--baseline-dir', '/tmp/base', '--budgets', 'budgets.toml')
+            (
+                'collect',
+                '--null',
+                '--out',
+                '/tmp/null',
+                '--baseline-dir',
+                '/tmp/base',
+                '--baseline-revision',
+                BASELINE_REVISION,
+                '--budgets',
+                'budgets.toml',
+            )
         )
         == 0
     )
     assert collected == [True]
+
+
+@pytest.mark.parametrize('revision', ['', ' ' * 40, 'not-a-sha', 'a' * 39])
+def test_collection_refuses_missing_or_malformed_baseline_revisions(tmp_path: Path, revision: str) -> None:
+    with pytest.raises(HarnessError, match='baseline revision'):
+        _ = comparison.collect(
+            repetitions=5,
+            out=tmp_path / 'out',
+            baseline_dir=tmp_path,
+            baseline_revision=revision,
+            budgets=BUDGETS,
+        )
 
 
 def _leadership_dataset(
@@ -556,6 +580,8 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     child = _child(tmp_path)
+    archive = tmp_path / 'archive'
+    archive.mkdir()
     calls = tmp_path / 'calls.txt'
     monkeypatch.setenv('CALL_LOG', str(calls))
     monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
@@ -569,6 +595,7 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
     dataset = _collect(
         repetitions=5,
         out=tmp_path / 'out',
+        baseline_dir=archive,
         command=(str(child), '{report}'),
     )
 
@@ -621,7 +648,7 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
                 'path': 'benchmarks/budgets.toml',
                 'sha256': hashlib.sha256(BUDGETS.read_bytes()).hexdigest(),
             },
-            'base': {'source_revision': 'baseline-revision', 'readings': {}},
+            'base': {'source_revision': BASELINE_REVISION, 'readings': {}},
             'head': {'source_revision': 'source-revision', 'readings': {}},
         },
         'targets': {'resolve': {'target': {'seconds': 0.1}}},

@@ -25,7 +25,11 @@ def test_competitive_workflow_is_locked_and_collects_separate_null_and_real_evid
     workflow = Path('.github/workflows/competitive-benchmarks.yml').read_text(encoding='utf-8')
 
     assert 'workflow_dispatch:' in workflow
+    assert 'pull_request:\n    types: [labeled]' in workflow
     assert "github.event.label.name == 'competitive-benchmark'" in workflow
+    assert (
+        "if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'competitive-benchmark'" in workflow
+    )
     assert 'contents: read' in workflow
     assert 'timeout-minutes: 120' in workflow
     assert "python-version: '3.12'" in workflow
@@ -43,6 +47,30 @@ def test_competitive_workflow_is_locked_and_collects_separate_null_and_real_evid
     assert 'if: always()' in workflow
     assert 'git archive' in workflow
     assert 'baseline-revision' in workflow
+    assert '--baseline-revision "$BASELINE_REVISION"' in workflow
+    assert '- name: Prepare artifact placeholders' in workflow
+    assert workflow.index('- name: Prepare artifact placeholders') < workflow.index(
+        '- name: Install the locked benchmark environment'
+    )
+    assert 'if-no-files-found: error' in workflow
+    assert 'if-no-files-found: ignore' not in workflow
+    assert '${{ runner.temp }}/competitive-benchmark-artifacts' in workflow
+    assert '"$ARTIFACT_DIR/null"' in workflow
+    assert '"$ARTIFACT_DIR/real"' in workflow
+    assert '"$ARTIFACT_DIR/calibration.json"' in workflow
+    assert '"$ARTIFACT_DIR/competitive-benchmarks.md"' in workflow
+    assert '"$ARTIFACT_DIR/status.txt"' in workflow
+    assert workflow.index('- name: Install the locked benchmark environment') < workflow.index(
+        '- name: Observe adapter equivalence before collection'
+    )
+    assert workflow.index('- name: Observe adapter equivalence before collection') < workflow.index(
+        '- name: Collect null evidence'
+    )
+    assert workflow.index('- name: Collect null evidence') < workflow.index('- name: Collect competitive evidence')
+    assert 'requirements' not in workflow
+    assert all(
+        '@' in line and line.split('@', 1)[1].split()[0].isalnum() for line in workflow.splitlines() if 'uses:' in line
+    )
     assert '\n  push:' not in workflow
 
 

@@ -130,10 +130,18 @@ def _preflight(*, allow_dirty: bool) -> tuple[str, dict[str, str]]:
     return _revision(), pins
 
 
-def _baseline_preflight(directory: Path) -> str:
-    if not _clean_tree(directory):
-        raise HarnessError(f'{directory}: baseline checkout is dirty; materialize a clean baseline revision')
-    return _revision(directory)
+def _baseline_preflight(directory: Path, revision: str) -> str:
+    if not directory.is_dir():
+        raise HarnessError(f'{directory}: baseline directory does not exist; materialize the requested revision')
+    if (
+        revision != revision.strip()
+        or len(revision) != 40
+        or any(character not in '0123456789abcdef' for character in revision)
+    ):
+        raise HarnessError(
+            f'baseline revision {revision!r} must be an unpadded 40-character lower-case hexadecimal SHA'
+        )
+    return revision
 
 
 def _case_id(name: str, *, repetition: int, order: str) -> str:
@@ -288,6 +296,7 @@ def collect(
     repetitions: int,
     out: Path,
     baseline_dir: Path,
+    baseline_revision: str,
     budgets: Path,
     null: bool = False,
     allow_dirty: bool = False,
@@ -300,8 +309,8 @@ def collect(
     if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
         raise HarnessError(f'{timeout_seconds} timeout seconds; the child timeout must be finite and positive')
     deadline = _monotonic() + timeout_seconds
+    baseline_revision = _baseline_preflight(baseline_dir, baseline_revision)
     revision, pins = _preflight(allow_dirty=allow_dirty)
-    baseline_revision = _baseline_preflight(baseline_dir)
     try:
         budget_digest = hashlib.sha256(budgets.read_bytes()).hexdigest()
     except OSError as error:
@@ -386,6 +395,7 @@ def _arguments(argv: Sequence[str] | None) -> dict[str, object]:
     parser.add_argument('--repetitions', type=int, default=DEFAULT_REPETITIONS)
     parser.add_argument('--out', required=True)
     parser.add_argument('--baseline-dir', required=True)
+    parser.add_argument('--baseline-revision', required=True)
     parser.add_argument('--budgets', required=True)
     parser.add_argument('--allow-dirty', action='store_true')
     parser.add_argument('--null', action='store_true')
@@ -401,6 +411,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             repetitions=require_integer(chosen['repetitions'], '--repetitions'),
             out=Path(require_text(chosen['out'], '--out')),
             baseline_dir=Path(require_text(chosen['baseline_dir'], '--baseline-dir')),
+            baseline_revision=require_text(chosen['baseline_revision'], '--baseline-revision'),
             budgets=Path(require_text(chosen['budgets'], '--budgets')),
             null=bool(chosen['null']),
             allow_dirty=bool(chosen['allow_dirty']),
