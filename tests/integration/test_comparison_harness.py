@@ -14,6 +14,7 @@ from benchmarks.harness import HarnessError, reduce, require_array, require_numb
 
 EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
 BUDGETS = Path('benchmarks/budgets.toml')
+REAL_DETERMINISTIC = comparison.deterministic
 
 
 @pytest.fixture(autouse=True)
@@ -367,6 +368,18 @@ def test_leadership_refuses_a_divergent_deterministic_budget_digest(tmp_path: Pa
         _ = leadership.evaluate(dataset, _calibration(), budgets)
 
 
+def test_leadership_refuses_a_head_deterministic_revision_that_differs_from_the_dataset(tmp_path: Path) -> None:
+    budgets = _deterministic_budget(tmp_path / 'budgets.toml')
+    dataset = _leadership_dataset()
+    description = require_object(require_object(dataset['targets'], 'targets')['resolve'], 'resolve')
+    description['secondary_metrics'] = ['allocations']
+    dataset['deterministic'] = _allocation_evidence(budgets)
+    dataset['source_revision'] = 'other-head'
+
+    with pytest.raises(HarnessError, match=r'head\.source_revision'):
+        _ = leadership.evaluate(dataset, _calibration(), budgets)
+
+
 def test_leadership_fails_an_allocations_claim_when_the_expanded_work_outcome_grows(tmp_path: Path) -> None:
     budgets = _deterministic_budget(tmp_path / 'budgets.toml')
     dataset = _leadership_dataset()
@@ -467,6 +480,19 @@ with open(os.environ['CALL_LOG'], 'a', encoding='utf-8') as stream:
         encoding='utf-8',
     )
     return script
+
+
+def test_deterministic_child_uses_the_side_directory_environment_and_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    script = (
+        'import json, os, pathlib, sys; '
+        "pathlib.Path(sys.argv[1]).write_text(json.dumps({'cwd': os.getcwd(), 'pythonpath': os.environ['PYTHONPATH']}))"
+    )
+    monkeypatch.setattr(comparison, 'DETERMINISTIC_COMMAND', ('-c', script, '{report}'))
+    readings = REAL_DETERMINISTIC(tmp_path, tmp_path / 'deterministic.json', side='base', timeout_seconds=0.25)
+
+    assert readings == {'cwd': str(tmp_path), 'pythonpath': str(tmp_path)}
 
 
 def test_collection_counterbalances_children_and_reduces_their_reports(

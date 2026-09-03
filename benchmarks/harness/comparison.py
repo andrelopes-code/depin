@@ -261,6 +261,9 @@ def _deterministic(directory: Path, report: Path, *, side: str, timeout_seconds:
     return read_json(report)
 
 
+deterministic = _deterministic
+
+
 def _write_atomic(path: Path, payload: dict[str, object]) -> None:
     temporary = path.with_name(f'.{path.name}.tmp')
     try:
