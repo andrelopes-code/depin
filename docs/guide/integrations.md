@@ -458,8 +458,8 @@ async — the same rule that already separates `resolve()` from `aresolve()`:
 Mixing them the wrong way fails the way the rest of depin does: resolving an
 async provider inside a sync `scope()` raises `AsyncInSyncContextError`, the
 same error `resolve()` raises anywhere else; and a sync `scope()` that closes
-over an async provider's teardown raises `TeardownError`, naming `ascope()` as
-the fix.
+over an async provider's teardown raises an `ExceptionGroup` containing
+`TeardownError`, naming `ascope()` as the fix.
 
 ## Startup and shutdown
 

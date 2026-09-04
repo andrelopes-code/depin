@@ -260,10 +260,9 @@ class ScopeFrame:
 
         Raises:
             ExceptionGroup: One or more teardowns failed. Every failure is
-                reported; none is allowed to hide another.
-            TeardownError: An async provider left a teardown here, reported
-                inside the raised `ExceptionGroup` rather than bare; drain it
-                with `drain_async()` instead.
+                reported; none is allowed to hide another. Protocol violations,
+                including an async teardown in this synchronous drain, appear as
+                `TeardownError` members; use `drain_async()` for async providers.
         """
         _run_teardowns_sync(self._take_teardowns())
 
@@ -290,10 +289,10 @@ class ScopeFrame:
 
         Raises:
             ExceptionGroup: One or more teardowns failed. Every failure is
-                reported, and the cache is dropped either way.
-            TeardownError: An async provider left a teardown here, reported
-                inside the raised `ExceptionGroup` rather than bare; drain it
-                with `drop_async()` instead.
+                reported, and the cache is dropped either way. Protocol
+                violations, including an async teardown in this synchronous
+                drain, appear as `TeardownError` members; use `drop_async()` for
+                async providers.
         """
         _run_teardowns_sync(self._take_all())
 
