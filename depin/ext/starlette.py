@@ -34,10 +34,10 @@ def seed_request(scope: Scope) -> ScopeSeed:
         ...     'path': '/orders',
         ...     'headers': [(b'x-tenant', b'acme')],
         ... }
-        >>> key, request = seed_request(scope)
-        >>> key is Request
+        >>> seed = seed_request(scope)
+        >>> seed.key is Request
         True
-        >>> request.headers['x-tenant']
+        >>> seed.value.headers['x-tenant']
         'acme'
     """
     return ScopeSeed(Request, Request(scope))

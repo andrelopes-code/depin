@@ -38,10 +38,10 @@ def seed_context(ctx: Context) -> ScopeSeed:
     Example:
         >>> from click import Command, Context
         >>> ctx = Context(Command('report'))
-        >>> key, value = seed_context(ctx)
-        >>> key is Context
+        >>> seed = seed_context(ctx)
+        >>> seed.key is Context
         True
-        >>> value is ctx
+        >>> seed.value is ctx
         True
     """
     return ScopeSeed(Context, ctx)

@@ -47,10 +47,10 @@ def seed_request(environ: WSGIEnvironment) -> ScopeSeed:
         >>> from wsgiref.util import setup_testing_defaults
         >>> environ = {'PATH_INFO': '/orders', 'HTTP_X_TENANT': 'acme'}
         >>> setup_testing_defaults(environ)
-        >>> key, request = seed_request(environ)
-        >>> key is Request
+        >>> seed = seed_request(environ)
+        >>> seed.key is Request
         True
-        >>> request.headers['x-tenant']
+        >>> seed.value.headers['x-tenant']
         'acme'
     """
     return ScopeSeed(Request, Request(environ))
