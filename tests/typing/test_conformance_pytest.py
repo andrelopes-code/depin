@@ -25,7 +25,7 @@ class FakeClock:
 
 def test_override_factory_yields_the_container() -> None:
     def consumer(depin_override: OverrideFactory) -> None:
-        with depin_override(Clock, FakeClock()) as di:
+        with depin_override(Clock).using(FakeClock()) as di:
             assert_type(di, FrozenContainer)
 
     _ = consumer
@@ -34,7 +34,7 @@ def test_override_factory_yields_the_container() -> None:
 def test_async_override_factory_yields_the_container() -> None:
     def consumer(depin_aoverride: AsyncOverrideFactory) -> None:
         async def use() -> None:
-            async with depin_aoverride(Clock, FakeClock()) as di:
+            async with depin_aoverride(Clock).using(FakeClock()) as di:
                 assert_type(di, FrozenContainer)
 
         _ = use
