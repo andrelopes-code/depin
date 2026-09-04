@@ -322,7 +322,7 @@ async def test_a_readiness_route_reports_a_failing_check() -> None:
     app.add_middleware(RequestScope, container=frozen)
 
     @app.get('/ready')
-    async def _ready() -> dict[str, object]:  # pyright: ignore[reportUnusedFunction]
+    async def ready() -> dict[str, object]:
         report = await frozen.ahealth()
         return {
             'healthy': report.healthy,
@@ -334,6 +334,8 @@ async def test_a_readiness_route_reports_a_failing_check() -> None:
                 for result in report.results
             ],
         }
+
+    _ = ready
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url='http://t') as client:

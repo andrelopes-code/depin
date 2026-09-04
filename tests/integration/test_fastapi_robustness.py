@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from starlette.types import Message, Receive, Send
 from starlette.types import Scope as ASGIScope
 
-from depin import Container, Scope
+from depin import Container, Scope, hosted_container
 from depin._core.scope import active_frame
 from depin.errors import OutsideScopeError
 from depin.ext.fastapi import Inject, RequestScope
@@ -57,15 +57,18 @@ async def test_lifespan_scope_passes_through_without_opening_frame() -> None:
 async def test_websocket_scope_opens_frame_and_delegates() -> None:
     seen: list[tuple[str, bool]] = []
 
+    class Connection:
+        pass
+
     async def inner(scope: ASGIScope, receive: Receive, send: Send) -> None:
         in_scope = True
         try:
-            active_frame()
+            hosted_container().resolve(Connection)
         except OutsideScopeError:
             in_scope = False
         seen.append((str(scope['type']), in_scope))
 
-    mw = RequestScope(inner, Container().freeze())
+    mw = RequestScope(inner, Container().bind(Connection, scope=Scope.SCOPED).freeze())
     ws_scope: ASGIScope = {'type': 'websocket', 'path': '/ws', 'headers': []}
     await mw(ws_scope, _json_body_receive, _noop_send)
     assert seen == [('websocket', True)]
@@ -76,7 +79,7 @@ async def test_http_request_in_frame_is_metadata_only() -> None:
     captured: dict[str, object] = {}
 
     async def inner(scope: ASGIScope, receive: Receive, send: Send) -> None:
-        req = active_frame().get(FastAPIRequest)
+        req = hosted_container().resolve(FastAPIRequest)
         assert isinstance(req, FastAPIRequest)
         captured['header'] = req.headers.get('x-probe')
         captured['path'] = req.url.path
@@ -88,7 +91,7 @@ async def test_http_request_in_frame_is_metadata_only() -> None:
             # must raise here rather than consume the route's stream.
             captured['body_error'] = type(exc).__name__
 
-    mw = RequestScope(inner, Container().freeze())
+    mw = RequestScope(inner, Container().scope_value(FastAPIRequest).freeze())
     await mw(_http_scope(), _json_body_receive, _noop_send)
     assert captured['header'] == 'meta'
     assert captured['path'] == '/'
