@@ -292,10 +292,11 @@ class FrozenContainer:
         Failures are collected into an `ExceptionGroup`.
 
         Raises:
-            ExceptionGroup: One or more teardowns failed. Protocol violations,
-                including an async teardown in this synchronous drain, appear as
-                `TeardownError` members of the group; use `aclose()` for async
-                providers.
+            AsyncInSyncContextError: A singleton requires an async teardown;
+                use `aclose()` instead.
+            ExceptionGroup: One or more synchronous teardowns failed. A
+                generator provider that violates its teardown protocol appears
+                as a `TeardownError` member of the group.
 
         Example:
             ```pycon

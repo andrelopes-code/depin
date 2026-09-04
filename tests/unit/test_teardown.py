@@ -1,5 +1,6 @@
 """Teardown records: what runs, what refuses to run, and how failures surface."""
 
+import asyncio
 from collections.abc import AsyncGenerator, Generator
 
 import pytest
@@ -13,7 +14,7 @@ from depin._core.teardown import (
     SyncGenTeardown,
     run_async,
 )
-from depin.errors import TeardownError
+from depin.errors import AsyncInSyncContextError, TeardownError
 
 
 class _FakeAsyncGen:
@@ -109,20 +110,18 @@ def test_sync_close_preserves_independent_failures_in_lifo_order() -> None:
     assert [type(error) for error in exc.value.exceptions] == [RuntimeError, RuntimeError, RuntimeError]
 
 
-@pytest.mark.asyncio
-async def test_sync_close_refuses_an_async_singleton_teardown() -> None:
+def test_sync_close_refuses_an_async_singleton_teardown() -> None:
     async def make() -> AsyncGenerator[str]:
         yield 'v'
 
     frozen = Container().bind(make, scope=Scope.SINGLETON, provides=str).freeze()
-    assert await frozen.aresolve(str) == 'v'
-    with pytest.raises(ExceptionGroup) as exc:
+
+    async def build() -> None:
+        assert await frozen.aresolve(str) == 'v'
+
+    asyncio.run(build())
+    with pytest.raises(AsyncInSyncContextError, match='cannot drain async singleton teardowns'):
         frozen.close()
-    assert [str(error) for error in exc.value.exceptions] == [
-        'an async provider registered a teardown in a synchronous scope; '
-        'open the scope with ascope() and drain it with aclose()/ascope() instead'
-    ]
-    assert [type(error) for error in exc.value.exceptions] == [TeardownError]
 
 
 def test_sync_scoped_teardown_preserves_failures_in_lifo_order() -> None:
