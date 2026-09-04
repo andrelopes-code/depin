@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from typing import get_args, get_origin, get_type_hints
 
 from depin._core.introspect import AnnotatedMeta, detect_shape, extract_annotated_meta, is_token_key
-from depin._core.markers import _TokenKey, get_provides
+from depin._core.markers import TokenKeyBase, get_provides
 from depin._core.scope import Scope
 from depin._core.spec import (
     ALIAS_PARAM,
@@ -364,7 +364,7 @@ def _reject_repeated_members(collection: CollectionBinding) -> None:
 
 def _resolve_key(
     source: object,
-    explicit: type[object] | _TokenKey | str | None,
+    explicit: type[object] | TokenKeyBase | str | None,
     shape: ProviderShape,
     localns: dict[str, object],
 ) -> ProviderKey:

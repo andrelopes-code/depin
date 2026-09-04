@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Iter
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from typing import Self, final, overload
 
-from depin._core.markers import Token, _TokenKey
+from depin._core.markers import Token, TokenKeyBase
 from depin._core.scope import Scope
 from depin._core.spec import (
     AliasBinding,
@@ -20,7 +20,13 @@ from depin._core.spec import (
 from depin.errors import InvalidProviderError
 
 type _BindFn = Callable[
-    [type[object] | Callable[..., object], Scope, type[object] | _TokenKey | str | None, str | None, Condition | None],
+    [
+        type[object] | Callable[..., object],
+        Scope,
+        type[object] | TokenKeyBase | str | None,
+        str | None,
+        Condition | None,
+    ],
     None,
 ]
 
@@ -39,7 +45,7 @@ class ScopeDecorator:
         self,
         bind: _BindFn,
         scope: Scope,
-        provides: type[object] | _TokenKey | str | None,
+        provides: type[object] | TokenKeyBase | str | None,
         tag: str | None,
         when: Condition | None,
     ) -> None:
@@ -86,7 +92,7 @@ class BindingCollector:
         source: type[T],
         *,
         scope: Scope = Scope.SINGLETON,
-        provides: type[object] | _TokenKey | str | None = None,
+        provides: type[object] | TokenKeyBase | str | None = None,
         tag: str | None = None,
         when: Condition | None = None,
         check: Callable[[T], object] | None = None,
@@ -97,7 +103,7 @@ class BindingCollector:
         source: Callable[..., Generator[T]],
         *,
         scope: Scope = Scope.SINGLETON,
-        provides: type[object] | _TokenKey | str | None = None,
+        provides: type[object] | TokenKeyBase | str | None = None,
         tag: str | None = None,
         when: Condition | None = None,
         check: Callable[[T], object] | None = None,
@@ -108,7 +114,7 @@ class BindingCollector:
         source: Callable[..., AsyncGenerator[T]],
         *,
         scope: Scope = Scope.SINGLETON,
-        provides: type[object] | _TokenKey | str | None = None,
+        provides: type[object] | TokenKeyBase | str | None = None,
         tag: str | None = None,
         when: Condition | None = None,
         check: Callable[[T], object] | None = None,
@@ -119,7 +125,7 @@ class BindingCollector:
         source: Callable[..., AbstractContextManager[T]],
         *,
         scope: Scope = Scope.SINGLETON,
-        provides: type[object] | _TokenKey | str | None = None,
+        provides: type[object] | TokenKeyBase | str | None = None,
         tag: str | None = None,
         when: Condition | None = None,
         check: Callable[[T], object] | None = None,
@@ -130,7 +136,7 @@ class BindingCollector:
         source: Callable[..., AbstractAsyncContextManager[T]],
         *,
         scope: Scope = Scope.SINGLETON,
-        provides: type[object] | _TokenKey | str | None = None,
+        provides: type[object] | TokenKeyBase | str | None = None,
         tag: str | None = None,
         when: Condition | None = None,
         check: Callable[[T], object] | None = None,
@@ -141,7 +147,7 @@ class BindingCollector:
         source: Callable[..., Awaitable[T]],
         *,
         scope: Scope = Scope.SINGLETON,
-        provides: type[object] | _TokenKey | str | None = None,
+        provides: type[object] | TokenKeyBase | str | None = None,
         tag: str | None = None,
         when: Condition | None = None,
         check: Callable[[T], object] | None = None,
@@ -152,7 +158,7 @@ class BindingCollector:
         source: Callable[..., T],
         *,
         scope: Scope = Scope.SINGLETON,
-        provides: type[object] | _TokenKey | str | None = None,
+        provides: type[object] | TokenKeyBase | str | None = None,
         tag: str | None = None,
         when: Condition | None = None,
         check: Callable[[T], object] | None = None,
@@ -168,7 +174,7 @@ class BindingCollector:
         | Callable[..., T],
         *,
         scope: Scope = Scope.SINGLETON,
-        provides: type[object] | _TokenKey | str | None = None,
+        provides: type[object] | TokenKeyBase | str | None = None,
         tag: str | None = None,
         when: Condition | None = None,
         check: Callable[[T], object] | None = None,
@@ -515,7 +521,7 @@ class BindingCollector:
     def singleton(
         self,
         *,
-        provides: type[object] | _TokenKey | str | None = None,
+        provides: type[object] | TokenKeyBase | str | None = None,
         tag: str | None = None,
         when: Condition | None = None,
     ) -> ScopeDecorator:
@@ -543,7 +549,7 @@ class BindingCollector:
     def scoped(
         self,
         *,
-        provides: type[object] | _TokenKey | str | None = None,
+        provides: type[object] | TokenKeyBase | str | None = None,
         tag: str | None = None,
         when: Condition | None = None,
     ) -> ScopeDecorator:
@@ -558,7 +564,7 @@ class BindingCollector:
     def transient(
         self,
         *,
-        provides: type[object] | _TokenKey | str | None = None,
+        provides: type[object] | TokenKeyBase | str | None = None,
         tag: str | None = None,
         when: Condition | None = None,
     ) -> ScopeDecorator:
@@ -604,7 +610,7 @@ class BindingCollector:
         self,
         source: type[object] | Callable[..., object],
         scope: Scope,
-        provides: type[object] | _TokenKey | str | None,
+        provides: type[object] | TokenKeyBase | str | None,
         tag: str | None,
         when: Condition | None,
     ) -> None:

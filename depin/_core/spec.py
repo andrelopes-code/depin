@@ -6,7 +6,7 @@ from enum import Enum
 from types import GenericAlias, UnionType
 from typing import Final, Protocol, TypeGuard, final, get_args, get_origin, runtime_checkable
 
-from depin._core.markers import Token, _TokenKey
+from depin._core.markers import Token, TokenKeyBase
 from depin._core.scope import Scope
 
 
@@ -100,7 +100,7 @@ class Underlying:
     applied: int
 
 
-type ProviderKey = type[object] | _TokenKey | str | GenericAlias | Underlying
+type ProviderKey = type[object] | TokenKeyBase | str | GenericAlias | Underlying
 """What a provider can be bound and resolved under: a class, a `Token`, a name, or a parameterised generic.
 
 The parameterised case needs no member of its own. A generic written in
@@ -141,7 +141,7 @@ class FrameBinding:
     middleware or other scope-setup code (for example ``fastapi.Request``).
     """
 
-    key: 'type[object] | _TokenKey'
+    key: 'type[object] | TokenKeyBase'
 
 
 def is_frame_binding(value: object) -> TypeGuard[FrameBinding]:
@@ -248,7 +248,7 @@ built, not when a value is resolved.
 class BindRecord:
     source: object
     scope: Scope
-    provides: type[object] | _TokenKey | str | None
+    provides: type[object] | TokenKeyBase | str | None
     tag: str | None
     condition: Condition | None = None
     check: object | None = None

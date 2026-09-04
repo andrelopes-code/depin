@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from depin._core.spec import ProviderKey
 
 
-class _TokenKey:
+class TokenKeyBase:
     """A named provider key, without the phantom type parameter `Token` carries.
 
     `Token` is the only intended implementation. This private nominal base exists so a
@@ -38,7 +38,7 @@ class _TokenKey:
 
     @override
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, _TokenKey) and self.name == other.name
+        return isinstance(other, TokenKeyBase) and self.name == other.name
 
     @override
     def __hash__(self) -> int:
@@ -46,7 +46,7 @@ class _TokenKey:
 
 
 @final
-class Token[T](_TokenKey):
+class Token[T](TokenKeyBase):
     """A typed, named provider key.
 
     Two ``Token`` instances are equal iff they share the same ``name``. This makes
@@ -70,7 +70,7 @@ class Token[T](_TokenKey):
 
     if TYPE_CHECKING:
 
-        def _witness(self, value: T) -> T: ...
+        def witness(self, value: T) -> T: ...
 
 
 @final
@@ -90,7 +90,7 @@ class Named:
     ``Named`` is the explicit form and the only way to reference a string key.
     """
 
-    key: '_TokenKey | str'
+    key: 'TokenKeyBase | str'
 
 
 @final

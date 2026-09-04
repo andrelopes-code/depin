@@ -1,10 +1,10 @@
-import depin
 import typing
 from collections.abc import Callable
 
 import pytest
 
-from depin._core.markers import Named, Tag, Token, _TokenKey, get_provides, injected, is_inject_marker, provides
+import depin
+from depin._core.markers import Named, Tag, Token, TokenKeyBase, get_provides, injected, is_inject_marker, provides
 from depin.errors import DepinError, InvalidProviderError
 
 
@@ -150,12 +150,12 @@ def test_provides_explains_a_key_shaped_target_in_its_own_terms(target: object, 
 
 
 def test_a_token_uses_the_private_nominal_key_base() -> None:
-    assert isinstance(Token[str]('db.url'), _TokenKey)
+    assert isinstance(Token[str]('db.url'), TokenKeyBase)
 
 
 def test_tokens_with_the_same_name_are_equal_and_hash_equally_as_keys() -> None:
-    a: _TokenKey = Token[str]('db.url')
-    b: _TokenKey = Token[int]('db.url')
+    a: TokenKeyBase = Token[str]('db.url')
+    b: TokenKeyBase = Token[int]('db.url')
     assert a == b
     assert hash(a) == hash(b)
 
