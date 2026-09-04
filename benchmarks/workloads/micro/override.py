@@ -60,7 +60,7 @@ def _resolve_through_an_active_override() -> Workload:
     def depin_setup() -> Session:
         frozen = Container().bind(_sole).freeze()
         stack = contextlib.ExitStack()
-        _ = stack.enter_context(frozen.override(Sole, Substitute()))
+        _ = stack.enter_context(frozen.override(Sole).using(Substitute()))
         _ = frozen.resolve(Sole)
         return Session(
             call=lambda: frozen.resolve(Sole),

@@ -25,7 +25,7 @@ def _override_nesting_session(size: int) -> tuple[Callable[[], object], Callable
     stack = contextlib.ExitStack()
     try:
         for index in range(size):
-            _ = stack.enter_context(frozen.override(type(f'Unrelated{index}', (), {}), object()))
+            _ = stack.enter_context(frozen.override(type(f'Unrelated{index}', (), {})).using(object()))
     except BaseException:
         stack.close()
         raise
