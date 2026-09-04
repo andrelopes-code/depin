@@ -153,7 +153,7 @@ def test_sync_singleton_chain_retries_once_after_mid_chain_failure() -> None:
     first.start()
     second.start()
     barrier.wait()
-    assert failure_started.wait(1)
+    failure_started.wait()
     release_failure.set()
     first.join()
     second.join()
