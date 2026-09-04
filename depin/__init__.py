@@ -35,7 +35,7 @@ from depin._core.hosting import (
     hosted_container,
     optional_hosted_container,
 )
-from depin._core.markers import Named, Tag, Token, TokenKey, injected, provides
+from depin._core.markers import Named, Tag, Token, injected, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope, ScopeFrame
 from depin._core.spec import Bindings, Condition, ProviderKey, ProviderShape, Underlying
@@ -76,7 +76,6 @@ __all__ = (
     'ScopeFrame',
     'Tag',
     'Token',
-    'TokenKey',
     'Underlying',
     'WarmupReport',
     'hosted_container',

@@ -64,3 +64,12 @@ pyright = "reportAssignmentType"
 basedpyright = "reportAssignmentType"
 ty = "invalid-assignment"
 pyrefly = "bad-assignment"
+
+[n07]
+misuse = "value() given a value incompatible with its token"
+line = 9
+mypy = "misc"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "invalid-argument-type"
+pyrefly = "bad-argument-type"

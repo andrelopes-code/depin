@@ -1,6 +1,6 @@
 """`collect()` given a member that is not a provider key.
 
-`ProviderKey` admits a class, a `TokenKey`, a string, a parameterised generic
+`ProviderKey` admits a class, a `Token`, a string, a parameterised generic
 alias and an `Underlying`. An integer is none of them, so it cannot stand in a
 collection's member sequence.
 """

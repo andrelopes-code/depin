@@ -12,7 +12,7 @@ writes them.
 
 from typing import Annotated, Protocol, assert_type
 
-from depin import Container, FrozenContainer, Named, ProviderKey, Tag, Token, TokenKey, Underlying
+from depin import Container, FrozenContainer, Named, ProviderKey, Tag, Token, Underlying
 
 
 class Config:
@@ -65,16 +65,6 @@ def a_token_resolves_at_its_parameter() -> None:
     di = Container().value(port, 8080).value(dsn, 'sqlite://').freeze()
     assert_type(di.resolve(port), int)
     assert_type(di.resolve(dsn), str)
-
-
-def a_token_widens_to_its_non_generic_base() -> None:
-    _base: TokenKey = port
-    _key: ProviderKey = port
-
-
-def a_bare_token_key_is_still_a_provider_key() -> None:
-    _standalone: TokenKey = TokenKey('legacy')
-    _key: ProviderKey = _standalone
 
 
 def a_class_a_protocol_and_a_string_are_provider_keys() -> None:

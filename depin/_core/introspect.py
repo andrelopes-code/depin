@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from types import NoneType, UnionType
 from typing import Annotated, TypeGuard, Union, get_args, get_origin
 
-from depin._core.markers import Named, Tag, TokenKey
+from depin._core.markers import Named, Tag, _TokenKey
 from depin._core.spec import ProviderShape
 from depin.errors import InvalidProviderError
 
@@ -48,23 +48,23 @@ def _wraps_async_generator(source: object) -> bool:
 @dataclass(frozen=True, slots=True)
 class AnnotatedMeta:
     base: object
-    token: TokenKey | None
+    token: _TokenKey | None
     tag: str | None
-    named: 'TokenKey | str | None'
+    named: '_TokenKey | str | None'
     optional: bool
 
 
-def is_token_key(value: object) -> TypeGuard[TokenKey]:
+def is_token_key(value: object) -> TypeGuard[_TokenKey]:
     """A Token's T is type-only; at runtime a named key is observable only as its untyped supertype."""
-    return isinstance(value, TokenKey)
+    return isinstance(value, _TokenKey)
 
 
 def extract_annotated_meta(annotation: object) -> AnnotatedMeta:
     base, extras = _split_annotated(annotation)
 
-    token: TokenKey | None = None
+    token: _TokenKey | None = None
     tag: str | None = None
-    named: TokenKey | str | None = None
+    named: _TokenKey | str | None = None
 
     for extra in extras:
         if is_token_key(extra):

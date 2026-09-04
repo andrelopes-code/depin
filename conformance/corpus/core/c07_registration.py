@@ -3,7 +3,7 @@
 Two public symbols are spelled `provides` and both are here. The decorator
 `provides(Store)` marks a class with the abstract key it satisfies; the
 `provides=` keyword names the key one binding registers under, and it accepts a
-class, a `TokenKey` and a string.
+class, a `Token` and a string.
 
 The scope decorators are the file's only assignability promises. A decorator's
 return type is a category `assert_type` cannot state honestly — ty infers the

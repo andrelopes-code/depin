@@ -87,9 +87,6 @@ fixtures = ["corpus/core/c02_keys.py"]
 [Token]
 fixtures = ["corpus/core/c02_keys.py"]
 
-[TokenKey]
-fixtures = ["corpus/core/c02_keys.py"]
-
 [Underlying]
 fixtures = ["corpus/core/c02_keys.py"]
 

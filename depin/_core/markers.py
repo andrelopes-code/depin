@@ -9,10 +9,10 @@ if TYPE_CHECKING:
     from depin._core.spec import ProviderKey
 
 
-class TokenKey:
+class _TokenKey:
     """A named provider key, without the phantom type parameter `Token` carries.
 
-    `Token` is the only intended implementation. ``TokenKey`` exists so a
+    `Token` is the only intended implementation. This private nominal base exists so a
     position that holds a named key but has no type argument to name — the
     `ProviderKey` alias, the key a `Named` marker carries, the ``provides=``
     keyword — can be spelled without writing ``Token[object]``, whose phantom
@@ -25,14 +25,6 @@ class TokenKey:
 
     Two instances are equal iff they share the same ``name``.
 
-    Example:
-        ```pycon
-        >>> from depin import Token, TokenKey
-        >>> key: TokenKey = Token[str]('db.url')
-        >>> key
-        Token('db.url')
-
-        ```
     """
 
     __slots__ = ('name',)
@@ -46,7 +38,7 @@ class TokenKey:
 
     @override
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, TokenKey) and self.name == other.name
+        return isinstance(other, _TokenKey) and self.name == other.name
 
     @override
     def __hash__(self) -> int:
@@ -54,7 +46,7 @@ class TokenKey:
 
 
 @final
-class Token[T](TokenKey):
+class Token[T](_TokenKey):
     """A typed, named provider key.
 
     Two ``Token`` instances are equal iff they share the same ``name``. This makes
@@ -76,6 +68,10 @@ class Token[T](TokenKey):
 
     __slots__ = ()
 
+    if TYPE_CHECKING:
+
+        def _witness(self, value: T) -> T: ...
+
 
 @final
 @dataclass(frozen=True, slots=True)
@@ -94,7 +90,7 @@ class Named:
     ``Named`` is the explicit form and the only way to reference a string key.
     """
 
-    key: 'TokenKey | str'
+    key: '_TokenKey | str'
 
 
 @final

@@ -30,7 +30,6 @@ EXPECTED_EXPORTS = (
     'ScopeFrame',
     'Tag',
     'Token',
-    'TokenKey',
     'Underlying',
     'WarmupReport',
     'hosted_container',
