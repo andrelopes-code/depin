@@ -17,6 +17,7 @@ from depin._core.spec import (
     collection_param,
     fmt_chain,
     fmt_key,
+    fmt_provider,
     is_alias_binding,
     render_key,
 )
@@ -189,3 +190,22 @@ def test_render_key_is_the_public_renderer_with_an_optional_tag() -> None:
     token = Token[int]('port')
 
     assert render_key(token, tag='primary') == "Token('port') (tag='primary')"
+
+
+def test_fmt_provider_names_a_decorator_by_qualified_source_name() -> None:
+    class Store: ...
+
+    def audit(inner: Store) -> Store:
+        return inner
+
+    spec = ProviderSpec(
+        key=Store,
+        tag=None,
+        source=audit,
+        scope=Scope.SINGLETON,
+        shape=ProviderShape.FUNCTION,
+        needs_async=False,
+        params=(ParamSpec(name='inner', key=Underlying(Store, 0), tag=None, has_default=False, default=None),),
+    )
+
+    assert fmt_provider(spec) == f'{Store.__qualname__} [decorated by {audit.__qualname__}]'

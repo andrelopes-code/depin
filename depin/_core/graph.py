@@ -14,7 +14,17 @@ from depin._core import decoration, longest_chain
 from depin._core.markers import get_provides
 from depin._core.providers import ASYNC_SHAPES, build_specs
 from depin._core.scope import Scope
-from depin._core.spec import BindRecord, Ident, ProviderKey, ProviderSpec, ResolutionPlan, fmt_chain, fmt_key
+from depin._core.spec import (
+    BindRecord,
+    Ident,
+    ProviderKey,
+    ProviderSpec,
+    ResolutionPlan,
+    Underlying,
+    fmt_chain,
+    fmt_key,
+    fmt_provider,
+)
 from depin.errors import (
     CaptiveDependencyError,
     CircularDependencyError,
@@ -270,7 +280,7 @@ def _check_captive(order: Iterable[ProviderSpec], by_key: _Index) -> None:
     the walk below looks through transients but stops at singleton boundaries
     (each singleton is validated as its own root).
     """
-    for root in order:
+    for root in sorted(order, key=lambda spec: isinstance(spec.key, Underlying)):
         if root.scope is not Scope.SINGLETON:
             continue
         reached_from: dict[Ident, ProviderSpec] = {}
@@ -284,7 +294,7 @@ def _check_captive(order: Iterable[ProviderSpec], by_key: _Index) -> None:
                 if dep.scope is Scope.SCOPED:
                     chain = (*_captive_chain(root, spec, reached_from), dep)
                     raise CaptiveDependencyError(_format_captive(root, dep, chain))
-                if dep.scope is Scope.TRANSIENT:
+                if dep.scope is Scope.TRANSIENT or _is_decoration_edge(spec, dep):
                     ident = (dep.key, dep.tag)
                     if ident in reached_from:
                         continue
@@ -312,8 +322,15 @@ def _captive_chain(
     return tuple(chain)
 
 
+def _is_decoration_edge(spec: ProviderSpec, dep: ProviderSpec) -> bool:
+    """Whether the dependency is the next layer down in a decorated binding."""
+    return isinstance(dep.key, Underlying) and any(
+        (param.key, param.tag) == (dep.key, dep.tag) for param in spec.params
+    )
+
+
 def _format_captive(root: ProviderSpec, dep: ProviderSpec, chain: tuple[ProviderSpec, ...]) -> str:
-    path = fmt_chain(s.key for s in chain)
+    path = ' -> '.join(fmt_provider(spec) for spec in chain)
     return (
         f'captive dependency: singleton {fmt_key(root.key)} depends on scoped {fmt_key(dep.key)} '
         f'(chain: {path}). A singleton outlives every scope, so it would capture one '

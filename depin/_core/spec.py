@@ -348,6 +348,27 @@ def render_key(key: ProviderKey, /, *, tag: str | None = None) -> str:
     return rendered if tag is None else f'{rendered} (tag={tag!r})'
 
 
+def fmt_provider(spec: ProviderSpec) -> str:
+    """Render a provider, naming its wrapper when it is a decoration layer."""
+    rendered = render_key(spec.key, tag=spec.tag)
+    if not _is_decoration_layer(spec):
+        return rendered
+    return f'{rendered} [decorated by {fmt_source(spec.source)}]'
+
+
+def _is_decoration_layer(spec: ProviderSpec) -> bool:
+    key = spec.key.key if isinstance(spec.key, Underlying) else spec.key
+    return any(
+        isinstance(param.key, Underlying) and param.key.key == key and param.tag == spec.tag for param in spec.params
+    )
+
+
+def fmt_source(source: object) -> str:
+    """Render a provider source without depending on an address-bearing repr."""
+    name = getattr(source, '__qualname__', None)
+    return name if isinstance(name, str) else type(source).__qualname__
+
+
 def fmt_key(key: object) -> str:
     if isinstance(key, type):
         return key.__qualname__
