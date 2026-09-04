@@ -243,19 +243,19 @@ BASELINE_DIR="$(mktemp -d)"
 git archive "$BASELINE_REVISION" | tar -x -C "$BASELINE_DIR"
 printf '%s\n' "$BASELINE_REVISION" > "$BASELINE_DIR/.depin-baseline-revision"
 uv run --no-sync pytest benchmarks/test_comparison.py -q
-uv run --no-sync python -m benchmarks.harness.comparison collect --null \
+uv run --no-sync python -m benchmarks.comparison.collection collect --null \
   --out /tmp/depin-comparison-null --baseline-dir "$BASELINE_DIR" \
   --baseline-revision "$BASELINE_REVISION" \
   --budgets benchmarks/budgets.toml
-uv run --no-sync python -m benchmarks.harness.leadership calibrate /tmp/depin-comparison-null \
+uv run --no-sync python -m benchmarks.comparison.leadership calibrate /tmp/depin-comparison-null \
   --out /tmp/depin-comparison-calibration.json
-uv run --no-sync python -m benchmarks.harness.comparison collect \
+uv run --no-sync python -m benchmarks.comparison.collection collect \
   --out /tmp/depin-comparison-real --baseline-dir "$BASELINE_DIR" \
   --baseline-revision "$BASELINE_REVISION" \
   --budgets benchmarks/budgets.toml
-uv run --no-sync python -m benchmarks.harness.leadership evaluate /tmp/depin-comparison-real \
+uv run --no-sync python -m benchmarks.comparison.leadership evaluate /tmp/depin-comparison-real \
   --calibration /tmp/depin-comparison-calibration.json --budgets benchmarks/budgets.toml
-uv run --no-sync python -m benchmarks.harness.comparison_report /tmp/depin-comparison-real \
+uv run --no-sync python -m benchmarks.comparison.report /tmp/depin-comparison-real \
   --calibration /tmp/depin-comparison-calibration.json --budgets benchmarks/budgets.toml \
   > /tmp/depin-comparison-report.md
 ```

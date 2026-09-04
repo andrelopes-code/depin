@@ -66,26 +66,26 @@ jobs:
 
       - name: Collect null evidence
         run: >
-          uv run --no-sync python -m benchmarks.harness.comparison collect --null
+          uv run --no-sync python -m benchmarks.comparison.collection collect --null
           --repetitions "$REPETITIONS" --out "$ARTIFACT_DIR/null"
           --baseline-dir "$BASELINE_DIR" --baseline-revision "$BASELINE_REVISION" --budgets benchmarks/budgets.toml
           --timeout-seconds 1500
 
       - name: Calibrate null evidence
         run: >
-          uv run --no-sync python -m benchmarks.harness.leadership calibrate
+          uv run --no-sync python -m benchmarks.comparison.leadership calibrate
           "$ARTIFACT_DIR/null" --out "$ARTIFACT_DIR/calibration.json"
 
       - name: Collect competitive evidence
         run: >
-          uv run --no-sync python -m benchmarks.harness.comparison collect
+          uv run --no-sync python -m benchmarks.comparison.collection collect
           --repetitions "$REPETITIONS" --out "$ARTIFACT_DIR/real"
           --baseline-dir "$BASELINE_DIR" --baseline-revision "$BASELINE_REVISION" --budgets benchmarks/budgets.toml
           --timeout-seconds 4500
 
       - name: Evaluate competitive evidence
         run: >
-          uv run --no-sync python -m benchmarks.harness.leadership evaluate
+          uv run --no-sync python -m benchmarks.comparison.leadership evaluate
           "$ARTIFACT_DIR/real" --calibration "$ARTIFACT_DIR/calibration.json"
           --budgets benchmarks/budgets.toml
 
@@ -93,7 +93,7 @@ jobs:
         if: always()
         run: |
           set +e
-          uv run --no-sync python -m benchmarks.harness.comparison_report \
+          uv run --no-sync python -m benchmarks.comparison.report \
             "$ARTIFACT_DIR/real" --calibration "$ARTIFACT_DIR/calibration.json" \
             --budgets benchmarks/budgets.toml > "$ARTIFACT_DIR/.competitive-benchmarks.md"
           command_result=$?

@@ -6,9 +6,10 @@ from types import SimpleNamespace
 
 import pytest
 
-import benchmarks.harness.comparison_report as comparison_report
-from benchmarks.harness import HarnessError, leadership, require_array, require_object
-from benchmarks.harness.comparison_report import main, render
+import benchmarks.comparison.report as comparison_report
+from benchmarks.comparison import leadership
+from benchmarks.comparison.report import main, render
+from benchmarks.harness import HarnessError, require_array, require_object
 
 FIXTURE = Path(__file__).parents[1] / 'fixtures' / 'comparison'
 BUDGETS = Path('benchmarks/budgets.toml')

@@ -1,6 +1,6 @@
 {
   "accepted": true,
-  "collection_command": "python -m benchmarks.harness.comparison collect --repetitions 5",
+  "collection_command": "python -m benchmarks.comparison.collection collect --repetitions 5",
   "deterministic": {
     "base": {
       "readings": {

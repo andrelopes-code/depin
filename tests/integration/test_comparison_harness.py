@@ -10,9 +10,10 @@ from pathlib import Path
 
 import pytest
 
-import benchmarks.harness.comparison as comparison
-import benchmarks.harness.leadership as leadership
+import benchmarks.comparison.collection as comparison
+import benchmarks.comparison.leadership as leadership
 from benchmarks.comparison import WORKLOADS as COMPARATIVE_WORKLOADS
+from benchmarks.comparison import protocol
 from benchmarks.comparison.inventory import build
 from benchmarks.contracts import Metric
 from benchmarks.harness import HarnessError, reduce, require_array, require_number, require_object
@@ -21,7 +22,7 @@ EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
 BUDGETS = Path('benchmarks/budgets.toml')
 BASELINE_REVISION = 'a' * 40
 REAL_DETERMINISTIC = comparison.collect_deterministic
-REAL_BASELINE_VALIDATION = comparison.validate_baseline_archive
+REAL_BASELINE_VALIDATION = protocol.validate_baseline_archive
 
 
 def _skip_baseline_validation(directory: Path, revision: str) -> None:
@@ -54,7 +55,7 @@ def deterministic_children(monkeypatch: pytest.MonkeyPatch) -> None:
         return {}
 
     monkeypatch.setattr(comparison, 'collect_deterministic', deterministic)
-    monkeypatch.setattr(comparison, 'validate_baseline_archive', _skip_baseline_validation)
+    monkeypatch.setattr(protocol, 'validate_baseline_archive', _skip_baseline_validation)
 
 
 def _collect(
@@ -230,7 +231,7 @@ def _leadership_dataset(
         },
         'harness_revision': 'harness-revision',
         'pins': {'pydepin': '0.17.1', 'wireup': '2.12.0'},
-        'protocol': leadership.COMPARISON_PROTOCOL,
+        'protocol': protocol.COMPARISON_PROTOCOL,
         'schema_version': 1,
         'source_revision': 'head-revision',
         'repetitions': repetitions,
@@ -721,7 +722,7 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
         'environment': {'host': 'synthetic', 'python_hash_seed': '0'},
         'harness_revision': 'source-revision',
         'pins': {'pydepin': '0.17.1', 'wireup': '2.12.0'},
-        'protocol': leadership.COMPARISON_PROTOCOL,
+        'protocol': protocol.COMPARISON_PROTOCOL,
         'repetitions': [
             {
                 'duration': 7000.0,
@@ -871,11 +872,11 @@ def test_baseline_preflight_rejects_marker_matched_but_wrong_archive_contents(
     baseline.mkdir()
     (baseline / '.depin-baseline-revision').write_text(f'{BASELINE_REVISION}\n', encoding='utf-8')
     (baseline / 'wrong.py').write_text('wrong\n', encoding='utf-8')
-    monkeypatch.setattr(comparison, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
-    monkeypatch.setattr(comparison, 'archive_entries', _expected_file)
+    monkeypatch.setattr(protocol, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
+    monkeypatch.setattr(protocol, 'archive_entries', _expected_file)
 
     with pytest.raises(HarnessError, match='baseline archive'):
-        _ = comparison.baseline_preflight(baseline, BASELINE_REVISION)
+        _ = protocol.baseline_preflight(baseline, BASELINE_REVISION)
 
 
 def test_baseline_preflight_rejects_an_extra_file_even_with_a_matched_marker(
@@ -885,11 +886,11 @@ def test_baseline_preflight_rejects_an_extra_file_even_with_a_matched_marker(
     baseline.mkdir()
     (baseline / '.depin-baseline-revision').write_text(f'{BASELINE_REVISION}\n', encoding='utf-8')
     (baseline / 'extra.py').write_text('extra\n', encoding='utf-8')
-    monkeypatch.setattr(comparison, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
-    monkeypatch.setattr(comparison, 'archive_entries', _no_expected_entries)
+    monkeypatch.setattr(protocol, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
+    monkeypatch.setattr(protocol, 'archive_entries', _no_expected_entries)
 
     with pytest.raises(HarnessError, match='baseline archive'):
-        _ = comparison.baseline_preflight(baseline, BASELINE_REVISION)
+        _ = protocol.baseline_preflight(baseline, BASELINE_REVISION)
 
 
 def test_baseline_preflight_rejects_a_symlink_with_the_wrong_target(
@@ -899,11 +900,11 @@ def test_baseline_preflight_rejects_a_symlink_with_the_wrong_target(
     baseline.mkdir()
     (baseline / '.depin-baseline-revision').write_text(f'{BASELINE_REVISION}\n', encoding='utf-8')
     (baseline / 'link').symlink_to('actual-target')
-    monkeypatch.setattr(comparison, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
-    monkeypatch.setattr(comparison, 'archive_entries', _expected_symlink)
+    monkeypatch.setattr(protocol, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
+    monkeypatch.setattr(protocol, 'archive_entries', _expected_symlink)
 
     with pytest.raises(HarnessError, match='baseline archive'):
-        _ = comparison.baseline_preflight(baseline, BASELINE_REVISION)
+        _ = protocol.baseline_preflight(baseline, BASELINE_REVISION)
 
 
 def test_baseline_preflight_rejects_a_file_with_the_wrong_mode(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -913,11 +914,11 @@ def test_baseline_preflight_rejects_a_file_with_the_wrong_mode(tmp_path: Path, m
     executable = baseline / 'mode.py'
     executable.write_text('content\n', encoding='utf-8')
     executable.chmod(0o755)
-    monkeypatch.setattr(comparison, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
-    monkeypatch.setattr(comparison, 'archive_entries', _expected_mode)
+    monkeypatch.setattr(protocol, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
+    monkeypatch.setattr(protocol, 'archive_entries', _expected_mode)
 
     with pytest.raises(HarnessError, match='baseline archive'):
-        _ = comparison.baseline_preflight(baseline, BASELINE_REVISION)
+        _ = protocol.baseline_preflight(baseline, BASELINE_REVISION)
 
 
 def test_baseline_preflight_accepts_a_real_git_archive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -928,9 +929,9 @@ def test_baseline_preflight_accepts_a_real_git_archive(tmp_path: Path, monkeypat
     with tarfile.open(fileobj=io.BytesIO(archive), mode='r:') as stream:
         stream.extractall(baseline, filter='fully_trusted')
     (baseline / '.depin-baseline-revision').write_text(f'{revision}\n', encoding='utf-8')
-    monkeypatch.setattr(comparison, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
+    monkeypatch.setattr(protocol, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
 
-    assert comparison.baseline_preflight(baseline, revision) == revision
+    assert protocol.baseline_preflight(baseline, revision) == revision
 
 
 @pytest.mark.parametrize(

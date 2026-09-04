@@ -36,8 +36,8 @@ def test_competitive_workflow_is_locked_and_collects_separate_null_and_real_evid
     assert "python-version: '3.12'" in workflow
     assert 'uv sync --locked --no-default-groups --group bench' in workflow
     assert 'pytest benchmarks/test_comparison.py -q' in workflow
-    assert 'comparison collect --null' in workflow
-    assert 'comparison collect' in workflow
+    assert 'comparison.collection collect --null' in workflow
+    assert 'comparison.collection collect' in workflow
     assert '--baseline-dir' in workflow
     assert '--budgets benchmarks/budgets.toml' in workflow
     assert 'leadership calibrate' in workflow

@@ -54,7 +54,7 @@ baseline, and the v3 calibration (schema 1, provenance fingerprint
 The seeded collector was `PYTHONPATH=/tmp/task12-seed-v3c.9sWpLf/seed taskset
 -c 0 timeout 1200s /home/dreco/.config/superpowers/worktrees/depin/
 performance-leadership-execution/.venv/bin/python -m
-benchmarks.harness.comparison collect --workload resolve_cached_singleton
+benchmarks.comparison.collection collect --workload resolve_cached_singleton
 --repetitions 5 --timeout-seconds 1200 --out
 /tmp/task12-seed-v3c.9sWpLf/seed-result --baseline-dir
 /tmp/task12-v3.l6PIqv/baseline --baseline-revision

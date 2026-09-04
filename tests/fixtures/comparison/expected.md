@@ -25,4 +25,4 @@
 | Harness revision | harness-revision |
 | Dependency versions | dependency-injector 4.49.1, pydepin 0.17.1 |
 | Host | synthetic-system synthetic-machine synthetic-cpu |
-| Collection command | python -m benchmarks.harness.comparison collect --repetitions 5 |
+| Collection command | python -m benchmarks.comparison.collection collect --repetitions 5 |

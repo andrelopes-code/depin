@@ -9,19 +9,11 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from benchmarks.comparison import WORKLOADS as INVENTORY
+from benchmarks.comparison import collection, leadership
 from benchmarks.comparison.adapters import ADAPTERS
-from benchmarks.harness import (
-    HarnessError,
-    comparison,
-    leadership,
-    read_json,
-    require_array,
-    require_object,
-    require_text,
-    stats,
-)
+from benchmarks.harness import HarnessError, read_json, require_array, require_object, require_text, stats
 
-USAGE = 'python -m benchmarks.harness.comparison_report DATASET --calibration PATH --budgets PATH'
+USAGE = 'python -m benchmarks.comparison.report DATASET --calibration PATH --budgets PATH'
 UNITS = ((1.0, 's'), (1e-3, 'ms'), (1e-6, 'µs'), (1e-9, 'ns'))
 
 
@@ -210,11 +202,11 @@ def render(dataset: dict[str, object], calibration: dict[str, object], budgets: 
 
 def _path(value: str) -> Path:
     candidate = Path(value)
-    return candidate / comparison.COMPARISON_FILE if candidate.is_dir() else candidate
+    return candidate / collection.COMPARISON_FILE if candidate.is_dir() else candidate
 
 
 def _arguments(argv: Sequence[str] | None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog='python -m benchmarks.harness.comparison_report', description=USAGE)
+    parser = argparse.ArgumentParser(prog='python -m benchmarks.comparison.report', description=USAGE)
     parser.add_argument('dataset')
     parser.add_argument('--calibration', required=True)
     parser.add_argument('--budgets', required=True)
