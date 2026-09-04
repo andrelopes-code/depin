@@ -190,9 +190,9 @@ and `tests/integration/test_workload_equivalence.py` enforce both, and they run
 in the ordinary suite — a workload whose baseline stops being equivalent fails as
 a normal test, before anything is timed.
 
-The methodology, the environments, and the reasoning behind the budgets are on
-the [performance pages](https://andrelopes-code.github.io/depin/latest/performance/methodology/)
-and in `specs/2026-09-02-step-7-performance-design.md`.
+The methodology, environments, and budget rationale are on the
+[performance pages](https://andrelopes-code.github.io/depin/latest/performance/methodology/)
+and in `docs/performance/{methodology,reproducing}.md`.
 
 ### What CI checks
 

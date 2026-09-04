@@ -39,8 +39,9 @@ Measure that worktree against the unmodified one, then remove it:
 git worktree remove --force /tmp/seeded
 ```
 
-The evidence report `specs/evidence/2026-09-02-step-7-performance.md` records the
-verdict each seed produced, and the verdict after it was removed.
+The [performance methodology](../../docs/performance/methodology.md) and
+[reproducing guide](../../docs/performance/reproducing.md) describe how to
+collect and interpret a seed verdict.
 
 ## Competitive cached lookup
 

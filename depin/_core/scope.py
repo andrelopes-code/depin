@@ -306,9 +306,8 @@ class ScopeFrame:
         is not available through the public API. A test that tried to catch a
         regression here by racing real threads caught it in roughly four runs
         out of five and cost seconds per run, which does not clear the
-        `[tool.mutmut]` gate's two-second-per-test budget; see the `Carried
-        from Step 5` entry in `specs/2026-08-28-roadmap-1.0-design.md` for the
-        fault-injection mechanism Step 6 owns building instead.
+        `[tool.mutmut]` gate's two-second-per-test budget. The deterministic
+        fault-injection seam keeps the concurrency invariant testable instead.
         """
         with self._mutex:
             records = tuple(reversed(self._teardowns))
