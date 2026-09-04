@@ -269,6 +269,10 @@ def _toposort(specs: Iterable[ProviderSpec], by_key: _Index) -> tuple[ProviderSp
     return tuple(ordered)
 
 
+def _captive_root_priority(spec: ProviderSpec) -> bool:
+    return isinstance(spec.key, Underlying)
+
+
 def _check_captive(order: Iterable[ProviderSpec], by_key: _Index) -> None:
     """Reject singletons that would capture a scoped provider for their lifetime.
 
@@ -280,7 +284,7 @@ def _check_captive(order: Iterable[ProviderSpec], by_key: _Index) -> None:
     the walk below looks through transients but stops at singleton boundaries
     (each singleton is validated as its own root).
     """
-    for root in sorted(order, key=lambda spec: isinstance(spec.key, Underlying)):
+    for root in sorted(order, key=_captive_root_priority):
         if root.scope is not Scope.SINGLETON:
             continue
         reached_from: dict[Ident, ProviderSpec] = {}

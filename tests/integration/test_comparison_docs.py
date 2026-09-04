@@ -22,8 +22,8 @@ Mutation = Callable[[dict[str, object]], None]
 
 def _evidence() -> tuple[dict[str, object], dict[str, object]]:
     return (
-        json.loads((FIXTURE / 'accepted.json').read_text(encoding='utf-8')),
-        json.loads((FIXTURE / 'calibration.json').read_text(encoding='utf-8')),
+        require_object(json.loads((FIXTURE / 'accepted.json').read_text(encoding='utf-8')), 'fixture.dataset'),
+        require_object(json.loads((FIXTURE / 'calibration.json').read_text(encoding='utf-8')), 'fixture.calibration'),
     )
 
 
@@ -94,18 +94,18 @@ def _pin_value_list(dataset: dict[str, object]) -> None:
     pins = dataset['pins']
     if not isinstance(pins, dict):
         raise AssertionError('fixture pins must be an object')
-    pins['pydepin'] = []
+    pins['pydepin'] = list[object]()
 
 
 def _host_object(dataset: dict[str, object]) -> None:
     environment = dataset['environment']
     if not isinstance(environment, dict):
         raise AssertionError('fixture environment must be an object')
-    environment['host'] = {}
+    environment['host'] = dict[str, object]()
 
 
 def _collection_command_list(dataset: dict[str, object]) -> None:
-    dataset['collection_command'] = []
+    dataset['collection_command'] = list[object]()
 
 
 def test_comparison_report_renders_evidence_without_aggregate_ranking() -> None:
@@ -256,7 +256,7 @@ def test_comparison_report_rejects_an_unknown_workload_before_rendering(
     unknown = 'fastest_library_overall'
     description = deepcopy(_target(dataset))
     description['claim'] = 'fastest library overall winner'
-    description['secondary_metrics'] = []
+    description['secondary_metrics'] = list[object]()
     targets = require_object(dataset['targets'], 'fixture.targets')
     targets[unknown] = description
     calibrations = require_object(calibration['workloads'], 'fixture.calibration')

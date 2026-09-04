@@ -21,6 +21,7 @@ from benchmarks.harness import (
     reduce,
     require_array,
     require_integer,
+    require_object,
     require_text,
     write_json,
 )
@@ -53,10 +54,10 @@ def _clean_tree(directory: Path | None = None) -> bool:
 def _expected_pins() -> dict[str, str]:
     from benchmarks.comparison.adapters import ADAPTERS
 
-    expected = {'pydepin': '0.17.1'}
+    expected: dict[str, str] = {'pydepin': '0.17.1'}
     for adapter in ADAPTERS:
         expected[adapter.competitor.distribution] = adapter.competitor.version
-    return dict(sorted(expected.items()))
+    return {distribution: expected[distribution] for distribution in sorted(expected)}
 
 
 def _pins() -> dict[str, str]:
@@ -366,7 +367,7 @@ def _arguments(argv: Sequence[str] | None) -> dict[str, object]:
     parser.add_argument('--workload', action='append', default=[])
     parser.add_argument('--timeout-seconds', type=int, default=DEFAULT_TIMEOUT_SECONDS)
     parsed = parser.parse_args(argv)
-    return vars(parsed)
+    return require_object(vars(parsed), 'parsed arguments')
 
 
 def main(argv: Sequence[str] | None = None) -> int:

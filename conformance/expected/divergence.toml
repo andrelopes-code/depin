@@ -15,11 +15,3 @@
 # it is spelled.
 #
 # `mode` is optional and defaults to "core".
-
-[d01]
-misuse = "override() given a replacement of an unrelated type"
-mypy = "accept"
-pyright = "accept"
-basedpyright = "accept"
-ty = "accept"
-pyrefly = "accept"
