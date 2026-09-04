@@ -184,7 +184,7 @@ class FrozenContainer:
 
             ```
         """
-        with push_frame() as frame:
+        with push_frame(self._root) as frame:
             try:
                 yield frame
             finally:
@@ -200,7 +200,7 @@ class FrozenContainer:
         `ExceptionGroup`. The per-request scope opened by the FastAPI integration
         is an ``ascope``.
         """
-        with push_frame() as frame:
+        with push_frame(self._root) as frame:
             try:
                 yield frame
             finally:
@@ -623,7 +623,7 @@ class FrozenContainer:
         if spec.scope is Scope.SINGLETON:
             return self._root
         if spec.scope is Scope.SCOPED:
-            return active_frame()
+            return active_frame(self._root)
         return None
 
     def _resolve_sync(self, spec: ProviderSpec) -> object:
@@ -633,7 +633,7 @@ class FrozenContainer:
             return self._construct_sync(spec)
         if spec.scope is Scope.SINGLETON:
             return self._resolve_cached_sync(spec, self._root)
-        return self._resolve_cached_sync(spec, active_frame())
+        return self._resolve_cached_sync(spec, active_frame(self._root))
 
     def _resolve_cached_sync(self, spec: ProviderSpec, frame: ScopeFrame) -> object:
         cache_id = (spec.key, spec.tag)
@@ -747,14 +747,16 @@ class FrozenContainer:
 
     def _resolve_params_sync(self, spec: ProviderSpec) -> dict[str, object]:
         out: dict[str, object] = {}
-        frame = optional_frame()
+        frame = optional_frame(self._root)
         for param in spec.params:
             # The plan always decides; the frame is checked first only because CPython's
             # specializing interpreter rewards this shape — the plan-first form does
             # strictly less work yet still costs ~55% more on the gated benchmark.
-            if frame is not None and param.key in frame and self._lookup_optional(param.key, param.tag) is None:
-                out[param.name] = frame.get(param.key)
-                continue
+            if frame is not None and self._lookup_optional(param.key, param.tag) is None:
+                supplied = frame.lookup_provided(param.key, param.tag)
+                if supplied is not MISSING:
+                    out[param.name] = supplied
+                    continue
             dep = self._lookup_optional(param.key, param.tag)
             if dep is None:
                 if param.has_default:
@@ -768,14 +770,16 @@ class FrozenContainer:
 
     async def _resolve_params_async(self, spec: ProviderSpec) -> dict[str, object]:
         out: dict[str, object] = {}
-        frame = optional_frame()
+        frame = optional_frame(self._root)
         for param in spec.params:
             # The plan always decides; the frame is checked first only because CPython's
             # specializing interpreter rewards this shape — the plan-first form does
             # strictly less work yet still costs ~55% more on the gated benchmark.
-            if frame is not None and param.key in frame and self._lookup_optional(param.key, param.tag) is None:
-                out[param.name] = frame.get(param.key)
-                continue
+            if frame is not None and self._lookup_optional(param.key, param.tag) is None:
+                supplied = frame.lookup_provided(param.key, param.tag)
+                if supplied is not MISSING:
+                    out[param.name] = supplied
+                    continue
             dep = self._lookup_optional(param.key, param.tag)
             if dep is None:
                 if param.has_default:
@@ -790,10 +794,10 @@ class FrozenContainer:
     def _frame_for(self, spec: ProviderSpec) -> ScopeFrame:
         if spec.scope is Scope.SINGLETON:
             return self._root
-        return active_frame()
+        return active_frame(self._root)
 
     def _read_frame(self, spec: ProviderSpec) -> object:
-        value = active_frame().lookup(spec.key)
+        value = active_frame(self._root).lookup_provided(spec.key, spec.tag)
         if value is MISSING:
             raise MissingProviderError(
                 f'no value in the active scope for {fmt_key(spec.key)}; '

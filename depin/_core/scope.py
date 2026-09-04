@@ -161,16 +161,18 @@ class ScopeFrame:
     single-flighted.
     """
 
-    __slots__ = ('_cache', '_flights', '_mutex', '_teardowns', 'parent')
+    __slots__ = ('_active', '_cache', '_flights', '_mutex', '_provided', '_teardowns', 'parent')
 
     def __init__(self, parent: 'ScopeFrame | None' = None) -> None:
         self._cache: dict[object, object] = {}
         self._flights: dict[object, _Flight | _Leader] = {}
+        self._provided: dict[tuple[object, str | None], object] = {}
         self._teardowns: list[Teardown] = []
         self._mutex = threading.Lock()
+        self._active = True
         self.parent = parent
 
-    def provide(self, key: object, value: object) -> None:
+    def provide(self, key: object, value: object, *, tag: str | None = None) -> None:
         """Place ``value`` into this frame under ``key``.
 
         The counterpart of `Container.scope_value()`: whoever opens the scope
@@ -193,7 +195,26 @@ class ScopeFrame:
             ```
         """
         with self._mutex:
-            self._cache[key] = value
+            self._provided[(key, tag)] = value
+
+    def lookup_provided(self, key: object, tag: str | None = None) -> object:
+        frame: ScopeFrame | None = self
+        identity = (key, tag)
+        while frame is not None:
+            with frame._mutex:
+                value = frame._provided.get(identity, MISSING)
+            if value is not MISSING:
+                return value
+            frame = frame.parent
+        return MISSING
+
+    def deactivate(self) -> None:
+        with self._mutex:
+            self._active = False
+
+    def is_active(self) -> bool:
+        with self._mutex:
+            return self._active
 
     def get(self, key: object) -> object:
         """Return the value stored under ``key`` here or in an ancestor frame.
@@ -212,6 +233,9 @@ class ScopeFrame:
         Unlike `get()` this reports absence without raising, so a caller can
         distinguish "not cached" from "cached as ``None``" in one traversal.
         """
+        supplied = self.lookup_provided(key)
+        if supplied is not MISSING:
+            return supplied
         frame: ScopeFrame | None = self
         while frame is not None:
             with frame._mutex:
@@ -317,6 +341,9 @@ class ScopeFrame:
 
     def claim_cached(self, key: object) -> tuple[object, _Flight | _Leader | None]:
         """Atomically return a cached value or claim/join its construction flight."""
+        provided = self._provided_for_cache_key(key)
+        if provided is not MISSING:
+            return provided, None
         if self.parent is None:
             with self._mutex:
                 value = self._cache.get(key, MISSING)
@@ -353,6 +380,9 @@ class ScopeFrame:
             leader = _Leader()
             self._flights[key] = leader
             return MISSING, leader
+
+    def _provided_for_cache_key(self, key: object) -> object:
+        return self.lookup_provided(key)
 
     def _visible_frames(self) -> tuple['ScopeFrame', ...]:
         frames: list[ScopeFrame] = []
@@ -414,26 +444,44 @@ class ScopeFrame:
                 follower.finish()
 
 
-_active: ContextVar[ScopeFrame | None] = ContextVar('depin_active_frame', default=None)
+_manual_owner = ScopeFrame()
+_active: ContextVar[tuple[tuple[ScopeFrame, ScopeFrame], ...]] = ContextVar('depin_active_frames', default=())
 
 
-def active_frame() -> ScopeFrame:
-    frame = _active.get()
+def active_frame(owner: ScopeFrame | None = None) -> ScopeFrame:
+    if owner is None:
+        owner = _manual_owner
+    for candidate, frame in _active.get():
+        if candidate is owner:
+            if frame.is_active():
+                return frame
+            break
+    else:
+        frame = None
     if frame is None:
         raise OutsideScopeError('no active scope frame; open one with FrozenContainer.scope() or .ascope()')
-    return frame
+    raise OutsideScopeError('the active scope frame has already exited; open a new scope')
 
 
-def optional_frame() -> ScopeFrame | None:
-    return _active.get()
+def optional_frame(owner: ScopeFrame | None = None) -> ScopeFrame | None:
+    if owner is None:
+        owner = _manual_owner
+    for candidate, frame in _active.get():
+        if candidate is owner:
+            return frame if frame.is_active() else None
+    return None
 
 
 @contextlib.contextmanager
-def push_frame() -> Generator[ScopeFrame]:
-    parent = _active.get()
+def push_frame(owner: ScopeFrame | None = None) -> Generator[ScopeFrame]:
+    if owner is None:
+        owner = _manual_owner
+    parent = optional_frame(owner)
     frame = ScopeFrame(parent=parent)
-    token = _active.set(frame)
+    active = tuple((candidate, active_frame) for candidate, active_frame in _active.get() if candidate is not owner)
+    token = _active.set((*active, (owner, frame)))
     try:
         yield frame
     finally:
+        frame.deactivate()
         _active.reset(token)
