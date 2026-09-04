@@ -23,7 +23,7 @@ import typer
 from click import Context as ClickContext
 from typer import Context as TyperContext
 
-from depin import Container, FrozenContainer, ProviderKey, ScopeFrame, Token
+from depin import Container, FrozenContainer, ScopeFrame, ScopeSeed, Token
 from depin.ext.cli import CommandContext
 from depin.ext.click import install as click_install
 from depin.ext.click import seed_context
@@ -51,7 +51,7 @@ def click_install_returns_the_frame_it_opened(ctx: ClickContext) -> None:
 
 
 def the_click_seed_maps_a_context_to_a_key_and_a_value() -> None:
-    _seed: Callable[[ClickContext], tuple[ProviderKey, object]] = seed_context
+    _seed: Callable[[ClickContext], ScopeSeed] = seed_context
 
 
 def a_click_group_opens_one_scope_for_the_whole_invocation() -> None:

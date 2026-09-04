@@ -13,7 +13,7 @@ both install modes.
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Protocol
 
-from depin import Container, FrozenContainer, ProviderKey
+from depin import Container, FrozenContainer, ScopeSeed
 from depin.ext.asgi import ASGIApp, ASGIScope, Message, RequestScope
 from depin.ext.asgi import Receive as ASGIReceive
 from depin.ext.asgi import Send as ASGISend
@@ -40,8 +40,8 @@ class Application:
         await send({'type': 'http.response.start', 'status': 200})
 
 
-def seed(scope: Scope) -> tuple[ProviderKey, object] | None:
-    return Request, Request(scope)
+def seed(scope: Scope) -> ScopeSeed:
+    return ScopeSeed(Request, Request(scope))
 
 
 def build() -> FrozenContainer:
@@ -57,7 +57,7 @@ def the_middleware_is_itself_an_asgi_app(container: FrozenContainer) -> None:
 
 
 def a_seed_is_a_callable_from_scope_to_a_key_and_a_value() -> None:
-    _seed: Callable[[Scope], tuple[ProviderKey, object] | None] = seed
+    _seed: Callable[[Scope], ScopeSeed] = seed
 
 
 def the_declared_triple_serves_an_application_with_no_framework(container: FrozenContainer) -> None:

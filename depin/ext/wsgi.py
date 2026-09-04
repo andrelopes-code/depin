@@ -102,7 +102,9 @@ class RequestScope[EnvironT, StartResponseT]:
     Example:
         Install the middleware once, per the wrapping framework's own idiom::
 
-            app.wsgi_app = RequestScope(app.wsgi_app, di, seed=lambda environ: (Request, Request(environ)))
+            from depin import ScopeSeed
+
+            app.wsgi_app = RequestScope(app.wsgi_app, di, seed=lambda environ: ScopeSeed(Request, Request(environ)))
     """
 
     __slots__ = ('_app', '_host', '_seed')

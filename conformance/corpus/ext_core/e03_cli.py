@@ -17,7 +17,7 @@ from collections.abc import Callable
 from contextlib import AbstractContextManager, ExitStack
 from typing import assert_type
 
-from depin import Container, FrozenContainer, ProviderKey, ScopeFrame
+from depin import Container, FrozenContainer, ScopeFrame, ScopeSeed
 from depin.ext.cli import CommandContext, install
 
 
@@ -40,8 +40,8 @@ class Tenant:
         self.name = name
 
 
-def seed(ctx: Invocation) -> tuple[ProviderKey, object] | None:
-    return Tenant, Tenant(ctx.command)
+def seed(ctx: Invocation) -> ScopeSeed:
+    return ScopeSeed(Tenant, Tenant(ctx.command))
 
 
 def build() -> FrozenContainer:
@@ -65,7 +65,7 @@ def install_hands_the_seed_the_context_it_was_given() -> None:
 
 
 def a_seed_is_a_callable_from_the_consumer_context() -> None:
-    _seed: Callable[[Invocation], tuple[ProviderKey, object] | None] = seed
+    _seed: Callable[[Invocation], ScopeSeed] = seed
 
 
 def the_frame_resolves_what_the_seed_placed_in_it() -> None:

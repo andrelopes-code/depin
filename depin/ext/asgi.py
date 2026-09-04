@@ -114,6 +114,8 @@ class RequestScope[ScopeT: ASGIScope, ReceiveT, SendT]:
     Example:
         Install the middleware once, per the wrapping framework's own idiom::
 
+            from depin import ScopeSeed
+
             middleware = RequestScope(app, di, seed=lambda scope: ScopeSeed(Request, Request(scope)))
     """
 
