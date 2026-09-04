@@ -36,6 +36,7 @@ EXPECTED_EXPORTS = (
     'injected',
     'optional_hosted_container',
     'provides',
+    'render_key',
 )
 
 

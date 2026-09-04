@@ -69,6 +69,9 @@ fixtures = ["corpus/core/c02_keys.py", "corpus/core/c08_diagnostics.py"]
 [ProviderShape]
 fixtures = ["corpus/core/c08_diagnostics.py"]
 
+[render_key]
+fixtures = ["corpus/core/c02_keys.py"]
+
 [Registry]
 fixtures = ["corpus/core/c07_registration.py"]
 

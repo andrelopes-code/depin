@@ -342,6 +342,12 @@ class Bindings(Protocol):
         ...
 
 
+def render_key(key: ProviderKey, /, *, tag: str | None = None) -> str:
+    """Render a provider key and its optional tag for public diagnostics."""
+    rendered = fmt_key(key)
+    return rendered if tag is None else f'{rendered} (tag={tag!r})'
+
+
 def fmt_key(key: object) -> str:
     if isinstance(key, type):
         return key.__qualname__

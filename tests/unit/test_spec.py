@@ -2,6 +2,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
+from depin._core.markers import Token
 from depin._core.scope import Scope
 from depin._core.spec import (
     AliasBinding,
@@ -17,6 +18,7 @@ from depin._core.spec import (
     fmt_chain,
     fmt_key,
     is_alias_binding,
+    render_key,
 )
 
 
@@ -181,3 +183,9 @@ def test_an_underlying_generic_key_renders_through_fmt_key() -> None:
 
     rendered = fmt_key(Underlying(list[Handler], 0))
     assert rendered == f'list[{Handler.__qualname__}] (undecorated)'
+
+
+def test_render_key_is_the_public_renderer_with_an_optional_tag() -> None:
+    token = Token[int]('port')
+
+    assert render_key(token, tag='primary') == "Token('port') (tag='primary')"
