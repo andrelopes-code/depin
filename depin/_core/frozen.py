@@ -5,6 +5,8 @@ import contextlib
 import inspect
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
 from contextvars import ContextVar
+from contextvars import Token as ContextToken
+from dataclasses import dataclass
 from typing import final, overload
 
 from depin._core import construct, injection, overrides
@@ -23,11 +25,11 @@ from depin._core.lifecycle import create_lifecycle_gate
 from depin._core.markers import Token
 from depin._core.render import render_tree
 from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional_frame, push_frame
-from depin._core.spec import ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
+from depin._core.spec import ParamSpec, ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
 from depin._core.teardown import Teardown
 from depin._core.typeguards import is_provider_key
 from depin._core.warmup import WarmupReport, reject_async_singletons, singleton_specs, warmup_report
-from depin.errors import AsyncInSyncContextError, CircularDependencyError, MissingProviderError
+from depin.errors import AsyncInSyncContextError, CircularDependencyError, DepinError, MissingProviderError
 
 
 class _Constructing:
@@ -40,6 +42,19 @@ class _Constructing:
 
 
 _constructing: ContextVar[_Constructing | None] = ContextVar('depin_constructing', default=None)
+_PENDING = object()
+
+
+@dataclass(slots=True)
+class _PendingResolution:
+    spec: ProviderSpec
+    frame: ScopeFrame | None
+    cache_id: object | None
+    leader: object | None
+    token: ContextToken[_Constructing | None] | None
+    kwargs: dict[str, object]
+    param_index: int = 0
+    waiting_name: str | None = None
 
 
 @final
@@ -761,55 +776,117 @@ class FrozenContainer:
         return None
 
     def _resolve_sync(self, spec: ProviderSpec) -> object:
-        if spec.needs_async:
-            raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
-        if spec.scope is Scope.TRANSIENT:
-            return self._construct_sync(spec)
-        if spec.scope is Scope.SINGLETON:
-            return self._resolve_cached_sync(spec, self._root)
-        return self._resolve_cached_sync(spec, active_frame(self._root))
-
-    def _resolve_cached_sync(self, spec: ProviderSpec, frame: ScopeFrame) -> object:
-        cache_id = (spec.key, spec.tag)
-        while True:
-            cached, claim = frame.claim_cached(cache_id)
-            if cached is not MISSING:
-                return cached
-            if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
-                if frame.is_leader(claim) and claim is not None:
-                    follower = frame.abort(cache_id, claim)
-                    if follower is not None:
-                        follower.finish()
-                if self._is_constructing(frame, cache_id):
-                    raise CircularDependencyError(
-                        f'{fmt_key(spec.key)} is already constructing in this context; '
-                        'resolve a different dependency or break the recursive provider call'
-                    )
-            if not frame.is_leader(claim):
-                if claim is not None:
-                    frame.wait_sync(claim)
-                continue
-            leader = claim
-            token = _constructing.set(_Constructing(frame, cache_id, _constructing.get()))
-            try:
-                kwargs = self._resolve_params_sync(spec) if spec.params else {}
-                value = construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
-            except BaseException:
-                follower = frame.abort(cache_id, leader)
-                if follower is not None:
-                    follower.finish()
-                raise
-            finally:
-                _constructing.reset(token)
-            follower = frame.publish(cache_id, leader, value)
-            if follower is not None:
-                follower.finish()
-            return value
+        pending: list[_PendingResolution] = []
+        initial = self._begin_sync(spec, pending)
+        if initial is not _PENDING:
+            return initial
+        try:
+            while pending:
+                current = pending[-1]
+                if current.param_index < len(current.spec.params):
+                    param = current.spec.params[current.param_index]
+                    supplied = self._supplied_param(current.spec, param)
+                    if supplied is not MISSING:
+                        current.kwargs[param.name] = supplied
+                        current.param_index += 1
+                        continue
+                    dependency = self._lookup_optional(param.key, param.tag)
+                    if dependency is None:
+                        if param.has_default:
+                            current.param_index += 1
+                            continue
+                        if param.optional:
+                            current.kwargs[param.name] = None
+                            current.param_index += 1
+                            continue
+                        raise MissingProviderError(
+                            f"missing provider for parameter '{param.name}' of {fmt_key(current.spec.key)}"
+                        )
+                    resolved = self._begin_sync(dependency, pending)
+                    if resolved is _PENDING:
+                        current.waiting_name = param.name
+                        continue
+                    current.kwargs[param.name] = resolved
+                    current.param_index += 1
+                    continue
+                value = construct.sync(
+                    current.spec, current.kwargs, self._teardown_sink(current.spec), self._read_frame
+                )
+                self._complete(pending, value)
+                if not pending:
+                    return value
+        except BaseException:
+            self._abort_pending(pending)
+            raise
+        raise DepinError('resolution completed without a value')
 
     async def _resolve_async(self, spec: ProviderSpec) -> object:
+        pending: list[_PendingResolution] = []
+        initial = await self._begin_async(spec, pending)
+        if initial is not _PENDING:
+            return initial
+        try:
+            while pending:
+                current = pending[-1]
+                if current.param_index < len(current.spec.params):
+                    param = current.spec.params[current.param_index]
+                    supplied = self._supplied_param(current.spec, param)
+                    if supplied is not MISSING:
+                        current.kwargs[param.name] = supplied
+                        current.param_index += 1
+                        continue
+                    dependency = self._lookup_optional(param.key, param.tag)
+                    if dependency is None:
+                        if param.has_default:
+                            current.param_index += 1
+                            continue
+                        if param.optional:
+                            current.kwargs[param.name] = None
+                            current.param_index += 1
+                            continue
+                        raise MissingProviderError(
+                            f"missing provider for parameter '{param.name}' of {fmt_key(current.spec.key)}"
+                        )
+                    resolved = await self._begin_async(dependency, pending)
+                    if resolved is _PENDING:
+                        current.waiting_name = param.name
+                        continue
+                    current.kwargs[param.name] = resolved
+                    current.param_index += 1
+                    continue
+                value = await construct.asynchronous(
+                    current.spec, current.kwargs, self._teardown_sink(current.spec), self._read_frame
+                )
+                self._complete(pending, value)
+                if not pending:
+                    return value
+        except BaseException:
+            self._abort_pending(pending)
+            raise
+        raise DepinError('resolution completed without a value')
+
+    def _is_constructing(self, frame: ScopeFrame, cache_id: object) -> bool:
+        current = _constructing.get()
+        while current is not None:
+            if current.cache_id == cache_id:
+                candidate: ScopeFrame | None = frame
+                while candidate is not None:
+                    if current.frame is candidate:
+                        return True
+                    candidate = candidate.parent
+            current = current.parent
+        return False
+
+    def _begin_sync(self, spec: ProviderSpec, pending: list[_PendingResolution]) -> object:
+        if spec.needs_async:
+            raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
+        return self._begin(spec, pending)
+
+    async def _begin_async(self, spec: ProviderSpec, pending: list[_PendingResolution]) -> object:
         frame = self._cache_target(spec)
         if frame is None:
-            return await self._construct_async(spec)
+            pending.append(_PendingResolution(spec, None, None, None, None, {}))
+            return _PENDING
         cache_id = (spec.key, spec.tag)
         while True:
             cached, claim = frame.claim_cached(cache_id)
@@ -829,42 +906,63 @@ class FrozenContainer:
                 if claim is not None:
                     await frame.wait_async(claim)
                 continue
-            leader = claim
             token = _constructing.set(_Constructing(frame, cache_id, _constructing.get()))
-            try:
-                kwargs = await self._resolve_params_async(spec) if spec.params else {}
-                value = await construct.asynchronous(spec, kwargs, self._teardown_sink(spec), self._read_frame)
-            except BaseException:
-                follower = frame.abort(cache_id, leader)
-                if follower is not None:
-                    follower.finish()
-                raise
-            finally:
-                _constructing.reset(token)
-            follower = frame.publish(cache_id, leader, value)
+            pending.append(_PendingResolution(spec, frame, cache_id, claim, token, {}))
+            return _PENDING
+
+    def _begin(self, spec: ProviderSpec, pending: list[_PendingResolution]) -> object:
+        frame = self._cache_target(spec)
+        if frame is None:
+            pending.append(_PendingResolution(spec, None, None, None, None, {}))
+            return _PENDING
+        cache_id = (spec.key, spec.tag)
+        while True:
+            cached, claim = frame.claim_cached(cache_id)
+            if cached is not MISSING:
+                return cached
+            if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
+                if frame.is_leader(claim) and claim is not None:
+                    follower = frame.abort(cache_id, claim)
+                    if follower is not None:
+                        follower.finish()
+                if self._is_constructing(frame, cache_id):
+                    raise CircularDependencyError(
+                        f'{fmt_key(spec.key)} is already constructing in this context; '
+                        'resolve a different dependency or break the recursive provider call'
+                    )
+            if not frame.is_leader(claim):
+                if claim is not None:
+                    frame.wait_sync(claim)
+                continue
+            token = _constructing.set(_Constructing(frame, cache_id, _constructing.get()))
+            pending.append(_PendingResolution(spec, frame, cache_id, claim, token, {}))
+            return _PENDING
+
+    def _complete(self, pending: list[_PendingResolution], value: object) -> None:
+        current = pending.pop()
+        if current.frame is not None and current.cache_id is not None and current.leader is not None:
+            follower = current.frame.publish(current.cache_id, current.leader, value)
             if follower is not None:
                 follower.finish()
-            return value
+        if current.token is not None:
+            _constructing.reset(current.token)
+        if pending:
+            parent = pending[-1]
+            if parent.waiting_name is None:
+                raise DepinError('dependency completed without a waiting parameter')
+            parent.kwargs[parent.waiting_name] = value
+            parent.waiting_name = None
+            parent.param_index += 1
 
-    def _is_constructing(self, frame: ScopeFrame, cache_id: object) -> bool:
-        current = _constructing.get()
-        while current is not None:
-            if current.cache_id == cache_id:
-                candidate: ScopeFrame | None = frame
-                while candidate is not None:
-                    if current.frame is candidate:
-                        return True
-                    candidate = candidate.parent
-            current = current.parent
-        return False
-
-    def _construct_sync(self, spec: ProviderSpec) -> object:
-        kwargs = self._resolve_params_sync(spec) if spec.params else {}
-        return construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
-
-    async def _construct_async(self, spec: ProviderSpec) -> object:
-        kwargs = await self._resolve_params_async(spec) if spec.params else {}
-        return await construct.asynchronous(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+    def _abort_pending(self, pending: list[_PendingResolution]) -> None:
+        while pending:
+            current = pending.pop()
+            if current.frame is not None and current.cache_id is not None and current.leader is not None:
+                follower = current.frame.abort(current.cache_id, current.leader)
+                if follower is not None:
+                    follower.finish()
+            if current.token is not None:
+                _constructing.reset(current.token)
 
     def _teardown_sink(self, spec: ProviderSpec) -> Callable[[Teardown], None]:
         """Register a teardown on the frame that owns this spec, so it drains with it.
@@ -879,51 +977,13 @@ class FrozenContainer:
 
         return register
 
-    def _resolve_params_sync(self, spec: ProviderSpec) -> dict[str, object]:
-        out: dict[str, object] = {}
+    def _supplied_param(self, spec: ProviderSpec, param: ParamSpec) -> object:
         frame = optional_frame(self._root)
-        for param in spec.params:
-            # The plan always decides; the frame is checked first only because CPython's
-            # specializing interpreter rewards this shape — the plan-first form does
-            # strictly less work yet still costs ~55% more on the gated benchmark.
-            if frame is not None and self._lookup_optional(param.key, param.tag) is None:
-                supplied = frame.lookup_provided(param.key, param.tag)
-                if supplied is not MISSING:
-                    out[param.name] = supplied
-                    continue
-            dep = self._lookup_optional(param.key, param.tag)
-            if dep is None:
-                if param.has_default:
-                    continue
-                if param.optional:
-                    out[param.name] = None
-                    continue
-                raise MissingProviderError(f"missing provider for parameter '{param.name}' of {fmt_key(spec.key)}")
-            out[param.name] = self._resolve_sync(dep)
-        return out
-
-    async def _resolve_params_async(self, spec: ProviderSpec) -> dict[str, object]:
-        out: dict[str, object] = {}
-        frame = optional_frame(self._root)
-        for param in spec.params:
-            # The plan always decides; the frame is checked first only because CPython's
-            # specializing interpreter rewards this shape — the plan-first form does
-            # strictly less work yet still costs ~55% more on the gated benchmark.
-            if frame is not None and self._lookup_optional(param.key, param.tag) is None:
-                supplied = frame.lookup_provided(param.key, param.tag)
-                if supplied is not MISSING:
-                    out[param.name] = supplied
-                    continue
-            dep = self._lookup_optional(param.key, param.tag)
-            if dep is None:
-                if param.has_default:
-                    continue
-                if param.optional:
-                    out[param.name] = None
-                    continue
-                raise MissingProviderError(f"missing provider for parameter '{param.name}' of {fmt_key(spec.key)}")
-            out[param.name] = await self._resolve_async(dep)
-        return out
+        if frame is None:
+            return MISSING
+        if self._lookup_optional(param.key, param.tag) is not None:
+            return MISSING
+        return frame.lookup_provided(param.key, param.tag)
 
     def _frame_for(self, spec: ProviderSpec) -> ScopeFrame:
         if spec.scope is Scope.SINGLETON:
