@@ -1,12 +1,10 @@
 """Public marker types and decorators for keys, tags, and injection."""
 
 from dataclasses import dataclass
+from types import GenericAlias
 from typing import TYPE_CHECKING, Never, final, override
 
 from depin.errors import DepinError, InvalidProviderError
-
-if TYPE_CHECKING:
-    from depin._core.spec import ProviderKey
 
 
 class TokenKeyBase:
@@ -251,5 +249,5 @@ def provides(abstract: type[object]) -> _ProvidesDecorator:
     return _ProvidesDecorator(abstract)
 
 
-def get_provides(cls: type) -> 'ProviderKey | None':
+def get_provides(cls: type) -> type[object] | GenericAlias | None:
     return getattr(cls, _PROVIDES_ATTR, None)

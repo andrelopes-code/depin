@@ -216,7 +216,7 @@ def test_an_unknown_target_field_is_rejected(tmp_path: Path) -> None:
 def test_invalid_utf8_target_file_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / 'targets.toml'
     path.write_bytes(b'[case]\njustification = "\xff"\n')
-    with pytest.raises(HarnessError, match=f'{path}.*invalid start byte'):
+    with pytest.raises(HarnessError, match=rf'{re.escape(str(path))}.*invalid start byte'):
         load(path)
 
 
@@ -231,12 +231,12 @@ def test_invalid_utf8_target_file_is_rejected(tmp_path: Path) -> None:
 def test_malformed_or_duplicate_target_toml_is_rejected(tmp_path: Path, contents: str) -> None:
     path = tmp_path / 'targets.toml'
     path.write_text(contents, encoding='utf-8')
-    with pytest.raises(HarnessError, match=f'{path}.*cannot load targets'):
+    with pytest.raises(HarnessError, match=rf'{re.escape(str(path))}.*cannot load targets'):
         load(path)
 
 
 def test_an_unreadable_target_path_is_rejected(tmp_path: Path) -> None:
-    with pytest.raises(HarnessError, match=f'{tmp_path}.*cannot load targets'):
+    with pytest.raises(HarnessError, match=rf'{re.escape(str(tmp_path))}.*cannot load targets'):
         load(tmp_path)
 
 

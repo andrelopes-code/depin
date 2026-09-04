@@ -322,7 +322,7 @@ def collect(
             }
         )
     deterministic: dict[str, object] = {
-        'budget_contract': {'path': os.path.relpath(budgets, Path.cwd()), 'sha256': budget_digest}
+        'budget_contract': {'path': Path(os.path.relpath(budgets, Path.cwd())).as_posix(), 'sha256': budget_digest}
     }
     for side, directory, source_revision in (
         ('base', baseline_dir, baseline_revision),

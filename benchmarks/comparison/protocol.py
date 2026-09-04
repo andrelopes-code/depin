@@ -268,11 +268,17 @@ def _directory_entries(directory: Path) -> dict[str, tuple[str, int, bytes]]:
 def validate_baseline_archive(directory: Path, revision: str) -> None:
     expected = archive_entries(revision)
     actual = _directory_entries(directory)
-    if actual == expected:
-        return
     missing = sorted(set(expected) - set(actual))
     extra = sorted(set(actual) - set(expected))
-    changed = sorted(name for name in set(expected) & set(actual) if expected[name] != actual[name])
+    changed = sorted(
+        name
+        for name in set(expected) & set(actual)
+        if expected[name][0] != actual[name][0]
+        or expected[name][2] != actual[name][2]
+        or (os.name != 'nt' and expected[name][1] != actual[name][1])
+    )
+    if not missing and not extra and not changed:
+        return
     details = [
         *(f'missing {name}' for name in missing),
         *(f'extra {name}' for name in extra),

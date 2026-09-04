@@ -47,10 +47,10 @@ def _cpu_model() -> str | None:
     return None
 
 
-def _available_processors() -> int | None:
-    if not hasattr(os, 'sched_getaffinity'):
-        return None
-    return len(os.sched_getaffinity(0))
+def _available_processors() -> int:
+    if hasattr(os, 'sched_getaffinity'):
+        return len(os.sched_getaffinity(0))
+    return os.cpu_count() or 1
 
 
 def _distributions() -> dict[str, object]:
