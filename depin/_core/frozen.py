@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
 from contextvars import ContextVar
 from contextvars import Token as ContextToken
 from dataclasses import dataclass
-from typing import final, overload
+from typing import TypeGuard, final, overload
 
 from depin._core import construct, injection, overrides
 from depin._core.diagnostics import DependencyGraph, build_graph
@@ -21,7 +21,7 @@ from depin._core.health import (
     run_check,
     run_check_async,
 )
-from depin._core.lifecycle import create_lifecycle_gate
+from depin._core.lifecycle import LifecycleState, create_lifecycle_gate
 from depin._core.markers import Token
 from depin._core.render import render_tree
 from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional_frame, push_frame
@@ -29,7 +29,14 @@ from depin._core.spec import ParamSpec, ProviderKey, ProviderSpec, ResolutionPla
 from depin._core.teardown import Teardown
 from depin._core.typeguards import is_provider_key
 from depin._core.warmup import WarmupReport, reject_async_singletons, singleton_specs, warmup_report
-from depin.errors import AsyncInSyncContextError, CircularDependencyError, DepinError, MissingProviderError
+from depin.errors import (
+    AsyncInSyncContextError,
+    CircularDependencyError,
+    ContainerClosedError,
+    ContainerLifecycleError,
+    DepinError,
+    MissingProviderError,
+)
 
 
 class _Constructing:
@@ -43,6 +50,7 @@ class _Constructing:
 
 _constructing: ContextVar[_Constructing | None] = ContextVar('depin_constructing', default=None)
 _PENDING = object()
+_RECURSIVE_PLAN_LIMIT = 256
 
 
 @dataclass(slots=True)
@@ -135,12 +143,15 @@ class FrozenContainer:
         ```
     """
 
-    __slots__ = ('_lifecycle', '_plan', '_root')
+    __slots__ = ('_lifecycle', '_plan', '_root', '_validate_key')
 
     def __init__(self, plan: ResolutionPlan) -> None:
         self._plan = plan
-        self._root = ScopeFrame()
         self._lifecycle = create_lifecycle_gate()
+        self._root = ScopeFrame(lifecycle=self._lifecycle)
+        self._validate_key: Callable[[object], TypeGuard[ProviderKey]] = is_provider_key
+        self._lifecycle.on_quiesce = self._quiesce_resolution
+        self._lifecycle.on_reopen = self._resume_resolution
 
     def __getitem__[T](self, key: type[T] | Token[T]) -> T:
         """Resolve ``key`` synchronously; shorthand for `resolve()`.
@@ -188,15 +199,11 @@ class FrozenContainer:
 
             ```
         """
-        ticket = self._lifecycle.admit('resolve', asynchronous=False)
-        try:
-            spec = self._lookup(key, tag)
-            # spec.source is type-erased `object` in the plan; the runtime contract
-            # (enforced by build_plan) is that providers return values matching the
-            # static type of their declared key, so we restate the static type here.
-            return self._resolve_sync(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
-        finally:
-            self._lifecycle.release(ticket)
+        spec = self._lookup(key, tag)
+        # spec.source is type-erased `object` in the plan; the runtime contract
+        # (enforced by build_plan) is that providers return values matching the
+        # static type of their declared key, so we restate the static type here.
+        return self._resolve_sync(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
     async def aresolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
         """Resolve a value by key, asynchronously.
@@ -216,14 +223,10 @@ class FrozenContainer:
             OutsideScopeError: ``key`` is scoped and no scope is active.
             CircularDependencyError: This task re-enters construction of the same cached provider.
         """
-        ticket = self._lifecycle.admit('aresolve', asynchronous=True)
-        try:
-            spec = self._lookup(key, tag)
-            # See the matching note in `resolve`: plan-level erasure of provider
-            # return types forces a single documented widening at this boundary.
-            return await self._resolve_async(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
-        finally:
-            self._lifecycle.release(ticket)
+        spec = self._lookup(key, tag)
+        # See the matching note in `resolve`: plan-level erasure of provider
+        # return types forces a single documented widening at this boundary.
+        return await self._resolve_async(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
     @contextlib.contextmanager
     def scope(self) -> Generator[ScopeFrame]:
@@ -262,7 +265,15 @@ class FrozenContainer:
 
             ```
         """
-        ticket = self._lifecycle.admit('scope', asynchronous=False)
+        lifecycle = self._lifecycle
+        with lifecycle.mutex:
+            if lifecycle.state is LifecycleState.CLOSED:
+                raise ContainerClosedError(
+                    'container is closed; build a new FrozenContainer before resolving or opening a scope'
+                )
+            if lifecycle.state is not LifecycleState.OPEN:
+                raise ContainerLifecycleError('container shutdown is already in progress; await aclose() to join it')
+            lifecycle.active += 1
         with push_frame(self._root) as frame:
             try:
                 yield frame
@@ -270,7 +281,11 @@ class FrozenContainer:
                 try:
                     frame.drain_sync()
                 finally:
-                    self._lifecycle.release(ticket)
+                    with lifecycle.mutex:
+                        lifecycle.active -= 1
+                        wake = lifecycle.active == 0 and bool(lifecycle.gate_waiters)
+                    if wake:
+                        lifecycle.wake_waiters()
 
     @contextlib.asynccontextmanager
     async def ascope(self) -> AsyncGenerator[ScopeFrame]:
@@ -287,7 +302,16 @@ class FrozenContainer:
                 that violates its teardown protocol appears as a `TeardownError`
                 member of the group.
         """
-        ticket = self._lifecycle.admit('ascope', asynchronous=True)
+        lifecycle = self._lifecycle
+        with lifecycle.mutex:
+            if lifecycle.state is LifecycleState.CLOSED:
+                raise ContainerClosedError(
+                    'container is closed; build a new FrozenContainer before resolving or opening a scope'
+                )
+            if lifecycle.state is not LifecycleState.OPEN:
+                raise ContainerLifecycleError('container shutdown is already in progress; await aclose() to join it')
+            lifecycle.active += 1
+            lifecycle.active_async += 1
         with push_frame(self._root) as frame:
             try:
                 yield frame
@@ -295,7 +319,12 @@ class FrozenContainer:
                 try:
                     await frame.drain_async()
                 finally:
-                    self._lifecycle.release(ticket)
+                    with lifecycle.mutex:
+                        lifecycle.active -= 1
+                        lifecycle.active_async -= 1
+                        wake = lifecycle.active == 0 and bool(lifecycle.gate_waiters)
+                    if wake:
+                        lifecycle.wake_waiters()
 
     def close(self) -> None:
         """Tear down singleton providers that own lifecycle resources, synchronously.
@@ -331,6 +360,19 @@ class FrozenContainer:
 
             ```
         """
+        if optional_frame(self._root) is not None:
+            raise ContainerLifecycleError(
+                'cannot close this container from inside its active resolution or scope; '
+                'exit that operation, then call close(), or await aclose() from outside it'
+            )
+        current = _constructing.get()
+        while current is not None:
+            if current.frame is self._root:
+                raise ContainerLifecycleError(
+                    'cannot close this container from inside its active resolution or scope; '
+                    'exit that operation, then call close(), or await aclose() from outside it'
+                )
+            current = current.parent
         if self._lifecycle.begin_sync_close(self._root.has_async_teardown()):
             try:
                 self._root.drain_sync()
@@ -349,11 +391,25 @@ class FrozenContainer:
                 that violates its teardown protocol appears as a `TeardownError`
                 member of the group.
         """
+        if optional_frame(self._root) is not None:
+            raise ContainerLifecycleError(
+                'cannot close this container from inside its active resolution or scope; '
+                'exit that operation, then call close(), or await aclose() from outside it'
+            )
+        current = _constructing.get()
+        while current is not None:
+            if current.frame is self._root:
+                raise ContainerLifecycleError(
+                    'cannot close this container from inside its active resolution or scope; '
+                    'exit that operation, then call close(), or await aclose() from outside it'
+                )
+            current = current.parent
         if not self._lifecycle.begin_async_close():
             await self._lifecycle.join()
             return
         try:
             await self._lifecycle.wait_until_quiet()
+            await self._root.wait_until_idle()
         except asyncio.CancelledError:
             self._lifecycle.reopen()
             raise
@@ -405,11 +461,14 @@ class FrozenContainer:
 
             ```
         """
-        ticket = self._lifecycle.admit('reset', asynchronous=False)
-        try:
-            self._root.drop_sync()
-        finally:
-            self._lifecycle.release(ticket)
+        state = self._lifecycle.state
+        if state is not LifecycleState.OPEN:
+            if state is LifecycleState.CLOSED:
+                raise ContainerClosedError(
+                    'container is closed; build a new FrozenContainer before resolving or opening a scope'
+                )
+            raise ContainerLifecycleError('container shutdown is already in progress; await aclose() to join it')
+        self._root.drop_sync()
 
     async def areset(self) -> None:
         """Tear down every built singleton and drop the cache; the counterpart to `reset()`.
@@ -424,11 +483,14 @@ class FrozenContainer:
                 provider that violates its teardown protocol appears as a
                 `TeardownError` member of the group.
         """
-        ticket = self._lifecycle.admit('areset', asynchronous=True)
-        try:
-            await self._root.drop_async()
-        finally:
-            self._lifecycle.release(ticket)
+        state = self._lifecycle.state
+        if state is not LifecycleState.OPEN:
+            if state is LifecycleState.CLOSED:
+                raise ContainerClosedError(
+                    'container is closed; build a new FrozenContainer before resolving or opening a scope'
+                )
+            raise ContainerLifecycleError('container shutdown is already in progress; await aclose() to join it')
+        await self._root.drop_async()
 
     def warmup(self) -> WarmupReport:
         """Construct every singleton now, instead of on first resolution.
@@ -459,11 +521,23 @@ class FrozenContainer:
 
             ```
         """
-        ticket = self._lifecycle.admit('warmup', asynchronous=False)
+        lifecycle = self._lifecycle
+        with lifecycle.mutex:
+            if lifecycle.state is LifecycleState.CLOSED:
+                raise ContainerClosedError(
+                    'container is closed; build a new FrozenContainer before resolving or opening a scope'
+                )
+            if lifecycle.state is not LifecycleState.OPEN:
+                raise ContainerLifecycleError('container shutdown is already in progress; await aclose() to join it')
+            lifecycle.active += 1
         try:
             return self._warmup_sync()
         finally:
-            self._lifecycle.release(ticket)
+            with lifecycle.mutex:
+                lifecycle.active -= 1
+                wake = lifecycle.active == 0 and bool(lifecycle.gate_waiters)
+            if wake:
+                lifecycle.wake_waiters()
 
     def _warmup_sync(self) -> WarmupReport:
         specs = singleton_specs(self._plan)
@@ -474,9 +548,10 @@ class FrozenContainer:
             if self._is_cached(spec):
                 cached.append(spec)
                 continue
-            # Routes through _resolve_any rather than _resolve_sync(spec) directly,
-            # so an active override() is honoured exactly as it is everywhere else.
-            _ = self._resolve_any(spec.key, spec.tag)
+            selected = self._lookup_optional(spec.key, spec.tag)
+            if selected is None:
+                raise MissingProviderError(f'no provider for {fmt_key(spec.key)} (tag={spec.tag!r})')
+            _ = self._resolve_root_cached_sync(spec) if selected is spec else self._resolve_sync(selected)
             constructed.append(spec)
         return warmup_report(self.graph(), constructed, cached)
 
@@ -491,11 +566,25 @@ class FrozenContainer:
             CircularDependencyError: This task re-enters construction of the
                 same cached provider.
         """
-        ticket = self._lifecycle.admit('awarmup', asynchronous=True)
+        lifecycle = self._lifecycle
+        with lifecycle.mutex:
+            if lifecycle.state is LifecycleState.CLOSED:
+                raise ContainerClosedError(
+                    'container is closed; build a new FrozenContainer before resolving or opening a scope'
+                )
+            if lifecycle.state is not LifecycleState.OPEN:
+                raise ContainerLifecycleError('container shutdown is already in progress; await aclose() to join it')
+            lifecycle.active += 1
+            lifecycle.active_async += 1
         try:
             return await self._warmup_async()
         finally:
-            self._lifecycle.release(ticket)
+            with lifecycle.mutex:
+                lifecycle.active -= 1
+                lifecycle.active_async -= 1
+                wake = lifecycle.active == 0 and bool(lifecycle.gate_waiters)
+            if wake:
+                lifecycle.wake_waiters()
 
     async def _warmup_async(self) -> WarmupReport:
         specs = singleton_specs(self._plan)
@@ -739,18 +828,35 @@ class FrozenContainer:
         return (key, tag) in self._plan.by_key
 
     def _resolve_any(self, key: ProviderKey, tag: str | None) -> object:
-        return self._resolve_sync(self._lookup(key, tag))
+        spec = self._lookup(key, tag)
+        return self._resolve_sync(spec)
 
     async def _aresolve_any(self, key: ProviderKey, tag: str | None) -> object:
-        return await self._resolve_async(self._lookup(key, tag))
+        spec = self._lookup(key, tag)
+        return await self._resolve_async(spec)
 
     def _lookup(self, key: object, tag: str | None) -> ProviderSpec:
-        if not is_provider_key(key):
+        if not self._validate_key(key):
             raise MissingProviderError(f'cannot look up provider for {key!r}: not a valid key type')
         spec = self._lookup_optional(key, tag)
         if spec is None:
             raise MissingProviderError(f'no provider for {fmt_key(key)} (tag={tag!r})')
         return spec
+
+    def _quiesce_resolution(self) -> None:
+        self._validate_key = self._validate_quiescing
+
+    def _resume_resolution(self) -> None:
+        self._validate_key = is_provider_key
+
+    def _validate_quiescing(self, key: object) -> TypeGuard[ProviderKey]:
+        if self._lifecycle.state is LifecycleState.CLOSED:
+            raise ContainerClosedError(
+                'container is closed; build a new FrozenContainer before resolving or opening a scope'
+            )
+        if optional_frame(self._root) is not None or _constructing.get() is not None:
+            return is_provider_key(key)
+        raise ContainerLifecycleError('container shutdown is already in progress; await aclose() to join it')
 
     def _lookup_optional(self, key: ProviderKey, tag: str | None) -> ProviderSpec | None:
         """Resolve ``(key, tag)`` to a spec, honouring any active override.
@@ -768,6 +874,98 @@ class FrozenContainer:
         return self._root.lookup((spec.key, spec.tag)) is not MISSING
 
     def _resolve_sync(self, spec: ProviderSpec) -> object:
+        if spec.needs_async:
+            raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
+        if spec.scope is Scope.TRANSIENT:
+            if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
+                return self._resolve_sync_iterative(spec)
+            return self._construct_sync(spec)
+        if spec.scope is Scope.SINGLETON:
+            return self._resolve_root_cached_sync(spec)
+        return self._resolve_cached_sync(spec, active_frame(self._root))
+
+    def _resolve_root_cached_sync(self, spec: ProviderSpec) -> object:
+        cache_id = (spec.key, spec.tag)
+        while True:
+            cached, claim = self._root.claim_root_cached(cache_id)
+            if cached is not MISSING:
+                return cached
+            if self._root.is_leader(claim) and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
+                if claim is not None:
+                    follower = self._root.abort(cache_id, claim)
+                    if follower is not None:
+                        follower.finish()
+                return self._resolve_sync_iterative(spec)
+            if not self._root.is_leader(claim):
+                if self._is_constructing(self._root, cache_id):
+                    raise CircularDependencyError(
+                        f'{fmt_key(spec.key)} is already constructing in this context; '
+                        'resolve a different dependency or break the recursive provider call'
+                    )
+                if claim is not None:
+                    self._root.wait_sync(claim)
+                continue
+            leader = claim
+            token = _constructing.set(_Constructing(self._root, cache_id, _constructing.get()))
+            try:
+                kwargs = self._resolve_params_sync(spec) if spec.params else {}
+                value = construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+            except BaseException:
+                follower = self._root.abort(cache_id, leader)
+                if follower is not None:
+                    follower.finish()
+                raise
+            finally:
+                _constructing.reset(token)
+            follower = self._root.publish(cache_id, leader, value)
+            if follower is not None:
+                follower.finish()
+            return value
+
+    def _resolve_cached_sync(self, spec: ProviderSpec, frame: ScopeFrame) -> object:
+        cache_id = (spec.key, spec.tag)
+        while True:
+            cached, claim = frame.claim_cached(cache_id, cache_id)
+            if cached is not MISSING:
+                return cached
+            if frame.is_leader(claim) and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
+                if claim is not None:
+                    follower = frame.abort(cache_id, claim)
+                    if follower is not None:
+                        follower.finish()
+                return self._resolve_sync_iterative(spec)
+            if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
+                if frame.is_leader(claim) and claim is not None:
+                    follower = frame.abort(cache_id, claim)
+                    if follower is not None:
+                        follower.finish()
+                if self._is_constructing(frame, cache_id):
+                    raise CircularDependencyError(
+                        f'{fmt_key(spec.key)} is already constructing in this context; '
+                        'resolve a different dependency or break the recursive provider call'
+                    )
+            if not frame.is_leader(claim):
+                if claim is not None:
+                    frame.wait_sync(claim)
+                continue
+            leader = claim
+            token = _constructing.set(_Constructing(frame, cache_id, _constructing.get()))
+            try:
+                kwargs = self._resolve_params_sync(spec) if spec.params else {}
+                value = construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+            except BaseException:
+                follower = frame.abort(cache_id, leader)
+                if follower is not None:
+                    follower.finish()
+                raise
+            finally:
+                _constructing.reset(token)
+            follower = frame.publish(cache_id, leader, value)
+            if follower is not None:
+                follower.finish()
+            return value
+
+    def _resolve_sync_iterative(self, spec: ProviderSpec) -> object:
         pending: list[_PendingResolution] = []
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
@@ -819,6 +1017,57 @@ class FrozenContainer:
         raise DepinError('resolution completed without a value')
 
     async def _resolve_async(self, spec: ProviderSpec) -> object:
+        frame = self._cache_target(spec)
+        if frame is None:
+            if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
+                return await self._resolve_async_iterative(spec)
+            return await self._construct_async(spec)
+        cache_id = (spec.key, spec.tag)
+        while True:
+            if frame is self._root:
+                cached, claim = frame.claim_root_cached(cache_id, asynchronous=True)
+            else:
+                cached, claim = frame.claim_cached(cache_id, cache_id, asynchronous=True)
+            if cached is not MISSING:
+                return cached
+            if frame.is_leader(claim) and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
+                if claim is not None:
+                    follower = frame.abort(cache_id, claim)
+                    if follower is not None:
+                        follower.finish()
+                return await self._resolve_async_iterative(spec)
+            if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
+                if frame.is_leader(claim) and claim is not None:
+                    follower = frame.abort(cache_id, claim)
+                    if follower is not None:
+                        follower.finish()
+                if self._is_constructing(frame, cache_id):
+                    raise CircularDependencyError(
+                        f'{fmt_key(spec.key)} is already constructing in this context; '
+                        'resolve a different dependency or break the recursive provider call'
+                    )
+            if not frame.is_leader(claim):
+                if claim is not None:
+                    await frame.wait_async(claim)
+                continue
+            leader = claim
+            token = _constructing.set(_Constructing(frame, cache_id, _constructing.get()))
+            try:
+                kwargs = await self._resolve_params_async(spec) if spec.params else {}
+                value = await construct.asynchronous(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+            except BaseException:
+                follower = frame.abort(cache_id, leader)
+                if follower is not None:
+                    follower.finish()
+                raise
+            finally:
+                _constructing.reset(token)
+            follower = frame.publish(cache_id, leader, value)
+            if follower is not None:
+                follower.finish()
+            return value
+
+    async def _resolve_async_iterative(self, spec: ProviderSpec) -> object:
         pending: list[_PendingResolution] = []
         initial = await self._begin_async(spec, pending)
         if initial is not _PENDING:
@@ -875,6 +1124,61 @@ class FrozenContainer:
             current = current.parent
         return False
 
+    def _cache_target(self, spec: ProviderSpec) -> ScopeFrame | None:
+        if spec.scope is Scope.SINGLETON:
+            return self._root
+        if spec.scope is Scope.SCOPED:
+            return active_frame(self._root)
+        return None
+
+    def _construct_sync(self, spec: ProviderSpec) -> object:
+        kwargs = self._resolve_params_sync(spec) if spec.params else {}
+        return construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+
+    async def _construct_async(self, spec: ProviderSpec) -> object:
+        kwargs = await self._resolve_params_async(spec) if spec.params else {}
+        return await construct.asynchronous(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+
+    def _resolve_params_sync(self, spec: ProviderSpec) -> dict[str, object]:
+        out: dict[str, object] = {}
+        frame = optional_frame(self._root)
+        for param in spec.params:
+            dependency = self._lookup_optional(param.key, param.tag)
+            if dependency is None:
+                if frame is not None:
+                    supplied = frame.lookup_provided(param.key, param.tag)
+                    if supplied is not MISSING:
+                        out[param.name] = supplied
+                        continue
+                if param.has_default:
+                    continue
+                if param.optional:
+                    out[param.name] = None
+                    continue
+                raise MissingProviderError(f"missing provider for parameter '{param.name}' of {fmt_key(spec.key)}")
+            out[param.name] = self._resolve_sync(dependency)
+        return out
+
+    async def _resolve_params_async(self, spec: ProviderSpec) -> dict[str, object]:
+        out: dict[str, object] = {}
+        frame = optional_frame(self._root)
+        for param in spec.params:
+            dependency = self._lookup_optional(param.key, param.tag)
+            if dependency is None:
+                if frame is not None:
+                    supplied = frame.lookup_provided(param.key, param.tag)
+                    if supplied is not MISSING:
+                        out[param.name] = supplied
+                        continue
+                if param.has_default:
+                    continue
+                if param.optional:
+                    out[param.name] = None
+                    continue
+                raise MissingProviderError(f"missing provider for parameter '{param.name}' of {fmt_key(spec.key)}")
+            out[param.name] = await self._resolve_async(dependency)
+        return out
+
     async def _begin_async(self, spec: ProviderSpec, pending: list[_PendingResolution]) -> object:
         if spec.scope is Scope.SINGLETON:
             frame = self._root
@@ -887,7 +1191,7 @@ class FrozenContainer:
             return _PENDING
         cache_id = (spec.key, spec.tag)
         while True:
-            cached, claim = frame.claim_cached(cache_id, cache_id)
+            cached, claim = frame.claim_cached(cache_id, cache_id, asynchronous=True)
             if cached is not MISSING:
                 return cached
             if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):

@@ -10,8 +10,9 @@ from enum import Enum
 from typing import Final
 
 from depin._core import teardown
+from depin._core.lifecycle import LifecycleGate, LifecycleState
 from depin._core.teardown import AsyncCMTeardown, AsyncGenTeardown, Teardown
-from depin.errors import DepinError, OutsideScopeError
+from depin.errors import ContainerClosedError, ContainerLifecycleError, DepinError, OutsideScopeError
 
 
 class Scope(Enum):
@@ -115,9 +116,10 @@ class _Flight:
 
 
 class _Leader:
-    __slots__ = ('flight',)
+    __slots__ = ('asynchronous', 'flight')
 
-    def __init__(self) -> None:
+    def __init__(self, *, asynchronous: bool = False) -> None:
+        self.asynchronous = asynchronous
         self.flight: _Flight | None = None
 
     @property
@@ -161,16 +163,39 @@ class ScopeFrame:
     single-flighted.
     """
 
-    __slots__ = ('_active', '_cache', '_flights', '_mutex', '_provided', '_teardowns', 'parent')
+    __slots__ = (
+        '_active',
+        '_cache',
+        '_flights',
+        '_lifecycle',
+        '_mutex',
+        '_teardowns',
+        'active',
+        'context_parent',
+        'owner',
+        'parent',
+    )
 
-    def __init__(self, parent: 'ScopeFrame | None' = None) -> None:
+    def __init__(
+        self,
+        parent: 'ScopeFrame | None' = None,
+        *,
+        context_parent: 'ScopeFrame | None' = None,
+        lifecycle: LifecycleGate | None = None,
+        owner: 'ScopeFrame | None' = None,
+    ) -> None:
         self._cache: dict[object, object] = {}
         self._flights: dict[object, _Flight | _Leader] = {}
-        self._provided: dict[tuple[object, str | None], object] = {}
         self._teardowns: list[Teardown] = []
-        self._mutex = threading.Lock()
-        self._active = True
+        self._lifecycle = lifecycle
+        self._mutex = lifecycle.mutex if lifecycle is not None else threading.Lock()
+        self.active = True
+        self.context_parent = context_parent
+        self.owner = owner
         self.parent = parent
+        if lifecycle is not None:
+            lifecycle.flights = self._flights
+            lifecycle.has_async_flights = self.has_async_flights
 
     def provide(self, key: object, value: object, *, tag: str | None = None) -> None:
         """Place ``value`` into this frame under ``key``.
@@ -195,14 +220,15 @@ class ScopeFrame:
             ```
         """
         with self._mutex:
-            self._provided[(key, tag)] = value
+            identity = key if tag is None else (MISSING, key, tag)
+            self._cache[identity] = value
 
     def lookup_provided(self, key: object, tag: str | None = None) -> object:
         frame: ScopeFrame | None = self
-        identity = (key, tag)
+        identity = key if tag is None else (MISSING, key, tag)
         while frame is not None:
             with frame._mutex:
-                value = frame._provided.get(identity, MISSING)
+                value = frame._cache.get(identity, MISSING)
             if value is not MISSING:
                 return value
             frame = frame.parent
@@ -210,11 +236,11 @@ class ScopeFrame:
 
     def deactivate(self) -> None:
         with self._mutex:
-            self._active = False
+            self.active = False
 
     def is_active(self) -> bool:
         with self._mutex:
-            return self._active
+            return self.active
 
     def get(self, key: object) -> object:
         """Return the value stored under ``key`` here or in an ancestor frame.
@@ -233,9 +259,6 @@ class ScopeFrame:
         Unlike `get()` this reports absence without raising, so a caller can
         distinguish "not cached" from "cached as ``None``" in one traversal.
         """
-        supplied = self.lookup_provided(key)
-        if supplied is not MISSING:
-            return supplied
         frame: ScopeFrame | None = self
         while frame is not None:
             with frame._mutex:
@@ -343,28 +366,32 @@ class ScopeFrame:
         return records
 
     def claim_cached(
-        self, key: object, provided_identity: tuple[object, str | None] | None = None
+        self,
+        key: object,
+        provided_identity: tuple[object, str | None] | None = None,
+        *,
+        asynchronous: bool = False,
     ) -> tuple[object, _Flight | _Leader | None]:
         """Atomically return a cached value or claim/join its construction flight."""
-        cache_key: object = key
-        identity = provided_identity if provided_identity is not None else (key, None)
-        # Keep this ancestor walk inline: cached resolution is the hottest path,
-        # and delegating it adds two Python calls to every lookup.
-        provided_frame: ScopeFrame | None = self
-        while provided_frame is not None:
-            with provided_frame._mutex:
-                provided = provided_frame._provided.get(identity, MISSING)
-            if provided is not MISSING:
-                return provided, None
-            provided_frame = provided_frame.parent
         if self.parent is None:
             with self._mutex:
+                cache_key: object = key
                 value = self._cache.get(cache_key, MISSING)
                 if value is not MISSING:
                     return value, None
+                lifecycle = self._lifecycle
+                if lifecycle is not None:
+                    if lifecycle.state is LifecycleState.CLOSED:
+                        raise ContainerClosedError(
+                            'container is closed; build a new FrozenContainer before resolving or opening a scope'
+                        )
+                    if lifecycle.state is not LifecycleState.OPEN and not lifecycle.flights and lifecycle.active == 0:
+                        raise ContainerLifecycleError(
+                            'container shutdown is already in progress; await aclose() to join it'
+                        )
                 flight = self._flights.get(cache_key)
                 if flight is None:
-                    leader = _Leader()
+                    leader = _Leader(asynchronous=asynchronous)
                     self._flights[cache_key] = leader
                     return MISSING, leader
                 if isinstance(flight, _Flight):
@@ -373,6 +400,20 @@ class ScopeFrame:
                 flight.flight = joined
                 self._flights[cache_key] = joined
                 return MISSING, joined
+        cache_key = key
+        if provided_identity is None:
+            identity = key
+        elif provided_identity[1] is None:
+            identity = provided_identity[0]
+        else:
+            identity = (MISSING, *provided_identity)
+        provided_frame: ScopeFrame | None = self
+        while provided_frame is not None:
+            with provided_frame._mutex:
+                provided = provided_frame._cache.get(identity, MISSING)
+            if provided is not MISSING:
+                return provided, None
+            provided_frame = provided_frame.parent
         frames = self._visible_frames()
         with contextlib.ExitStack() as locks:
             for frame in frames:
@@ -390,9 +431,36 @@ class ScopeFrame:
                 flight.flight = joined
                 frame._flights[cache_key] = joined
                 return MISSING, joined
-            leader = _Leader()
+            leader = _Leader(asynchronous=asynchronous)
             self._flights[cache_key] = leader
             return MISSING, leader
+
+    def claim_root_cached(self, key: object, *, asynchronous: bool = False) -> tuple[object, _Flight | _Leader | None]:
+        with self._mutex:
+            value = self._cache.get(key, MISSING)
+            if value is not MISSING:
+                return value, None
+            lifecycle = self._lifecycle
+            if lifecycle is not None:
+                if lifecycle.state is LifecycleState.CLOSED:
+                    raise ContainerClosedError(
+                        'container is closed; build a new FrozenContainer before resolving or opening a scope'
+                    )
+                if lifecycle.state is not LifecycleState.OPEN and not lifecycle.flights and lifecycle.active == 0:
+                    raise ContainerLifecycleError(
+                        'container shutdown is already in progress; await aclose() to join it'
+                    )
+            flight = self._flights.get(key)
+            if flight is None:
+                leader = _Leader(asynchronous=asynchronous)
+                self._flights[key] = leader
+                return MISSING, leader
+            if isinstance(flight, _Flight):
+                return MISSING, flight
+            joined = _Flight(flight)
+            flight.flight = joined
+            self._flights[key] = joined
+            return MISSING, joined
 
     def _visible_frames(self) -> tuple['ScopeFrame', ...]:
         frames: list[ScopeFrame] = []
@@ -407,29 +475,55 @@ class ScopeFrame:
 
     def publish(self, key: object, leader: object, value: object) -> _Flight | None:
         """Cache a leader's value and return any followers to signal after unlocking."""
+        follower: _Flight | None = None
         with self._mutex:
             active = self._flights.get(key)
             if active is leader:
                 self._cache[key] = value
                 del self._flights[key]
-                return None
-            if isinstance(leader, _Leader) and isinstance(active, _Flight) and active.leader is leader:
+            elif isinstance(leader, _Leader) and isinstance(active, _Flight) and active.leader is leader:
                 self._cache[key] = value
                 del self._flights[key]
-                return active
-            return None
+                follower = active
+            else:
+                return None
+        return follower
 
     def abort(self, key: object, leader: object) -> _Flight | None:
         """Remove a failed leader's flight and return any followers to signal after unlocking."""
+        follower: _Flight | None = None
         with self._mutex:
             active = self._flights.get(key)
             if active is leader:
                 del self._flights[key]
-                return None
-            if isinstance(leader, _Leader) and isinstance(active, _Flight) and active.leader is leader:
+            elif isinstance(leader, _Leader) and isinstance(active, _Flight) and active.leader is leader:
                 del self._flights[key]
-                return active
-            return None
+                follower = active
+            else:
+                return None
+        return follower
+
+    def has_async_flights(self) -> bool:
+        return any(
+            active.asynchronous if isinstance(active, _Leader) else active.leader.asynchronous
+            for active in self._flights.values()
+        )
+
+    async def wait_until_idle(self) -> None:
+        while True:
+            with self._mutex:
+                pending: list[_Flight] = []
+                for key, active in self._flights.items():
+                    if isinstance(active, _Leader):
+                        flight = _Flight(active)
+                        active.flight = flight
+                        self._flights[key] = flight
+                    else:
+                        flight = active
+                    pending.append(flight)
+                if not pending:
+                    return
+            await asyncio.gather(*(flight.wait_async() for flight in pending))
 
     def start_flight(self, key: object) -> tuple[_Flight | _Leader, bool]:
         """Join a per-key construction flight, or start one when none is active."""
@@ -454,44 +548,50 @@ class ScopeFrame:
                 follower.finish()
 
 
-_manual_owner = ScopeFrame()
-_active: ContextVar[tuple[tuple[ScopeFrame, ScopeFrame], ...]] = ContextVar('depin_active_frames', default=())
+_manualowner = ScopeFrame()
+_active: ContextVar[ScopeFrame | None] = ContextVar('depin_active_frame', default=None)
 
 
 def active_frame(owner: ScopeFrame | None = None) -> ScopeFrame:
     if owner is None:
-        owner = _manual_owner
-    for candidate, frame in _active.get():
-        if candidate is owner:
-            if frame.is_active():
+        owner = _manualowner
+    frame = _active.get()
+    while frame is not None:
+        if frame.owner is owner:
+            if frame.active:
                 return frame
             break
-    else:
-        frame = None
-    if frame is None:
-        raise OutsideScopeError('no active scope frame; open one with FrozenContainer.scope() or .ascope()')
-    raise OutsideScopeError('the active scope frame has already exited; open a new scope')
+        frame = frame.context_parent
+    if frame is not None:
+        raise OutsideScopeError('the active scope frame has already exited; open a new scope')
+    raise OutsideScopeError('no active scope frame; open one with FrozenContainer.scope() or .ascope()')
 
 
 def optional_frame(owner: ScopeFrame | None = None) -> ScopeFrame | None:
     if owner is None:
-        owner = _manual_owner
-    for candidate, frame in _active.get():
-        if candidate is owner:
-            return frame if frame.is_active() else None
+        owner = _manualowner
+    frame = _active.get()
+    while frame is not None:
+        if frame.owner is owner:
+            return frame if frame.active else None
+        frame = frame.context_parent
     return None
 
 
 @contextlib.contextmanager
 def push_frame(owner: ScopeFrame | None = None) -> Generator[ScopeFrame]:
     if owner is None:
-        owner = _manual_owner
-    parent = optional_frame(owner)
-    frame = ScopeFrame(parent=parent)
-    active = tuple((candidate, active_frame) for candidate, active_frame in _active.get() if candidate is not owner)
-    token = _active.set((*active, (owner, frame)))
+        owner = _manualowner
+    context_parent = _active.get()
+    parent = context_parent
+    while parent is not None and parent.owner is not owner:
+        parent = parent.context_parent
+    if parent is not None and not parent.active:
+        parent = None
+    frame = ScopeFrame(parent=parent, context_parent=context_parent, owner=owner)
+    token = _active.set(frame)
     try:
         yield frame
     finally:
-        frame.deactivate()
+        frame.active = False
         _active.reset(token)
