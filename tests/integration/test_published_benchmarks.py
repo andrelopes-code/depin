@@ -1,4 +1,7 @@
+import os
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from test_harness_reports import _write
@@ -102,16 +105,58 @@ def test_no_retired_workload_still_carries_a_budget() -> None:
     assert not {workload for workload, _ in available} & retired
 
 
-def test_competitive_cached_lookup_seed_applies_only_to_the_cached_resolution_path() -> None:
+def test_competitive_cached_lookup_seed_applies_only_to_the_cached_resolution_path(tmp_path: Path) -> None:
     patch = ROOT / 'benchmarks' / 'seeds' / 'competitive-cached-lookup.patch'
-    rendered = patch.read_text(encoding='utf-8')
-
-    checked = subprocess.run(
-        ('git', 'apply', '--check', str(patch)), cwd=ROOT, capture_output=True, text=True, check=False
+    seeded_package = tmp_path / 'depin'
+    shutil.copytree(ROOT / 'depin', seeded_package)
+    initialized = subprocess.run(
+        ('git', 'init', '--quiet', str(tmp_path)), cwd=ROOT, capture_output=True, text=True, check=False
     )
 
-    assert checked.returncode == 0, checked.stderr
-    changed = [line.removeprefix('+++ b/') for line in rendered.splitlines() if line.startswith('+++ b/')]
-    assert changed == ['depin/_core/frozen.py']
-    assert '+                self._warm_cached_lookup_probe = {cache_id: cached}' in rendered
-    assert '+                _ = self._warm_cached_lookup_probe[cache_id]' in rendered
+    applied = subprocess.run(
+        ('git', 'apply', str(patch)),
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert initialized.returncode == 0, initialized.stderr
+    assert applied.returncode == 0, applied.stderr
+    observed = subprocess.run(
+        (
+            sys.executable,
+            '-c',
+            """
+from depin import Container, Scope
+from depin._core.frozen import FrozenContainer
+
+
+class Cached: pass
+
+
+class Transient: pass
+
+
+container = Container().bind(Cached).bind(Transient, scope=Scope.TRANSIENT).freeze()
+assert '_warm_cached_lookup_probe' in FrozenContainer.__slots__
+assert container._warm_cached_lookup_probe == {}
+
+container.resolve(Transient)
+container.resolve(Transient)
+assert container._warm_cached_lookup_probe == {}
+
+cached = container.resolve(Cached)
+assert container._warm_cached_lookup_probe == {}
+assert container.resolve(Cached) is cached
+assert len(container._warm_cached_lookup_probe) == 1
+""",
+        ),
+        cwd=tmp_path,
+        env={**os.environ, 'PYTHONPATH': str(tmp_path)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert observed.returncode == 0, observed.stderr
