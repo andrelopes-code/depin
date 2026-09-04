@@ -13,6 +13,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  release-verification:
+    uses: ./.github/workflows/release-verification.yml
+    with:
+      ref: ${{ github.sha }}
+
   checks:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
