@@ -26,7 +26,7 @@ from importlib.metadata import PackageNotFoundError, version
 from depin._core.bindings import ScopeDecorator
 from depin._core.container import Container
 from depin._core.diagnostics import DependencyGraph, GraphEdge, GraphNode
-from depin._core.frozen import FrozenContainer
+from depin._core.frozen import FrozenContainer, ProviderOverride
 from depin._core.health import HealthCheck, HealthReport, HealthResult
 from depin._core.hosting import (
     CONTRACT_VERSION,
@@ -68,6 +68,7 @@ __all__ = (
     'Host',
     'Named',
     'ProviderKey',
+    'ProviderOverride',
     'ProviderShape',
     'Registry',
     'Scope',

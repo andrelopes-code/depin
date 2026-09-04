@@ -204,8 +204,7 @@ matching rendered text would be brittle where it is not simply useless.
 
 ## The divergence register
 
-Two false negatives in the public API are routed to Step 8:
-`FrozenContainer.override(Config, Other())`, accepted by all five, and
+One false negative in the public API is routed to Step 8:
 `Container.value(Token[int], 'str')`, accepted by four and rejected by Pyrefly.
 
 They cannot be negative fixtures. A fixture every checker accepts gates nothing,

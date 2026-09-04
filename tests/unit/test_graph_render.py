@@ -714,7 +714,7 @@ def test_explain_describes_the_plan_not_an_active_override() -> None:
     container = Container().bind(Config).bind(Store)
     di = container.freeze()
     expected = render_tree(build_graph(build_plan(container.records())), Store, None, frozenset())
-    with di.override(Config, Config()):
+    with di.override(Config).using(Config()):
         assert di.explain(Store) == expected
 
 

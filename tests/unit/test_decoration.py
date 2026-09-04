@@ -280,7 +280,7 @@ def test_an_override_replaces_the_decorated_key_whole() -> None:
             return 'fake'
 
     di = Container().bind(Store).decorate(Store, Loud).freeze()
-    with di.override(Store, Fake()):
+    with di.override(Store).using(Fake()):
         assert di.resolve(Store).get() == 'fake'
     assert isinstance(di.resolve(Store), Loud)
 

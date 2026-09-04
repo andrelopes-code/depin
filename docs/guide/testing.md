@@ -5,7 +5,7 @@ without the code under test noticing.
 
 ## Overriding a provider
 
-`override()` replaces a key for the duration of a block, everywhere it appears —
+`override()` selects a key, and `using()` replaces it for the duration of a block, everywhere it appears —
 including deep in the graph, as a dependency of something else:
 
 ```pycon
@@ -23,7 +23,7 @@ including deep in the graph, as a dependency of something else:
 ...     def now(self) -> str:
 ...         return '2026-01-01'
 >>> di = Container().bind(Clock).bind(Report).freeze()
->>> with di.override(Clock, FrozenClock()):
+>>> with di.override(Clock).using(FrozenClock()):
 ...     di[Report].render()
 'at 2026-01-01'
 
@@ -48,7 +48,7 @@ Three details worth knowing:
     ```pycon
     >>> di = Container().bind(Clock).bind(Report).freeze()
     >>> _ = di[Report]
-    >>> with di.override(Clock, FrozenClock()):
+    >>> with di.override(Clock).using(FrozenClock()):
     ...     di[Clock].now()
     ...     di[Report].render()
     '2026-01-01'
@@ -62,7 +62,7 @@ Three details worth knowing:
 
     ```pycon
     >>> di.reset()
-    >>> with di.override(Clock, FrozenClock()):
+    >>> with di.override(Clock).using(FrozenClock()):
     ...     di.reset()
     ...     di[Report].render()
     'at 2026-01-01'
@@ -97,7 +97,7 @@ def di():
 
 
 def test_report_uses_the_clock(di):
-    with di.override(Clock, FrozenClock()):
+    with di.override(Clock).using(FrozenClock()):
         assert di[Report].render() == 'at 2026-01-01'
 ```
 

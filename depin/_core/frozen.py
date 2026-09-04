@@ -5,7 +5,7 @@ import contextlib
 import inspect
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
 from contextvars import ContextVar
-from typing import overload
+from typing import final, overload
 
 from depin._core import construct, injection, overrides
 from depin._core.diagnostics import DependencyGraph, build_graph
@@ -40,6 +40,56 @@ class _Constructing:
 
 
 _constructing: ContextVar[_Constructing | None] = ContextVar('depin_constructing', default=None)
+
+
+@final
+class ProviderOverride:
+    """A selected provider override that can receive a temporary replacement.
+
+    Obtain one from `FrozenContainer.override()`, then call `using()` to enter
+    the override context. A callable replacement that is not a class is invoked
+    as a transient factory; every other replacement is returned as-is.
+
+    Example:
+        ```pycon
+        >>> from depin import Container
+        >>> class Clock:
+        ...     def now(self) -> str:
+        ...         return 'real'
+        >>> class FakeClock:
+        ...     def now(self) -> str:
+        ...         return 'fake'
+        >>> di = Container().bind(Clock).freeze()
+        >>> with di.override(Clock).using(FakeClock()):
+        ...     di[Clock].now()
+        'fake'
+
+        ```
+    """
+
+    __slots__ = ('_container', '_key', '_tag')
+
+    def __init__(self, container: 'FrozenContainer', key: ProviderKey, tag: str | None) -> None:
+        self._container = container
+        self._key = key
+        self._tag = tag
+
+    def using(self, replacement: object, /) -> contextlib.AbstractContextManager['FrozenContainer']:
+        """Temporarily replace the selected provider with ``replacement``.
+
+        The returned context manager is bound to the current `contextvars.Context`,
+        so concurrent tasks and threads do not see the replacement. Overrides
+        nest and the innermost one wins.
+
+        Returns:
+            A context manager yielding the container while this replacement is active.
+        """
+        return self._using(replacement)
+
+    @contextlib.contextmanager
+    def _using(self, replacement: object, /) -> Generator['FrozenContainer']:
+        with overrides.pushed(self._key, self._tag, replacement):
+            yield self._container
 
 
 class FrozenContainer:
@@ -175,7 +225,9 @@ class FrozenContainer:
         Use `ascope()` when any provider in the scope is async.
 
         Raises:
-            TeardownError: An async provider left a teardown in this sync scope.
+            ExceptionGroup: One or more teardowns failed. Protocol violations,
+                including an async teardown in this synchronous scope, appear as
+                `TeardownError` members of the group.
 
         Example:
             ```pycon
@@ -214,6 +266,11 @@ class FrozenContainer:
         run in reverse order on exit, with failures collected into an
         `ExceptionGroup`. The per-request scope opened by the FastAPI integration
         is an ``ascope``.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed. A generator provider
+                that violates its teardown protocol appears as a `TeardownError`
+                member of the group.
         """
         ticket = self._lifecycle.admit('ascope', asynchronous=True)
         with push_frame(self._root) as frame:
@@ -235,8 +292,10 @@ class FrozenContainer:
         Failures are collected into an `ExceptionGroup`.
 
         Raises:
-            TeardownError: A singleton is an async provider, reported inside
-                the raised `ExceptionGroup` rather than bare; use `aclose()`.
+            ExceptionGroup: One or more teardowns failed. Protocol violations,
+                including an async teardown in this synchronous drain, appear as
+                `TeardownError` members of the group; use `aclose()` for async
+                providers.
 
         Example:
             ```pycon
@@ -268,6 +327,11 @@ class FrozenContainer:
         The async counterpart to `close()`, and the one to call when any
         singleton is an async provider. Drains the root scope in reverse order of
         construction, collecting failures into an `ExceptionGroup`.
+
+        Raises:
+            ExceptionGroup: One or more teardowns failed. A generator provider
+                that violates its teardown protocol appears as a `TeardownError`
+                member of the group.
         """
         if not self._lifecycle.begin_async_close():
             await self._lifecycle.join()
@@ -307,10 +371,11 @@ class FrozenContainer:
         resolution can hand a caller a value whose teardown already ran.
 
         Raises:
-            TeardownError: A singleton is an async provider, reported inside
-                the raised `ExceptionGroup` rather than bare; use `areset()`.
             ExceptionGroup: One or more teardowns failed. Every failure is
-                reported, and the cache is dropped either way.
+                reported, and the cache is dropped either way. Protocol
+                violations, including an async teardown in this synchronous
+                drain, appear as `TeardownError` members; use `areset()` for
+                async providers.
 
         Example:
             ```pycon
@@ -339,7 +404,9 @@ class FrozenContainer:
 
         Raises:
             ExceptionGroup: One or more teardowns failed. Every failure is
-                reported, and the cache is dropped either way.
+                reported, and the cache is dropped either way. A generator
+                provider that violates its teardown protocol appears as a
+                `TeardownError` member of the group.
         """
         ticket = self._lifecycle.admit('areset', asynchronous=True)
         try:
@@ -555,25 +622,14 @@ class FrozenContainer:
         injectables = injection.collect(fn, sig, self._is_registered)
         return injection.wrap(fn, sig, injectables, self._resolve_any, self._aresolve_any)
 
-    @contextlib.contextmanager
-    def override[T](
-        self,
-        key: type[T] | Token[T],
-        replacement: T,
-        *,
-        tag: str | None = None,
-    ) -> Generator['FrozenContainer']:
-        """Temporarily replace a provider's value within a ``with`` block.
+    def override(self, key: ProviderKey, /, *, tag: str | None = None) -> ProviderOverride:
+        """Select a provider to temporarily replace with `ProviderOverride.using()`.
 
-        Inside the block, every resolution of ``key`` (and ``tag``) returns
-        ``replacement`` instead of the registered provider — including
-        resolutions deep in the graph, as a dependency of another provider, not
-        only top-level lookups. If ``replacement`` is a callable and not a class
-        it is invoked as a factory per resolution; otherwise it is returned
-        as-is. The override is bound to the current `contextvars.Context` and
-        undone on exit, so concurrent contexts are unaffected; overrides nest,
-        innermost wins. Primarily a testing seam — swap a real dependency for a
-        fake without rebuilding the container.
+        `using()` supplies a replacement for one block. Every resolution of the
+        selected key and tag returns that replacement during the block, including
+        resolutions deep in the graph. The override is bound to the current
+        `contextvars.Context`, so concurrent contexts are unaffected; overrides
+        nest and the innermost one wins.
 
         Raises:
             MissingProviderError: ``key`` is not a valid provider key type.
@@ -588,7 +644,7 @@ class FrozenContainer:
             ...     def now(self) -> str:
             ...         return 'fake'
             >>> di = Container().bind(Clock).freeze()
-            >>> with di.override(Clock, FakeClock()):
+            >>> with di.override(Clock).using(FakeClock()):
             ...     di[Clock].now()
             'fake'
             >>> di[Clock].now()
@@ -598,8 +654,7 @@ class FrozenContainer:
         """
         if not is_provider_key(key):
             raise MissingProviderError(f'cannot override {key!r}: not a valid key type')
-        with overrides.pushed(key, tag, replacement):
-            yield self
+        return ProviderOverride(self, key, tag)
 
     def graph(self) -> DependencyGraph:
         """Return the validated dependency graph as data.

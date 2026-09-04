@@ -133,7 +133,7 @@ async def test_ascope_yields_a_frame() -> None:
 
 def test_override_yields_the_container() -> None:
     di = Container().bind(Config).freeze()
-    with di.override(Config, Config()) as overridden:
+    with di.override(Config).using(Config()) as overridden:
         assert_type(overridden, FrozenContainer)
 
 

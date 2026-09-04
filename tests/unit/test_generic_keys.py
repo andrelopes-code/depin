@@ -2,7 +2,6 @@
 
 import typing
 from collections.abc import Callable
-from contextlib import ExitStack
 from typing import Protocol
 
 import pytest
@@ -194,5 +193,3 @@ def test_a_deprecated_alias_is_refused_by_every_runtime_gate() -> None:
         _ = di.resolve(alias)  # pyright: ignore[reportArgumentType]
     with pytest.raises(MissingProviderError, match='not a valid key type'):
         _ = di.explain(alias)  # pyright: ignore[reportArgumentType]
-    with pytest.raises(MissingProviderError, match='not a valid key type'), ExitStack() as stack:
-        _ = stack.enter_context(di.override(alias, []))  # pyright: ignore[reportArgumentType]

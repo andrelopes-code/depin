@@ -42,7 +42,7 @@ def main() -> None:
     print(di[Clock].now())
     print(di[Report].render())
 
-    with di.override(Clock, FakeClock()):
+    with di.override(Clock).using(FakeClock()):
         # The overridden key is replaced immediately, even for a singleton
         # already built above.
         print(di[Clock].now())
