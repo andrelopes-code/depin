@@ -69,6 +69,7 @@ nav:
       - Comparative baseline: performance/comparison-baseline.md
       - Reproducing: performance/reproducing.md
   - Support policy: support-policy.md
+  - Stability and compatibility: stability.md
   - Reference:
       - Overview: reference/index.md
       - Container & Registry: reference/container.md

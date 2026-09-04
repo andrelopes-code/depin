@@ -1,5 +1,8 @@
 # Support policy
 
+The [stability and compatibility policy](stability.md) defines which depin
+surfaces are public and when the V1 Semantic Versioning commitment begins.
+
 ## Python versions
 
 depin supports every CPython release that upstream still supports, from 3.12
