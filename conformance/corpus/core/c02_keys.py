@@ -12,7 +12,18 @@ writes them.
 
 from typing import Annotated, Protocol, assert_type
 
-from depin import Container, FrozenContainer, Named, ProviderKey, Tag, Token, Underlying, render_key
+from depin import (
+    Container,
+    FrozenContainer,
+    Named,
+    ProviderKey,
+    ScopeSeed,
+    ScopeSeeder,
+    Tag,
+    Token,
+    Underlying,
+    render_key,
+)
 
 
 class Config:
@@ -76,6 +87,13 @@ def a_class_a_protocol_and_a_string_are_provider_keys() -> None:
 def a_provider_key_renders_with_an_optional_tag() -> None:
     assert_type(render_key(port), str)
     assert_type(render_key(port, tag='primary'), str)
+
+
+def a_scope_seed_contract_is_structural() -> None:
+    def seed(_context: object) -> ScopeSeed:
+        return ScopeSeed(port, 8080)
+
+    _seeder: ScopeSeeder[object] = seed
 
 
 def a_parameterised_generic_alias_is_a_key() -> None:

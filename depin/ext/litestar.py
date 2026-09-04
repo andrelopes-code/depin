@@ -29,11 +29,11 @@ from litestar import Request
 from litestar.datastructures import State
 from litestar.types import ASGIApp, Receive, Scope, Send
 
-from depin import FrozenContainer, ProviderKey
+from depin import FrozenContainer, ScopeSeed
 from depin.ext.asgi import RequestScope as ASGIRequestScope
 
 
-def seed_request(scope: Scope) -> tuple[ProviderKey, object]:
+def seed_request(scope: Scope) -> ScopeSeed:
     """Build the `litestar.Request` that `RequestScope` places into each HTTP frame.
 
     The request is constructed from the connection scope alone, so the body
@@ -60,7 +60,7 @@ def seed_request(scope: Scope) -> tuple[ProviderKey, object]:
         'acme'
     """
     request: Request[object, object, State] = Request(scope)
-    return Request[object, object, State], request
+    return ScopeSeed(Request[object, object, State], request)
 
 
 class RequestScope(ASGIRequestScope[Scope, Receive, Send]):

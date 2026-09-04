@@ -28,11 +28,10 @@ Written against depin's public integration contract — `depin.Host` — so it
 reaches nothing inside the private package.
 """
 
-from collections.abc import Callable
 from contextlib import AbstractContextManager
 from typing import Protocol
 
-from depin import FrozenContainer, Host, ProviderKey, ScopeFrame
+from depin import FrozenContainer, Host, ScopeFrame, ScopeSeeder
 
 
 class CommandContext(Protocol):
@@ -45,7 +44,7 @@ def install[C: CommandContext](
     ctx: C,
     container: FrozenContainer,
     *,
-    seed: Callable[[C], tuple[ProviderKey, object] | None] | None = None,
+    seed: ScopeSeeder[C] | None = None,
 ) -> ScopeFrame:
     """Open one depin scope bound to a command context's lifetime.
 
@@ -93,5 +92,5 @@ def install[C: CommandContext](
     if seed is not None:
         seeded = seed(ctx)
         if seeded is not None:
-            frame.provide(*seeded)
+            seeded.apply(frame)
     return frame

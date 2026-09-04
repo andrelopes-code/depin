@@ -13,7 +13,7 @@ from typing import Self
 
 import pytest
 
-from depin import Container, FrozenContainer, ProviderKey, Scope, Token, optional_hosted_container
+from depin import Container, FrozenContainer, Scope, ScopeSeed, Token, optional_hosted_container
 from depin.errors import MissingProviderError
 from depin.ext.cli import install
 
@@ -65,8 +65,8 @@ def torn_down_container(torn: list[Resource]) -> FrozenContainer:
     return Container().bind(make, scope=Scope.SCOPED, provides=Resource).freeze()
 
 
-def seed_tenant(value: str) -> tuple[ProviderKey, object]:
-    return (TENANT, value)
+def seed_tenant(value: str) -> ScopeSeed:
+    return ScopeSeed(TENANT, value)
 
 
 def test_install_returns_the_frame_the_caller_seeds_its_own_values_into() -> None:
@@ -123,7 +123,7 @@ def test_the_seed_receives_the_context_it_was_installed_on() -> None:
     di = seeded_container()
     seen: list[object] = []
 
-    def seed(ctx: CommandContextStandIn) -> tuple[ProviderKey, object]:
+    def seed(ctx: CommandContextStandIn) -> ScopeSeed:
         seen.append(ctx)
         return seed_tenant('acme')
 

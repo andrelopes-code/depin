@@ -38,6 +38,7 @@ from depin._core.hosting import (
 from depin._core.markers import Named, Tag, Token, injected, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope, ScopeFrame
+from depin._core.seeds import ScopeSeed, ScopeSeeder
 from depin._core.spec import Bindings, Condition, ProviderKey, ProviderShape, Underlying, render_key
 from depin._core.warmup import WarmupReport
 from depin.errors import AsyncInSyncContextError, ContainerClosedError, ContainerLifecycleError
@@ -74,6 +75,8 @@ __all__ = (
     'Scope',
     'ScopeDecorator',
     'ScopeFrame',
+    'ScopeSeed',
+    'ScopeSeeder',
     'Tag',
     'Token',
     'Underlying',

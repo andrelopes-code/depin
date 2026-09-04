@@ -27,10 +27,10 @@ Written against depin's public integration contract — `depin.Host` — so it
 reaches nothing inside the private package.
 """
 
-from collections.abc import Callable, Iterable, MutableMapping
+from collections.abc import Iterable, MutableMapping
 from typing import Protocol
 
-from depin import FrozenContainer, Host, ProviderKey
+from depin import FrozenContainer, Host, ScopeSeeder
 
 type Environ = MutableMapping[str, object]
 """The per-request environment: CGI variables plus the ``wsgi.*`` server keys.
@@ -112,7 +112,7 @@ class RequestScope[EnvironT, StartResponseT]:
         app: WSGIApp[EnvironT, StartResponseT],
         container: FrozenContainer,
         *,
-        seed: Callable[[EnvironT], tuple[ProviderKey, object] | None] | None = None,
+        seed: ScopeSeeder[EnvironT] | None = None,
     ) -> None:
         self._app = app
         self._host = Host(container)
@@ -123,5 +123,5 @@ class RequestScope[EnvironT, StartResponseT]:
             if self._seed is not None:
                 seeded = self._seed(environ)
                 if seeded is not None:
-                    frame.provide(*seeded)
+                    seeded.apply(frame)
             return self._app(environ, start_response)

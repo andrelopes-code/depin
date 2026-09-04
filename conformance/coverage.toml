@@ -78,6 +78,12 @@ fixtures = ["corpus/core/c07_registration.py"]
 [Scope]
 fixtures = ["corpus/core/c06_lifetimes.py"]
 
+[ScopeSeed]
+fixtures = ["corpus/core/c02_keys.py"]
+
+[ScopeSeeder]
+fixtures = ["corpus/core/c02_keys.py"]
+
 [ScopeDecorator]
 fixtures = ["corpus/core/c07_registration.py"]
 

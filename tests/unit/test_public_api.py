@@ -28,6 +28,8 @@ EXPECTED_EXPORTS = (
     'Scope',
     'ScopeDecorator',
     'ScopeFrame',
+    'ScopeSeed',
+    'ScopeSeeder',
     'Tag',
     'Token',
     'Underlying',
