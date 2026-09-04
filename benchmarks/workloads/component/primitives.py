@@ -62,7 +62,7 @@ class RequestHandler:
         self.incoming = incoming
 
 
-def _key_name(key: ProviderKey) -> str:
+def key_name(key: ProviderKey) -> str:
     return key.__name__ if isinstance(key, type) else str(key)
 
 
@@ -74,7 +74,7 @@ def _tree_shape(tree: str) -> str:
     return f'lines={len(tree.splitlines())} elided={tree.count("(shown above)")}'
 
 
-def _request_observation(handler: RequestHandler) -> Observation:
+def request_observation(handler: RequestHandler) -> Observation:
     return Observation(
         result=type(handler).__name__,
         constructed=(type(handler.session).__name__, type(handler).__name__),
@@ -82,7 +82,7 @@ def _request_observation(handler: RequestHandler) -> Observation:
     )
 
 
-def _freeze_claim(*, work: str, shape: str, valid: tuple[str, ...], invalid: tuple[str, ...]) -> Claim:
+def freeze_claim(*, work: str, shape: str, valid: tuple[str, ...], invalid: tuple[str, ...]) -> Claim:
     return Claim(
         question='What does validating a declared graph cost at freeze time?',
         work=work,
@@ -101,7 +101,7 @@ def _freeze_claim(*, work: str, shape: str, valid: tuple[str, ...], invalid: tup
     )
 
 
-def _diagnostic_claim(
+def diagnostic_claim(
     *, question: str, work: str, shape: str, valid: tuple[str, ...], invalid: tuple[str, ...]
 ) -> Claim:
     return Claim(
@@ -119,7 +119,7 @@ def _diagnostic_claim(
     )
 
 
-def _freeze_workload(name: str, build: Callable[[], Container], claim: Claim) -> Workload:
+def freeze_workload(name: str, build: Callable[[], Container], claim: Claim) -> Workload:
     def setup() -> Session:
         container = build()
         return Session(
@@ -130,7 +130,7 @@ def _freeze_workload(name: str, build: Callable[[], Container], claim: Claim) ->
     return Workload(name=name, tier=Tier.COMPONENT, claim=claim, subject=implementation('depin', setup))
 
 
-def _explain_workload(name: str, build: Callable[[], tuple[Container, ProviderKey]], claim: Claim) -> Workload:
+def explain_workload(name: str, build: Callable[[], tuple[Container, ProviderKey]], claim: Claim) -> Workload:
     def setup() -> Session:
         container, key = build()
         frozen = container.freeze()

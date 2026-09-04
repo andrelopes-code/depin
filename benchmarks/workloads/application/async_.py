@@ -16,9 +16,9 @@ from .model import (
     Repository,
     Settings,
     Sink,
-    _already_warm,
-    _ledger_payload,
-    _order_payload,
+    already_warm,
+    ledger_payload,
+    order_payload,
 )
 
 
@@ -65,10 +65,10 @@ def build_depin_async_deployment(sink: Sink) -> Deployment:
     app.add_middleware(RequestScope, container=frozen)
 
     async def ledger(trail: Inject[AuditTrail]) -> dict[str, str]:
-        return _ledger_payload(trail)
+        return ledger_payload(trail)
 
     async def order(service: Inject[OrderService]) -> dict[str, str]:
-        return _order_payload(service)
+        return order_payload(service)
 
     app.add_api_route('/ledger', ledger, methods=['GET'])
     app.add_api_route('/order', order, methods=['GET'])
@@ -90,7 +90,7 @@ def build_direct_async_deployment(sink: Sink) -> Deployment:
         try:
             trail = AuditTrail(opened, sink)
             try:
-                return _ledger_payload(trail)
+                return ledger_payload(trail)
             finally:
                 trail.close()
         finally:
@@ -99,8 +99,8 @@ def build_direct_async_deployment(sink: Sink) -> Deployment:
     async def order() -> dict[str, str]:
         repository = Repository(settings, sink)
         service = OrderService(repository, catalog, sink)
-        return _order_payload(service)
+        return order_payload(service)
 
     app.add_api_route('/ledger', ledger, methods=['GET'])
     app.add_api_route('/order', order, methods=['GET'])
-    return Deployment(app=app, warm=_already_warm)
+    return Deployment(app=app, warm=already_warm)

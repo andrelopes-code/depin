@@ -5,13 +5,13 @@ from benchmarks.graphs import build_chain, build_decorated_chain, build_layered_
 from benchmarks.workloads.component.primitives import (
     LARGE_GRAPH,
     LAYERED_GRAPH,
-    _diagnostic_claim,
-    _explain_workload,
+    diagnostic_claim,
+    explain_workload,
 )
 from benchmarks.workloads.shell import Session, implementation
 
 
-def _build_the_graph_view() -> Workload:
+def build_the_graph_view() -> Workload:
     def setup() -> Session:
         container, _ = build_chain(LARGE_GRAPH)
         frozen = container.freeze()
@@ -26,7 +26,7 @@ def _build_the_graph_view() -> Workload:
     return Workload(
         name='build_the_graph_view',
         tier=Tier.COMPONENT,
-        claim=_diagnostic_claim(
+        claim=diagnostic_claim(
             question='What does the public graph view over a validated plan cost?',
             work=f'Build the node and edge view of a {LARGE_GRAPH}-provider graph.',
             shape=f'A linear chain of {LARGE_GRAPH} providers.',
@@ -37,11 +37,11 @@ def _build_the_graph_view() -> Workload:
     )
 
 
-def _explain_a_deep_chain() -> Workload:
-    return _explain_workload(
+def explain_a_deep_chain() -> Workload:
+    return explain_workload(
         'explain_a_deep_chain',
         lambda: build_chain(LARGE_GRAPH),
-        _diagnostic_claim(
+        diagnostic_claim(
             question='What does rendering a resolution tree cost over a chain nothing is reached twice in?',
             work=f'Render the resolution tree below the leaf of a {LARGE_GRAPH}-provider chain.',
             shape=f'A linear chain of {LARGE_GRAPH} providers, so every node is reached exactly once.',
@@ -55,11 +55,11 @@ def _explain_a_deep_chain() -> Workload:
     )
 
 
-def _explain_a_deep_chain_with_every_node_decorated() -> Workload:
-    return _explain_workload(
+def explain_a_deep_chain_with_every_node_decorated() -> Workload:
+    return explain_workload(
         'explain_a_deep_chain_with_every_node_decorated',
         lambda: build_decorated_chain(LARGE_GRAPH),
-        _diagnostic_claim(
+        diagnostic_claim(
             question='What does a decorator over every node add to rendering a resolution tree?',
             work=f'Render the resolution tree below the leaf of a decorated {LARGE_GRAPH}-provider chain.',
             shape='`explain_a_deep_chain`, with one pass-through decorator over every node.',
@@ -69,11 +69,11 @@ def _explain_a_deep_chain_with_every_node_decorated() -> Workload:
     )
 
 
-def _explain_a_layered_dag() -> Workload:
-    return _explain_workload(
+def explain_a_layered_dag() -> Workload:
+    return explain_workload(
         'explain_a_layered_dag',
         lambda: build_layered_dag(LAYERED_GRAPH),
-        _diagnostic_claim(
+        diagnostic_claim(
             question='What does rendering a resolution tree cost when subtrees repeat?',
             work=f'Render the resolution tree below the deepest node of a {LAYERED_GRAPH}-node layered DAG.',
             shape=(
@@ -93,7 +93,7 @@ def _explain_a_layered_dag() -> Workload:
     )
 
 
-def _export_a_large_graph_as_dot() -> Workload:
+def export_a_large_graph_as_dot() -> Workload:
     def setup() -> Session:
         container, _ = build_chain(LARGE_GRAPH)
         graph = container.freeze().graph()
@@ -109,7 +109,7 @@ def _export_a_large_graph_as_dot() -> Workload:
     return Workload(
         name='export_a_large_graph_as_dot',
         tier=Tier.COMPONENT,
-        claim=_diagnostic_claim(
+        claim=diagnostic_claim(
             question='What does exporting a graph to Graphviz cost?',
             work=f'Render a {LARGE_GRAPH}-provider graph as a dot document.',
             shape=f'A linear chain of {LARGE_GRAPH} providers.',

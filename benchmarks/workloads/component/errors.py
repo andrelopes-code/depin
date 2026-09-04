@@ -10,7 +10,7 @@ from benchmarks.workloads.shell import CONCURRENCY, Session, implementation
 from depin.errors import MissingProviderError
 
 
-def _freeze_a_chain_missing_a_provider(size: int) -> Workload:
+def freeze_a_chain_missing_a_provider(size: int) -> Workload:
     def setup() -> Session:
         container, _ = build_chain_missing_a_provider(size)
 
@@ -71,7 +71,7 @@ def _freeze_a_chain_missing_a_provider(size: int) -> Workload:
     )
 
 
-def _explain_an_unbound_key(size: int) -> Workload:
+def explain_an_unbound_key(size: int) -> Workload:
     def setup() -> Session:
         container, _ = build_layered_dag(size)
         frozen = container.freeze()

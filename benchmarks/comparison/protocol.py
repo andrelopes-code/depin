@@ -30,13 +30,13 @@ CALIBRATION_PROVENANCE_VERSION = 1
 COMPARISON_PROTOCOL = 'counterbalanced-comparison-v1'
 
 
-def _boolean(value: object, where: str) -> bool:
+def boolean(value: object, where: str) -> bool:
     if not isinstance(value, bool):
         raise HarnessError(f'{where}: expected a boolean, found {value!r}')
     return value
 
 
-def _finite_positive(value: object, where: str) -> float:
+def finite_positive(value: object, where: str) -> float:
     number = require_number(value, where)
     if not math.isfinite(number) or number <= 0.0:
         raise HarnessError(f'{where}: expected a finite positive duration, found {number!r}')
@@ -50,14 +50,14 @@ def seed(dataset: dict[str, object]) -> int:
     return int(value)
 
 
-def _accepted(dataset: dict[str, object]) -> None:
+def accepted(dataset: dict[str, object]) -> None:
     if dataset.get('accepted') is not True:
         raise HarnessError(
             'dataset.accepted must be true; --allow-dirty is diagnostic evidence and requires clean collection'
         )
 
 
-def _schema(dataset: dict[str, object]) -> None:
+def schema(dataset: dict[str, object]) -> None:
     require_schema_version(dataset, 'dataset', COMPARISON_SCHEMA_VERSION)
 
 
@@ -75,7 +75,7 @@ def _digest(value: object, where: str) -> str:
 
 
 def protocol_material(dataset: dict[str, object]) -> dict[str, object]:
-    _schema(dataset)
+    schema(dataset)
     protocol = require_text(dataset.get('protocol'), 'dataset.protocol')
     if protocol != COMPARISON_PROTOCOL:
         raise HarnessError(f'dataset.protocol: unsupported protocol {protocol!r}')
@@ -106,10 +106,10 @@ def protocol_material(dataset: dict[str, object]) -> dict[str, object]:
                 'system': require_text(host.get('system'), 'dataset.environment.host.system'),
             },
             'interpreter': {
-                'free_threading': _boolean(
+                'free_threading': boolean(
                     interpreter.get('free_threading'), 'dataset.environment.interpreter.free_threading'
                 ),
-                'hash_randomization': _boolean(
+                'hash_randomization': boolean(
                     interpreter.get('hash_randomization'), 'dataset.environment.interpreter.hash_randomization'
                 ),
                 'implementation': require_text(
@@ -135,18 +135,18 @@ def protocol_fingerprint(dataset: dict[str, object]) -> str:
     return hashlib.sha256(encoded.encode('utf-8')).hexdigest()
 
 
-def _protocol_digest(protocol: dict[str, object]) -> str:
+def protocol_digest(protocol: dict[str, object]) -> str:
     encoded = json.dumps(protocol, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
     return hashlib.sha256(encoded.encode('utf-8')).hexdigest()
 
 
-def _protocol_difference(expected: object, actual: object, where: str = '') -> str | None:
+def protocol_difference(expected: object, actual: object, where: str = '') -> str | None:
     if is_object(expected) and is_object(actual):
         for key in sorted(set(expected) | set(actual)):
             nested = f'{where}.{key}' if where else key
             if key not in expected or key not in actual:
                 return nested
-            difference = _protocol_difference(expected[key], actual[key], nested)
+            difference = protocol_difference(expected[key], actual[key], nested)
             if difference is not None:
                 return difference
         return None
@@ -154,14 +154,14 @@ def _protocol_difference(expected: object, actual: object, where: str = '') -> s
         if len(expected) != len(actual):
             return where
         for index, (left, right) in enumerate(zip(expected, actual, strict=True)):
-            difference = _protocol_difference(left, right, f'{where}[{index}]')
+            difference = protocol_difference(left, right, f'{where}[{index}]')
             if difference is not None:
                 return difference
         return None
     return None if expected == actual else where
 
 
-def _calibration_provenance(calibration: dict[str, object]) -> dict[str, object]:
+def calibration_provenance(calibration: dict[str, object]) -> dict[str, object]:
     require_schema_version(calibration, 'calibration', CALIBRATION_SCHEMA_VERSION)
     provenance = require_object(calibration.get('provenance'), 'calibration.provenance')
     version = require_integer(provenance.get('version'), 'calibration.provenance.version')
@@ -172,7 +172,7 @@ def _calibration_provenance(calibration: dict[str, object]) -> dict[str, object]
     _ = _digest(provenance.get('null_dataset_sha256'), 'calibration.provenance.null_dataset_sha256')
     fingerprint = _digest(provenance.get('protocol_fingerprint'), 'calibration.provenance.protocol_fingerprint')
     protocol = require_object(provenance.get('protocol'), 'calibration.provenance.protocol')
-    if _protocol_digest(protocol) != fingerprint:
+    if protocol_digest(protocol) != fingerprint:
         raise HarnessError('calibration.provenance.protocol does not match its protocol_fingerprint')
     _ = require_text(provenance.get('source_revision'), 'calibration.provenance.source_revision')
     _ = require_text(provenance.get('harness_revision'), 'calibration.provenance.harness_revision')
@@ -299,7 +299,7 @@ def _finite(value: object, *, where: str, positive: bool = False) -> None:
         raise HarnessError(f'{where}: {number!r} must be {expectation}; repair the pytest-benchmark report')
 
 
-def _validate_raw(report: Path, *, repetition: int, order: str, expected: set[str]) -> None:
+def validate_raw(report: Path, *, repetition: int, order: str, expected: set[str]) -> None:
     payload = read_json(report)
     entries = require_array(payload.get('benchmarks'), f'{report}.benchmarks')
     names: set[str] = set()

@@ -110,12 +110,12 @@ class Outer(Decorated):
     """The outer of the two decorators over the leaf."""
 
 
-async def _ready(value: object) -> object:
+async def ready(value: object) -> object:
     """The bare coroutine the async baseline drives through the same event loop."""
     return value
 
 
-def _decoration(wrapper: type[Decorated], node: type[object]) -> Callable[..., object]:
+def decoration(wrapper: type[Decorated], node: type[object]) -> Callable[..., object]:
     """A decorator over `node` returning a `wrapper`, annotated the way `graphs._provider` is."""
 
     def wrap(inner: object) -> object:
@@ -125,15 +125,15 @@ def _decoration(wrapper: type[Decorated], node: type[object]) -> Callable[..., o
     return wrap
 
 
-def _boxed() -> Boxed[Repo]:
+def boxed() -> Boxed[Repo]:
     return Boxed(Repo())
 
 
-def _sole() -> Sole:
+def sole() -> Sole:
     return Sole()
 
 
-def _construct_chain(nodes: tuple[type[object], ...]) -> object:
+def construct_chain(nodes: tuple[type[object], ...]) -> object:
     """Construct every class in `nodes`, in order, and return the last."""
     made: object = None
     for node in nodes:
@@ -141,8 +141,8 @@ def _construct_chain(nodes: tuple[type[object], ...]) -> object:
     return made
 
 
-def _construct_recorded(nodes: tuple[type[object], ...], log: list[str]) -> object:
-    """`_construct_chain`, naming each class in `log` as it is constructed."""
+def construct_recorded(nodes: tuple[type[object], ...], log: list[str]) -> object:
+    """`construct_chain`, naming each class in `log` as it is constructed."""
     made: object = None
     for node in nodes:
         log.append(node.__name__)
@@ -150,7 +150,7 @@ def _construct_recorded(nodes: tuple[type[object], ...], log: list[str]) -> obje
     return made
 
 
-def _build_collection(size: int) -> Container:
+def build_collection(size: int) -> Container:
     """`size` independently bound members, gathered under `list[Element]`."""
     container = Container()
     members: list[type[object]] = []
@@ -166,5 +166,5 @@ def _build_collection(size: int) -> Container:
     return container.collect(Element, members)
 
 
-def _collection_result(members: list[Element]) -> str:
+def collection_result(members: list[Element]) -> str:
     return f'list[{len(members)}] {type(members[0]).__name__}..{type(members[-1]).__name__}'

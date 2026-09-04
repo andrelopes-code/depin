@@ -58,7 +58,7 @@ class Trace:
             self.events.append(event)
 
 
-def _node(index: int) -> type[object]:
+def node(index: int) -> type[object]:
     return type(f'Node{index}', (), {})
 
 
@@ -118,50 +118,50 @@ def _resource(node: type[object], trace: Trace) -> Callable[..., object]:
     return make
 
 
-def _chain(size: int, scope: Scope, trace: Trace) -> tuple[Container, type[object]]:
+def chain(size: int, scope: Scope, trace: Trace) -> tuple[Container, type[object]]:
     container = Container()
     previous: type[object] | None = None
     leaf: type[object] = object
     for index in range(size):
-        leaf = _node(index)
+        leaf = node(index)
         provider = _source(leaf, trace) if previous is None else _link(leaf, previous, trace)
         container = container.bind(provider, provides=leaf, scope=scope)
         previous = leaf
     return container, leaf
 
 
-def _fan_out(size: int, trace: Trace) -> tuple[Container, type[object]]:
+def fan_out(size: int, trace: Trace) -> tuple[Container, type[object]]:
     container = Container()
     leaves: list[type[object]] = []
     for index in range(size):
-        leaf = _node(index)
+        leaf = node(index)
         container = container.bind(_source(leaf, trace), provides=leaf, scope=Scope.TRANSIENT)
         leaves.append(leaf)
     root = type('Root', (), {})
     return container.bind(_joiner(root, leaves, trace), provides=root, scope=Scope.TRANSIENT), root
 
 
-def _collection(size: int, trace: Trace) -> Container:
+def collection(size: int, trace: Trace) -> Container:
     container = Container()
     members: list[type[object]] = []
     for index in range(size):
-        member = _node(index)
+        member = node(index)
         container = container.bind(_source(member, trace), provides=member, scope=Scope.TRANSIENT)
         members.append(member)
     return container.collect(Element, members)
 
 
-def _resources(size: int, trace: Trace) -> Container:
+def resources(size: int, trace: Trace) -> Container:
     container = Container()
     members: list[type[object]] = []
     for index in range(size):
-        member = _node(index)
+        member = node(index)
         container = container.bind(_resource(member, trace), provides=member, scope=Scope.SCOPED)
         members.append(member)
     return container.collect(Element, members)
 
 
-def _claim(
+def claim(
     *,
     question: str,
     work: str,
@@ -197,22 +197,22 @@ def _async_resource(node: type[object], trace: Trace) -> Callable[..., object]:
     return make
 
 
-def _async_resources(size: int, trace: Trace) -> Container:
+def async_resources(size: int, trace: Trace) -> Container:
     container = Container()
     members: list[type[object]] = []
     for index in range(size):
-        member = _node(index)
+        member = node(index)
         container = container.bind(_async_resource(member, trace), provides=member, scope=Scope.SCOPED)
         members.append(member)
     return container.collect(Element, members)
 
 
-def _members(values: Sequence[object]) -> str:
+def members(values: Sequence[object]) -> str:
     """The constructed members, by type name and in order: what a collection observably produced."""
     return ','.join(type(value).__name__ for value in values)
 
 
-def _split_events(trace: Trace) -> tuple[tuple[str, ...], tuple[str, ...]]:
+def split_events(trace: Trace) -> tuple[tuple[str, ...], tuple[str, ...]]:
     opened = tuple(event for event in trace.events if not event.startswith('close '))
     closed = tuple(event.removeprefix('close ') for event in trace.events if event.startswith('close '))
     return opened, closed

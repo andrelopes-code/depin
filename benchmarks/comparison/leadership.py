@@ -14,15 +14,15 @@ from pathlib import Path
 from benchmarks.comparison.protocol import (
     CALIBRATION_PROVENANCE_VERSION,
     MINIMUM_REPETITIONS,
-    _accepted,
-    _boolean,
-    _calibration_provenance,
-    _finite_positive,
-    _protocol_difference,
-    _protocol_digest,
-    _schema,
+    accepted,
+    boolean,
+    calibration_provenance,
+    finite_positive,
+    protocol_difference,
+    protocol_digest,
     protocol_fingerprint,
     protocol_material,
+    schema,
     seed,
 )
 from benchmarks.harness import (
@@ -107,11 +107,11 @@ def _sample(repetition: dict[str, object], workload: str, label: str, where: str
 
 
 def _qualified(sample: dict[str, object], where: str) -> float | None:
-    if 'qualified' in sample and not _boolean(sample['qualified'], f'{where}.qualified'):
+    if 'qualified' in sample and not boolean(sample['qualified'], f'{where}.qualified'):
         return None
-    median = _finite_positive(sample.get('median'), f'{where}.median')
-    mean = _finite_positive(sample.get('mean'), f'{where}.mean')
-    rounds = _finite_positive(sample.get('rounds'), f'{where}.rounds')
+    median = finite_positive(sample.get('median'), f'{where}.median')
+    mean = finite_positive(sample.get('mean'), f'{where}.mean')
+    rounds = finite_positive(sample.get('rounds'), f'{where}.rounds')
     return median if rounds >= 1000.0 or mean * rounds >= 0.5 else None
 
 
@@ -135,7 +135,7 @@ def paired_medians(
 
 def calibration_entry(value: object, workload: str) -> tuple[float | None, bool]:
     fields = require_object(value, f'calibration.workloads.{workload}')
-    eligible = _boolean(fields.get('eligible'), f'calibration.workloads.{workload}.eligible')
+    eligible = boolean(fields.get('eligible'), f'calibration.workloads.{workload}.eligible')
     p99_value = fields.get('p99')
     allowance_value = fields.get('allowance')
     if p99_value is None or allowance_value is None:
@@ -158,8 +158,8 @@ def calibration_entry(value: object, workload: str) -> tuple[float | None, bool]
 
 def calibrate(dataset: dict[str, object]) -> dict[str, object]:
     """Derive deterministic per-workload allowances from a null comparison dataset."""
-    _schema(dataset)
-    _accepted(dataset)
+    schema(dataset)
+    accepted(dataset)
     random_seed = seed(dataset)
     collected = repetitions(dataset)
     calibrated: dict[str, object] = {}
@@ -257,7 +257,7 @@ def _absolute(
     if target is None:
         return None, None, None
     fields = require_object(target, f'dataset.targets.{workload}.target')
-    fixed = _finite_positive(fields.get('fixed_seconds'), f'dataset.targets.{workload}.target.fixed_seconds')
+    fixed = finite_positive(fields.get('fixed_seconds'), f'dataset.targets.{workload}.target.fixed_seconds')
     fraction_value = fields.get('fraction_of_direct')
     fraction = (
         None
@@ -275,15 +275,15 @@ def evaluate(
     dataset: dict[str, object], calibration: dict[str, object], budget_file: Path
 ) -> tuple[WorkloadVerdict, ...]:
     """Evaluate all workloads from decoded comparison and calibration JSON."""
-    _schema(dataset)
-    _accepted(dataset)
-    provenance = _calibration_provenance(calibration)
+    schema(dataset)
+    accepted(dataset)
+    provenance = calibration_provenance(calibration)
     expected_protocol = protocol_material(dataset)
     recorded_protocol = require_object(provenance['protocol'], 'calibration.provenance.protocol')
-    difference = _protocol_difference(expected_protocol, recorded_protocol)
+    difference = protocol_difference(expected_protocol, recorded_protocol)
     if difference is not None:
         raise HarnessError(f'calibration.provenance.protocol.{difference} differs from the comparison dataset')
-    if provenance['protocol_fingerprint'] != _protocol_digest(expected_protocol):
+    if provenance['protocol_fingerprint'] != protocol_digest(expected_protocol):
         raise HarnessError('calibration.provenance.protocol_fingerprint differs from the comparison dataset')
     random_seed = seed(dataset)
     collected = repetitions(dataset)

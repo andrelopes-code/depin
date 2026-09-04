@@ -1,8 +1,7 @@
 from collections.abc import Callable
-from pathlib import Path
 
 import pytest
-from test_harness_reports import _aggregate_of
+from test_harness_reports import aggregate_of
 
 from benchmarks.contracts import Metric, Tier, Workload
 from benchmarks.harness import HarnessError, pairs, reduce, scaling
@@ -113,19 +112,8 @@ def test_a_scaling_workload_prepares_a_callable_that_can_be_measured() -> None:
                 prepared.close()
 
 
-def test_the_cold_resolution_depth_cliff_is_where_the_baseline_measured_it() -> None:
-    """Pinned, not repaired: making resolution iterative is Step 8's change, not Step 7's.
-
-    The probe runs in a fresh interpreter at module level, because the answer is a
-    frame budget divided by the frames a resolution consumes per provider — measured
-    under pytest it would pin the runner's stack depth instead.
-    """
-    assert scale.deepest_resolvable_chain() == {'singleton': scale.DEPTH_CLIFF, 'transient': scale.DEPTH_CLIFF}
-
-
-def test_freeze_accepts_and_warmup_survives_a_graph_a_cold_resolve_cannot(tmp_path: Path) -> None:
-    """The cliff's consequence: `freeze()` admits a graph the runtime cannot resolve cold."""
-    del tmp_path
+def test_freeze_and_warmup_support_a_deep_graph() -> None:
+    """Planning and eager construction support graphs beyond Python's recursion limit."""
     from benchmarks.graphs import build_chain
 
     container, leaf = build_chain(1000)
@@ -178,10 +166,10 @@ def test_a_fixed_rounds_floor_does_not_carry_the_rule_at_every_cost() -> None:
     fixed = 120
     slow, fast = 5.9e-3 / 1.7, 1.4e-5
 
-    assert not reduce.qualifies(_aggregate_of(rounds=fixed, mean=slow))
-    assert not reduce.qualifies(_aggregate_of(rounds=fixed, mean=fast))
-    assert reduce.qualifies(_aggregate_of(rounds=reduce.rounds_for(slow), mean=slow))
-    assert reduce.qualifies(_aggregate_of(rounds=reduce.rounds_for(fast), mean=fast))
+    assert not reduce.qualifies(aggregate_of(rounds=fixed, mean=slow))
+    assert not reduce.qualifies(aggregate_of(rounds=fixed, mean=fast))
+    assert reduce.qualifies(aggregate_of(rounds=reduce.rounds_for(slow), mean=slow))
+    assert reduce.qualifies(aggregate_of(rounds=reduce.rounds_for(fast), mean=fast))
 
 
 @pytest.mark.parametrize('median', [0.0, -1.0, float('inf'), float('nan')])

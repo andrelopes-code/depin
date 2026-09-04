@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
-from test_harness_gate import _budget_file, _latency_budget, _work_budget
+from test_harness_gate import budget_file, latency_budget, work_budget
 
 from benchmarks.harness import HarnessError, gate, pairs, require_object
 from benchmarks.workloads import scale
@@ -81,7 +81,7 @@ def test_a_collection_gates_end_to_end(tmp_path: Path) -> None:
         latency_command=('-c', REPORT_WRITER, '{report}'),
         deterministic_command=('-c', DETERMINISTIC_WRITER, '{report}'),
     )
-    budgets = _budget_file(tmp_path / 'budgets.toml', [_latency_budget('probe'), _work_budget('probe')])
+    budgets = budget_file(tmp_path / 'budgets.toml', [latency_budget('probe'), work_budget('probe')])
 
     assert gate.main([str(out), '--budgets', str(budgets)]) == gate.EXIT_REGRESSION
 

@@ -8,7 +8,8 @@ from dishka import Container, Provider, Scope, make_container
 
 from benchmarks.comparison.adapters import Adapter
 from benchmarks.comparison.contracts import Candidate, Competitor, Equivalence
-from benchmarks.comparison.shapes import Chain, chain, observation
+from benchmarks.comparison.shapes import Chain, observation
+from benchmarks.comparison.shapes import chain as chain_shape
 from benchmarks.contracts import Implementation, Observation, Prepared, Workload
 from benchmarks.harness import HarnessError
 from benchmarks.workloads.micro import CHAIN_DEPTH, HOT_GRAPH
@@ -40,21 +41,21 @@ class DishkaChain:
         self.container.close()
 
 
-def _chain(size: int, scope: Scope, *, cache: bool) -> DishkaChain:
-    shape = chain(size)
+def chain(size: int, scope: Scope, *, cache: bool) -> DishkaChain:
+    shape = chain_shape(size)
     return DishkaChain(shape=shape, container=make_container(_ChainProvider(shape, scope, cache=cache)))
 
 
 def warm_chain(size: int) -> DishkaChain:
-    return _chain(size, Scope.APP, cache=True)
+    return chain(size, Scope.APP, cache=True)
 
 
 def transient_chain(size: int) -> DishkaChain:
-    return _chain(size, Scope.APP, cache=False)
+    return chain(size, Scope.APP, cache=False)
 
 
 def scoped_chain(size: int) -> DishkaChain:
-    return _chain(size, Scope.REQUEST, cache=True)
+    return chain(size, Scope.REQUEST, cache=True)
 
 
 def _implementation(build: Callable[[], DishkaChain], *, warm: bool) -> Implementation:

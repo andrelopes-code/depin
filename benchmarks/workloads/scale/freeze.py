@@ -6,72 +6,72 @@ from functools import partial
 from benchmarks.contracts import Observation, Prepared
 from depin import Scope
 
-from .builders import COLLECTION_KEY, Trace, _chain, _collection, _fan_out, _members, _node
+from .builders import COLLECTION_KEY, Trace, chain, collection, fan_out, members, node
 
 
-def _freeze_prepare(size: int) -> Prepared:
-    container, _ = _chain(size, Scope.SINGLETON, Trace(recording=False))
+def freeze_prepare(size: int) -> Prepared:
+    container, _ = chain(size, Scope.SINGLETON, Trace(recording=False))
     return Prepared(call=container.freeze)
 
 
-def _freeze_observe(size: int) -> Observation:
+def freeze_observe(size: int) -> Observation:
     trace = Trace(recording=True)
-    container, _ = _chain(size, Scope.SINGLETON, trace)
+    container, _ = chain(size, Scope.SINGLETON, trace)
     frozen = container.freeze()
     return Observation(result=str(len(frozen.graph().nodes)), constructed=tuple(trace.events), closed=())
 
 
-def _resolve_prepare(size: int) -> Prepared:
-    container, leaf = _chain(size, Scope.TRANSIENT, Trace(recording=False))
+def resolve_prepare(size: int) -> Prepared:
+    container, leaf = chain(size, Scope.TRANSIENT, Trace(recording=False))
     frozen = container.freeze()
     return Prepared(call=partial(frozen.resolve, leaf))
 
 
-def _resolve_observe(size: int) -> Observation:
+def resolve_observe(size: int) -> Observation:
     trace = Trace(recording=True)
-    container, leaf = _chain(size, Scope.TRANSIENT, trace)
+    container, leaf = chain(size, Scope.TRANSIENT, trace)
     value = container.freeze().resolve(leaf)
     return Observation(result=type(value).__name__, constructed=tuple(trace.events), closed=())
 
 
 def _direct_chain(size: int, trace: Trace) -> Callable[[], object]:
-    nodes = tuple(_node(index) for index in range(size))
+    nodes = tuple(node(index) for index in range(size))
 
     def run() -> object:
         built: object = None
-        for node in nodes:
-            trace.record(node.__name__)
-            built = node()
+        for node_type in nodes:
+            trace.record(node_type.__name__)
+            built = node_type()
         return built
 
     return run
 
 
-def _direct_resolve_prepare(size: int) -> Prepared:
+def direct_resolve_prepare(size: int) -> Prepared:
     return Prepared(call=_direct_chain(size, Trace(recording=False)))
 
 
-def _direct_resolve_observe(size: int) -> Observation:
+def direct_resolve_observe(size: int) -> Observation:
     trace = Trace(recording=True)
     value = _direct_chain(size, trace)()
     return Observation(result=type(value).__name__, constructed=tuple(trace.events), closed=())
 
 
-def _fan_out_prepare(size: int) -> Prepared:
-    container, root = _fan_out(size, Trace(recording=False))
+def fan_out_prepare(size: int) -> Prepared:
+    container, root = fan_out(size, Trace(recording=False))
     frozen = container.freeze()
     return Prepared(call=partial(frozen.resolve, root))
 
 
-def _fan_out_observe(size: int) -> Observation:
+def fan_out_observe(size: int) -> Observation:
     trace = Trace(recording=True)
-    container, root = _fan_out(size, trace)
+    container, root = fan_out(size, trace)
     value = container.freeze().resolve(root)
     return Observation(result=type(value).__name__, constructed=tuple(trace.events), closed=())
 
 
 def _direct_fan_out(size: int, trace: Trace) -> Callable[[], object]:
-    leaves = tuple(_node(index) for index in range(size))
+    leaves = tuple(node(index) for index in range(size))
     root = type('Root', (), {})
 
     def run() -> object:
@@ -83,29 +83,29 @@ def _direct_fan_out(size: int, trace: Trace) -> Callable[[], object]:
     return run
 
 
-def _direct_fan_out_prepare(size: int) -> Prepared:
+def direct_fan_out_prepare(size: int) -> Prepared:
     return Prepared(call=_direct_fan_out(size, Trace(recording=False)))
 
 
-def _direct_fan_out_observe(size: int) -> Observation:
+def direct_fan_out_observe(size: int) -> Observation:
     trace = Trace(recording=True)
     value = _direct_fan_out(size, trace)()
     return Observation(result=type(value).__name__, constructed=tuple(trace.events), closed=())
 
 
-def _collection_prepare(size: int) -> Prepared:
-    frozen = _collection(size, Trace(recording=False)).freeze()
+def collection_prepare(size: int) -> Prepared:
+    frozen = collection(size, Trace(recording=False)).freeze()
     return Prepared(call=partial(frozen.resolve, COLLECTION_KEY))
 
 
-def _collection_observe(size: int) -> Observation:
+def collection_observe(size: int) -> Observation:
     trace = Trace(recording=True)
-    values = _collection(size, trace).freeze().resolve(COLLECTION_KEY)
-    return Observation(result=_members(values), constructed=tuple(trace.events), closed=())
+    values = collection(size, trace).freeze().resolve(COLLECTION_KEY)
+    return Observation(result=members(values), constructed=tuple(trace.events), closed=())
 
 
 def _direct_collection(size: int, trace: Trace) -> Callable[[], list[object]]:
-    members = tuple(_node(index) for index in range(size))
+    members = tuple(node(index) for index in range(size))
 
     def run() -> list[object]:
         built: list[object] = []
@@ -117,11 +117,11 @@ def _direct_collection(size: int, trace: Trace) -> Callable[[], list[object]]:
     return run
 
 
-def _direct_collection_prepare(size: int) -> Prepared:
+def direct_collection_prepare(size: int) -> Prepared:
     return Prepared(call=_direct_collection(size, Trace(recording=False)))
 
 
-def _direct_collection_observe(size: int) -> Observation:
+def direct_collection_observe(size: int) -> Observation:
     trace = Trace(recording=True)
     values = _direct_collection(size, trace)()
-    return Observation(result=_members(values), constructed=tuple(trace.events), closed=())
+    return Observation(result=members(values), constructed=tuple(trace.events), closed=())

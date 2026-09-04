@@ -11,6 +11,7 @@ from pathlib import Path
 from benchmarks.comparison import WORKLOADS as INVENTORY
 from benchmarks.comparison import collection, leadership
 from benchmarks.comparison.adapters import ADAPTERS
+from benchmarks.comparison.protocol import MINIMUM_REPETITIONS, seed
 from benchmarks.harness import HarnessError, read_json, require_array, require_object, require_text, stats
 
 USAGE = 'python -m benchmarks.comparison.report DATASET --calibration PATH --budgets PATH'
@@ -93,7 +94,7 @@ def _candidate_rows(dataset: dict[str, object], workload: str, verdict: leadersh
             )
             continue
         candidate, depin = leadership.paired_medians(leadership.repetitions(dataset), workload, label, 'depin')
-        if len(candidate) < leadership.MINIMUM_REPETITIONS or len(depin) < leadership.MINIMUM_REPETITIONS:
+        if len(candidate) < MINIMUM_REPETITIONS or len(depin) < MINIMUM_REPETITIONS:
             rows.append(
                 [
                     _text(label, f'dataset.targets.{workload}.candidates.{label}.label'),
@@ -105,7 +106,7 @@ def _candidate_rows(dataset: dict[str, object], workload: str, verdict: leadersh
                 ]
             )
             continue
-        paired = stats.paired_ratio(candidate, depin, seed=leadership.seed(dataset))
+        paired = stats.paired_ratio(candidate, depin, seed=seed(dataset))
         rows.append(
             [
                 _text(label, f'dataset.targets.{workload}.candidates.{label}.label'),
@@ -119,7 +120,7 @@ def _candidate_rows(dataset: dict[str, object], workload: str, verdict: leadersh
     return rows
 
 
-def _claim(dataset: dict[str, object], workload: str) -> str:
+def claim(dataset: dict[str, object], workload: str) -> str:
     description = leadership.workloads(dataset)[workload]
     for comparative in INVENTORY:
         if comparative.workload.name == workload:
@@ -146,7 +147,7 @@ def _summary_rows(
     )
     allowance = leadership.calibration_entry(entry, verdict.workload)[0]
     return [
-        ['Claim', _claim(dataset, verdict.workload)],
+        ['Claim', claim(dataset, verdict.workload)],
         ['Status', verdict.status.value],
         ['Noise allowance', '—' if allowance is None else f'{allowance:.1%}'],
         ['Direct overhead', '—' if verdict.absolute_overhead is None else _signed_duration(verdict.absolute_overhead)],

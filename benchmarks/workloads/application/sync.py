@@ -16,7 +16,7 @@ from .model import (
     SessionStore,
     Settings,
     Sink,
-    _already_warm,
+    already_warm,
 )
 
 
@@ -75,7 +75,7 @@ def build_depin_sync_deployment(sink: Sink) -> Deployment:
     app.add_api_route('/status', status, methods=['GET'])
     app.add_api_route('/report', report, methods=['GET'])
     app.add_api_route('/price', price, methods=['GET'])
-    return Deployment(app=app, warm=_already_warm)
+    return Deployment(app=app, warm=already_warm)
 
 
 def build_direct_sync_deployment(sink: Sink) -> Deployment:
@@ -105,4 +105,4 @@ def build_direct_sync_deployment(sink: Sink) -> Deployment:
     app.add_api_route('/status', status, methods=['GET'])
     app.add_api_route('/report', report, methods=['GET'])
     app.add_api_route('/price', price, methods=['GET'])
-    return Deployment(app=app, warm=_already_warm)
+    return Deployment(app=app, warm=already_warm)

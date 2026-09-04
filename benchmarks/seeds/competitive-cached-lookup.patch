@@ -16,12 +16,14 @@ diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
  
      def __getitem__[T](self, key: type[T] | Token[T]) -> T:
          """Resolve ``key`` synchronously; shorthand for `resolve()`.
-@@ -774,6 +775,8 @@
-         while True:
-             cached, claim = frame.claim_cached(cache_id)
-             if cached is not MISSING:
-+                self._warm_cached_lookup_probe = {cache_id: cached}
-+                _ = self._warm_cached_lookup_probe[cache_id]
-                 return cached
-             if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
-                 if frame.is_leader(claim) and claim is not None:
+@@ -190,6 +191,10 @@
+         ticket = self._lifecycle.admit('resolve', asynchronous=False)
+         try:
+             spec = self._lookup(key, tag)
++            if spec.scope is Scope.SINGLETON:
++                cached = self._root.lookup((spec.key, spec.tag))
++                if cached is not MISSING:
++                    self._warm_cached_lookup_probe = {(spec.key, spec.tag): cached}
+             # spec.source is type-erased `object` in the plan; the runtime contract
+             # (enforced by build_plan) is that providers return values matching the
+             # static type of their declared key, so we restate the static type here.

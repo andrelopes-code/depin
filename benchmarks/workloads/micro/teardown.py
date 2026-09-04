@@ -7,10 +7,10 @@ from benchmarks.contracts import Claim, Metric, Observation, Tier, Workload
 from benchmarks.workloads.shell import CONCURRENCY, Session, implementation
 from depin import Container, Scope
 
-from .core import Connection, Sole, _sole
+from .core import Connection, Sole, sole
 
 
-def _construct_a_singleton_for_the_first_time() -> Workload:
+def construct_a_singleton_for_the_first_time() -> Workload:
     def recording(log: list[str]) -> Callable[[], Sole]:
         def provide() -> Sole:
             log.append(Sole.__name__)
@@ -19,7 +19,7 @@ def _construct_a_singleton_for_the_first_time() -> Workload:
         return provide
 
     def depin_setup() -> Session:
-        frozen = Container().bind(_sole).freeze()
+        frozen = Container().bind(sole).freeze()
         _ = frozen.resolve(Sole)
 
         def cold() -> object:
@@ -112,7 +112,7 @@ def _recording_sync_resource(log: list[str]) -> Callable[[], Iterator[Connection
     return provide
 
 
-def _resolve_a_sync_resource_with_teardown() -> Workload:
+def resolve_a_sync_resource_with_teardown() -> Workload:
     def depin_setup() -> Session:
         frozen = Container().bind(_sync_resource(), provides=Connection, scope=Scope.SCOPED).freeze()
 

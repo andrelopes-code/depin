@@ -4,10 +4,10 @@ from benchmarks.contracts import Claim, Metric, Observation, Tier, Workload
 from benchmarks.graphs import build_chain, chain_types
 from benchmarks.workloads.shell import CONCURRENCY, Session, implementation
 
-from .core import HOT_GRAPH, Aliased, Middle, Outer, Wired, _construct_chain, _decoration
+from .core import HOT_GRAPH, Aliased, Middle, Outer, Wired, construct_chain, decoration
 
 
-def _resolve_cached_singleton() -> Workload:
+def resolve_cached_singleton() -> Workload:
     def depin_setup() -> Session:
         container, leaf = build_chain(HOT_GRAPH)
         frozen = container.freeze()
@@ -18,7 +18,7 @@ def _resolve_cached_singleton() -> Workload:
         )
 
     def direct_setup() -> Session:
-        held = Wired(_construct_chain(chain_types(HOT_GRAPH)))
+        held = Wired(construct_chain(chain_types(HOT_GRAPH)))
         return Session(
             call=lambda: held.value,
             observe=lambda: Observation(result=type(held.value).__name__, constructed=(), closed=()),
@@ -51,7 +51,7 @@ def _resolve_cached_singleton() -> Workload:
     )
 
 
-def _resolve_cached_singleton_through_an_alias() -> Workload:
+def resolve_cached_singleton_through_an_alias() -> Workload:
     def depin_setup() -> Session:
         container, leaf = build_chain(HOT_GRAPH)
         frozen = container.alias(Aliased, to=leaf).freeze()
@@ -62,7 +62,7 @@ def _resolve_cached_singleton_through_an_alias() -> Workload:
         )
 
     def direct_setup() -> Session:
-        held = Wired(_construct_chain(chain_types(HOT_GRAPH)))
+        held = Wired(construct_chain(chain_types(HOT_GRAPH)))
         return Session(
             call=lambda: held.value,
             observe=lambda: Observation(result=type(held.value).__name__, constructed=(), closed=()),
@@ -93,10 +93,10 @@ def _resolve_cached_singleton_through_an_alias() -> Workload:
     )
 
 
-def _resolve_singleton_through_a_two_deep_decoration_chain() -> Workload:
+def resolve_singleton_through_a_two_deep_decoration_chain() -> Workload:
     def depin_setup() -> Session:
         container, leaf = build_chain(HOT_GRAPH)
-        frozen = container.decorate(leaf, _decoration(Middle, leaf)).decorate(leaf, _decoration(Outer, leaf)).freeze()
+        frozen = container.decorate(leaf, decoration(Middle, leaf)).decorate(leaf, decoration(Outer, leaf)).freeze()
         _ = frozen.resolve(leaf)
         return Session(
             call=lambda: frozen.resolve(leaf),
@@ -104,7 +104,7 @@ def _resolve_singleton_through_a_two_deep_decoration_chain() -> Workload:
         )
 
     def direct_setup() -> Session:
-        held = Wired(Outer(Middle(_construct_chain(chain_types(HOT_GRAPH)))))
+        held = Wired(Outer(Middle(construct_chain(chain_types(HOT_GRAPH)))))
         return Session(
             call=lambda: held.value,
             observe=lambda: Observation(result=type(held.value).__name__, constructed=(), closed=()),

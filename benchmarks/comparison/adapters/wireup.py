@@ -9,7 +9,8 @@ from wireup import SyncContainer, create_sync_container, injectable
 
 from benchmarks.comparison.adapters import Adapter
 from benchmarks.comparison.contracts import Candidate, Competitor, Equivalence
-from benchmarks.comparison.shapes import Chain, chain, observation
+from benchmarks.comparison.shapes import Chain, observation
+from benchmarks.comparison.shapes import chain as chain_shape
 from benchmarks.contracts import Implementation, Observation, Prepared, Workload
 from benchmarks.harness import HarnessError
 from benchmarks.workloads.micro import CHAIN_DEPTH, HOT_GRAPH
@@ -49,22 +50,22 @@ def _injectable_factory(factory: Callable[..., object], lifetime: Lifetime) -> C
     return injectable(factory, lifetime='scoped')
 
 
-def _chain(size: int, lifetime: Lifetime) -> WireupChain:
-    shape = chain(size)
+def chain(size: int, lifetime: Lifetime) -> WireupChain:
+    shape = chain_shape(size)
     factories = [_injectable_factory(factory, lifetime) for factory in shape.factories]
     return WireupChain(shape=shape, container=create_sync_container(injectables=factories))
 
 
 def warm_chain(size: int) -> WireupChain:
-    return _chain(size, 'singleton')
+    return chain(size, 'singleton')
 
 
 def transient_chain(size: int) -> WireupChain:
-    return _chain(size, 'transient')
+    return chain(size, 'transient')
 
 
 def scoped_chain(size: int) -> WireupChain:
-    return _chain(size, 'scoped')
+    return chain(size, 'scoped')
 
 
 def _implementation(build: Callable[[], WireupChain], *, warm: bool) -> Implementation:

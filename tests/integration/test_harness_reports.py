@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
-from test_harness_gate import _dataset, _flat
+from test_harness_gate import flat, make_dataset
 
 from benchmarks.contracts import Tier
 from benchmarks.harness import HarnessError, reduce, report, require_object
@@ -21,7 +21,7 @@ def _entry(name: str, *, mean: float = 1e-6, rounds: int = 5000) -> dict[str, ob
     }
 
 
-def _aggregate_of(*, rounds: int, mean: float) -> reduce.Aggregate:
+def aggregate_of(*, rounds: int, mean: float) -> reduce.Aggregate:
     return reduce.Aggregate(name='probe', rounds=rounds, minimum=mean, median=mean, mean=mean, stddev=0.0, iqr=0.0)
 
 
@@ -35,14 +35,14 @@ MALFORMED_REPORTS: list[tuple[object, str]] = [
 ]
 
 
-def _write(path: Path, payload: object) -> Path:
+def write(path: Path, payload: object) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     _ = path.write_text(json.dumps(payload), encoding='utf-8')
     return path
 
 
 def test_a_report_reduces_to_one_aggregate_per_workload(tmp_path: Path) -> None:
-    path = _write(tmp_path / 'report.json', _benchmark_report([_entry('one'), _entry('two', mean=2e-6)]))
+    path = write(tmp_path / 'report.json', _benchmark_report([_entry('one'), _entry('two', mean=2e-6)]))
 
     reduced = reduce.load(path)
 
@@ -53,7 +53,7 @@ def test_a_report_reduces_to_one_aggregate_per_workload(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(('payload', 'message'), MALFORMED_REPORTS)
 def test_a_malformed_report_is_refused(tmp_path: Path, payload: object, message: str) -> None:
-    path = _write(tmp_path / 'report.json', payload)
+    path = write(tmp_path / 'report.json', payload)
 
     with pytest.raises(HarnessError, match=message):
         _ = reduce.load(path)
@@ -73,7 +73,7 @@ def test_a_report_that_is_not_json_is_refused(tmp_path: Path) -> None:
 
 
 def test_two_benchmarks_under_one_name_are_refused(tmp_path: Path) -> None:
-    path = _write(tmp_path / 'report.json', _benchmark_report([_entry('one'), _entry('one')]))
+    path = write(tmp_path / 'report.json', _benchmark_report([_entry('one'), _entry('one')]))
 
     with pytest.raises(HarnessError, match='two benchmarks named one'):
         _ = reduce.load(path)
@@ -90,10 +90,10 @@ def test_sample_quality_needs_a_thousand_rounds_or_half_a_second(rounds: int, me
 
 
 def test_the_report_renders_the_same_markdown_from_the_same_data(tmp_path: Path) -> None:
-    dataset = _dataset(
+    dataset = make_dataset(
         tmp_path / 'data',
-        base=_flat('probe', 1e-6),
-        head=_flat('probe', 2e-6),
+        base=flat('probe', 1e-6),
+        head=flat('probe', 2e-6),
         deterministic={
             'base': {},
             'head': {
@@ -126,14 +126,14 @@ def test_the_tail_quantiles_are_computed_from_the_round_array(tmp_path: Path) ->
     entry = _entry('probe')
     require_object(entry['stats'], 'stats')['data'] = [float(value) for value in range(1, 101)]
 
-    reduced = reduce.load(_write(tmp_path / 'report.json', _benchmark_report([entry])))['probe']
+    reduced = reduce.load(write(tmp_path / 'report.json', _benchmark_report([entry])))['probe']
 
     assert reduced.p95 == pytest.approx(95.05)
     assert reduced.p99 == pytest.approx(99.01)
 
 
 def test_an_entry_with_no_round_array_carries_no_quantiles(tmp_path: Path) -> None:
-    reduced = reduce.load(_write(tmp_path / 'report.json', _benchmark_report([_entry('probe')])))['probe']
+    reduced = reduce.load(write(tmp_path / 'report.json', _benchmark_report([_entry('probe')])))['probe']
 
     assert reduced.p95 is None
     assert reduced.p99 is None
@@ -143,14 +143,14 @@ def test_the_cpu_reading_and_the_tier_are_read_from_extra_info(tmp_path: Path) -
     entry = _entry('probe')
     entry['extra_info'] = {'cpu_nanoseconds': 4321, 'tier': Tier.APPLICATION.value}
 
-    reduced = reduce.load(_write(tmp_path / 'report.json', _benchmark_report([entry])))['probe']
+    reduced = reduce.load(write(tmp_path / 'report.json', _benchmark_report([entry])))['probe']
 
     assert reduced.cpu == 4321
     assert reduced.tier == Tier.APPLICATION.value
 
 
 def test_an_aggregate_carrying_no_optional_reading_stores_none_of_them() -> None:
-    stored = reduce.encode(_aggregate_of(rounds=10, mean=1e-6))
+    stored = reduce.encode(aggregate_of(rounds=10, mean=1e-6))
 
     assert set(stored) == {'rounds', 'minimum', 'median', 'mean', 'stddev', 'iqr'}
 

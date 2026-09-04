@@ -12,7 +12,7 @@ from collections.abc import Sequence
 from importlib import metadata
 from pathlib import Path
 
-from benchmarks.comparison.protocol import COMPARISON_PROTOCOL, _validate_raw, baseline_preflight
+from benchmarks.comparison.protocol import COMPARISON_PROTOCOL, baseline_preflight, validate_raw
 from benchmarks.harness import (
     COMPARISON_SCHEMA_VERSION,
     HarnessError,
@@ -181,7 +181,7 @@ def _run(
             f'repetition {repetition} ({order}) child exited {completed.returncode}: '
             f'{" ".join(argv)}\n{completed.stdout}{completed.stderr}'
         )
-    _validate_raw(report, repetition=repetition, order=order, expected=expected)
+    validate_raw(report, repetition=repetition, order=order, expected=expected)
     return reduce.load(report)
 
 

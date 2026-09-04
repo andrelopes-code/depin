@@ -2,16 +2,16 @@
 
 from benchmarks.contracts import Claim, Metric, Observation, Tier, Workload
 from benchmarks.graphs import build_chain, build_decorated_chain, build_generic_chain, chain_types
-from benchmarks.workloads.component.primitives import LARGE_GRAPH, _freeze_claim, _freeze_workload, _key_name
+from benchmarks.workloads.component.primitives import LARGE_GRAPH, freeze_claim, freeze_workload, key_name
 from benchmarks.workloads.shell import CONCURRENCY, Session, implementation
 from depin import WarmupReport
 
 
-def _freeze_a_chain(size: int) -> Workload:
-    return _freeze_workload(
+def freeze_a_chain(size: int) -> Workload:
+    return freeze_workload(
         f'freeze_a_chain_of_{size}',
         lambda: build_chain(size)[0],
-        _freeze_claim(
+        freeze_claim(
             work=f'Validate and order a linear chain of {size} providers.',
             shape=f'A linear chain of {size} providers, each depending on the one before it.',
             valid=(
@@ -23,11 +23,11 @@ def _freeze_a_chain(size: int) -> Workload:
     )
 
 
-def _freeze_a_generic_key_chain(size: int) -> Workload:
-    return _freeze_workload(
+def freeze_a_generic_key_chain(size: int) -> Workload:
+    return freeze_workload(
         f'freeze_a_generic_key_chain_of_{size}',
         lambda: build_generic_chain(size)[0],
-        _freeze_claim(
+        freeze_claim(
             work=f'Validate and order a chain of {size} providers whose every key is a parameterised generic.',
             shape=f'`freeze_a_chain_of_{size}`, with every key a parameterised generic instead of a bare class.',
             valid=(
@@ -39,11 +39,11 @@ def _freeze_a_generic_key_chain(size: int) -> Workload:
     )
 
 
-def _freeze_a_decorated_chain(size: int) -> Workload:
-    return _freeze_workload(
+def freeze_a_decorated_chain(size: int) -> Workload:
+    return freeze_workload(
         f'freeze_a_decorated_chain_of_{size}',
         lambda: build_decorated_chain(size)[0],
-        _freeze_claim(
+        freeze_claim(
             work=f'Validate and order a chain of {size} providers with one decorator over every node.',
             shape=f'`freeze_a_chain_of_{size}`, with one pass-through decorator over every node.',
             valid=(f'The cost of the decoration fold, read against `freeze_a_chain_of_{size}` at the same size.',),
@@ -55,7 +55,7 @@ def _freeze_a_decorated_chain(size: int) -> Workload:
     )
 
 
-def _warmup_a_cold_singleton_graph() -> Workload:
+def warmup_a_cold_singleton_graph() -> Workload:
     def depin_setup() -> Session:
         container, _ = build_chain(LARGE_GRAPH)
         frozen = container.freeze()
@@ -69,7 +69,7 @@ def _warmup_a_cold_singleton_graph() -> Workload:
             report: WarmupReport = frozen.warmup()
             return Observation(
                 result=f'{len(report.constructed)} constructed',
-                constructed=tuple(_key_name(node.key) for node in report.constructed),
+                constructed=tuple(key_name(node.key) for node in report.constructed),
                 closed=(),
             )
 

@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 import benchmarks.comparison.report as comparison_report
-from benchmarks.comparison import leadership
+from benchmarks.comparison import protocol
 from benchmarks.comparison.report import main, render
 from benchmarks.harness import HarnessError, require_array, require_object
 
@@ -29,8 +29,8 @@ def _evidence() -> tuple[dict[str, object], dict[str, object]]:
 
 def _refresh_protocol_fingerprint(dataset: dict[str, object], calibration: dict[str, object]) -> None:
     provenance = require_object(calibration['provenance'], 'fixture.calibration.provenance')
-    provenance['protocol'] = leadership.protocol_material(dataset)
-    provenance['protocol_fingerprint'] = leadership.protocol_fingerprint(dataset)
+    provenance['protocol'] = protocol.protocol_material(dataset)
+    provenance['protocol_fingerprint'] = protocol.protocol_fingerprint(dataset)
 
 
 def _target(dataset: dict[str, object]) -> dict[str, object]:

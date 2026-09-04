@@ -11,22 +11,22 @@ from .core import (
     Element,
     Repo,
     Wired,
-    _boxed,
-    _build_collection,
-    _collection_result,
-    _construct_chain,
-    _construct_recorded,
+    boxed,
+    build_collection,
+    collection_result,
+    construct_chain,
+    construct_recorded,
 )
 
 
-def _resolve_a_collection(size: int) -> Workload:
+def resolve_a_collection(size: int) -> Workload:
     def depin_setup() -> Session:
-        frozen = _build_collection(size).freeze()
+        frozen = build_collection(size).freeze()
         _ = frozen.resolve(list[Element])
         return Session(
             call=lambda: frozen.resolve(list[Element]),
             observe=lambda: Observation(
-                result=_collection_result(frozen.resolve(list[Element])),
+                result=collection_result(frozen.resolve(list[Element])),
                 constructed=(),
                 closed=(),
             ),
@@ -36,7 +36,7 @@ def _resolve_a_collection(size: int) -> Workload:
         members = [type(f'Member{index}', (), {})() for index in range(size)]
         return Session(
             call=lambda: list(members),
-            observe=lambda: Observation(result=_collection_result(list(members)), constructed=(), closed=()),
+            observe=lambda: Observation(result=collection_result(list(members)), constructed=(), closed=()),
         )
 
     return Workload(
@@ -69,7 +69,7 @@ def _resolve_a_collection(size: int) -> Workload:
     )
 
 
-def _resolve_a_transient_chain() -> Workload:
+def resolve_a_transient_chain() -> Workload:
     def depin_setup() -> Session:
         container, leaf = build_chain(CHAIN_DEPTH, scope=Scope.TRANSIENT)
         frozen = container.freeze()
@@ -89,10 +89,10 @@ def _resolve_a_transient_chain() -> Workload:
 
         def observe() -> Observation:
             log: list[str] = []
-            value = _construct_recorded(nodes, log)
+            value = construct_recorded(nodes, log)
             return Observation(result=type(value).__name__, constructed=tuple(log), closed=())
 
-        return Session(call=lambda: _construct_chain(nodes), observe=observe)
+        return Session(call=lambda: construct_chain(nodes), observe=observe)
 
     return Workload(
         name='resolve_a_transient_chain',
@@ -121,9 +121,9 @@ def _resolve_a_transient_chain() -> Workload:
     )
 
 
-def _resolve_a_generic_key() -> Workload:
+def resolve_a_generic_key() -> Workload:
     def depin_setup() -> Session:
-        frozen = Container().bind(_boxed).freeze()
+        frozen = Container().bind(boxed).freeze()
         _ = frozen.resolve(Boxed[Repo])
         return Session(
             call=lambda: frozen.resolve(Boxed[Repo]),

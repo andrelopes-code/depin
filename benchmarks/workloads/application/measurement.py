@@ -11,7 +11,7 @@ from benchmarks.contracts import Cost, Implementation, Observation, Prepared
 from .model import Builder, NullSink, TraceSink, WorkloadError
 
 
-def _prepare_request(build: Builder, path: str) -> Prepared:
+def prepare_request(build: Builder, path: str) -> Prepared:
     """Open the loop, the transport and the client, prime the route, and hand back one request.
 
     Everything a request does not pay for on the steady path is done here: the
@@ -43,7 +43,7 @@ def _prepare_request(build: Builder, path: str) -> Prepared:
     return Prepared(call=call, close=close)
 
 
-def _observe_request(build: Builder, path: str) -> Observation:
+def observe_request(build: Builder, path: str) -> Observation:
     """Run one request with a recording sink, after warmup, and report what it built and closed."""
     sink = TraceSink()
     deployment = build(sink)
@@ -61,7 +61,7 @@ def _observe_request(build: Builder, path: str) -> Observation:
     )
 
 
-def _prepare_startup(build: Builder) -> Prepared:
+def prepare_startup(build: Builder) -> Prepared:
     def call() -> object:
         started = time.process_time_ns()
         _ = build(NullSink())
@@ -70,14 +70,14 @@ def _prepare_startup(build: Builder) -> Prepared:
     return Prepared(call=call)
 
 
-def _observe_startup(build: Builder) -> Observation:
+def observe_startup(build: Builder) -> Observation:
     sink = TraceSink()
     deployment = build(sink)
     paths = sorted(route.path for route in deployment.app.routes if isinstance(route, Route))
     return Observation(result=' '.join(paths), constructed=sink.constructed, closed=sink.disposed)
 
 
-def _request_implementations(label: str, build: Builder, path: str) -> Implementation:
+def request_implementations(label: str, build: Builder, path: str) -> Implementation:
     return Implementation(
-        label=label, prepare=lambda: _prepare_request(build, path), observe=lambda: _observe_request(build, path)
+        label=label, prepare=lambda: prepare_request(build, path), observe=lambda: observe_request(build, path)
     )

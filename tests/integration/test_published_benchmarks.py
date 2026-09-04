@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from test_harness_reports import _write
+from test_harness_reports import write
 
 from benchmarks import test_latency
 from benchmarks.contracts import Metric, Tier
@@ -31,8 +31,8 @@ def test_a_published_case_takes_its_floor_from_the_cost_the_dataset_recorded() -
 
 def test_the_published_page_separates_the_application_tier_and_gives_it_quantiles(tmp_path: Path) -> None:
     dataset = tmp_path / 'dataset'
-    _write(dataset / pairs.ENVIRONMENT_FILE, {'environment': environment.capture(), 'repetitions': 1, 'seed': SEED})
-    _write(
+    write(dataset / pairs.ENVIRONMENT_FILE, {'environment': environment.capture(), 'repetitions': 1, 'seed': SEED})
+    write(
         dataset / 'rep0.json',
         {
             'repetition': 0,
@@ -76,7 +76,7 @@ def test_the_published_page_separates_the_application_tier_and_gives_it_quantile
 
 
 def test_the_published_page_states_every_retired_and_refused_measurement(tmp_path: Path) -> None:
-    _write(tmp_path / pairs.ENVIRONMENT_FILE, {'environment': environment.capture(), 'repetitions': 1, 'seed': SEED})
+    write(tmp_path / pairs.ENVIRONMENT_FILE, {'environment': environment.capture(), 'repetitions': 1, 'seed': SEED})
 
     rendered = report.render(tmp_path)
 

@@ -8,7 +8,7 @@ from depin import Container, Scope, injected
 from .core import CHAIN_DEPTH, Repo
 
 
-def _open_and_close_a_scope() -> Workload:
+def open_and_close_a_scope() -> Workload:
     def depin_setup() -> Session:
         container, leaf = build_chain(CHAIN_DEPTH, scope=Scope.SCOPED)
         frozen = container.freeze()
@@ -80,7 +80,7 @@ def _open_and_close_a_scope() -> Workload:
     )
 
 
-def _call_through_an_inject_wrapper() -> Workload:
+def call_through_an_inject_wrapper() -> Workload:
     def depin_setup() -> Session:
         frozen = Container().bind(Repo).freeze()
 
@@ -129,7 +129,7 @@ def _call_through_an_inject_wrapper() -> Workload:
     )
 
 
-def _call_through_an_inject_wrapper_with_explicit_arguments() -> Workload:
+def call_through_an_inject_wrapper_with_explicit_arguments() -> Workload:
     def depin_setup() -> Session:
         frozen = Container().bind(Repo).freeze()
 

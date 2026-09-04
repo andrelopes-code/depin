@@ -6,8 +6,8 @@ from typing import Protocol
 
 from fastapi import FastAPI
 
-_PROVIDER_WORK = 500
-_HANDLER_WORK = 1500
+PROVIDER_WORK = 500
+HANDLER_WORK = 1500
 
 
 class WorkloadError(RuntimeError):
@@ -77,7 +77,7 @@ class Deployment:
     warm: Callable[[], Awaitable[None]]
 
 
-async def _already_warm() -> None:
+async def already_warm() -> None:
     return None
 
 
@@ -206,7 +206,7 @@ class Repository:
     __slots__ = ('digest',)
 
     def __init__(self, settings: Settings, sink: Sink) -> None:
-        self.digest = simulated_work(_PROVIDER_WORK) + settings.rate
+        self.digest = simulated_work(PROVIDER_WORK) + settings.rate
         sink.built('Repository')
 
 
@@ -222,14 +222,14 @@ class OrderService:
         return {'digest': str(self._repository.digest), 'price': str(self._catalog.price(11))}
 
 
-def _order_payload(service: OrderService) -> dict[str, str]:
+def order_payload(service: OrderService) -> dict[str, str]:
     """The endpoint body shared by both implementations of the realistic route."""
     payload = service.place()
-    payload['handled'] = str(simulated_work(_HANDLER_WORK))
+    payload['handled'] = str(simulated_work(HANDLER_WORK))
     return payload
 
 
-def _ledger_payload(trail: AuditTrail) -> dict[str, str]:
+def ledger_payload(trail: AuditTrail) -> dict[str, str]:
     return {'entries': str(trail.record(5))}
 
 

@@ -6,13 +6,13 @@ from benchmarks.workloads.component.primitives import (
     REQUEST,
     DatabaseSession,
     RequestHandler,
-    _request_observation,
+    request_observation,
 )
 from benchmarks.workloads.shell import CONCURRENCY, Session, implementation
 from depin import Container, Scope
 
 
-def _open_a_request_shaped_scope() -> Workload:
+def open_a_request_shaped_scope() -> Workload:
     def depin_setup() -> Session:
         frozen = (
             Container()
@@ -30,7 +30,7 @@ def _open_a_request_shaped_scope() -> Workload:
         def observe() -> Observation:
             with frozen.scope() as frame:
                 frame.provide(REQUEST, INCOMING)
-                return _request_observation(frozen.resolve(RequestHandler))
+                return request_observation(frozen.resolve(RequestHandler))
 
         return Session(call=run, observe=observe)
 
@@ -46,7 +46,7 @@ def _open_a_request_shaped_scope() -> Workload:
             seeded.clear()
             return handler
 
-        return Session(call=run, observe=lambda: _request_observation(run()))
+        return Session(call=run, observe=lambda: request_observation(run()))
 
     return Workload(
         name='open_a_request_shaped_scope',

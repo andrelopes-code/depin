@@ -14,34 +14,34 @@ from .builders import (
     OVERRIDE_GRAPH,
     OVERRIDE_NESTING_SIZES,
     TEARDOWN_SIZES,
-    _claim,
+    claim,
 )
 from .freeze import (
-    _collection_observe,
-    _collection_prepare,
-    _direct_collection_observe,
-    _direct_collection_prepare,
-    _direct_fan_out_observe,
-    _direct_fan_out_prepare,
-    _direct_resolve_observe,
-    _direct_resolve_prepare,
-    _fan_out_observe,
-    _fan_out_prepare,
-    _freeze_observe,
-    _freeze_prepare,
-    _resolve_observe,
-    _resolve_prepare,
+    collection_observe,
+    collection_prepare,
+    direct_collection_observe,
+    direct_collection_prepare,
+    direct_fan_out_observe,
+    direct_fan_out_prepare,
+    direct_resolve_observe,
+    direct_resolve_prepare,
+    fan_out_observe,
+    fan_out_prepare,
+    freeze_observe,
+    freeze_prepare,
+    resolve_observe,
+    resolve_prepare,
 )
-from .override import _override_nesting_observe, _override_nesting_prepare
+from .override import override_nesting_observe, override_nesting_prepare
 from .teardown import (
-    _async_teardown_observe,
-    _async_teardown_prepare,
-    _direct_async_teardown_observe,
-    _direct_async_teardown_prepare,
-    _direct_teardown_observe,
-    _direct_teardown_prepare,
-    _teardown_observe,
-    _teardown_prepare,
+    async_teardown_observe,
+    async_teardown_prepare,
+    direct_async_teardown_observe,
+    direct_async_teardown_prepare,
+    direct_teardown_observe,
+    direct_teardown_prepare,
+    teardown_observe,
+    teardown_prepare,
 )
 
 
@@ -65,7 +65,7 @@ def _workload(
     )
 
 
-FREEZE_CLAIM = _claim(
+FREEZE_CLAIM = claim(
     question='How does validating a graph scale with the number of providers in it?',
     work=(
         'Validate a linear chain of providers into a resolution plan. There is no direct baseline: hand-wiring has '
@@ -87,7 +87,7 @@ FREEZE_CLAIM = _claim(
 )
 
 
-DEPTH_CLAIM = _claim(
+DEPTH_CLAIM = claim(
     question='How does constructing a dependency chain scale with its depth?',
     work='Construct every node of a transient chain, deepest first, and return the leaf.',
     included='One resolve() of the leaf, and the construction of every node it depends on.',
@@ -99,13 +99,14 @@ DEPTH_CLAIM = _claim(
         'The overhead depin adds over constructing the same objects by hand, at each depth.',
     ),
     invalid=(
-        'The depth a graph may reach: cold resolution recurses, and DEPTH_CLIFF is where it stops.',
+        'The maximum supported depth: the runtime uses an iterative executor and depth support '
+        'is a correctness property.',
         'Anything about a cached lookup, which does not construct.',
     ),
 )
 
 
-FAN_OUT_CLAIM = _claim(
+FAN_OUT_CLAIM = claim(
     question='How does resolving one node scale with the number of dependencies it declares?',
     work='Construct n leaves and the single root that declares all of them as parameters.',
     included='One resolve() of the root, and the construction of every leaf.',
@@ -123,7 +124,7 @@ FAN_OUT_CLAIM = _claim(
 )
 
 
-COLLECTION_CLAIM = _claim(
+COLLECTION_CLAIM = claim(
     question='How does resolving a collection scale with the number of members in it?',
     work='Construct every member of a collection and return them in registration order.',
     included='One resolve() of the list key, and the construction of every member.',
@@ -141,7 +142,7 @@ COLLECTION_CLAIM = _claim(
 )
 
 
-TEARDOWN_CLAIM = _claim(
+TEARDOWN_CLAIM = claim(
     question='How does closing a scope scale with the number of resources opened in it?',
     work='Open a scope, construct n generator-backed resources, and close them in reverse order.',
     included='Scope entry, one resolve() of the collection, and the teardown every resource runs on exit.',
@@ -159,7 +160,7 @@ TEARDOWN_CLAIM = _claim(
 )
 
 
-ASYNC_TEARDOWN_CLAIM = _claim(
+ASYNC_TEARDOWN_CLAIM = claim(
     question='How does closing an asynchronous scope scale with the number of resources opened in it?',
     work='Open an async scope, construct n async-generator resources, and close them in reverse order.',
     included=(
@@ -181,7 +182,7 @@ ASYNC_TEARDOWN_CLAIM = _claim(
 )
 
 
-OVERRIDE_NESTING_CLAIM = _claim(
+OVERRIDE_NESTING_CLAIM = claim(
     question='How does one resolution scale with the number of overrides standing over it?',
     work=(
         'Resolve a warm singleton with n nested override frames active, none of which names the key being '
@@ -219,46 +220,46 @@ def _curve(
 
 
 WORKLOADS: tuple[Workload, ...] = (
-    *_curve('scale_freeze_graph_size', FREEZE_SIZES, FREEZE_CLAIM, (_freeze_prepare, _freeze_observe)),
+    *_curve('scale_freeze_graph_size', FREEZE_SIZES, FREEZE_CLAIM, (freeze_prepare, freeze_observe)),
     *_curve(
         'scale_resolve_transient_depth',
         DEPTH_SIZES,
         DEPTH_CLAIM,
-        (_resolve_prepare, _resolve_observe),
-        (_direct_resolve_prepare, _direct_resolve_observe),
+        (resolve_prepare, resolve_observe),
+        (direct_resolve_prepare, direct_resolve_observe),
     ),
     *_curve(
         'scale_resolve_fan_out',
         FAN_OUT_SIZES,
         FAN_OUT_CLAIM,
-        (_fan_out_prepare, _fan_out_observe),
-        (_direct_fan_out_prepare, _direct_fan_out_observe),
+        (fan_out_prepare, fan_out_observe),
+        (direct_fan_out_prepare, direct_fan_out_observe),
     ),
     *_curve(
         'scale_resolve_collection',
         COLLECTION_SIZES,
         COLLECTION_CLAIM,
-        (_collection_prepare, _collection_observe),
-        (_direct_collection_prepare, _direct_collection_observe),
+        (collection_prepare, collection_observe),
+        (direct_collection_prepare, direct_collection_observe),
     ),
     *_curve(
         'scale_scope_teardown',
         TEARDOWN_SIZES,
         TEARDOWN_CLAIM,
-        (_teardown_prepare, _teardown_observe),
-        (_direct_teardown_prepare, _direct_teardown_observe),
+        (teardown_prepare, teardown_observe),
+        (direct_teardown_prepare, direct_teardown_observe),
     ),
     *_curve(
         'scale_async_teardown',
         ASYNC_TEARDOWN_SIZES,
         ASYNC_TEARDOWN_CLAIM,
-        (_async_teardown_prepare, _async_teardown_observe),
-        (_direct_async_teardown_prepare, _direct_async_teardown_observe),
+        (async_teardown_prepare, async_teardown_observe),
+        (direct_async_teardown_prepare, direct_async_teardown_observe),
     ),
     *_curve(
         'scale_override_nesting',
         OVERRIDE_NESTING_SIZES,
         OVERRIDE_NESTING_CLAIM,
-        (_override_nesting_prepare, _override_nesting_observe),
+        (override_nesting_prepare, override_nesting_observe),
     ),
 )

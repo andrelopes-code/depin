@@ -7,7 +7,7 @@ from functools import partial
 from benchmarks.contracts import Observation, Prepared
 from depin import Scope
 
-from .builders import OVERRIDE_GRAPH, Trace, _chain
+from .builders import OVERRIDE_GRAPH, Trace, chain
 
 
 def _override_nesting_session(size: int) -> tuple[Callable[[], object], Callable[[], None]]:
@@ -19,7 +19,7 @@ def _override_nesting_session(size: int) -> tuple[Callable[[], object], Callable
     walks the whole stack and then reads the plan — the shape a resolution takes
     inside a test that has overridden something else.
     """
-    container, leaf = _chain(OVERRIDE_GRAPH, Scope.SINGLETON, Trace(recording=False))
+    container, leaf = chain(OVERRIDE_GRAPH, Scope.SINGLETON, Trace(recording=False))
     frozen = container.freeze()
     _ = frozen.resolve(leaf)
     stack = contextlib.ExitStack()
@@ -32,12 +32,12 @@ def _override_nesting_session(size: int) -> tuple[Callable[[], object], Callable
     return partial(frozen.resolve, leaf), stack.close
 
 
-def _override_nesting_prepare(size: int) -> Prepared:
+def override_nesting_prepare(size: int) -> Prepared:
     call, close = _override_nesting_session(size)
     return Prepared(call=call, close=close)
 
 
-def _override_nesting_observe(size: int) -> Observation:
+def override_nesting_observe(size: int) -> Observation:
     call, close = _override_nesting_session(size)
     try:
         return Observation(result=type(call()).__name__, constructed=(), closed=())

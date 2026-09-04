@@ -6,10 +6,10 @@ from benchmarks.contracts import Claim, Metric, Observation, Tier, Workload
 from benchmarks.workloads.shell import Session, implementation
 from depin import Container, Scope
 
-from .core import Pool, _ready
+from .core import Pool, ready
 
 
-def _resolve_an_async_singleton() -> Workload:
+def resolve_an_async_singleton() -> Workload:
     def depin_setup() -> Session:
         async def make() -> Pool:
             return Pool()
@@ -30,11 +30,11 @@ def _resolve_an_async_singleton() -> Workload:
     def direct_setup() -> Session:
         held = Pool()
         loop = asyncio.new_event_loop()
-        _ = loop.run_until_complete(_ready(held))
+        _ = loop.run_until_complete(ready(held))
         return Session(
-            call=lambda: loop.run_until_complete(_ready(held)),
+            call=lambda: loop.run_until_complete(ready(held)),
             observe=lambda: Observation(
-                result=type(loop.run_until_complete(_ready(held))).__name__,
+                result=type(loop.run_until_complete(ready(held))).__name__,
                 constructed=(),
                 closed=(),
             ),

@@ -6,12 +6,12 @@ from benchmarks.contracts import Claim, Metric, Observation, Tier, Workload
 from benchmarks.workloads.shell import CONCURRENCY, Session, implementation
 from depin import Container
 
-from .core import Indirect, Sole, Substitute, Wired, _sole
+from .core import Indirect, Sole, Substitute, Wired, sole
 
 
-def _resolve_with_no_active_override() -> Workload:
+def resolve_with_no_active_override() -> Workload:
     def depin_setup() -> Session:
-        frozen = Container().bind(_sole).freeze()
+        frozen = Container().bind(sole).freeze()
         _ = frozen.resolve(Sole)
         return Session(
             call=lambda: frozen.resolve(Sole),
@@ -56,9 +56,9 @@ def _resolve_with_no_active_override() -> Workload:
     )
 
 
-def _resolve_through_an_active_override() -> Workload:
+def resolve_through_an_active_override() -> Workload:
     def depin_setup() -> Session:
-        frozen = Container().bind(_sole).freeze()
+        frozen = Container().bind(sole).freeze()
         stack = contextlib.ExitStack()
         _ = stack.enter_context(frozen.override(Sole).using(Substitute()))
         _ = frozen.resolve(Sole)

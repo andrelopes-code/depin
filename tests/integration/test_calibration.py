@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from test_harness_gate import _budget_file, _dataset
+from test_harness_gate import budget_file, make_dataset
 
 from benchmarks.contracts import Metric, NoiseClass
 from benchmarks.harness import HarnessError, calibrate
@@ -10,7 +10,7 @@ from benchmarks.harness import budgets as budget_module
 
 def _null_collection(directory: Path) -> Path:
     medians = [1.00e-6, 1.02e-6, 0.99e-6, 1.01e-6, 1.03e-6]
-    _dataset(
+    make_dataset(
         directory,
         base=[{'test_latency[probe-depin]': median} for median in medians],
         head=[{'test_latency[probe-depin]': median} for median in reversed(medians)],
@@ -99,7 +99,7 @@ def test_the_generated_budget_file_is_one_the_gate_accepts(tmp_path: Path) -> No
 
 def test_a_generated_budget_carries_the_measurement_that_justifies_it(tmp_path: Path) -> None:
     available = budget_module.load(
-        _budget_file(tmp_path / 'budgets.toml', [calibrate.render(_null_collection(tmp_path / 'null'))])
+        budget_file(tmp_path / 'budgets.toml', [calibrate.render(_null_collection(tmp_path / 'null'))])
     )
 
     assert 'paired null p99' in available[('probe', Metric.LATENCY.value)].justification
