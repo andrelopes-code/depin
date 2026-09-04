@@ -11,12 +11,13 @@ not reserve intermediate version numbers.
    contract.
 2. Maintain comparative evidence under the accepted
    [competitive-performance leadership proposal](proposals/2026-09-02-competitive-performance-leadership-proposal.md).
-3. Run bounded compiled-Python experiments under the
-   [compiled-resolution runtime proposal](proposals/2026-09-02-compiled-resolution-runtime-proposal.md).
+3. Continue bounded compiled-Python experiments under the
+   [compiled-resolution runtime proposal](proposals/2026-09-02-compiled-resolution-runtime-proposal.md),
+   with freeze-time composition of closures for synchronous transient chains
+   selected next after the 2026-09-04 cached-runtime experiment's NO-GO.
 4. Recalibrate FastAPI application performance under the
    [FastAPI minimum-overhead proposal](proposals/2026-09-02-fastapi-minimum-overhead-proposal.md).
-5. Consider an optional native accelerator only if optimized Python still loses
-   materially, under the
+5. Keep the optional native accelerator NO-GO under the
    [optional-native accelerator proposal](proposals/2026-09-02-optional-native-accelerator-proposal.md).
 6. Complete the final public-API audit, stability commitment, comparison page,
    and package classifier; maintainers then decide whether to tag `1.0.0`.
