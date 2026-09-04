@@ -26,7 +26,7 @@ from typing import assert_type
 import pytest
 
 from depin import Container, FrozenContainer, ProviderKey, ScopeFrame, Token
-from depin.ext.pytest import AsyncOverrideFactory, AsyncOverrideHandle, OverrideFactory
+from depin.ext.pytest import AsyncOverrideFactory, AsyncOverrideHandle, OverrideFactory, OverrideHandle
 from depin.ext.pytest import depin_aoverride as real_aoverride_fixture
 from depin.ext.pytest import depin_ascope as real_ascope_fixture
 from depin.ext.pytest import depin_container as real_container_fixture
@@ -75,6 +75,7 @@ def the_plugin_exports_all_five_fixtures() -> None:
 
 def the_container_method_behind_the_fixture_satisfies_the_protocol(di: FrozenContainer) -> None:
     _factory: OverrideFactory = di.override
+    _handle: OverrideHandle = di.override(Clock)
 
 
 def an_async_context_manager_factory_satisfies_the_async_protocol(di: FrozenContainer) -> None:

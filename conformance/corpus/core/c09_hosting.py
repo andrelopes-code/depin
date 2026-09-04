@@ -8,10 +8,10 @@ its `with` statement binds.
 typed surface and not an implementation detail: an integration that guards on
 ``CONTRACT_VERSION >= ContractVersion(1, 0)`` is writing against them.
 
-The eleven exceptions in `depin.errors` are none of them in `depin.__all__`, and
-four inherit a builtin as well as `DepinError`. That second base is a typing
-fact rather than a detail — it decides what an ``except TypeError`` clause a
-consumer already had will now catch — so each is witnessed at both.
+The public exceptions are witnessed through `depin.errors`; lifecycle errors
+that are also convenience exports are witnessed through both surfaces. A
+builtin second base is a typing fact rather than a detail because it changes
+which existing ``except`` clauses catch the error.
 """
 
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
@@ -27,10 +27,21 @@ from depin import (
     hosted_container,
     optional_hosted_container,
 )
+from depin import (
+    AsyncInSyncContextError as PublicAsyncInSyncContextError,
+)
+from depin import (
+    ContainerClosedError as PublicContainerClosedError,
+)
+from depin import (
+    ContainerLifecycleError as PublicContainerLifecycleError,
+)
 from depin.errors import (
     AsyncInSyncContextError,
     CaptiveDependencyError,
     CircularDependencyError,
+    ContainerClosedError,
+    ContainerLifecycleError,
     ContainerNotBoundError,
     DepinError,
     DuplicateProviderError,
@@ -45,6 +56,11 @@ from depin.errors import (
 class Config:
     def __init__(self) -> None:
         self.dsn = 'sqlite://'
+
+
+_public_async_error: type[AsyncInSyncContextError] = PublicAsyncInSyncContextError
+_public_closed_error: type[ContainerClosedError] = PublicContainerClosedError
+_public_lifecycle_error: type[ContainerLifecycleError] = PublicContainerLifecycleError
 
 
 def build() -> FrozenContainer:
@@ -131,6 +147,10 @@ def each_resolution_error_narrows_to_its_own_class() -> None:
         _circular: DepinError = error
     except AsyncInSyncContextError as error:
         _async_in_sync: DepinError = error
+    except ContainerClosedError as error:
+        _closed: ContainerLifecycleError = error
+    except ContainerLifecycleError as error:
+        _lifecycle: DepinError = error
     except OutsideScopeError as error:
         _outside: DepinError = error
 

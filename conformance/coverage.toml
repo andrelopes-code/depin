@@ -20,6 +20,9 @@
 [CONTRACT_VERSION]
 fixtures = ["corpus/core/c09_hosting.py"]
 
+[AsyncInSyncContextError]
+fixtures = ["corpus/core/c09_hosting.py"]
+
 [Bindings]
 fixtures = ["corpus/core/c07_registration.py"]
 
@@ -32,6 +35,12 @@ fixtures = [
     "corpus/core/c03_providers.py",
     "corpus/core/c07_registration.py",
 ]
+
+[ContainerClosedError]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+[ContainerLifecycleError]
+fixtures = ["corpus/core/c09_hosting.py"]
 
 [ContractVersion]
 fixtures = ["corpus/core/c09_hosting.py"]
@@ -65,6 +74,9 @@ fixtures = ["corpus/core/c02_keys.py"]
 
 [ProviderKey]
 fixtures = ["corpus/core/c02_keys.py", "corpus/core/c08_diagnostics.py"]
+
+[ProviderOverride]
+fixtures = ["corpus/core/c06_lifetimes.py"]
 
 [ProviderShape]
 fixtures = ["corpus/core/c08_diagnostics.py"]
@@ -114,10 +126,10 @@ fixtures = ["corpus/core/c09_hosting.py"]
 [provides]
 fixtures = ["corpus/core/c07_registration.py"]
 
-# `depin.errors`. None of the eleven is in `depin.__all__`, and four inherit a
-# builtin as well as `DepinError` — which decides what an `except TypeError`
-# clause a consumer already had will now catch, so it is a typing fact rather
-# than a detail.
+# `depin.errors`. Some lifecycle errors are also convenience exports from
+# `depin`; each surface has its own entry. The exceptions that also inherit a
+# builtin affect existing ``except`` clauses, so that inheritance is a typing
+# fact rather than an implementation detail.
 
 ["depin.errors.DepinError"]
 fixtures = ["corpus/core/c09_hosting.py"]
@@ -129,6 +141,12 @@ fixtures = ["corpus/core/c09_hosting.py"]
 fixtures = ["corpus/core/c09_hosting.py"]
 
 ["depin.errors.AsyncInSyncContextError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.ContainerClosedError"]
+fixtures = ["corpus/core/c09_hosting.py"]
+
+["depin.errors.ContainerLifecycleError"]
 fixtures = ["corpus/core/c09_hosting.py"]
 
 ["depin.errors.OutsideScopeError"]
@@ -251,7 +269,13 @@ fixtures = ["corpus/ext_extras/x05_taskiq.py"]
 ["depin.ext.pytest.OverrideFactory"]
 fixtures = ["corpus/ext_extras/x06_pytest.py"]
 
+["depin.ext.pytest.OverrideHandle"]
+fixtures = ["corpus/ext_extras/x06_pytest.py"]
+
 ["depin.ext.pytest.AsyncOverrideFactory"]
+fixtures = ["corpus/ext_extras/x06_pytest.py"]
+
+["depin.ext.pytest.AsyncOverrideHandle"]
 fixtures = ["corpus/ext_extras/x06_pytest.py"]
 
 ["depin.ext.pytest.depin_container"]

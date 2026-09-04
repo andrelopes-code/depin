@@ -9,9 +9,12 @@ import depin
 
 EXPECTED_EXPORTS = (
     'CONTRACT_VERSION',
+    'AsyncInSyncContextError',
     'Bindings',
     'Condition',
     'Container',
+    'ContainerClosedError',
+    'ContainerLifecycleError',
     'ContractVersion',
     'DependencyGraph',
     'FrozenContainer',
@@ -23,6 +26,7 @@ EXPECTED_EXPORTS = (
     'Host',
     'Named',
     'ProviderKey',
+    'ProviderOverride',
     'ProviderShape',
     'Registry',
     'Scope',

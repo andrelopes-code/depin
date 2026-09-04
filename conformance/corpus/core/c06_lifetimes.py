@@ -13,7 +13,7 @@ the value the `with` statement binds, which is nominal.
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from typing import assert_type
 
-from depin import Container, FrozenContainer, Scope, ScopeFrame, Token
+from depin import Container, FrozenContainer, ProviderOverride, Scope, ScopeFrame, Token
 
 
 class Config:
@@ -87,7 +87,8 @@ def a_nested_scope_yields_a_frame_of_the_same_type() -> None:
 
 def override_yields_a_container_with_the_replacement_in_place() -> None:
     di = build()
-    _manager: AbstractContextManager[FrozenContainer] = di.override(Config).using(Config('postgres://'))
+    selection: ProviderOverride = di.override(Config)
+    _manager: AbstractContextManager[FrozenContainer] = selection.using(Config('postgres://'))
     with di.override(Config).using(Config('postgres://')) as overridden:
         assert_type(overridden, FrozenContainer)
         assert_type(overridden.resolve(Config), Config)
