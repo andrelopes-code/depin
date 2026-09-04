@@ -767,17 +767,11 @@ class FrozenContainer:
     def _is_cached(self, spec: ProviderSpec) -> bool:
         return self._root.lookup((spec.key, spec.tag)) is not MISSING
 
-    def _cache_target(self, spec: ProviderSpec) -> ScopeFrame | None:
-        """Return the frame that caches this spec, or None for transient scope."""
-        if spec.scope is Scope.SINGLETON:
-            return self._root
-        if spec.scope is Scope.SCOPED:
-            return active_frame(self._root)
-        return None
-
     def _resolve_sync(self, spec: ProviderSpec) -> object:
         pending: list[_PendingResolution] = []
-        initial = self._begin_sync(spec, pending)
+        if spec.needs_async:
+            raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
+        initial = self._begin(spec, pending)
         if initial is not _PENDING:
             return initial
         try:
@@ -802,7 +796,11 @@ class FrozenContainer:
                         raise MissingProviderError(
                             f"missing provider for parameter '{param.name}' of {fmt_key(current.spec.key)}"
                         )
-                    resolved = self._begin_sync(dependency, pending)
+                    if dependency.needs_async:
+                        raise AsyncInSyncContextError(
+                            f'{fmt_key(dependency.key)} requires async resolution; call aresolve() instead'
+                        )
+                    resolved = self._begin(dependency, pending)
                     if resolved is _PENDING:
                         current.waiting_name = param.name
                         continue
@@ -877,19 +875,19 @@ class FrozenContainer:
             current = current.parent
         return False
 
-    def _begin_sync(self, spec: ProviderSpec, pending: list[_PendingResolution]) -> object:
-        if spec.needs_async:
-            raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
-        return self._begin(spec, pending)
-
     async def _begin_async(self, spec: ProviderSpec, pending: list[_PendingResolution]) -> object:
-        frame = self._cache_target(spec)
+        if spec.scope is Scope.SINGLETON:
+            frame = self._root
+        elif spec.scope is Scope.SCOPED:
+            frame = active_frame(self._root)
+        else:
+            frame = None
         if frame is None:
             pending.append(_PendingResolution(spec, None, None, None, None, {}))
             return _PENDING
         cache_id = (spec.key, spec.tag)
         while True:
-            cached, claim = frame.claim_cached(cache_id)
+            cached, claim = frame.claim_cached(cache_id, cache_id)
             if cached is not MISSING:
                 return cached
             if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
@@ -911,13 +909,18 @@ class FrozenContainer:
             return _PENDING
 
     def _begin(self, spec: ProviderSpec, pending: list[_PendingResolution]) -> object:
-        frame = self._cache_target(spec)
+        if spec.scope is Scope.SINGLETON:
+            frame = self._root
+        elif spec.scope is Scope.SCOPED:
+            frame = active_frame(self._root)
+        else:
+            frame = None
         if frame is None:
             pending.append(_PendingResolution(spec, None, None, None, None, {}))
             return _PENDING
         cache_id = (spec.key, spec.tag)
         while True:
-            cached, claim = frame.claim_cached(cache_id)
+            cached, claim = frame.claim_cached(cache_id, cache_id)
             if cached is not MISSING:
                 return cached
             if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
