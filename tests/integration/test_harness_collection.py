@@ -2,10 +2,11 @@ import json
 from pathlib import Path
 
 import pytest
-from test_harness_gate import budget_file, latency_budget, work_budget
 
 from benchmarks.harness import HarnessError, gate, pairs, require_object
 from benchmarks.workloads import scale
+
+from .test_harness_gate import budget_file, latency_budget, work_budget
 
 SEED = 20260902
 

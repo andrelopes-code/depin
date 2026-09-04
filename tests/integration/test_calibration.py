@@ -1,11 +1,12 @@
 from pathlib import Path
 
 import pytest
-from test_harness_gate import budget_file, make_dataset
 
 from benchmarks.contracts import Metric, NoiseClass
 from benchmarks.harness import HarnessError, calibrate
 from benchmarks.harness import budgets as budget_module
+
+from .test_harness_gate import budget_file, make_dataset
 
 
 def _null_collection(directory: Path) -> Path:

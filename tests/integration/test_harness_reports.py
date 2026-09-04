@@ -3,10 +3,11 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
-from test_harness_gate import flat, make_dataset
 
 from benchmarks.contracts import Tier
 from benchmarks.harness import HarnessError, reduce, report, require_object
+
+from .test_harness_gate import flat, make_dataset
 
 
 def _benchmark_report(entries: Sequence[dict[str, object]]) -> dict[str, object]:

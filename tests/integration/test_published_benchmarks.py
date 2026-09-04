@@ -4,13 +4,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-from test_harness_reports import write
-
 from benchmarks import test_latency
 from benchmarks.contracts import Metric, Tier
 from benchmarks.harness import budgets as budget_module
 from benchmarks.harness import environment, pairs, reduce, report, unmeasured
 from benchmarks.workloads import WORKLOADS
+
+from .test_harness_reports import write
 
 ROOT = Path(__file__).resolve().parents[2]
 SEED = 20260902

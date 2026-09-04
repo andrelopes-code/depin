@@ -1,11 +1,12 @@
 from collections.abc import Callable
 
 import pytest
-from test_harness_reports import aggregate_of
 
 from benchmarks.contracts import Metric, Tier, Workload
 from benchmarks.harness import HarnessError, pairs, reduce, scaling
 from benchmarks.workloads import scale
+
+from .test_harness_reports import aggregate_of
 
 
 def _smallest(curve: str) -> Workload:
