@@ -40,6 +40,7 @@ from depin._core.registry import Registry
 from depin._core.scope import Scope, ScopeFrame
 from depin._core.spec import Bindings, Condition, ProviderKey, ProviderShape, Underlying
 from depin._core.warmup import WarmupReport
+from depin.errors import AsyncInSyncContextError, ContainerClosedError, ContainerLifecycleError
 
 try:
     __version__ = version('pydepin')
@@ -50,9 +51,12 @@ except PackageNotFoundError:
 
 __all__ = (
     'CONTRACT_VERSION',
+    'AsyncInSyncContextError',
     'Bindings',
     'Condition',
     'Container',
+    'ContainerClosedError',
+    'ContainerLifecycleError',
     'ContractVersion',
     'DependencyGraph',
     'FrozenContainer',

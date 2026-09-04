@@ -37,12 +37,21 @@ class CircularDependencyError(DepinError):
 
 
 class AsyncInSyncContextError(DepinError):
-    """A synchronous resolution requires an async provider.
+    """A synchronous operation requires asynchronous execution.
 
     Raised by `FrozenContainer.resolve()` (or ``frozen[key]``) when the
-    target — or something it depends on — is an async provider. Use
-    `FrozenContainer.aresolve()` inside an event loop instead.
+    target — or something it depends on — is an async provider. It also guards
+    `FrozenContainer.close()` when an event loop or async work needs to keep
+    running. Use the matching asynchronous API instead.
     """
+
+
+class ContainerLifecycleError(DepinError, RuntimeError):
+    """A container operation conflicts with active work or shutdown."""
+
+
+class ContainerClosedError(ContainerLifecycleError):
+    """A terminally closed container cannot resolve values or open scopes."""
 
 
 class OutsideScopeError(DepinError):

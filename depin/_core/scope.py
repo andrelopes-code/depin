@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Final
 
 from depin._core import teardown
-from depin._core.teardown import Teardown
+from depin._core.teardown import AsyncCMTeardown, AsyncGenTeardown, Teardown
 from depin.errors import DepinError, OutsideScopeError
 
 
@@ -250,6 +250,10 @@ class ScopeFrame:
     def add_teardown(self, record: Teardown) -> None:
         with self._mutex:
             self._teardowns.append(record)
+
+    def has_async_teardown(self) -> bool:
+        with self._mutex:
+            return any(isinstance(record, AsyncGenTeardown | AsyncCMTeardown) for record in self._teardowns)
 
     def drain_sync(self) -> None:
         """Run every pending teardown, newest first, without an event loop.

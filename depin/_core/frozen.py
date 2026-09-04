@@ -1,5 +1,6 @@
 """The immutable runtime: resolve values, open scopes, inject, and override."""
 
+import asyncio
 import contextlib
 import inspect
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
@@ -18,6 +19,7 @@ from depin._core.health import (
     run_check,
     run_check_async,
 )
+from depin._core.lifecycle import create_lifecycle_gate
 from depin._core.markers import Token
 from depin._core.render import render_tree
 from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional_frame, push_frame
@@ -68,11 +70,12 @@ class FrozenContainer:
         ```
     """
 
-    __slots__ = ('_plan', '_root')
+    __slots__ = ('_lifecycle', '_plan', '_root')
 
     def __init__(self, plan: ResolutionPlan) -> None:
         self._plan = plan
         self._root = ScopeFrame()
+        self._lifecycle = create_lifecycle_gate()
 
     def __getitem__[T](self, key: type[T] | Token[T]) -> T:
         """Resolve ``key`` synchronously; shorthand for `resolve()`.
@@ -120,11 +123,15 @@ class FrozenContainer:
 
             ```
         """
-        spec = self._lookup(key, tag)
-        # spec.source is type-erased `object` in the plan; the runtime contract
-        # (enforced by build_plan) is that providers return values matching the
-        # static type of their declared key, so we restate the static type here.
-        return self._resolve_sync(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
+        ticket = self._lifecycle.admit('resolve', asynchronous=False)
+        try:
+            spec = self._lookup(key, tag)
+            # spec.source is type-erased `object` in the plan; the runtime contract
+            # (enforced by build_plan) is that providers return values matching the
+            # static type of their declared key, so we restate the static type here.
+            return self._resolve_sync(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
+        finally:
+            self._lifecycle.release(ticket)
 
     async def aresolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
         """Resolve a value by key, asynchronously.
@@ -144,10 +151,14 @@ class FrozenContainer:
             OutsideScopeError: ``key`` is scoped and no scope is active.
             CircularDependencyError: This task re-enters construction of the same cached provider.
         """
-        spec = self._lookup(key, tag)
-        # See the matching note in `resolve`: plan-level erasure of provider
-        # return types forces a single documented widening at this boundary.
-        return await self._resolve_async(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
+        ticket = self._lifecycle.admit('aresolve', asynchronous=True)
+        try:
+            spec = self._lookup(key, tag)
+            # See the matching note in `resolve`: plan-level erasure of provider
+            # return types forces a single documented widening at this boundary.
+            return await self._resolve_async(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
+        finally:
+            self._lifecycle.release(ticket)
 
     @contextlib.contextmanager
     def scope(self) -> Generator[ScopeFrame]:
@@ -184,11 +195,15 @@ class FrozenContainer:
 
             ```
         """
+        ticket = self._lifecycle.admit('scope', asynchronous=False)
         with push_frame(self._root) as frame:
             try:
                 yield frame
             finally:
-                frame.drain_sync()
+                try:
+                    frame.drain_sync()
+                finally:
+                    self._lifecycle.release(ticket)
 
     @contextlib.asynccontextmanager
     async def ascope(self) -> AsyncGenerator[ScopeFrame]:
@@ -200,11 +215,15 @@ class FrozenContainer:
         `ExceptionGroup`. The per-request scope opened by the FastAPI integration
         is an ``ascope``.
         """
+        ticket = self._lifecycle.admit('ascope', asynchronous=True)
         with push_frame(self._root) as frame:
             try:
                 yield frame
             finally:
-                await frame.drain_async()
+                try:
+                    await frame.drain_async()
+                finally:
+                    self._lifecycle.release(ticket)
 
     def close(self) -> None:
         """Tear down singleton providers that own lifecycle resources, synchronously.
@@ -237,7 +256,11 @@ class FrozenContainer:
 
             ```
         """
-        self._root.drain_sync()
+        if self._lifecycle.begin_sync_close(self._root.has_async_teardown()):
+            try:
+                self._root.drain_sync()
+            finally:
+                self._lifecycle.close()
 
     async def aclose(self) -> None:
         """Tear down singleton providers that own lifecycle resources, asynchronously.
@@ -246,7 +269,26 @@ class FrozenContainer:
         singleton is an async provider. Drains the root scope in reverse order of
         construction, collecting failures into an `ExceptionGroup`.
         """
-        await self._root.drain_async()
+        if not self._lifecycle.begin_async_close():
+            await self._lifecycle.join()
+            return
+        try:
+            await self._lifecycle.wait_until_quiet()
+        except asyncio.CancelledError:
+            self._lifecycle.reopen()
+            raise
+        self._lifecycle.begin_draining()
+        drain = asyncio.create_task(self._root.drain_async())
+        cancelled = False
+        try:
+            await asyncio.shield(drain)
+        except asyncio.CancelledError:
+            cancelled = True
+            await asyncio.shield(drain)
+        finally:
+            self._lifecycle.close()
+        if cancelled:
+            raise asyncio.CancelledError
 
     def reset(self) -> None:
         """Tear down every built singleton and drop the cache, so the next resolution rebuilds.
@@ -282,7 +324,11 @@ class FrozenContainer:
 
             ```
         """
-        self._root.drop_sync()
+        ticket = self._lifecycle.admit('reset', asynchronous=False)
+        try:
+            self._root.drop_sync()
+        finally:
+            self._lifecycle.release(ticket)
 
     async def areset(self) -> None:
         """Tear down every built singleton and drop the cache; the counterpart to `reset()`.
@@ -295,7 +341,11 @@ class FrozenContainer:
             ExceptionGroup: One or more teardowns failed. Every failure is
                 reported, and the cache is dropped either way.
         """
-        await self._root.drop_async()
+        ticket = self._lifecycle.admit('areset', asynchronous=True)
+        try:
+            await self._root.drop_async()
+        finally:
+            self._lifecycle.release(ticket)
 
     def warmup(self) -> WarmupReport:
         """Construct every singleton now, instead of on first resolution.
@@ -326,6 +376,13 @@ class FrozenContainer:
 
             ```
         """
+        ticket = self._lifecycle.admit('warmup', asynchronous=False)
+        try:
+            return self._warmup_sync()
+        finally:
+            self._lifecycle.release(ticket)
+
+    def _warmup_sync(self) -> WarmupReport:
         specs = singleton_specs(self._plan)
         reject_async_singletons(specs)
         constructed: list[ProviderSpec] = []
@@ -351,6 +408,13 @@ class FrozenContainer:
             CircularDependencyError: This task re-enters construction of the
                 same cached provider.
         """
+        ticket = self._lifecycle.admit('awarmup', asynchronous=True)
+        try:
+            return await self._warmup_async()
+        finally:
+            self._lifecycle.release(ticket)
+
+    async def _warmup_async(self) -> WarmupReport:
         specs = singleton_specs(self._plan)
         constructed: list[ProviderSpec] = []
         cached: list[ProviderSpec] = []
@@ -411,6 +475,13 @@ class FrozenContainer:
 
             ```
         """
+        ticket = self._lifecycle.admit('health', asynchronous=False)
+        try:
+            return self._health_sync()
+        finally:
+            self._lifecycle.release(ticket)
+
+    def _health_sync(self) -> HealthReport:
         specs = checked_specs(self._plan)
         reject_async_checks(specs)
         return HealthReport(tuple(run_check(spec, self._resolve_any(spec.key, spec.tag)) for spec in specs))
@@ -425,6 +496,13 @@ class FrozenContainer:
             CircularDependencyError: This task re-enters construction of the
                 same cached provider.
         """
+        ticket = self._lifecycle.admit('ahealth', asynchronous=True)
+        try:
+            return await self._health_async()
+        finally:
+            self._lifecycle.release(ticket)
+
+    async def _health_async(self) -> HealthReport:
         specs = checked_specs(self._plan)
         results: list[HealthResult] = []
         for spec in specs:
