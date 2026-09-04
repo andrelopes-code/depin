@@ -9,6 +9,7 @@ import pytest
 
 from depin._core.container import Container
 from depin._core.frozen import FrozenContainer
+from depin._core.lifecycle import create_lifecycle_gate
 from depin._core.scope import Scope
 from depin.errors import AsyncInSyncContextError, ContainerClosedError, ContainerLifecycleError
 
@@ -18,6 +19,18 @@ async def _checkpoint() -> None:
     future = loop.create_future()
     loop.call_soon(future.set_result, None)
     await future
+
+
+def test_reopen_restores_admission_after_quiescing() -> None:
+    gate = create_lifecycle_gate()
+    assert gate.begin_async_close()
+    with pytest.raises(ContainerLifecycleError, match='shutdown is already'):
+        gate.admit('test', asynchronous=False)
+
+    gate.reopen()
+
+    ticket = gate.admit('test', asynchronous=False)
+    gate.release(ticket)
 
 
 def test_sync_close_rejects_background_async_resolution() -> None:
