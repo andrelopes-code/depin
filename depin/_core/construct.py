@@ -54,7 +54,8 @@ def sync(
         case ProviderShape.CLASS:
             return as_class(spec.source, key)(**kwargs)
         case ProviderShape.FUNCTION:
-            return as_factory(spec.source, key)(**kwargs)
+            factory = as_factory(spec.source, key)
+            return factory() if not kwargs else factory(**kwargs)
         case ProviderShape.GENERATOR:
             gen = as_sync_iterator(as_factory(spec.source, key)(**kwargs), key)
             value = next(gen)

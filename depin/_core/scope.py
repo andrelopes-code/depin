@@ -442,14 +442,16 @@ class ScopeFrame:
                 return value, None
             lifecycle = self._lifecycle
             if lifecycle is not None:
-                if lifecycle.state is LifecycleState.CLOSED:
-                    raise ContainerClosedError(
-                        'container is closed; build a new FrozenContainer before resolving or opening a scope'
-                    )
-                if lifecycle.state is not LifecycleState.OPEN and not lifecycle.flights and lifecycle.active == 0:
-                    raise ContainerLifecycleError(
-                        'container shutdown is already in progress; await aclose() to join it'
-                    )
+                state = lifecycle.state
+                if state is not LifecycleState.OPEN:
+                    if state is LifecycleState.CLOSED:
+                        raise ContainerClosedError(
+                            'container is closed; build a new FrozenContainer before resolving or opening a scope'
+                        )
+                    if not lifecycle.flights and lifecycle.active == 0:
+                        raise ContainerLifecycleError(
+                            'container shutdown is already in progress; await aclose() to join it'
+                        )
             flight = self._flights.get(key)
             if flight is None:
                 leader = _Leader(asynchronous=asynchronous)
