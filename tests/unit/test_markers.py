@@ -3,7 +3,8 @@ from collections.abc import Callable
 
 import pytest
 
-from depin._core.markers import Named, Tag, Token, TokenKey, get_provides, injected, is_inject_marker, provides
+import depin
+from depin._core.markers import Named, Tag, Token, TokenKeyBase, get_provides, injected, is_inject_marker, provides
 from depin.errors import DepinError, InvalidProviderError
 
 
@@ -148,13 +149,13 @@ def test_provides_explains_a_key_shaped_target_in_its_own_terms(target: object, 
         _ = provides(target)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
 
-def test_a_token_is_a_token_key() -> None:
-    assert isinstance(Token[str]('db.url'), TokenKey)
+def test_a_token_uses_the_private_nominal_key_base() -> None:
+    assert isinstance(Token[str]('db.url'), TokenKeyBase)
 
 
 def test_tokens_with_the_same_name_are_equal_and_hash_equally_as_keys() -> None:
-    a: TokenKey = Token[str]('db.url')
-    b: TokenKey = Token[int]('db.url')
+    a: TokenKeyBase = Token[str]('db.url')
+    b: TokenKeyBase = Token[int]('db.url')
     assert a == b
     assert hash(a) == hash(b)
 
@@ -165,3 +166,7 @@ def test_a_token_instance_carries_no_dict() -> None:
 
 def test_token_repr_is_unchanged() -> None:
     assert repr(Token[int]('max.conn')) == "Token('max.conn')"
+
+
+def test_token_key_base_is_not_public() -> None:
+    assert not hasattr(depin, 'TokenKey')

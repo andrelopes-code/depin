@@ -27,7 +27,7 @@ from starlette.types import Receive as StarletteReceive
 from starlette.types import Scope as StarletteScope
 from starlette.types import Send as StarletteSend
 
-from depin import Container, FrozenContainer, ProviderKey
+from depin import Container, FrozenContainer, ScopeSeed
 from depin.ext.asgi import RequestScope as BaseRequestScope
 from depin.ext.litestar import RequestScope as LitestarRequestScope
 from depin.ext.litestar import seed_request as litestar_seed
@@ -53,7 +53,7 @@ def the_starlette_middleware_specialises_the_generic_base(app: StarletteASGIApp)
 
 
 def the_starlette_seed_maps_a_scope_to_a_key_and_a_value() -> None:
-    _seed: Callable[[StarletteScope], tuple[ProviderKey, object]] = starlette_seed
+    _seed: Callable[[StarletteScope], ScopeSeed] = starlette_seed
 
 
 def the_litestar_middleware_is_a_litestar_asgi_app(app: LitestarASGIApp) -> None:
@@ -65,4 +65,4 @@ def the_litestar_middleware_specialises_the_generic_base(app: LitestarASGIApp) -
 
 
 def the_litestar_seed_maps_a_scope_to_a_key_and_a_value() -> None:
-    _seed: Callable[[LitestarScope], tuple[ProviderKey, object]] = litestar_seed
+    _seed: Callable[[LitestarScope], ScopeSeed] = litestar_seed

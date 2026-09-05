@@ -13,7 +13,7 @@ the value the `with` statement binds, which is nominal.
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from typing import assert_type
 
-from depin import Container, FrozenContainer, Scope, ScopeFrame, Token
+from depin import Container, FrozenContainer, ProviderOverride, Scope, ScopeFrame, Token
 
 
 class Config:
@@ -87,21 +87,22 @@ def a_nested_scope_yields_a_frame_of_the_same_type() -> None:
 
 def override_yields_a_container_with_the_replacement_in_place() -> None:
     di = build()
-    _manager: AbstractContextManager[FrozenContainer] = di.override(Config, Config('postgres://'))
-    with di.override(Config, Config('postgres://')) as overridden:
+    selection: ProviderOverride = di.override(Config)
+    _manager: AbstractContextManager[FrozenContainer] = selection.using(Config('postgres://'))
+    with di.override(Config).using(Config('postgres://')) as overridden:
         assert_type(overridden, FrozenContainer)
         assert_type(overridden.resolve(Config), Config)
 
 
 def override_replaces_a_token_at_its_own_type() -> None:
     di = build()
-    with di.override(port, 9090) as overridden:
+    with di.override(port).using(9090) as overridden:
         assert_type(overridden.resolve(port), int)
 
 
 def override_carries_a_tag_without_changing_its_type() -> None:
     di = Container().bind(Config, tag='primary').freeze()
-    with di.override(Config, Config('postgres://'), tag='primary') as overridden:
+    with di.override(Config, tag='primary').using(Config('postgres://')) as overridden:
         assert_type(overridden, FrozenContainer)
 
 

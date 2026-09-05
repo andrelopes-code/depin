@@ -35,10 +35,10 @@ Written against depin's public integration contract — `depin.Host` — so it
 reaches nothing inside the private package.
 """
 
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Mapping
 from typing import Protocol
 
-from depin import FrozenContainer, Host, ProviderKey
+from depin import FrozenContainer, Host, ScopeSeeder
 
 type Message = Mapping[str, object]
 """One ASGI event, in either direction."""
@@ -114,7 +114,9 @@ class RequestScope[ScopeT: ASGIScope, ReceiveT, SendT]:
     Example:
         Install the middleware once, per the wrapping framework's own idiom::
 
-            middleware = RequestScope(app, di, seed=lambda scope: (Request, Request(scope)))
+            from depin import ScopeSeed
+
+            middleware = RequestScope(app, di, seed=lambda scope: ScopeSeed(Request, Request(scope)))
     """
 
     __slots__ = ('_app', '_host', '_seed')
@@ -124,7 +126,7 @@ class RequestScope[ScopeT: ASGIScope, ReceiveT, SendT]:
         app: ASGIApp[ScopeT, ReceiveT, SendT],
         container: FrozenContainer,
         *,
-        seed: Callable[[ScopeT], tuple[ProviderKey, object] | None] | None = None,
+        seed: ScopeSeeder[ScopeT] | None = None,
     ) -> None:
         self._app = app
         self._host = Host(container)
@@ -138,5 +140,5 @@ class RequestScope[ScopeT: ASGIScope, ReceiveT, SendT]:
             if self._seed is not None and scope['type'] == 'http':
                 seeded = self._seed(scope)
                 if seeded is not None:
-                    frame.provide(*seeded)
+                    seeded.apply(frame)
             await self._app(scope, receive, send)

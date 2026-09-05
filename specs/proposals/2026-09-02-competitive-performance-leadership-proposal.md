@@ -1,7 +1,7 @@
 # Proposal: competitive performance leadership
 
 Date: 2026-09-02
-Status: proposed
+Status: accepted, active
 Scope: comparative evidence, performance targets, ergonomics guardrails, and sequencing of optimization work
 
 ## Nature of this document

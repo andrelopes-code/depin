@@ -9,7 +9,7 @@ import pytest
 
 from depin._core.container import Container
 from depin._core.graph import build_plan
-from depin._core.markers import Named, Token, provides
+from depin._core.markers import Named, Tag, Token, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope
 from depin._core.spec import Underlying
@@ -891,6 +891,116 @@ def test_a_decorator_capturing_a_scoped_dependency_is_rejected() -> None:
     container = Container().bind(Store).bind(Session, scope=Scope.SCOPED).decorate(Store, Loud)
     with pytest.raises(CaptiveDependencyError):
         _ = container.freeze()
+
+
+def test_captive_chain_identifies_a_decorator_directly_capturing_a_scoped_dependency() -> None:
+    class Store: ...
+
+    class Session: ...
+
+    class AuditStore:
+        def __init__(self, inner: Store, session: Session) -> None: ...
+
+    container = Container().bind(Store).bind(Session, scope=Scope.SCOPED).decorate(Store, AuditStore)
+    with pytest.raises(CaptiveDependencyError) as error:
+        _ = container.freeze()
+
+    assert f'{Store.__qualname__} [decorated by {AuditStore.__qualname__}] -> {Session.__qualname__}' in str(
+        error.value
+    )
+
+
+def test_captive_chain_keeps_a_transient_after_a_decorator() -> None:
+    class Store: ...
+
+    class Session: ...
+
+    class Worker:
+        def __init__(self, session: Session) -> None: ...
+
+    class AuditStore:
+        def __init__(self, inner: Store, worker: Worker) -> None: ...
+
+    container = (
+        Container()
+        .bind(Store)
+        .bind(Session, scope=Scope.SCOPED)
+        .bind(Worker, scope=Scope.TRANSIENT)
+        .decorate(Store, AuditStore)
+    )
+    with pytest.raises(CaptiveDependencyError) as error:
+        _ = container.freeze()
+
+    assert (
+        f'{Store.__qualname__} [decorated by {AuditStore.__qualname__}] '
+        f'-> {Worker.__qualname__} -> {Session.__qualname__}'
+    ) in str(error.value)
+
+
+def test_captive_chain_identifies_the_inner_of_two_decorators_as_the_cause() -> None:
+    class Store: ...
+
+    class Session: ...
+
+    class CaptureStore:
+        def __init__(self, inner: Store, session: Session) -> None: ...
+
+    class AuditStore:
+        def __init__(self, inner: Store) -> None: ...
+
+    container = (
+        Container()
+        .bind(Store)
+        .bind(Session, scope=Scope.SCOPED)
+        .decorate(Store, CaptureStore)
+        .decorate(Store, AuditStore)
+    )
+    with pytest.raises(CaptiveDependencyError) as error:
+        _ = container.freeze()
+
+    chain = str(error.value).split('chain: ', 1)[1]
+    assert (
+        chain.index(f'[decorated by {AuditStore.__qualname__}]')
+        < chain.index(f'[decorated by {CaptureStore.__qualname__}]')
+        < chain.index(Session.__qualname__)
+    )
+
+
+def test_captive_chain_renders_a_tagged_decorated_binding() -> None:
+    class Store: ...
+
+    class Session: ...
+
+    class AuditStore:
+        def __init__(self, inner: Annotated[Store, Tag('primary')], session: Session) -> None: ...
+
+    container = (
+        Container()
+        .bind(Store, tag='primary')
+        .bind(Session, scope=Scope.SCOPED)
+        .decorate(Store, AuditStore, tag='primary')
+    )
+    with pytest.raises(CaptiveDependencyError) as error:
+        _ = container.freeze()
+
+    assert f"{Store.__qualname__} (tag='primary') [decorated by {AuditStore.__qualname__}]" in str(error.value)
+
+
+def test_captive_chain_renders_a_token_keyed_decorated_binding() -> None:
+    class Store: ...
+
+    class Session: ...
+
+    store = Token[Store]('store')
+
+    class AuditStore:
+        def __init__(self, inner: Annotated[Store, Named(store)], session: Session) -> None: ...
+
+    container = Container().bind(Store, provides=store).bind(Session, scope=Scope.SCOPED).decorate(store, AuditStore)
+    with pytest.raises(CaptiveDependencyError) as error:
+        _ = container.freeze()
+
+    assert f"Token('store') [decorated by {AuditStore.__qualname__}]" in str(error.value)
 
 
 def test_a_decorator_with_an_unbound_dependency_is_rejected() -> None:

@@ -39,7 +39,7 @@ from benchmarks.harness import (
 )
 from benchmarks.harness import budgets as budget_module
 from benchmarks.harness.budgets import Budget, Outcome
-from benchmarks.harness.pairs import BASE, DETERMINISTIC_FILE, ENVIRONMENT_FILE, HEAD
+from benchmarks.harness.pairs import BASE, DETERMINISTIC_FILE, ENVIRONMENT_FILE, HEAD, split_size
 
 USAGE = 'python -m benchmarks.harness.gate DIR --budgets benchmarks/budgets.toml'
 MINIMUM_REPETITIONS = 5
@@ -243,6 +243,77 @@ def _allocations(
             )
         )
     return verdicts
+
+
+def deterministic_verdicts(
+    workload: str,
+    metrics: Sequence[str],
+    base: Mapping[str, object],
+    head: Mapping[str, object],
+    available: Mapping[tuple[str, str], Budget],
+) -> tuple[Verdict, ...]:
+    """Decide the deterministic evidence a comparative workload explicitly claims."""
+    if len(metrics) != len(set(metrics)):
+        raise HarnessError(f'{workload}: secondary deterministic metrics must not repeat')
+    if Metric.LATENCY.value in metrics:
+        raise HarnessError(f'{workload}: latency cannot be a secondary deterministic metric')
+
+    verdicts: list[Verdict] = []
+    for metric in metrics:
+        if metric == Metric.ALLOCATIONS.value:
+            counts_base = _allocation_numbers(base, 'base')
+            counts_head = _allocation_numbers(head, 'head')
+            allocation_before = counts_base.get(workload)
+            allocation_after = counts_head.get(workload)
+            if allocation_before is None or allocation_after is None:
+                raise HarnessError(f'{workload}: allocations readings must be present on both base and head')
+            budget = _budget_for(available, workload, Metric.ALLOCATIONS.value)
+            changes = {field: _change(allocation_before[field], allocation_after[field]) for field in ALLOCATION_FIELDS}
+            worst = max(changes, key=changes.__getitem__)
+            verdicts.append(
+                Verdict(workload, Metric.ALLOCATIONS.value, budget_module.decide_exact(budget, changes[worst]), worst)
+            )
+            work_base = _numbers(base, budget_module.WORK, 'base').get(workload)
+            work_head = _numbers(head, budget_module.WORK, 'head').get(workload)
+            if work_base is None or work_head is None:
+                raise HarnessError(f'{workload}: allocations requires work readings on both base and head')
+            work_budget = _budget_for(available, workload, budget_module.WORK)
+            verdicts.append(
+                Verdict(
+                    workload,
+                    budget_module.WORK,
+                    budget_module.decide_exact(work_budget, _change(work_base, work_head)),
+                    'work',
+                )
+            )
+        elif metric == Metric.RETAINED.value:
+            retained_before = _numbers(base, metric, 'base').get(workload)
+            retained_after = _numbers(head, metric, 'head').get(workload)
+            if retained_before is None or retained_after is None:
+                raise HarnessError(f'{workload}: retained readings must be present on both base and head')
+            budget = _budget_for(available, workload, metric)
+            verdicts.append(
+                Verdict(
+                    workload,
+                    metric,
+                    budget_module.decide_exact(budget, _change(retained_before, retained_after)),
+                    'retained',
+                )
+            )
+        elif metric == Metric.SCALING.value:
+            curve, _ = split_size(workload)
+            scaling_before = _curves(base, 'base').get(curve)
+            scaling_after = _curves(head, 'head').get(curve)
+            if scaling_before is None or scaling_after is None:
+                raise HarnessError(f'{workload}: scaling curve {curve} must be present on both base and head')
+            if len(scaling_before) != len(scaling_after):
+                raise HarnessError(f'{workload}: scaling curve {curve} has different size counts between base and head')
+            budget = _budget_for(available, curve, metric)
+            scaling_worst = max(_change(left, right) for left, right in zip(scaling_before, scaling_after, strict=True))
+            verdicts.append(Verdict(curve, metric, budget_module.decide_exact(budget, scaling_worst), 'scaling'))
+        else:
+            raise HarnessError(f'{workload}: {metric!r} is not a deterministic secondary metric')
+    return tuple(verdicts)
 
 
 def _deterministic(base: Path, head: Path, available: Mapping[tuple[str, str], Budget]) -> list[Verdict]:

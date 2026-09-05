@@ -554,7 +554,7 @@ def test_an_override_wins_over_a_frame_seed_for_an_unbound_key() -> None:
 
     with frozen.scope() as frame:
         frame.provide(Extra, seeded)
-        with frozen.override(Extra, overridden):
+        with frozen.override(Extra).using(overridden):
             report = frozen.resolve(Report)
 
     assert report.extra is overridden

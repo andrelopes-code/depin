@@ -330,7 +330,7 @@ def test_override_context_isolated_or_inherited_by_child_threads() -> None:
     async def resolve_siblings() -> tuple[Service, Service]:
         return await asyncio.gather(frozen.aresolve(Service), frozen.aresolve(Service))
 
-    with frozen.override(Service, replacement):
+    with frozen.override(Service).using(replacement):
         sibling = asyncio.run(resolve_siblings())
         child_threads = [threading.Thread(target=child) for _ in range(2)]
         for thread in child_threads:

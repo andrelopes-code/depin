@@ -3,8 +3,8 @@
 #
 #   uvx ty@<pinned> check --error all --output-format concise
 #
-# Paths come from `[tool.ty.src] include` in pyproject.toml. 45 diagnostics in
-# 31 entries. A previously recorded figure of 32 was counted under a bare
+# Paths come from `[tool.ty.src] include` in pyproject.toml. 47 diagnostics in
+# 30 entries. A previously recorded figure of 32 was counted under a bare
 # `uvx ty check`; `--error all` adds ty's unsoundness lints, so it is not the
 # same measurement.
 #
@@ -17,7 +17,7 @@
 #
 # Three classifications recur.
 #
-# 1. Suppression spelling. 27 of the 44 sit on a line that already carries a
+# 1. Suppression spelling. 26 of the 47 sit on a line that already carries a
 #    `# type: ignore[code]  # pyright: ignore[code]` pair. ty honours a bare
 #    `# type: ignore` and its own `# ty: ignore[...]`, and reads neither of
 #    those two, so it re-reports code the other checkers have already been
@@ -34,6 +34,7 @@
 # 3. A third-party resolution ty does not share: `taskiq.TaskiqResult` reaches
 #    it through pydantic's `PydanticRecursiveRef`.
 
+benchmarks/comparison/adapters/dependency_injector.py:unsound-assignment:4 ty does not recognise Dependency Injector's generic providers as the two structural provider protocols used to keep the adapter independent of its concrete classes
 depin/_core/frozen.py:invalid-return-type:2 the two `_resolve_sync` / `_resolve_async` delegations that return `object` where `T` is promised; both lines carry the waiver pair ty does not read
 depin/_core/frozen.py:unsound-return-statement:1 ty does not solve `T` through a `type[T] | Token[T]` parameter, so `__getitem__`'s delegation to `resolve` infers `Unknown`
 depin/_core/graph.py:unsound-return-statement:1 the captive-chain walk reassigns `node` from a lookup keyed by `node`'s own attributes while the loop condition also reads it; ty breaks that cycle with `Unknown` in the unannotated `chain`
@@ -56,7 +57,6 @@ tests/unit/test_graph_validation.py:invalid-argument-type:4 four deliberate `col
 tests/unit/test_graph_validation.py:invalid-assignment:1 the `sys.modules[name] = None` fixture, on a line carrying the waiver pair ty does not read
 tests/unit/test_health_declaration.py:no-matching-overload:1 a deliberate `check=3` misuse on a line carrying the waiver pair ty does not read
 tests/unit/test_markers.py:invalid-argument-type:2 two deliberate `provides()` misuses, both lines carrying the waiver pair ty does not read
-tests/unit/test_overrides.py:invalid-argument-type:1 a deliberate `override(42, 'x')` misuse on a line carrying the waiver pair ty does not read
 tests/unit/test_provider_contracts.py:unresolved-attribute:1 the `__wrapped__` assignment fixture, on a line carrying the waiver pair ty does not read
 tests/unit/test_providers.py:missing-type-argument:1 the bare `Iterator` fixture, on a line carrying the waiver pair ty does not read
 tests/unit/test_providers.py:no-matching-overload:1 a deliberate `bind(42, ...)` misuse on a line carrying the waiver pair ty does not read

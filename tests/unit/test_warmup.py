@@ -215,7 +215,7 @@ def test_warmup_honours_an_active_override() -> None:
         value = 'fake'
 
     di = Container().bind(Config).freeze()
-    with di.override(Config, FakeConfig()):
+    with di.override(Config).using(FakeConfig()):
         report = di.warmup()
         assert di[Config].value == 'fake'
     assert [node.key for node in report.constructed] == [Config]

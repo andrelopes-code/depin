@@ -11,7 +11,7 @@ from collections.abc import Generator
 
 import pytest
 
-from depin import Container, FrozenContainer, ProviderKey, Scope, Token, optional_hosted_container
+from depin import Container, FrozenContainer, Scope, ScopeSeed, Token, optional_hosted_container
 from depin.errors import MissingProviderError
 from depin.ext.asgi import ASGIScope, Message, RequestScope
 
@@ -51,8 +51,8 @@ async def send(message: Message) -> None:
     """Discard the message: nothing here asserts on the response stream."""
 
 
-def seed_request_id(value: str) -> tuple[ProviderKey, object]:
-    return (REQUEST_ID, value)
+def seed_request_id(value: str) -> ScopeSeed:
+    return ScopeSeed(REQUEST_ID, value)
 
 
 async def test_a_lifespan_scope_is_forwarded_with_no_scope_opened() -> None:
@@ -174,8 +174,8 @@ async def test_two_concurrent_requests_each_see_their_own_seed() -> None:
     released = asyncio.Event()
     seen: dict[object, str] = {}
 
-    def seed(scope: ASGIScope) -> tuple[ProviderKey, object]:
-        return (REQUEST_ID, scope['path'])
+    def seed(scope: ASGIScope) -> ScopeSeed:
+        return ScopeSeed(REQUEST_ID, scope['path'])
 
     async def app(scope: ASGIScope, _receive: object, _send: object) -> None:
         path = scope['path']

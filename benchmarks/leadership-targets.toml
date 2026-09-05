@@ -1,0 +1,97 @@
+[resolve_cached_singleton]
+fixed_seconds = 0.0000005
+justification = 'One cached lookup ceiling from the steady-state resolution formula.'
+
+[resolve_cached_singleton_through_an_alias]
+fixed_seconds = 0.000001
+justification = 'Cached lookup plus one alias hop ceiling from the indirection formula.'
+
+[resolve_singleton_through_a_two_deep_decoration_chain]
+fixed_seconds = 0.0000015
+justification = 'Cached lookup plus two decoration hops ceiling from the wrapper formula.'
+
+[resolve_a_collection_of_10]
+fixed_seconds = 0.000005
+justification = 'Collection assembly ceiling from the fixed per-member lookup formula at ten members.'
+
+[resolve_a_collection_of_100]
+fixed_seconds = 0.00005
+justification = 'Collection assembly ceiling from the fixed per-member lookup formula at one hundred members.'
+
+[resolve_a_transient_chain]
+fixed_seconds = 0.00001
+justification = 'Transient construction ceiling from the per-node construction formula.'
+
+[open_and_close_a_scope]
+fixed_seconds = 0.000012
+justification = 'Scope entry and exit ceiling from the frame lifecycle formula.'
+
+[call_through_an_inject_wrapper]
+fixed_seconds = 0.000001
+justification = 'One injection wrapper dispatch ceiling from the parameter binding formula.'
+
+[call_through_an_inject_wrapper_with_explicit_arguments]
+fixed_seconds = 0.000001
+justification = 'One injection wrapper dispatch ceiling from the explicit argument binding formula.'
+
+[resolve_an_async_singleton]
+fixed_seconds = 0.0000005
+justification = 'Cached asynchronous lookup ceiling from the coroutine boundary formula.'
+
+[resolve_with_no_active_override]
+fixed_seconds = 0.0000005
+justification = 'Cached lookup with an empty override stack ceiling from the baseline formula.'
+
+[resolve_through_an_active_override]
+fixed_seconds = 0.000001
+justification = 'Cached lookup plus one override frame ceiling from the substitution formula.'
+
+[resolve_a_generic_key]
+fixed_seconds = 0.0000005
+justification = 'Cached generic-key lookup ceiling from the key resolution formula.'
+
+[construct_a_singleton_for_the_first_time]
+fixed_seconds = 0.0000005
+justification = 'First singleton construction ceiling from the cold-cache formula.'
+
+[resolve_a_sync_resource_with_teardown]
+fixed_seconds = 0.000003
+justification = 'Synchronous resource construction and teardown ceiling from the lifecycle formula.'
+
+[warmup_a_cold_singleton_graph]
+fixed_seconds = 0.0005
+justification = 'Graph warmup ceiling from the per-singleton construction formula at one thousand nodes.'
+
+[open_a_request_shaped_scope]
+fixed_seconds = 0.0000035
+justification = 'Request-shaped scope lifecycle ceiling from the scoped resource formula.'
+
+[fastapi_cpu_light_endpoint]
+fixed_seconds = 0.000012
+fraction_of_direct = 0.1
+justification = 'FastAPI light endpoint ceiling from the direct baseline fraction formula.'
+
+[fastapi_request_scoped_graph]
+fixed_seconds = 0.000016
+fraction_of_direct = 0.1
+justification = 'FastAPI scoped graph ceiling from the direct baseline fraction formula.'
+
+[fastapi_singletons_and_transients]
+fixed_seconds = 0.000016
+fraction_of_direct = 0.1
+justification = 'FastAPI singleton and transient ceiling from the direct baseline fraction formula.'
+
+[fastapi_async_resource_teardown]
+fixed_seconds = 0.000018
+fraction_of_direct = 0.1
+justification = 'FastAPI asynchronous teardown ceiling from the direct baseline fraction formula.'
+
+[fastapi_endpoint_with_work]
+fixed_seconds = 0.000012
+fraction_of_direct = 0.1
+justification = 'FastAPI representative work ceiling from the direct baseline fraction formula.'
+
+[fastapi_application_startup]
+fixed_seconds = 0.00003
+fraction_of_direct = 0.1
+justification = 'FastAPI startup ceiling from the direct baseline fraction formula.'

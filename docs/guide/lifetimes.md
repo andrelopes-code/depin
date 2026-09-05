@@ -117,7 +117,8 @@ finally:
 
 Calling it twice is harmless: the second call finds nothing left to drain.
 Calling `close()` on a graph with an async singleton teardown raises
-`TeardownError` — that teardown needs an event loop, so use `aclose()`.
+`AsyncInSyncContextError` before any teardown runs — that teardown needs an
+event loop, so use `aclose()`.
 
 ## Values supplied by the scope
 

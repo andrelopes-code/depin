@@ -27,10 +27,10 @@ Written against depin's public integration contract — `depin.Host` — so it
 reaches nothing inside the private package.
 """
 
-from collections.abc import Callable, Iterable, MutableMapping
+from collections.abc import Iterable, MutableMapping
 from typing import Protocol
 
-from depin import FrozenContainer, Host, ProviderKey
+from depin import FrozenContainer, Host, ScopeSeeder
 
 type Environ = MutableMapping[str, object]
 """The per-request environment: CGI variables plus the ``wsgi.*`` server keys.
@@ -102,7 +102,9 @@ class RequestScope[EnvironT, StartResponseT]:
     Example:
         Install the middleware once, per the wrapping framework's own idiom::
 
-            app.wsgi_app = RequestScope(app.wsgi_app, di, seed=lambda environ: (Request, Request(environ)))
+            from depin import ScopeSeed
+
+            app.wsgi_app = RequestScope(app.wsgi_app, di, seed=lambda environ: ScopeSeed(Request, Request(environ)))
     """
 
     __slots__ = ('_app', '_host', '_seed')
@@ -112,7 +114,7 @@ class RequestScope[EnvironT, StartResponseT]:
         app: WSGIApp[EnvironT, StartResponseT],
         container: FrozenContainer,
         *,
-        seed: Callable[[EnvironT], tuple[ProviderKey, object] | None] | None = None,
+        seed: ScopeSeeder[EnvironT] | None = None,
     ) -> None:
         self._app = app
         self._host = Host(container)
@@ -123,5 +125,5 @@ class RequestScope[EnvironT, StartResponseT]:
             if self._seed is not None:
                 seeded = self._seed(environ)
                 if seeded is not None:
-                    frame.provide(*seeded)
+                    seeded.apply(frame)
             return self._app(environ, start_response)

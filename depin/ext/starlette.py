@@ -11,11 +11,11 @@ application, nothing more.
 from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from depin import FrozenContainer, ProviderKey
+from depin import FrozenContainer, ScopeSeed
 from depin.ext.asgi import RequestScope as ASGIRequestScope
 
 
-def seed_request(scope: Scope) -> tuple[ProviderKey, object]:
+def seed_request(scope: Scope) -> ScopeSeed:
     """Build the `starlette.requests.Request` that `RequestScope` places into each HTTP frame.
 
     The request is constructed from the connection scope alone, which is what
@@ -34,13 +34,13 @@ def seed_request(scope: Scope) -> tuple[ProviderKey, object]:
         ...     'path': '/orders',
         ...     'headers': [(b'x-tenant', b'acme')],
         ... }
-        >>> key, request = seed_request(scope)
-        >>> key is Request
+        >>> seed = seed_request(scope)
+        >>> seed.key is Request
         True
-        >>> request.headers['x-tenant']
+        >>> seed.value.headers['x-tenant']
         'acme'
     """
-    return Request, Request(scope)
+    return ScopeSeed(Request, Request(scope))
 
 
 class RequestScope(ASGIRequestScope[Scope, Receive, Send]):

@@ -14,7 +14,7 @@ from typing import Protocol
 
 import pytest
 
-from depin import FrozenContainer, Host, ScopeFrame, Token
+from depin import FrozenContainer, Host, ProviderKey, ScopeFrame
 from depin.errors import ContainerNotBoundError
 
 _CONTAINER_NOT_DEFINED = (
@@ -34,25 +34,25 @@ class OverrideFactory(Protocol):
     only this type.
     """
 
-    def __call__[T](
-        self,
-        key: type[T] | Token[T],
-        replacement: T,
-        *,
-        tag: str | None = None,
-    ) -> contextlib.AbstractContextManager[FrozenContainer]: ...
+    def __call__(self, key: ProviderKey, /, *, tag: str | None = None) -> 'OverrideHandle': ...
+
+
+class OverrideHandle(Protocol):
+    """A selected pytest override that receives its replacement through `using()`."""
+
+    def using(self, replacement: object, /) -> contextlib.AbstractContextManager[FrozenContainer]: ...
 
 
 class AsyncOverrideFactory(Protocol):
     """The callable `depin_aoverride` returns; the async counterpart to `OverrideFactory`."""
 
-    def __call__[T](
-        self,
-        key: type[T] | Token[T],
-        replacement: T,
-        *,
-        tag: str | None = None,
-    ) -> contextlib.AbstractAsyncContextManager[FrozenContainer]: ...
+    def __call__(self, key: ProviderKey, /, *, tag: str | None = None) -> 'AsyncOverrideHandle': ...
+
+
+class AsyncOverrideHandle(Protocol):
+    """A selected async pytest override that receives its replacement through `using()`."""
+
+    def using(self, replacement: object, /) -> contextlib.AbstractAsyncContextManager[FrozenContainer]: ...
 
 
 @pytest.fixture
@@ -84,8 +84,8 @@ def depin_override(depin_container: FrozenContainer) -> OverrideFactory:
     with.
 
     Returns:
-        A callable ``(key, replacement, *, tag=None)`` whose result is a
-        context manager yielding `depin_container`.
+        A callable ``(key, *, tag=None)`` whose result accepts `using(replacement)`
+        and yields `depin_container` inside its context manager.
 
     Raises:
         MissingProviderError: ``key`` is not a valid provider key type.
@@ -110,7 +110,7 @@ def depin_override(depin_container: FrozenContainer) -> OverrideFactory:
         >>> di = Container().bind(Clock).bind(Report).freeze()
         >>> _ = di[Report]
         >>> di.reset()
-        >>> with di.override(Clock, FakeClock()):
+        >>> with di.override(Clock).using(FakeClock()):
         ...     di[Report].clock.now()
         'fake'
         >>> di.reset()
@@ -120,19 +120,22 @@ def depin_override(depin_container: FrozenContainer) -> OverrideFactory:
         ```
     """
 
-    @contextlib.contextmanager
-    def factory[T](
-        key: type[T] | Token[T],
-        replacement: T,
-        *,
-        tag: str | None = None,
-    ) -> Generator[FrozenContainer]:
-        depin_container.reset()
-        try:
-            with depin_container.override(key, replacement, tag=tag):
-                yield depin_container
-        finally:
+    class Handle:
+        def __init__(self, key: ProviderKey, tag: str | None) -> None:
+            self._key = key
+            self._tag = tag
+
+        @contextlib.contextmanager
+        def using(self, replacement: object, /) -> Generator[FrozenContainer]:
             depin_container.reset()
+            try:
+                with depin_container.override(self._key, tag=self._tag).using(replacement):
+                    yield depin_container
+            finally:
+                depin_container.reset()
+
+    def factory(key: ProviderKey, /, *, tag: str | None = None) -> OverrideHandle:
+        return Handle(key, tag)
 
     return factory
 
@@ -146,27 +149,30 @@ def depin_aoverride(depin_container: FrozenContainer) -> AsyncOverrideFactory:
     while `areset()` drains it correctly.
 
     Returns:
-        A callable ``(key, replacement, *, tag=None)`` whose result is an
-        async context manager yielding `depin_container`.
+        A callable ``(key, *, tag=None)`` whose result accepts `using(replacement)`
+        and yields `depin_container` inside its async context manager.
 
     Raises:
         MissingProviderError: ``key`` is not a valid provider key type.
         ExceptionGroup: A teardown drained by `areset()` failed.
     """
 
-    @contextlib.asynccontextmanager
-    async def factory[T](
-        key: type[T] | Token[T],
-        replacement: T,
-        *,
-        tag: str | None = None,
-    ) -> AsyncGenerator[FrozenContainer]:
-        await depin_container.areset()
-        try:
-            with depin_container.override(key, replacement, tag=tag):
-                yield depin_container
-        finally:
+    class Handle:
+        def __init__(self, key: ProviderKey, tag: str | None) -> None:
+            self._key = key
+            self._tag = tag
+
+        @contextlib.asynccontextmanager
+        async def using(self, replacement: object, /) -> AsyncGenerator[FrozenContainer]:
             await depin_container.areset()
+            try:
+                with depin_container.override(self._key, tag=self._tag).using(replacement):
+                    yield depin_container
+            finally:
+                await depin_container.areset()
+
+    def factory(key: ProviderKey, /, *, tag: str | None = None) -> AsyncOverrideHandle:
+        return Handle(key, tag)
 
     return factory
 

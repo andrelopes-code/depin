@@ -42,6 +42,22 @@ equivalent empty chain. Both packages precompute provider-specific work. This is
 evidence that most of the current dispatch overhead is avoidable without first
 introducing native code.
 
+## Experiment decision: 2026-09-04
+
+The bounded runtime experiment added an empty override-stack snapshot and a
+protected read for a hot synchronous cached-singleton value. The cached
+singleton improved from 4.910 to 4.665 microseconds (-5.0%), and the no-active-
+override path improved from 4.799 to 4.589 microseconds (-4.4%). Guard
+workloads changed by +3.3% for active overrides, +4.2% for aliases, -2.5% for
+decorators, and +1.0% for transients. Ninety focused tests and the ruff,
+basedpyright, and mypy gates were green.
+
+This is a NO-GO: neither required path reached the >=10% improvement gate. No
+budget or code from this experiment is accepted. The next selected bounded
+experiment is freeze-time composition of closures for synchronous transient
+chains, subject to measurement. FastAPI remains subsequent to the core work,
+and the native path remains NO-GO.
+
 ## Goals
 
 - Make the common no-override path execute a specialized program per requested
@@ -276,6 +292,7 @@ has reached its demonstrated potential.
 
 ## Decision requested
 
-Accept freeze-time compilation and iterative cold construction as the primary
-core performance direction, with the final execution strategy selected by a
-measured prototype rather than preference.
+Continue bounded, measured experiments under this proposal. The 2026-09-04
+cached-runtime experiment is NO-GO; the next selected experiment is freeze-time
+composition of closures for synchronous transient chains. The final execution
+strategy remains unselected until an experiment meets the acceptance criteria.

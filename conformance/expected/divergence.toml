@@ -15,19 +15,3 @@
 # it is spelled.
 #
 # `mode` is optional and defaults to "core".
-
-[d01]
-misuse = "override() given a replacement of an unrelated type"
-mypy = "accept"
-pyright = "accept"
-basedpyright = "accept"
-ty = "accept"
-pyrefly = "accept"
-
-[d02]
-misuse = "value() given a value of a type the token does not carry"
-mypy = "accept"
-pyright = "accept"
-basedpyright = "accept"
-ty = "accept"
-pyrefly = "reject"

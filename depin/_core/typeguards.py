@@ -17,13 +17,13 @@ from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from types import GenericAlias, NoneType, UnionType
 from typing import Generic, TypeGuard, Union, get_args, get_origin
 
-from depin._core.markers import TokenKey
+from depin._core.markers import TokenKeyBase
 from depin._core.spec import ALIAS_PARAM, ParamSpec, ProviderKey, Underlying, fmt_key, fmt_parameterised
 from depin.errors import InvalidProviderError
 
 
 def is_provider_key(value: object) -> TypeGuard[ProviderKey]:
-    return isinstance(value, type | str | TokenKey | Underlying) or is_generic_key(value)
+    return isinstance(value, type | str | TokenKeyBase | Underlying) or is_generic_key(value)
 
 
 def generic_origin(value: object) -> type[object] | None:

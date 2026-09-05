@@ -30,11 +30,11 @@ from wsgiref.types import StartResponse, WSGIApplication, WSGIEnvironment
 
 from flask import Request
 
-from depin import FrozenContainer, ProviderKey
+from depin import FrozenContainer, ScopeSeed
 from depin.ext.wsgi import RequestScope as WSGIRequestScope
 
 
-def seed_request(environ: WSGIEnvironment) -> tuple[ProviderKey, object]:
+def seed_request(environ: WSGIEnvironment) -> ScopeSeed:
     """Build the `flask.Request` that `RequestScope` places into each request frame.
 
     Args:
@@ -47,13 +47,13 @@ def seed_request(environ: WSGIEnvironment) -> tuple[ProviderKey, object]:
         >>> from wsgiref.util import setup_testing_defaults
         >>> environ = {'PATH_INFO': '/orders', 'HTTP_X_TENANT': 'acme'}
         >>> setup_testing_defaults(environ)
-        >>> key, request = seed_request(environ)
-        >>> key is Request
+        >>> seed = seed_request(environ)
+        >>> seed.key is Request
         True
-        >>> request.headers['x-tenant']
+        >>> seed.value.headers['x-tenant']
         'acme'
     """
-    return Request, Request(environ)
+    return ScopeSeed(Request, Request(environ))
 
 
 class RequestScope(WSGIRequestScope[WSGIEnvironment, StartResponse]):

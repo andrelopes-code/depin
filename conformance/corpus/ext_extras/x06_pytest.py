@@ -25,8 +25,8 @@ from typing import assert_type
 
 import pytest
 
-from depin import Container, FrozenContainer, ScopeFrame, Token
-from depin.ext.pytest import AsyncOverrideFactory, OverrideFactory
+from depin import Container, FrozenContainer, ProviderKey, ScopeFrame, Token
+from depin.ext.pytest import AsyncOverrideFactory, AsyncOverrideHandle, OverrideFactory, OverrideHandle
 from depin.ext.pytest import depin_aoverride as real_aoverride_fixture
 from depin.ext.pytest import depin_ascope as real_ascope_fixture
 from depin.ext.pytest import depin_container as real_container_fixture
@@ -75,42 +75,40 @@ def the_plugin_exports_all_five_fixtures() -> None:
 
 def the_container_method_behind_the_fixture_satisfies_the_protocol(di: FrozenContainer) -> None:
     _factory: OverrideFactory = di.override
+    _handle: OverrideHandle = di.override(Clock)
 
 
 def an_async_context_manager_factory_satisfies_the_async_protocol(di: FrozenContainer) -> None:
-    @contextlib.asynccontextmanager
-    async def factory[T](
-        key: type[T] | Token[T],
-        replacement: T,
-        *,
-        tag: str | None = None,
-    ) -> AsyncGenerator[FrozenContainer]:
-        await di.areset()
-        with di.override(key, replacement, tag=tag):
+    class Handle:
+        @contextlib.asynccontextmanager
+        async def using(self, replacement: object, /) -> AsyncGenerator[FrozenContainer]:
             yield di
+
+    def factory(key: ProviderKey, /, *, tag: str | None = None) -> AsyncOverrideHandle:
+        return Handle()
 
     _factory: AsyncOverrideFactory = factory
 
 
 def a_test_overrides_a_class_key(depin_override: OverrideFactory) -> None:
-    with depin_override(Clock, FakeClock()) as di:
+    with depin_override(Clock).using(FakeClock()) as di:
         assert_type(di, FrozenContainer)
         assert_type(di.resolve(Report), Report)
         assert_type(di.resolve(Report).clock.now(), str)
 
 
 def a_test_overrides_a_token_key(depin_override: OverrideFactory) -> None:
-    with depin_override(tenant, 'globex') as di:
+    with depin_override(tenant).using('globex') as di:
         assert_type(di.resolve(tenant), str)
 
 
 def a_test_overrides_a_tagged_binding(depin_override: OverrideFactory) -> None:
-    with depin_override(Clock, FakeClock(), tag='primary') as di:
+    with depin_override(Clock, tag='primary').using(FakeClock()) as di:
         assert_type(di, FrozenContainer)
 
 
 async def an_async_test_overrides_a_class_key(depin_aoverride: AsyncOverrideFactory) -> None:
-    async with depin_aoverride(Clock, FakeClock()) as di:
+    async with depin_aoverride(Clock).using(FakeClock()) as di:
         assert_type(di, FrozenContainer)
         assert_type(await di.aresolve(Report), Report)
 

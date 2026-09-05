@@ -1,0 +1,63 @@
+{
+  "provenance": {
+    "harness_revision": "harness-revision",
+    "null_dataset_sha256": "81341ddf49a41b09d47fb844454fb1f29ff3cad89eb1cf46a351b347584725c4",
+    "protocol": {
+      "budget_contract_sha256": "8142bcee8b717d86184c7c6daff05d5b521a26d0850d0d6f94c848d08cd17a6b",
+      "environment": {
+        "host": {
+          "available_processors": 1,
+          "cpu_model": "synthetic-cpu",
+          "machine": "synthetic-machine",
+          "processor": "synthetic-processor",
+          "system": "synthetic-system"
+        },
+        "interpreter": {
+          "free_threading": false,
+          "hash_randomization": true,
+          "implementation": "CPython",
+          "version": "3.12.0"
+        },
+        "python_hash_seed": "0"
+      },
+      "minimum_repetitions": 5,
+      "pins": {
+        "dependency-injector": "4.49.1",
+        "pydepin": "0.17.1"
+      },
+      "protocol": "counterbalanced-comparison-v1",
+      "schema_version": 1,
+      "targets": {
+        "allocations_of_a_cached_singleton_resolution": {
+          "candidates": [
+            {
+              "classification": "equivalent",
+              "label": "dependency-injector-4.49.1",
+              "reason": "same observed cached resolution"
+            },
+            {
+              "classification": "partial",
+              "label": "dishka-1.10.1",
+              "reason": "does not preserve the complete observation"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "cannot express this cache lifecycle"
+            }
+          ],
+          "claim": "What does one resolution allocate once the value is already built?",
+          "secondary_metrics": ["allocations"],
+          "target": {"fixed_seconds": 1.0, "fraction_of_direct": null}
+        }
+      }
+    },
+    "protocol_fingerprint": "284208236dda77d4f7fc58a7009967414c70fa907a8250f36c9eb0ba0579cd2a",
+    "source_revision": "head-revision",
+    "version": 1
+  },
+  "schema_version": 1,
+  "workloads": {
+    "allocations_of_a_cached_singleton_resolution": {"allowance": 0.01, "eligible": true, "p99": 0.01}
+  }
+}

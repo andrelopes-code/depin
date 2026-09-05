@@ -6,7 +6,7 @@ from enum import Enum
 from types import GenericAlias, UnionType
 from typing import Final, Protocol, TypeGuard, final, get_args, get_origin, runtime_checkable
 
-from depin._core.markers import Token, TokenKey
+from depin._core.markers import Token, TokenKeyBase
 from depin._core.scope import Scope
 
 
@@ -100,7 +100,7 @@ class Underlying:
     applied: int
 
 
-type ProviderKey = type[object] | TokenKey | str | GenericAlias | Underlying
+type ProviderKey = type[object] | TokenKeyBase | str | GenericAlias | Underlying
 """What a provider can be bound and resolved under: a class, a `Token`, a name, or a parameterised generic.
 
 The parameterised case needs no member of its own. A generic written in
@@ -141,7 +141,7 @@ class FrameBinding:
     middleware or other scope-setup code (for example ``fastapi.Request``).
     """
 
-    key: 'type[object] | TokenKey'
+    key: 'type[object] | TokenKeyBase'
 
 
 def is_frame_binding(value: object) -> TypeGuard[FrameBinding]:
@@ -248,7 +248,7 @@ built, not when a value is resolved.
 class BindRecord:
     source: object
     scope: Scope
-    provides: type[object] | TokenKey | str | None
+    provides: type[object] | TokenKeyBase | str | None
     tag: str | None
     condition: Condition | None = None
     check: object | None = None
@@ -340,6 +340,33 @@ class Bindings(Protocol):
     def records(self) -> Iterable[BindRecord]:
         """Return this source's bindings, in declaration order."""
         ...
+
+
+def render_key(key: ProviderKey, /, *, tag: str | None = None) -> str:
+    """Render a provider key and its optional tag for public diagnostics."""
+    rendered = fmt_key(key)
+    return rendered if tag is None else f'{rendered} (tag={tag!r})'
+
+
+def fmt_provider(spec: ProviderSpec) -> str:
+    """Render a provider, naming its wrapper when it is a decoration layer."""
+    rendered = render_key(spec.key, tag=spec.tag)
+    if not _is_decoration_layer(spec):
+        return rendered
+    return f'{rendered} [decorated by {fmt_source(spec.source)}]'
+
+
+def _is_decoration_layer(spec: ProviderSpec) -> bool:
+    key = spec.key.key if isinstance(spec.key, Underlying) else spec.key
+    return any(
+        isinstance(param.key, Underlying) and param.key.key == key and param.tag == spec.tag for param in spec.params
+    )
+
+
+def fmt_source(source: object) -> str:
+    """Render a provider source without depending on an address-bearing repr."""
+    name = getattr(source, '__qualname__', None)
+    return name if isinstance(name, str) else type(source).__qualname__
 
 
 def fmt_key(key: object) -> str:

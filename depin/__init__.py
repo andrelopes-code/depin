@@ -26,7 +26,7 @@ from importlib.metadata import PackageNotFoundError, version
 from depin._core.bindings import ScopeDecorator
 from depin._core.container import Container
 from depin._core.diagnostics import DependencyGraph, GraphEdge, GraphNode
-from depin._core.frozen import FrozenContainer
+from depin._core.frozen import FrozenContainer, ProviderOverride
 from depin._core.health import HealthCheck, HealthReport, HealthResult
 from depin._core.hosting import (
     CONTRACT_VERSION,
@@ -35,11 +35,13 @@ from depin._core.hosting import (
     hosted_container,
     optional_hosted_container,
 )
-from depin._core.markers import Named, Tag, Token, TokenKey, injected, provides
+from depin._core.markers import Named, Tag, Token, injected, provides
 from depin._core.registry import Registry
 from depin._core.scope import Scope, ScopeFrame
-from depin._core.spec import Bindings, Condition, ProviderKey, ProviderShape, Underlying
+from depin._core.seeds import ScopeSeed, ScopeSeeder
+from depin._core.spec import Bindings, Condition, ProviderKey, ProviderShape, Underlying, render_key
 from depin._core.warmup import WarmupReport
+from depin.errors import AsyncInSyncContextError, ContainerClosedError, ContainerLifecycleError
 
 try:
     __version__ = version('pydepin')
@@ -50,9 +52,12 @@ except PackageNotFoundError:
 
 __all__ = (
     'CONTRACT_VERSION',
+    'AsyncInSyncContextError',
     'Bindings',
     'Condition',
     'Container',
+    'ContainerClosedError',
+    'ContainerLifecycleError',
     'ContractVersion',
     'DependencyGraph',
     'FrozenContainer',
@@ -64,18 +69,21 @@ __all__ = (
     'Host',
     'Named',
     'ProviderKey',
+    'ProviderOverride',
     'ProviderShape',
     'Registry',
     'Scope',
     'ScopeDecorator',
     'ScopeFrame',
+    'ScopeSeed',
+    'ScopeSeeder',
     'Tag',
     'Token',
-    'TokenKey',
     'Underlying',
     'WarmupReport',
     'hosted_container',
     'injected',
     'optional_hosted_container',
     'provides',
+    'render_key',
 )

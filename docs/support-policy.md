@@ -1,5 +1,8 @@
 # Support policy
 
+The [stability and compatibility policy](stability.md) defines which depin
+surfaces are public and when the V1 Semantic Versioning commitment begins.
+
 ## Python versions
 
 depin supports every CPython release that upstream still supports, from 3.12
@@ -148,21 +151,20 @@ ty cannot express an anti-`Any` rule at all, and stock Pyright has no equivalent
 of `reportAny`. This requirement is therefore two checkers' and not five's, and
 the policy says so rather than implying coverage it does not have.
 
-### Two known false negatives
+### One known false negative
 
-Two public signatures accept a call they should reject. Both are recorded as
-divergence fixtures whose gate is each checker's verdict rather than rejection,
-and both are routed to the Step 8 surface review, which is the last window in
-which the call shape may change.
+One public signature accepts a call it should reject. It is recorded as a
+divergence fixture whose gate is each checker's verdict rather than rejection,
+and is routed to the Step 8 surface review, which is the last window in which
+the call shape may change.
 
 | Call | Verdict today |
 | --- | --- |
-| `FrozenContainer.override(Config, Other())` | accepted by all five |
 | `Container.value(Token[int], 'str')` | accepted by four; rejected by Pyrefly |
 
-In both, the type variable appears in the key parameter and in the value
-parameter, so the solver widens it to the join of the two. The gate fails when a
-verdict moves in either direction: a checker that starts rejecting one is news to
+The type variable appears in the key parameter and in the value parameter, so
+the solver widens it to the join of the two. The gate fails when a verdict moves
+in either direction: a checker that starts rejecting it is news to
 be recorded deliberately, and a checker that stops rejecting one is a loss of
 detection.
 

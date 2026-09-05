@@ -19,7 +19,7 @@ from collections.abc import Callable, Iterable, MutableMapping
 from types import TracebackType
 from typing import Protocol
 
-from depin import Container, FrozenContainer, ProviderKey
+from depin import Container, FrozenContainer, ScopeSeed
 from depin.ext.wsgi import Environ as WSGIEnviron
 from depin.ext.wsgi import RequestScope, WSGIApp
 from depin.ext.wsgi import StartResponse as WSGIStartResponse
@@ -45,8 +45,8 @@ class Application:
         return [b'ok']
 
 
-def seed(environ: Environ) -> tuple[ProviderKey, object] | None:
-    return Request, Request(environ)
+def seed(environ: Environ) -> ScopeSeed:
+    return ScopeSeed(Request, Request(environ))
 
 
 def build() -> FrozenContainer:
@@ -66,7 +66,7 @@ def the_middleware_is_callable_at_the_pair_it_was_built_with(container: FrozenCo
 
 
 def a_seed_is_a_callable_from_the_environment_to_a_key_and_a_value() -> None:
-    _seed: Callable[[Environ], tuple[ProviderKey, object] | None] = seed
+    _seed: Callable[[Environ], ScopeSeed] = seed
 
 
 def the_middleware_installs_without_a_seed(container: FrozenContainer) -> None:

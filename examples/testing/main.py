@@ -47,7 +47,7 @@ def main() -> None:
 
     # The override applies everywhere the key appears, including deep in the
     # graph — Report never learns that its Clock was swapped.
-    with di.override(Clock, FrozenClock('2026-01-01')):
+    with di.override(Clock).using(FrozenClock('2026-01-01')):
         print(di[Report].render())
 
     print(di[Report].render())

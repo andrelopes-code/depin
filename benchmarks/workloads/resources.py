@@ -74,7 +74,7 @@ NO_BASELINE_HOLDING = (
 _SOURCES: dict[str, Workload] = {workload.name: workload for workload in (*MICRO_WORKLOADS, *COMPONENT_WORKLOADS)}
 
 
-def _key_name(key: ProviderKey) -> str:
+def key_name(key: ProviderKey) -> str:
     return key.__name__ if isinstance(key, type) else str(key)
 
 
@@ -331,7 +331,7 @@ def _retained_by_a_warm_singleton_cache() -> Workload:
 
         def observe() -> Observation:
             frozen.reset()
-            built = tuple(_key_name(node.key) for node in frozen.warmup().constructed)
+            built = tuple(key_name(node.key) for node in frozen.warmup().constructed)
             return Observation(result=f'{len(built)} constructed', constructed=built, closed=())
 
         return Session(call=build, observe=observe)

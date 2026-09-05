@@ -34,7 +34,6 @@ from depin import (
     Scope,
     ScopeFrame,
     Token,
-    TokenKey,
     Underlying,
     WarmupReport,
     hosted_container,
@@ -133,7 +132,7 @@ async def test_ascope_yields_a_frame() -> None:
 
 def test_override_yields_the_container() -> None:
     di = Container().bind(Config).freeze()
-    with di.override(Config, Config()) as overridden:
+    with di.override(Config).using(Config()) as overridden:
         assert_type(overridden, FrozenContainer)
 
 
@@ -428,8 +427,6 @@ def _first_key(key: ProviderKey) -> ProviderKey:
 
 def test_a_token_is_accepted_where_a_provider_key_is_expected() -> None:
     assert_type(_first_key(port), ProviderKey)
-    key: TokenKey = port
-    assert_type(_first_key(key), ProviderKey)
 
 
 def test_a_token_is_an_alias_and_an_explain_argument() -> None:

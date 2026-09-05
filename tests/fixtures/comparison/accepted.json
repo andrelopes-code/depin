@@ -1,0 +1,69 @@
+{
+  "accepted": true,
+  "collection_command": "python -m benchmarks.comparison.collection collect --repetitions 5",
+  "deterministic": {
+    "base": {
+      "readings": {
+        "allocations": {
+          "allocations_of_a_cached_singleton_resolution": {"blocks": 4, "size": 320}
+        },
+        "work": {"allocations_of_a_cached_singleton_resolution": 12}
+      },
+      "source_revision": "base-revision"
+    },
+    "budget_contract": {
+      "path": "benchmarks/budgets.toml",
+      "sha256": "8142bcee8b717d86184c7c6daff05d5b521a26d0850d0d6f94c848d08cd17a6b"
+    },
+    "head": {
+      "readings": {
+        "allocations": {
+          "allocations_of_a_cached_singleton_resolution": {"blocks": 4, "size": 320}
+        },
+        "work": {"allocations_of_a_cached_singleton_resolution": 12}
+      },
+      "source_revision": "head-revision"
+    }
+  },
+  "environment": {
+    "host": {
+      "available_processors": 1,
+      "cpu_model": "synthetic-cpu",
+      "machine": "synthetic-machine",
+      "processor": "synthetic-processor",
+      "system": "synthetic-system"
+    },
+    "interpreter": {
+      "free_threading": false,
+      "hash_randomization": true,
+      "implementation": "CPython",
+      "version": "3.12.0"
+    },
+    "python_hash_seed": "0"
+  },
+  "harness_revision": "harness-revision",
+  "pins": {"dependency-injector": "4.49.1", "pydepin": "0.17.1"},
+  "protocol": "counterbalanced-comparison-v1",
+  "repetitions": [
+    {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}},
+    {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}},
+    {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}},
+    {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}},
+    {"samples": {"test_comparison[allocations_of_a_cached_singleton_resolution-dependency-injector-4.49.1]": {"mean": 1.0, "median": 1.0, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-depin]": {"mean": 0.9, "median": 0.9, "rounds": 1000}, "test_comparison[allocations_of_a_cached_singleton_resolution-direct]": {"mean": 0.4, "median": 0.4, "rounds": 1000}}}
+  ],
+  "seed": 17,
+  "schema_version": 1,
+  "source_revision": "head-revision",
+  "targets": {
+    "allocations_of_a_cached_singleton_resolution": {
+      "claim": "What does one resolution allocate once the value is already built?",
+      "candidates": [
+        {"classification": "equivalent", "label": "dependency-injector-4.49.1", "reason": "same observed cached resolution"},
+        {"classification": "partial", "label": "dishka-1.10.1", "reason": "does not preserve the complete observation"},
+        {"classification": "incomparable", "label": "wireup-2.12.0", "reason": "cannot express this cache lifecycle"}
+      ],
+      "secondary_metrics": ["allocations"],
+      "target": {"fixed_seconds": 1.0, "fraction_of_direct": null}
+    }
+  }
+}

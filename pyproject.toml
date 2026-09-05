@@ -114,6 +114,10 @@ bench = [
     "pytest-benchmark>=5.1",
     "fastapi>=0.133",
     "httpx>=0.27",
+    "dependency-injector==4.49.1",
+    "dishka==1.10.1",
+    "wireup==2.12.0",
+    "svcs==26.1.0",
 ]
 docs = [
     # MkDocs 2.0 removes the plugin system and the theming system with no
@@ -214,9 +218,9 @@ show_missing = true
 source_paths = ["depin"]
 # mutmut runs `pytest tests/unit` from inside `mutants/`, so anything the unit
 # suite reads from the working tree has to be copied there too.
-# `conformance/coverage.toml` is read at collection time by
-# `tests/unit/test_conformance_coverage.py`, which parametrises over it.
-also_copy = ["scripts", "conformance"]
+    # The conformance registers reference both source and benchmark files while
+    # collecting the unit suite, so mutmut needs both trees in its sandbox.
+    also_copy = ["scripts", "conformance", "benchmarks"]
 only_mutate = ["depin/_core/*.py"]
 pytest_add_cli_args = ["--timeout=2"]
 pytest_add_cli_args_test_selection = ["tests/unit"]

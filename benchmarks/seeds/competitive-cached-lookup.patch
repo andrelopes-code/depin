@@ -1,0 +1,29 @@
+diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
+--- a/depin/_core/frozen.py
++++ b/depin/_core/frozen.py
+@@ -143,12 +143,13 @@
+         ```
+     """
+ 
+-    __slots__ = ('_lifecycle', '_plan', '_root', '_validate_key')
++    __slots__ = ('_lifecycle', '_plan', '_root', '_validate_key', '_warm_cached_lookup_probe')
+ 
+     def __init__(self, plan: ResolutionPlan) -> None:
+         self._plan = plan
+         self._lifecycle = create_lifecycle_gate()
+         self._root = ScopeFrame(lifecycle=self._lifecycle)
++        self._warm_cached_lookup_probe: dict[object, object] = {}
+         self._validate_key: Callable[[object], TypeGuard[ProviderKey]] = is_provider_key
+         self._lifecycle.on_quiesce = self._quiesce_resolution
+         self._lifecycle.on_reopen = self._resume_resolution
+@@ -200,6 +201,10 @@
+             ```
+         """
+         spec = self._lookup(key, tag)
++        if spec.scope is Scope.SINGLETON:
++            cached = self._root.lookup((spec.key, spec.tag))
++            if cached is not MISSING:
++                self._warm_cached_lookup_probe = {(spec.key, spec.tag): cached}
+         if spec.needs_async:
+             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
+         if spec.scope is Scope.TRANSIENT:

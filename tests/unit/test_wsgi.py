@@ -10,7 +10,7 @@ from collections.abc import Generator, Iterable
 
 import pytest
 
-from depin import Container, FrozenContainer, ProviderKey, Scope, Token, hosted_container, optional_hosted_container
+from depin import Container, FrozenContainer, Scope, ScopeSeed, Token, hosted_container, optional_hosted_container
 from depin.errors import ContainerNotBoundError, MissingProviderError
 from depin.ext.wsgi import Environ, RequestScope
 
@@ -52,8 +52,8 @@ def start_response(status: str, headers: list[tuple[str, str]]) -> object:
     return (status, headers)
 
 
-def seed_request_id(value: str) -> tuple[ProviderKey, object]:
-    return (REQUEST_ID, value)
+def seed_request_id(value: str) -> ScopeSeed:
+    return ScopeSeed(REQUEST_ID, value)
 
 
 def test_a_request_publishes_the_container() -> None:
@@ -86,8 +86,8 @@ def test_a_seed_reads_the_environ_of_its_own_request() -> None:
     di = seeded_container()
     resolved: list[str] = []
 
-    def seed(environ: Environ) -> tuple[ProviderKey, object]:
-        return (REQUEST_ID, str(environ['PATH_INFO']))
+    def seed(environ: Environ) -> ScopeSeed:
+        return ScopeSeed(REQUEST_ID, str(environ['PATH_INFO']))
 
     def app(_environ: Environ, _start_response: object) -> Iterable[bytes]:
         resolved.append(di.resolve(REQUEST_ID))

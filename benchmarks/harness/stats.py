@@ -45,6 +45,26 @@ def _positive(values: Sequence[float], side: str) -> None:
             raise HarnessError(f'{side}[{index}] is {value!r}; a duration must be finite and positive')
 
 
+def bootstrap_paired_log_ratios(
+    base: Sequence[float], head: Sequence[float], *, seed: int, resamples: int = DEFAULT_RESAMPLES
+) -> tuple[float, ...]:
+    """Return the deterministic bootstrap distribution of median paired log ratios."""
+    if len(base) != len(head):
+        raise HarnessError(f'{len(base)} base measurements against {len(head)} head measurements; pairs must match')
+    if not base:
+        raise HarnessError('no measurements to pair')
+    if resamples < 1:
+        raise HarnessError(f'{resamples} resamples; the bootstrap needs at least one')
+    _positive(base, 'base')
+    _positive(head, 'head')
+    differences = [math.log(after) - math.log(before) for before, after in zip(base, head, strict=True)]
+    generator = random.Random(seed)
+    return tuple(
+        statistics.median([differences[generator.randrange(len(differences))] for _ in differences])
+        for _ in range(resamples)
+    )
+
+
 def paired_ratio(
     base: Sequence[float],
     head: Sequence[float],
@@ -62,24 +82,11 @@ def paired_ratio(
         HarnessError: the two sequences differ in length, are empty, carry a
             duration that is not finite and positive, or `resamples` is below one.
     """
-    if len(base) != len(head):
-        raise HarnessError(f'{len(base)} base measurements against {len(head)} head measurements; pairs must match')
-    if not base:
-        raise HarnessError('no measurements to pair')
-    if resamples < 1:
-        raise HarnessError(f'{resamples} resamples; the bootstrap needs at least one')
-    _positive(base, 'base')
-    _positive(head, 'head')
-
+    resampled = sorted(bootstrap_paired_log_ratios(base, head, seed=seed, resamples=resamples))
     differences = [math.log(after) - math.log(before) for before, after in zip(base, head, strict=True)]
-    count = len(differences)
-    generator = random.Random(seed)
-    resampled = sorted(
-        statistics.median([differences[generator.randrange(count)] for _ in range(count)]) for _ in range(resamples)
-    )
     return Paired(
         ratio=math.expm1(statistics.median(differences)),
         low=math.expm1(quantile(resampled, LOWER_QUANTILE)),
         high=math.expm1(quantile(resampled, UPPER_QUANTILE)),
-        n=count,
+        n=len(differences),
     )

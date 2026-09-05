@@ -39,5 +39,36 @@ Measure that worktree against the unmodified one, then remove it:
 git worktree remove --force /tmp/seeded
 ```
 
-The evidence report `specs/evidence/2026-09-02-step-7-performance.md` records the
-verdict each seed produced, and the verdict after it was removed.
+The [performance methodology](../../docs/performance/methodology.md) and
+[reproducing guide](../../docs/performance/reproducing.md) describe how to
+collect and interpret a seed verdict.
+
+## Competitive cached lookup
+
+`competitive-cached-lookup.patch` adds one container-owned dictionary allocation
+and lookup on every warm cached singleton hit. It was measured in a temporary
+clone at `2daaf7ceb82764a0ba44e5ef4c4b4c39048b0a25`, using CPU 0, the v3 archived
+baseline, and the v3 calibration (schema 1, provenance fingerprint
+`643844979a968bf143d3686a5f53bd842e0f71295e8f6f4873dbfd9116579405`).
+
+The seeded collector was `PYTHONPATH=/tmp/task12-seed-v3c.9sWpLf/seed taskset
+-c 0 timeout 1200s /home/dreco/.config/superpowers/worktrees/depin/
+performance-leadership-execution/.venv/bin/python -m
+benchmarks.comparison.collection collect --workload resolve_cached_singleton
+--repetitions 5 --timeout-seconds 1200 --out
+/tmp/task12-seed-v3c.9sWpLf/seed-result --baseline-dir
+/tmp/task12-v3.l6PIqv/baseline --baseline-revision
+4ad63e77bd21eefab15f1dde44c7e62460533da7 --budgets benchmarks/budgets.toml`
+(exit 0). The evaluator against
+`/tmp/task12-v3.l6PIqv/calibration-pinned.json` and the same budgets exited 3
+because focused evidence omits other target rows; the cached verdict itself was
+`loss`.
+
+The post-removal collector at
+`/tmp/task12-seed-v3.cPvvkW/removed-result-v2/comparison.json` also exited 0,
+and its focused evaluator exited 3 with cached verdict `loss`. Removing the seed
+reduced the depin median from 1.88406556845 to 1.73703301698 microseconds
+(8.465%) and reduced the excess ratio to Dependency Injector by 119.616
+percentage points. Both exceed the calibrated 1.5% allowance. The unchanged
+`loss` category is expected: competitive loss has precedence, so the proof is
+the reversible measured degradation rather than a nonexistent category change.

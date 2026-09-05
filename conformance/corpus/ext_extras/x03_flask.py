@@ -22,7 +22,7 @@ from wsgiref.types import StartResponse, WSGIApplication, WSGIEnvironment
 
 from flask import Flask
 
-from depin import Container, FrozenContainer, ProviderKey
+from depin import Container, FrozenContainer, ScopeSeed
 from depin.ext.flask import RequestScope, seed_request
 from depin.ext.wsgi import RequestScope as BaseRequestScope
 from depin.ext.wsgi import WSGIApp
@@ -52,4 +52,4 @@ def the_middleware_specialises_the_generic_base(app: WSGIApplication) -> None:
 
 
 def the_seed_maps_the_environment_to_a_key_and_a_value() -> None:
-    _seed: Callable[[WSGIEnvironment], tuple[ProviderKey, object]] = seed_request
+    _seed: Callable[[WSGIEnvironment], ScopeSeed] = seed_request

@@ -96,7 +96,7 @@ def test_testing_example_overrides_a_protocol_deep_in_the_graph() -> None:
     di = build_testing()
     assert di[Report].render() == 'report at real-time'
 
-    with di.override(Clock, FrozenClock('2026-01-01')):
+    with di.override(Clock).using(FrozenClock('2026-01-01')):
         assert di[Report].render() == 'report at 2026-01-01'
 
     assert di[Report].render() == 'report at real-time'
@@ -107,7 +107,7 @@ def test_eviction_example_evicts_a_consumer_built_before_the_override() -> None:
     real = di[EvictionReport]
     assert real.render() == 'report at real-time'
 
-    with di.override(EvictionClock, EvictionFakeClock()):
+    with di.override(EvictionClock).using(EvictionFakeClock()):
         assert di[EvictionClock].now() == 'fake-time'
         # Report was built and cached above; the override alone does not
         # touch it.

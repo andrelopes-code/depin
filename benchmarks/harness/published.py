@@ -30,7 +30,11 @@ def accepted() -> Path:
     """
     if not RESULTS.is_dir():
         raise HarnessError(f'{RESULTS}: no published results directory')
-    datasets = sorted(path for path in RESULTS.iterdir() if path.is_dir())
+    datasets = sorted(
+        path
+        for path in RESULTS.iterdir()
+        if path.is_dir() and (path / 'environment.json').is_file() and any(path.glob('rep*.json'))
+    )
     if len(datasets) != 1:
         raise HarnessError(
             f'{RESULTS}: holds {len(datasets)} datasets ({", ".join(path.name for path in datasets)}); '

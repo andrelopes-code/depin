@@ -10,7 +10,7 @@ unused annotated local.
 
 from typing import assert_type
 
-from depin import Container, FrozenContainer, ProviderKey, Token, TokenKey
+from depin import Container, FrozenContainer, ProviderKey, Token
 
 
 class Config:
@@ -59,7 +59,6 @@ def a_token_resolves_at_its_own_type() -> None:
 
 def a_token_is_accepted_where_a_key_is_expected() -> None:
     _key: ProviderKey = port
-    _base: TokenKey = port
 
 
 def provides_accepts_a_token() -> None:

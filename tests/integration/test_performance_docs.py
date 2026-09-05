@@ -24,6 +24,18 @@ def test_one_dataset_is_accepted() -> None:
     assert published.accepted().is_dir()
 
 
+def test_published_dataset_ignores_the_comparative_dataset(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    ordinary = tmp_path / '2026-09-02'
+    comparative = tmp_path / '2026-09-02-competitive-baseline'
+    ordinary.mkdir()
+    comparative.mkdir()
+    (ordinary / 'environment.json').write_text('{}', encoding='utf-8')
+    (ordinary / 'rep0.json').write_text('{}', encoding='utf-8')
+    monkeypatch.setattr(published, 'RESULTS', tmp_path)
+
+    assert published.accepted() == ordinary
+
+
 def test_the_page_is_the_render_of_the_accepted_dataset() -> None:
     assert PAGE.read_text(encoding='utf-8') == render(published.accepted())
 

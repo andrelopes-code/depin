@@ -84,7 +84,7 @@ def test_it(depin_container, depin_override) -> None:
     # Built -- and cached, Report is a singleton -- before the override exists.
     assert depin_container[Report].render() == 'report at real'
 
-    with depin_override(Clock, FakeClock()) as di:
+    with depin_override(Clock).using(FakeClock()) as di:
         assert di[Report].render() == 'report at fake'
 """,
             id='evicts-a-consumer-built-before-the-block',
@@ -95,7 +95,7 @@ from shapes import Clock, FakeClock, Report
 
 
 def test_it(depin_container, depin_override) -> None:
-    with depin_override(Clock, FakeClock()) as di:
+    with depin_override(Clock).using(FakeClock()) as di:
         assert di[Report].render() == 'report at fake'
 
     assert depin_container[Report].render() == 'report at real'
@@ -141,7 +141,7 @@ def test_override_leaves_a_value_cached_in_an_open_scope_alone(pytester: pytest.
             built = depin_container[Report]
             assert built.render() == 'report at real'
 
-            with depin_override(Clock, FakeClock()) as di:
+            with depin_override(Clock).using(FakeClock()) as di:
                 # reset() reaches the root cache only, so the value already in
                 # the open scope keeps the Clock it was built with.
                 assert di[Report] is built
@@ -200,7 +200,7 @@ def test_override_forwards_tag_to_only_the_tagged_binding(pytester: pytest.Pytes
 
 
         def test_it(depin_container, depin_override) -> None:
-            with depin_override(Clock, FakeClock(), tag='alt') as di:
+            with depin_override(Clock, tag='alt').using(FakeClock()) as di:
                 assert di.resolve(Clock).now() == 'real'
                 assert di.resolve(Clock, tag='alt').now() == 'fake'
 
@@ -260,7 +260,7 @@ async def test_it(depin_container, depin_aoverride) -> None:
     real = await depin_container.aresolve(Greeting)
     assert await real.greeter.greet() == 'real'
 
-    async with depin_aoverride(Greeter, FakeGreeter()) as di:
+    async with depin_aoverride(Greeter).using(FakeGreeter()) as di:
         fake = await di.aresolve(Greeting)
         assert await fake.greeter.greet() == 'fake'
 

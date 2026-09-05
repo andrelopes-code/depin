@@ -4,7 +4,7 @@ from typing import Protocol
 
 import pytest
 
-from depin import Container, TokenKey
+from depin import Container, Token
 from depin._core.spec import ParamSpec, Underlying
 from depin._core.typeguards import (
     as_alias_target,
@@ -47,9 +47,8 @@ def test_an_underlying_key_is_a_provider_key() -> None:
     assert is_provider_key(Underlying(Store, 0))
 
 
-def test_a_token_key_is_a_provider_key() -> None:
-    """`ProviderKey` names `TokenKey`, so the guard behind it has to admit one."""
-    assert is_provider_key(TokenKey('db.url'))
+def test_a_token_is_a_provider_key() -> None:
+    assert is_provider_key(Token[str]('db.url'))
 
 
 def test_as_check_raises_for_a_non_callable_check() -> None:

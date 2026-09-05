@@ -22,11 +22,11 @@ it into the frame under a key of its own.
 
 from click import Context
 
-from depin import FrozenContainer, ProviderKey, ScopeFrame
+from depin import FrozenContainer, ScopeFrame, ScopeSeed
 from depin.ext.cli import install as install_command_scope
 
 
-def seed_context(ctx: Context) -> tuple[ProviderKey, object]:
+def seed_context(ctx: Context) -> ScopeSeed:
     """Build the `click.Context` binding that `install` places into the invocation's frame.
 
     Args:
@@ -38,13 +38,13 @@ def seed_context(ctx: Context) -> tuple[ProviderKey, object]:
     Example:
         >>> from click import Command, Context
         >>> ctx = Context(Command('report'))
-        >>> key, value = seed_context(ctx)
-        >>> key is Context
+        >>> seed = seed_context(ctx)
+        >>> seed.key is Context
         True
-        >>> value is ctx
+        >>> seed.value is ctx
         True
     """
-    return Context, ctx
+    return ScopeSeed(Context, ctx)
 
 
 def install(ctx: Context, container: FrozenContainer) -> ScopeFrame:

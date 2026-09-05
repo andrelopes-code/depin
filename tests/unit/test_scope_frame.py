@@ -184,6 +184,16 @@ def test_push_frame_sets_active() -> None:
         assert active_frame() is frame
 
 
+def test_deactivate_marks_a_frame_inactive_idempotently() -> None:
+    frame = ScopeFrame()
+    assert frame.is_active()
+
+    frame.deactivate()
+    frame.deactivate()
+
+    assert not frame.is_active()
+
+
 def test_nested_push_restores_outer() -> None:
     with push_frame() as outer:
         with push_frame() as inner:
