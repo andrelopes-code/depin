@@ -740,6 +740,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../performance/comparison-baseline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparative baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../performance/reproducing/" class="md-nav__link">
         
   
@@ -799,6 +827,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stability and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -817,10 +872,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -838,8 +893,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1988,7 +2043,9 @@ single-flighted.</p>
 
 
 <a href="#depin.ScopeFrame.provide" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">provide</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">provide</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2115,19 +2172,9 @@ distinguish "not cached" from "cached as <code>None</code>" in one traversal.</p
             <td>
               <div class="doc-md-description">
                 <p>One or more teardowns failed. Every failure is
-reported; none is allowed to hide another.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="TeardownError">TeardownError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>An async provider left a teardown here, reported
-inside the raised <code>ExceptionGroup</code> rather than bare; drain it
-with <code>drain_async()</code> instead.</p>
+reported; none is allowed to hide another. Protocol violations,
+including an async teardown in this synchronous drain, appear as
+<code>TeardownError</code> members; use <code>drain_async()</code> for async providers.</p>
               </div>
             </td>
           </tr>
@@ -2226,19 +2273,10 @@ operation on the root frame and carries the same hazard.</p>
             <td>
               <div class="doc-md-description">
                 <p>One or more teardowns failed. Every failure is
-reported, and the cache is dropped either way.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="TeardownError">TeardownError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>An async provider left a teardown here, reported
-inside the raised <code>ExceptionGroup</code> rather than bare; drain it
-with <code>drop_async()</code> instead.</p>
+reported, and the cache is dropped either way. Protocol
+violations, including an async teardown in this synchronous
+drain, appear as <code>TeardownError</code> members; use <code>drop_async()</code> for
+async providers.</p>
               </div>
             </td>
           </tr>
@@ -2312,6 +2350,10 @@ reported, and the cache is dropped either way.</p>
 <a href="#depin.ScopeFrame.claim_cached" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">claim_cached</span><span class="p">(</span>
     <span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
+    <span class="n">provided_identity</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="n">_Leader</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>
 </code></pre></div>
 

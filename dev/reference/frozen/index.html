@@ -740,6 +740,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../performance/comparison-baseline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparative baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../performance/reproducing/" class="md-nav__link">
         
   
@@ -799,6 +827,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stability and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -817,10 +872,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -838,8 +893,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2327,11 +2382,13 @@ Use <code>ascope()</code> when any provider in the scope is async.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="TeardownError">TeardownError</span></code>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>An async provider left a teardown in this sync scope.</p>
+                <p>One or more teardowns failed. Protocol violations,
+including an async teardown in this synchronous scope, appear as
+<code>TeardownError</code> members of the group.</p>
               </div>
             </td>
           </tr>
@@ -2386,6 +2443,31 @@ run in reverse order on exit, with failures collected into an
 is an <code>ascope</code>.</p>
 
 
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One or more teardowns failed. A generator provider
+that violates its teardown protocol appears as a <code>TeardownError</code>
+member of the group.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
     </div>
 
 </div>
@@ -2422,12 +2504,24 @@ Failures are collected into an <code>ExceptionGroup</code>.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="TeardownError">TeardownError</span></code>
+                  <code><a class="autorefs autorefs-internal" title="AsyncInSyncContextError (depin.errors.AsyncInSyncContextError)" href="../errors/#depin.errors.AsyncInSyncContextError">AsyncInSyncContextError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A singleton is an async provider, reported inside
-the raised <code>ExceptionGroup</code> rather than bare; use <code>aclose()</code>.</p>
+                <p>A singleton requires an async teardown;
+use <code>aclose()</code> instead.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One or more synchronous teardowns failed. A
+generator provider that violates its teardown protocol appears
+as a <code>TeardownError</code> member of the group.</p>
               </div>
             </td>
           </tr>
@@ -2480,6 +2574,31 @@ singleton is an async provider. Drains the root scope in reverse order of
 construction, collecting failures into an <code>ExceptionGroup</code>.</p>
 
 
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ExceptionGroup">ExceptionGroup</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One or more teardowns failed. A generator provider
+that violates its teardown protocol appears as a <code>TeardownError</code>
+member of the group.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
     </div>
 
 </div>
@@ -2522,23 +2641,15 @@ resolution can hand a caller a value whose teardown already ran.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="TeardownError">TeardownError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>A singleton is an async provider, reported inside
-the raised <code>ExceptionGroup</code> rather than bare; use <code>areset()</code>.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
                   <code><span title="ExceptionGroup">ExceptionGroup</span></code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>One or more teardowns failed. Every failure is
-reported, and the cache is dropped either way.</p>
+reported, and the cache is dropped either way. Protocol
+violations, including an async teardown in this synchronous
+drain, appear as <code>TeardownError</code> members; use <code>areset()</code> for
+async providers.</p>
               </div>
             </td>
           </tr>
@@ -2601,7 +2712,9 @@ thread or task may be resolving through this container.</p>
             <td>
               <div class="doc-md-description">
                 <p>One or more teardowns failed. Every failure is
-reported, and the cache is dropped either way.</p>
+reported, and the cache is dropped either way. A generator
+provider that violates its teardown protocol appears as a
+<code>TeardownError</code> member of the group.</p>
               </div>
             </td>
           </tr>
@@ -3001,25 +3114,18 @@ its annotation does not admit <code>None</code>.</p>
 
 <a href="#depin.FrozenContainer.override" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">override</span><span class="p">(</span>
-    <span class="n">key</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">],</span>
-    <span class="n">replacement</span><span class="p">:</span> <span class="n">T</span><span class="p">,</span>
-    <span class="o">*</span><span class="p">,</span>
-    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">FrozenContainer</span><span class="p">]</span>
+    <span class="n">key</span><span class="p">:</span> <span class="n">ProviderKey</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProviderOverride</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Temporarily replace a provider's value within a <code>with</code> block.</p>
-<p>Inside the block, every resolution of <code>key</code> (and <code>tag</code>) returns
-<code>replacement</code> instead of the registered provider — including
-resolutions deep in the graph, as a dependency of another provider, not
-only top-level lookups. If <code>replacement</code> is a callable and not a class
-it is invoked as a factory per resolution; otherwise it is returned
-as-is. The override is bound to the current <code>contextvars.Context</code> and
-undone on exit, so concurrent contexts are unaffected; overrides nest,
-innermost wins. Primarily a testing seam — swap a real dependency for a
-fake without rebuilding the container.</p>
+        <p>Select a provider to temporarily replace with <code>ProviderOverride.using()</code>.</p>
+<p><code>using()</code> supplies a replacement for one block. Every resolution of the
+selected key and tag returns that replacement during the block, including
+resolutions deep in the graph. The override is bound to the current
+<code>contextvars.Context</code>, so concurrent contexts are unaffected; overrides
+nest and the innermost one wins.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -3055,7 +3161,7 @@ fake without rebuilding the container.</p>
 <span class="gp">... </span>    <span class="k">def</span><span class="w"> </span><span class="nf">now</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="gp">... </span>        <span class="k">return</span> <span class="s1">'fake'</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Clock</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">di</span><span class="o">.</span><span class="n">override</span><span class="p">(</span><span class="n">Clock</span><span class="p">,</span> <span class="n">FakeClock</span><span class="p">()):</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">di</span><span class="o">.</span><span class="n">override</span><span class="p">(</span><span class="n">Clock</span><span class="p">)</span><span class="o">.</span><span class="n">using</span><span class="p">(</span><span class="n">FakeClock</span><span class="p">()):</span>
 <span class="gp">... </span>    <span class="n">di</span><span class="p">[</span><span class="n">Clock</span><span class="p">]</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
 <span class="go">'fake'</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">di</span><span class="p">[</span><span class="n">Clock</span><span class="p">]</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>

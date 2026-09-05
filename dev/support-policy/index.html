@@ -16,7 +16,7 @@
         <link rel="prev" href="../performance/reproducing/">
       
       
-        <link rel="next" href="../reference/">
+        <link rel="next" href="../stability/">
       
       
         
@@ -740,6 +740,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../performance/comparison-baseline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparative baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../performance/reproducing/" class="md-nav__link">
         
   
@@ -957,10 +985,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#two-known-false-negatives" class="md-nav__link">
+  <a href="#one-known-false-negative" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Two known false negatives
+        One known false negative
       
     </span>
   </a>
@@ -997,6 +1025,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stability and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     
     
     
@@ -1011,10 +1066,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -1032,8 +1087,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1759,10 +1814,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#two-known-false-negatives" class="md-nav__link">
+  <a href="#one-known-false-negative" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Two known false negatives
+        One known false negative
       
     </span>
   </a>
@@ -1806,6 +1861,8 @@
 
 
 <h1 id="support-policy">Support policy<a class="headerlink" href="#support-policy" title="Permanent link">&para;</a></h1>
+<p>The <a href="../stability/">stability and compatibility policy</a> defines which depin
+surfaces are public and when the V1 Semantic Versioning commitment begins.</p>
 <h2 id="python-versions">Python versions<a class="headerlink" href="#python-versions" title="Permanent link">&para;</a></h2>
 <p>depin supports every CPython release that upstream still supports, from 3.12
 upward. 3.12 is the floor because the library is written in PEP 695 generic
@@ -2002,11 +2059,11 @@ carry the requirement:</p>
 <p>ty cannot express an anti-<code>Any</code> rule at all, and stock Pyright has no equivalent
 of <code>reportAny</code>. This requirement is therefore two checkers' and not five's, and
 the policy says so rather than implying coverage it does not have.</p>
-<h3 id="two-known-false-negatives">Two known false negatives<a class="headerlink" href="#two-known-false-negatives" title="Permanent link">&para;</a></h3>
-<p>Two public signatures accept a call they should reject. Both are recorded as
-divergence fixtures whose gate is each checker's verdict rather than rejection,
-and both are routed to the Step 8 surface review, which is the last window in
-which the call shape may change.</p>
+<h3 id="one-known-false-negative">One known false negative<a class="headerlink" href="#one-known-false-negative" title="Permanent link">&para;</a></h3>
+<p>One public signature accepts a call it should reject. It is recorded as a
+divergence fixture whose gate is each checker's verdict rather than rejection,
+and is routed to the Step 8 surface review, which is the last window in which
+the call shape may change.</p>
 <table>
 <thead>
 <tr>
@@ -2016,18 +2073,14 @@ which the call shape may change.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>FrozenContainer.override(Config, Other())</code></td>
-<td>accepted by all five</td>
-</tr>
-<tr>
 <td><code>Container.value(Token[int], 'str')</code></td>
 <td>accepted by four; rejected by Pyrefly</td>
 </tr>
 </tbody>
 </table>
-<p>In both, the type variable appears in the key parameter and in the value
-parameter, so the solver widens it to the join of the two. The gate fails when a
-verdict moves in either direction: a checker that starts rejecting one is news to
+<p>The type variable appears in the key parameter and in the value parameter, so
+the solver widens it to the join of the two. The gate fails when a verdict moves
+in either direction: a checker that starts rejecting it is news to
 be recorded deliberately, and a checker that stops rejecting one is a loss of
 detection.</p>
 <p>Pyrefly rejects the second because it infers the phantom parameter of <code>Token[T]</code>

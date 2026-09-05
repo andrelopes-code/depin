@@ -740,6 +740,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../performance/comparison-baseline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparative baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../performance/reproducing/" class="md-nav__link">
         
   
@@ -799,6 +827,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stability and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -817,10 +872,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -838,8 +893,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1571,8 +1626,7 @@ for which module to install.</p>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">C</span><span class="p">,</span>
     <span class="n">container</span><span class="p">:</span> <span class="n">FrozenContainer</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="n">seed</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">C</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">ProviderKey</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>
-    <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="n">ScopeSeeder</span><span class="p">[</span><span class="n">C</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScopeFrame</span>
 </code></pre></div>
 
@@ -1639,7 +1693,7 @@ invocation the framework opened it for.</p>
                 <code>seed</code>
             </td>
             <td>
-                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="depin.ext.cli.install[C]">C</span>], <span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="ProviderKey (depin.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a>, <span title="object">object</span>] | None] | None</code>
+                  <code><span title="depin.ScopeSeeder">ScopeSeeder</span>[<span title="depin.ext.cli.install[C]">C</span>] | None</code>
             </td>
             <td>
               <div class="doc-md-description">

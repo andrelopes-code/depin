@@ -872,6 +872,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../performance/comparison-baseline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparative baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../performance/reproducing/" class="md-nav__link">
         
   
@@ -933,6 +961,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stability and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     
     
     
@@ -947,10 +1002,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -968,8 +1023,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1788,7 +1843,8 @@ of them is async:</p>
 </code></pre></div>
 <p>Calling it twice is harmless: the second call finds nothing left to drain.
 Calling <code>close()</code> on a graph with an async singleton teardown raises
-<code>TeardownError</code> — that teardown needs an event loop, so use <code>aclose()</code>.</p>
+<code>AsyncInSyncContextError</code> before any teardown runs — that teardown needs an
+event loop, so use <code>aclose()</code>.</p>
 <h2 id="values-supplied-by-the-scope">Values supplied by the scope<a class="headerlink" href="#values-supplied-by-the-scope" title="Permanent link">&para;</a></h2>
 <p>Some values are not built by the graph at all; they arrive with the unit of work.
 An HTTP request, an authenticated principal, a job payload. Declare them with

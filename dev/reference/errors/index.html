@@ -740,6 +740,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../performance/comparison-baseline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparative baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../performance/reproducing/" class="md-nav__link">
         
   
@@ -799,6 +827,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stability and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -817,10 +872,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -838,8 +893,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1105,6 +1160,28 @@
     <span class="md-ellipsis">
       
         AsyncInSyncContextError
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.errors.ContainerLifecycleError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ContainerLifecycleError
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.errors.ContainerClosedError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ContainerClosedError
       
     </span>
   </a>
@@ -1684,6 +1761,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.errors.ContainerLifecycleError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ContainerLifecycleError
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depin.errors.ContainerClosedError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ContainerClosedError
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.errors.OutsideScopeError" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1946,10 +2045,73 @@ depends on the other.</p>
 
 
 
-        <p>A synchronous resolution requires an async provider.</p>
+        <p>A synchronous operation requires asynchronous execution.</p>
 <p>Raised by <code>FrozenContainer.resolve()</code> (or <code>frozen[key]</code>) when the
-target — or something it depends on — is an async provider. Use
-<code>FrozenContainer.aresolve()</code> inside an event loop instead.</p>
+target — or something it depends on — is an async provider. It also guards
+<code>FrozenContainer.close()</code> when an event loop or async work needs to keep
+running. Use the matching asynchronous API instead.</p>
+
+
+
+
+
+
+
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="depin.errors.ContainerLifecycleError" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">ContainerLifecycleError</span>
+
+
+<a href="#depin.errors.ContainerLifecycleError" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code>, <code><span title="RuntimeError">RuntimeError</span></code></p>
+
+
+
+        <p>A container operation conflicts with active work or shutdown.</p>
+
+
+
+
+
+
+
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="depin.errors.ContainerClosedError" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">ContainerClosedError</span>
+
+
+<a href="#depin.errors.ContainerClosedError" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="ContainerLifecycleError (depin.errors.ContainerLifecycleError)" href="#depin.errors.ContainerLifecycleError">ContainerLifecycleError</a></code></p>
+
+
+
+        <p>A terminally closed container cannot resolve values or open scopes.</p>
 
 
 

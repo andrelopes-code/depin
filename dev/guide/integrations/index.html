@@ -938,6 +938,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../performance/comparison-baseline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparative baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../performance/reproducing/" class="md-nav__link">
         
   
@@ -999,6 +1027,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stability and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     
     
     
@@ -1013,10 +1068,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -1034,8 +1089,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2292,8 +2347,8 @@ async — the same rule that already separates <code>resolve()</code> from <code
 <p>Mixing them the wrong way fails the way the rest of depin does: resolving an
 async provider inside a sync <code>scope()</code> raises <code>AsyncInSyncContextError</code>, the
 same error <code>resolve()</code> raises anywhere else; and a sync <code>scope()</code> that closes
-over an async provider's teardown raises <code>TeardownError</code>, naming <code>ascope()</code> as
-the fix.</p>
+over an async provider's teardown raises an <code>ExceptionGroup</code> containing
+<code>TeardownError</code>, naming <code>ascope()</code> as the fix.</p>
 <h2 id="startup-and-shutdown">Startup and shutdown<a class="headerlink" href="#startup-and-shutdown" title="Permanent link">&para;</a></h2>
 <p><code>Host.container</code> is the <code>FrozenContainer</code> the host was built around, so
 startup and shutdown are reached through it rather than through <code>Host</code>

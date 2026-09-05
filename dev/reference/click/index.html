@@ -740,6 +740,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../performance/comparison-baseline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparative baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../performance/reproducing/" class="md-nav__link">
         
   
@@ -799,6 +827,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stability and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -817,10 +872,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -838,8 +893,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1732,7 +1787,7 @@ def cli(ctx: click.Context) -&gt; None:
 
 
 <a href="#depin.ext.click.seed_context" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">seed_context</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">Context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">ProviderKey</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">seed_context</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">Context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScopeSeed</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -1782,7 +1837,7 @@ def cli(ctx: click.Context) -&gt; None:
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="tuple">tuple</span>[<a class="autorefs autorefs-internal" title="ProviderKey (depin.ProviderKey)" href="../diagnostics/#depin.ProviderKey">ProviderKey</a>, <span title="object">object</span>]</code>
+                  <code><span title="depin.ScopeSeed">ScopeSeed</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1801,10 +1856,10 @@ def cli(ctx: click.Context) -&gt; None:
 <blockquote>
 <p>from click import Command, Context
 ctx = Context(Command('report'))
-key, value = seed_context(ctx)
-key is Context
+seed = seed_context(ctx)
+seed.key is Context
 True
-value is ctx
+seed.value is ctx
 True</p>
 </blockquote>
 </blockquote>
