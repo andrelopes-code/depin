@@ -73,6 +73,29 @@ async def test_async_chain_of_one_thousand_resolves_without_recursion() -> None:
     assert await container.freeze().aresolve(tokens[-1]) is terminal
 
 
+@pytest.mark.asyncio
+async def test_iterative_resolution_handles_optional_default_and_provided_parameters() -> None:
+    class Result:
+        def __init__(self, value: str | None, count: int = 7) -> None:
+            self.value = value
+            self.count = count
+
+    container = Container()
+    for index in range(CONCURRENCY_DEPTH):
+        container.value(Token[int](f'padding-{index}'), index)
+    frozen = container.bind(Result, scope=Scope.TRANSIENT).freeze()
+
+    assert vars(frozen.resolve(Result)) == {'value': None, 'count': 7}
+    assert vars(await frozen.aresolve(Result)) == {'value': None, 'count': 7}
+
+    with frozen.scope() as frame:
+        frame.provide(str, 'sync')
+        assert vars(frozen.resolve(Result)) == {'value': 'sync', 'count': 7}
+    async with frozen.ascope() as frame:
+        frame.provide(str, 'async')
+        assert vars(await frozen.aresolve(Result)) == {'value': 'async', 'count': 7}
+
+
 def test_sync_chain_propagates_a_mid_chain_provider_failure() -> None:
     container, key, _ = _sync_chain(Scope.TRANSIENT, failure_at=DEPTH // 2)
     with pytest.raises(RuntimeError, match='mid-chain failure'):

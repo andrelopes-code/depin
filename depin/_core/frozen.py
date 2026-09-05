@@ -200,10 +200,20 @@ class FrozenContainer:
             ```
         """
         spec = self._lookup(key, tag)
+        if spec.scope is Scope.TRANSIENT:
+            if spec.needs_async:
+                raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
+            if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
+                resolved = self._resolve_sync_iterative(spec)
+            else:
+                kwargs = self._resolve_params_sync(spec) if spec.params else {}
+                resolved = construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+        else:
+            resolved = self._resolve_sync(spec)
         # spec.source is type-erased `object` in the plan; the runtime contract
         # (enforced by build_plan) is that providers return values matching the
         # static type of their declared key, so we restate the static type here.
-        return self._resolve_sync(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
+        return resolved  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
     async def aresolve[T](self, key: type[T] | Token[T], *, tag: str | None = None) -> T:
         """Resolve a value by key, asynchronously.
@@ -226,7 +236,12 @@ class FrozenContainer:
         spec = self._lookup(key, tag)
         # See the matching note in `resolve`: plan-level erasure of provider
         # return types forces a single documented widening at this boundary.
-        return await self._resolve_async(spec)  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
+        resolved = await (
+            self._resolve_async_iterative(spec)
+            if spec.scope is Scope.TRANSIENT and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT
+            else self._resolve_async(spec)
+        )
+        return resolved  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
     @contextlib.contextmanager
     def scope(self) -> Generator[ScopeFrame]:
@@ -551,7 +566,11 @@ class FrozenContainer:
             selected = self._lookup_optional(spec.key, spec.tag)
             if selected is None:
                 raise MissingProviderError(f'no provider for {fmt_key(spec.key)} (tag={spec.tag!r})')
-            _ = self._resolve_root_cached_sync(spec) if selected is spec else self._resolve_sync(selected)
+            _ = (
+                self._resolve_root_cached_sync(spec, allow_iterative=False)
+                if selected is spec
+                else self._resolve_sync(selected)
+            )
             constructed.append(spec)
         return warmup_report(self.graph(), constructed, cached)
 
@@ -829,11 +848,22 @@ class FrozenContainer:
 
     def _resolve_any(self, key: ProviderKey, tag: str | None) -> object:
         spec = self._lookup(key, tag)
-        return self._resolve_sync(spec)
+        if spec.scope is not Scope.TRANSIENT:
+            return self._resolve_sync(spec)
+        if spec.needs_async:
+            raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
+        if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
+            return self._resolve_sync_iterative(spec)
+        kwargs = self._resolve_params_sync(spec) if spec.params else {}
+        return construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
 
     async def _aresolve_any(self, key: ProviderKey, tag: str | None) -> object:
         spec = self._lookup(key, tag)
-        return await self._resolve_async(spec)
+        return await (
+            self._resolve_async_iterative(spec)
+            if spec.scope is Scope.TRANSIENT and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT
+            else self._resolve_async(spec)
+        )
 
     def _lookup(self, key: object, tag: str | None) -> ProviderSpec:
         if not self._validate_key(key):
@@ -877,20 +907,18 @@ class FrozenContainer:
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
         if spec.scope is Scope.TRANSIENT:
-            if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
-                return self._resolve_sync_iterative(spec)
             return self._construct_sync(spec)
         if spec.scope is Scope.SINGLETON:
             return self._resolve_root_cached_sync(spec)
         return self._resolve_cached_sync(spec, active_frame(self._root))
 
-    def _resolve_root_cached_sync(self, spec: ProviderSpec) -> object:
+    def _resolve_root_cached_sync(self, spec: ProviderSpec, *, allow_iterative: bool = True) -> object:
         cache_id = (spec.key, spec.tag)
         while True:
             cached, claim = self._root.claim_root_cached(cache_id)
             if cached is not MISSING:
                 return cached
-            if self._root.is_leader(claim) and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
+            if allow_iterative and self._root.is_leader(claim) and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
                 if claim is not None:
                     follower = self._root.abort(cache_id, claim)
                     if follower is not None:
@@ -1019,8 +1047,6 @@ class FrozenContainer:
     async def _resolve_async(self, spec: ProviderSpec) -> object:
         frame = self._cache_target(spec)
         if frame is None:
-            if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
-                return await self._resolve_async_iterative(spec)
             return await self._construct_async(spec)
         cache_id = (spec.key, spec.tag)
         while True:
@@ -1141,10 +1167,10 @@ class FrozenContainer:
 
     def _resolve_params_sync(self, spec: ProviderSpec) -> dict[str, object]:
         out: dict[str, object] = {}
-        frame = optional_frame(self._root)
         for param in spec.params:
             dependency = self._lookup_optional(param.key, param.tag)
             if dependency is None:
+                frame = optional_frame(self._root)
                 if frame is not None:
                     supplied = frame.lookup_provided(param.key, param.tag)
                     if supplied is not MISSING:
@@ -1161,10 +1187,10 @@ class FrozenContainer:
 
     async def _resolve_params_async(self, spec: ProviderSpec) -> dict[str, object]:
         out: dict[str, object] = {}
-        frame = optional_frame(self._root)
         for param in spec.params:
             dependency = self._lookup_optional(param.key, param.tag)
             if dependency is None:
+                frame = optional_frame(self._root)
                 if frame is not None:
                     supplied = frame.lookup_provided(param.key, param.tag)
                     if supplied is not MISSING:
