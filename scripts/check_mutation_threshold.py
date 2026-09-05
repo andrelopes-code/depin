@@ -100,7 +100,6 @@ def evaluate(stats: MutationStats) -> str | None:
         ('no_tests', stats.no_tests),
         ('skipped', stats.skipped),
         ('suspicious', stats.suspicious),
-        ('timeout', stats.timeout),
         ('check_was_interrupted_by_user', stats.check_was_interrupted_by_user),
         ('segfault', stats.segfault),
     )
@@ -108,10 +107,10 @@ def evaluate(stats: MutationStats) -> str | None:
     if found:
         return f'mutation run has inconclusive results: {", ".join(found)}'
 
-    decided = stats.killed + stats.survived
+    decided = stats.killed + stats.timeout + stats.survived
     if decided == 0:
         return 'mutation run decided no mutants'
-    killed_percent = stats.killed / decided * 100
+    killed_percent = (stats.killed + stats.timeout) / decided * 100
     if killed_percent < MINIMUM_KILLED_PERCENT:
         return (
             f'mutation score is {killed_percent:.1f}%, below the {MINIMUM_KILLED_PERCENT:.1f}% threshold; '
@@ -132,9 +131,12 @@ def main(arguments: list[str] | None = None) -> int:
         return 1
 
     error = evaluate(result)
-    decided = result.killed + result.survived
-    score = result.killed / decided * 100 if decided else 0.0
-    print(f'mutation score: {score:.1f}% ({result.killed} killed, {result.survived} survived, {result.total} total)')
+    decided = result.killed + result.timeout + result.survived
+    score = (result.killed + result.timeout) / decided * 100 if decided else 0.0
+    print(
+        f'mutation score: {score:.1f}% '
+        f'({result.killed} killed, {result.timeout} timed out, {result.survived} survived, {result.total} total)'
+    )
     if error is not None:
         print(error)
         return 1

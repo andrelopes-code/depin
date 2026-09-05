@@ -41,11 +41,15 @@ def test_evaluate_rejects_score_below_threshold() -> None:
 
 @pytest.mark.parametrize(
     'result',
-    ['no_tests', 'skipped', 'suspicious', 'timeout', 'check_was_interrupted_by_user', 'segfault'],
+    ['no_tests', 'skipped', 'suspicious', 'check_was_interrupted_by_user', 'segfault'],
 )
 def test_evaluate_rejects_inconclusive_results(result: str) -> None:
     assert result in MutationStats.__dataclass_fields__
     assert evaluate(mutation_stats(**{result: 1})) == f'mutation run has inconclusive results: {result}=1'
+
+
+def test_evaluate_counts_a_timeout_as_a_detected_mutant() -> None:
+    assert evaluate(mutation_stats(killed=84, survived=15, timeout=1)) is None
 
 
 @pytest.mark.parametrize(
@@ -129,7 +133,7 @@ def test_main_accepts_valid_stats_and_prints_the_summary(tmp_path: Path, capsys:
     write_stats(path, values)
 
     assert main([str(path)]) == 0
-    assert capsys.readouterr().out == 'mutation score: 95.0% (95 killed, 5 survived, 100 total)\n'
+    assert capsys.readouterr().out == 'mutation score: 95.0% (95 killed, 0 timed out, 5 survived, 100 total)\n'
 
 
 def test_evaluate_rejects_zero_decided_mutants() -> None:
