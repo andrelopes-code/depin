@@ -200,16 +200,18 @@ class FrozenContainer:
             ```
         """
         spec = self._lookup(key, tag)
+        if spec.needs_async:
+            raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
         if spec.scope is Scope.TRANSIENT:
-            if spec.needs_async:
-                raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
             if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
                 resolved = self._resolve_sync_iterative(spec)
             else:
                 kwargs = self._resolve_params_sync(spec) if spec.params else {}
                 resolved = construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+        elif spec.scope is Scope.SINGLETON:
+            resolved = self._resolve_root_cached_sync(spec)
         else:
-            resolved = self._resolve_sync(spec)
+            resolved = self._resolve_cached_sync(spec, active_frame(self._root))
         # spec.source is type-erased `object` in the plan; the runtime contract
         # (enforced by build_plan) is that providers return values matching the
         # static type of their declared key, so we restate the static type here.
@@ -476,8 +478,8 @@ class FrozenContainer:
 
             ```
         """
-        state = self._lifecycle.state
-        if state is not LifecycleState.OPEN:
+        if self._validate_key is not is_provider_key:
+            state = self._lifecycle.state
             if state is LifecycleState.CLOSED:
                 raise ContainerClosedError(
                     'container is closed; build a new FrozenContainer before resolving or opening a scope'
@@ -498,8 +500,8 @@ class FrozenContainer:
                 provider that violates its teardown protocol appears as a
                 `TeardownError` member of the group.
         """
-        state = self._lifecycle.state
-        if state is not LifecycleState.OPEN:
+        if self._validate_key is not is_provider_key:
+            state = self._lifecycle.state
             if state is LifecycleState.CLOSED:
                 raise ContainerClosedError(
                     'container is closed; build a new FrozenContainer before resolving or opening a scope'
@@ -848,14 +850,16 @@ class FrozenContainer:
 
     def _resolve_any(self, key: ProviderKey, tag: str | None) -> object:
         spec = self._lookup(key, tag)
-        if spec.scope is not Scope.TRANSIENT:
-            return self._resolve_sync(spec)
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
-        if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
-            return self._resolve_sync_iterative(spec)
-        kwargs = self._resolve_params_sync(spec) if spec.params else {}
-        return construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+        if spec.scope is Scope.TRANSIENT:
+            if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
+                return self._resolve_sync_iterative(spec)
+            kwargs = self._resolve_params_sync(spec) if spec.params else {}
+            return construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+        if spec.scope is Scope.SINGLETON:
+            return self._resolve_root_cached_sync(spec)
+        return self._resolve_cached_sync(spec, active_frame(self._root))
 
     async def _aresolve_any(self, key: ProviderKey, tag: str | None) -> object:
         spec = self._lookup(key, tag)
@@ -918,7 +922,7 @@ class FrozenContainer:
             cached, claim = self._root.claim_root_cached(cache_id)
             if cached is not MISSING:
                 return cached
-            if allow_iterative and self._root.is_leader(claim) and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
+            if allow_iterative and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT and self._root.is_leader(claim):
                 if claim is not None:
                     follower = self._root.abort(cache_id, claim)
                     if follower is not None:

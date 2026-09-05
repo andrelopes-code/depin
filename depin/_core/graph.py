@@ -269,10 +269,6 @@ def _toposort(specs: Iterable[ProviderSpec], by_key: _Index) -> tuple[ProviderSp
     return tuple(ordered)
 
 
-def _captive_root_priority(spec: ProviderSpec) -> bool:
-    return isinstance(spec.key, Underlying)
-
-
 def _check_captive(order: Iterable[ProviderSpec], by_key: _Index) -> None:
     """Reject singletons that would capture a scoped provider for their lifetime.
 
@@ -284,8 +280,8 @@ def _check_captive(order: Iterable[ProviderSpec], by_key: _Index) -> None:
     the walk below looks through transients but stops at singleton boundaries
     (each singleton is validated as its own root).
     """
-    for root in sorted(order, key=_captive_root_priority):
-        if root.scope is not Scope.SINGLETON:
+    for root in order:
+        if root.scope is not Scope.SINGLETON or isinstance(root.key, Underlying):
             continue
         reached_from: dict[Ident, ProviderSpec] = {}
         stack: list[ProviderSpec] = [root]
@@ -298,7 +294,7 @@ def _check_captive(order: Iterable[ProviderSpec], by_key: _Index) -> None:
                 if dep.scope is Scope.SCOPED:
                     chain = (*_captive_chain(root, spec, reached_from), dep)
                     raise CaptiveDependencyError(_format_captive(root, dep, chain))
-                if dep.scope is Scope.TRANSIENT or _is_decoration_edge(spec, dep):
+                if dep.scope is Scope.TRANSIENT or isinstance(dep.key, Underlying):
                     ident = (dep.key, dep.tag)
                     if ident in reached_from:
                         continue
@@ -324,13 +320,6 @@ def _captive_chain(
         chain.append(node)
     chain.reverse()
     return tuple(chain)
-
-
-def _is_decoration_edge(spec: ProviderSpec, dep: ProviderSpec) -> bool:
-    """Whether the dependency is the next layer down in a decorated binding."""
-    return isinstance(dep.key, Underlying) and any(
-        (param.key, param.tag) == (dep.key, dep.tag) for param in spec.params
-    )
 
 
 def _format_captive(root: ProviderSpec, dep: ProviderSpec, chain: tuple[ProviderSpec, ...]) -> str:

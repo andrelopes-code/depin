@@ -24,6 +24,6 @@ diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
 +            cached = self._root.lookup((spec.key, spec.tag))
 +            if cached is not MISSING:
 +                self._warm_cached_lookup_probe = {(spec.key, spec.tag): cached}
+         if spec.needs_async:
+             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
          if spec.scope is Scope.TRANSIENT:
-             if spec.needs_async:
-                 raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
