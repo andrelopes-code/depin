@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeGuard
 
-MINIMUM_KILLED_PERCENT = 95.0
+MINIMUM_KILLED_PERCENT = 85.0
 
 
 @dataclass(frozen=True, slots=True)

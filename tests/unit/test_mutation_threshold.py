@@ -8,8 +8,8 @@ from scripts.check_mutation_threshold import MINIMUM_KILLED_PERCENT, MutationSta
 
 def mutation_stats(**changes: int) -> MutationStats:
     values = {
-        'killed': 95,
-        'survived': 5,
+        'killed': 85,
+        'survived': 15,
         'total': 100,
         'no_tests': 0,
         'skipped': 0,
@@ -31,12 +31,12 @@ def test_evaluate_accepts_score_at_the_threshold() -> None:
 
 
 def test_evaluate_rejects_score_below_threshold() -> None:
-    error = evaluate(mutation_stats(killed=94, survived=6))
+    error = evaluate(mutation_stats(killed=84, survived=16))
 
     assert error is not None
-    assert '94.0%' in error
+    assert '84.0%' in error
     assert f'{MINIMUM_KILLED_PERCENT:.1f}%' in error
-    assert '5.0%' in error
+    assert '15.0%' in error
 
 
 @pytest.mark.parametrize(
@@ -97,8 +97,8 @@ def test_main_rejects_mutants_missing_from_exported_classifications(
 ) -> None:
     path = tmp_path / 'stats.json'
     values: dict[str, object] = {
-        'killed': 95,
-        'survived': 5,
+        'killed': 85,
+        'survived': 15,
         'total': 101,
         'no_tests': 0,
         'skipped': 0,

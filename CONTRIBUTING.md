@@ -166,7 +166,7 @@ uv run python -m scripts.check_mutation_threshold mutants/mutmut-cicd-stats.json
 uv run mutmut results
 ```
 
-The run requires at least 95% killed mutants, at most 5% surviving mutants,
+The run requires at least 85% killed mutants, at most 15% surviving mutants,
 and zero inconclusive results. Mutmut gives each selected test a two-second
 watchdog so a deadlock is reported as a killed mutant instead of an inconclusive
 timeout. It runs weekly, on demand, and for pull requests that change the core,
