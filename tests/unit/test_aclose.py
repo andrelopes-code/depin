@@ -1,9 +1,11 @@
+import asyncio
 from collections.abc import AsyncGenerator
 
 import pytest
 
 from depin._core.container import Container
 from depin._core.scope import Scope
+from depin.errors import ContainerClosedError, ContainerLifecycleError
 
 
 @pytest.mark.asyncio
@@ -72,3 +74,64 @@ async def test_aclose_aggregates_errors() -> None:
     with pytest.raises(ExceptionGroup) as exc:
         await frozen.aclose()
     assert len(exc.value.exceptions) == 2
+
+
+@pytest.mark.asyncio
+async def test_operations_reject_shutdown_in_progress_and_closed_container() -> None:
+    class Service: ...
+
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def build() -> Service:
+        started.set()
+        await release.wait()
+        return Service()
+
+    frozen = Container().bind(build, scope=Scope.SINGLETON).freeze()
+    resolving = asyncio.create_task(frozen.aresolve(Service))
+    await started.wait()
+    closing = asyncio.create_task(frozen.aclose())
+    checkpoint = asyncio.get_running_loop().create_future()
+    asyncio.get_running_loop().call_soon(checkpoint.set_result, None)
+    await checkpoint
+
+    with pytest.raises(ContainerLifecycleError):
+        _ = frozen.resolve(Service)
+    with pytest.raises(ContainerLifecycleError):
+        _ = await frozen.aresolve(Service)
+    with pytest.raises(ContainerLifecycleError), frozen.scope():
+        pass
+    with pytest.raises(ContainerLifecycleError):
+        async with frozen.ascope():
+            pass
+    with pytest.raises(ContainerLifecycleError):
+        frozen.reset()
+    with pytest.raises(ContainerLifecycleError):
+        await frozen.areset()
+    with pytest.raises(ContainerLifecycleError):
+        _ = frozen.warmup()
+    with pytest.raises(ContainerLifecycleError):
+        _ = await frozen.awarmup()
+
+    release.set()
+    assert isinstance(await resolving, Service)
+    await closing
+
+    with pytest.raises(ContainerClosedError):
+        _ = frozen.resolve(Service)
+    with pytest.raises(ContainerClosedError):
+        _ = await frozen.aresolve(Service)
+    with pytest.raises(ContainerClosedError), frozen.scope():
+        pass
+    with pytest.raises(ContainerClosedError):
+        async with frozen.ascope():
+            pass
+    with pytest.raises(ContainerClosedError):
+        frozen.reset()
+    with pytest.raises(ContainerClosedError):
+        await frozen.areset()
+    with pytest.raises(ContainerClosedError):
+        _ = frozen.warmup()
+    with pytest.raises(ContainerClosedError):
+        _ = await frozen.awarmup()
