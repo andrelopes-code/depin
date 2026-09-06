@@ -1,7 +1,7 @@
 # Proposal: evidence-gated optional native accelerator
 
 Date: 2026-09-02
-Status: proposed for investigation after the compiled Python runtime and FastAPI recalibration
+Status: NO-GO pending optimized Python and FastAPI recalibration
 Scope: Rust feasibility, Python/native boundary, packaging, semantic parity, and adoption thresholds
 
 ## Nature of this document
@@ -267,8 +267,8 @@ maintenance needs a deliberately high adoption threshold.
 - [Dependency Injector installation and compiled
   modules](https://python-dependency-injector.ets-labs.org/introduction/installation.html)
 
-## Decision requested
+## Entry decision
 
-Authorize a bounded optional-native experiment after Python optimization, with
-shipping contingent on semantic parity, broad fallback, and material application
-gain.
+Keep native work NO-GO. A future session may authorize a bounded optional-native
+experiment after Python optimization and FastAPI recalibration, with shipping
+contingent on semantic parity, broad fallback, and material application gain.

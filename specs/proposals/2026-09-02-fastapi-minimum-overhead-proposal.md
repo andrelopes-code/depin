@@ -1,14 +1,15 @@
 # Proposal: minimum-overhead FastAPI integration
 
 Date: 2026-09-02
-Status: proposed; depends on the competitive baseline and should be recalibrated after the compiled runtime
+Status: proposed; scheduled after compiled-Python and provider-discovery decisions, then recalibrated
 Scope: `depin.ext.fastapi`, request hosting, scope activation, endpoint injection, and application benchmarks
 
 ## Nature of this document
 
 This proposal defines an application-level performance outcome. It does not yet
 choose a new public setup function, route class, or compatibility mechanism. Any
-surface change must be designed and accepted before Step 8 freezes the API.
+surface change must be designed and accepted before the exact `1.0.0` API
+freeze.
 
 ## Executive summary
 
@@ -219,7 +220,7 @@ validation, security, and dependency facilities.
 
 - a supported-API compatibility study across the FastAPI version matrix;
 - measured prototypes for route setup and lazy request state;
-- an accepted public-surface design before Step 8 closes;
+- an accepted public-surface design before the exact `1.0.0` API freeze;
 - lifecycle-equivalence and application-performance evidence; and
 - migration documentation if setup behavior changes.
 

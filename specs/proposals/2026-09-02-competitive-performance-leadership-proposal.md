@@ -24,10 +24,10 @@ on warm singleton lookup, a 20-provider transient chain, and a 20-provider scope
 cycle. The screening is not publication-grade and cannot support a ranking, but
 the margins are too large to dismiss as noise.
 
-Competitive measurements should therefore move ahead of the Step 9 comparison
-page and become engineering input before the Step 8 surface freeze. The public
-page may remain a 1.0 commitment; the measurements that make optimization
-possible may not.
+The accepted comparative baseline moved measurements ahead of the final 1.0
+comparison page and made them engineering input before the exact `1.0.0` API
+freeze. The public page remains a 1.0 commitment, while the measurements that
+make optimization possible are maintained throughout the remaining work.
 
 The target is leadership per semantically equivalent workload, not an aggregate
 score. `depin` must be no slower than the fastest eligible implementation within
@@ -103,8 +103,8 @@ An optimization is rejected if it requires any of the following:
 
 The existing `Container` to `freeze()` to `FrozenContainer` mental model remains
 the ergonomic baseline. Existing valid consumer code must continue to type-check
-without changes unless a separately accepted Step 8 surface decision says
-otherwise.
+without changes unless a separately accepted pre-1.0 public-surface decision
+says otherwise.
 
 ## Comparative evidence system
 
@@ -194,13 +194,13 @@ work onto the user.
 
 ## Program sequence
 
-1. Land competitor adapters and accepted baseline evidence.
+1. Maintain competitor adapters and accepted baseline evidence.
 2. Execute the compiled-runtime proposal against the core gaps.
 3. Recalibrate and execute the FastAPI proposal against the remaining
    application overhead.
 4. Evaluate the native-accelerator proposal only against the optimized Python
    implementation.
-5. Publish the Step 9 comparison page from fresh accepted data.
+5. Publish the final 1.0 comparison page from fresh accepted data.
 
 The sequence prevents Rust from receiving credit for algorithmic work Python can
 do, and prevents framework overhead from hiding a successful core optimization.
@@ -240,7 +240,7 @@ merely to make a regression or competitor loss pass.
 
 ## Alternatives considered
 
-### Keep comparisons for Step 9
+### Defer comparisons until the final 1.0 audit
 
 Rejected. A comparison page after the surface freeze can describe the gap but
 cannot guide the architectural work needed to close it.
@@ -266,7 +266,7 @@ Rejected. That would replace the product rather than improve it.
 - separate reviewed designs and plans for the runtime, FastAPI, and optional
   native work;
 - evidence reports that close or reject each optimization proposal; and
-- a fresh Step 9 comparison page generated from accepted data.
+- a fresh final 1.0 comparison page generated from accepted data.
 
 ## Primary references
 
@@ -275,7 +275,7 @@ Rejected. That would replace the product rather than improve it.
 - [Dishka technical requirements](https://dishka.readthedocs.io/en/latest/requirements/technical.html)
 - [Wireup benchmark methodology and results](https://maldoinc.github.io/wireup/latest/benchmarks/)
 
-## Decision requested
+## Active decision
 
-Accept performance leadership, semantic equivalence, and unchanged ergonomics as
+Performance leadership, semantic equivalence, and unchanged ergonomics remain
 the governing quality contract for the remaining pre-1.0 performance work.
