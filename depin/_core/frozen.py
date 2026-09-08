@@ -3,14 +3,16 @@
 import asyncio
 import contextlib
 import inspect
-from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
+from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Mapping
 from contextvars import ContextVar
 from contextvars import Token as ContextToken
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import TypeGuard, final, overload
 
 from depin._core import construct, injection, overrides
 from depin._core.diagnostics import DependencyGraph, build_graph
+from depin._core.generated import Program, compile_sync_transients
 from depin._core.health import (
     HealthCheck,
     HealthReport,
@@ -25,7 +27,7 @@ from depin._core.lifecycle import LifecycleState, create_lifecycle_gate
 from depin._core.markers import Token
 from depin._core.render import render_tree
 from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional_frame, push_frame
-from depin._core.spec import ParamSpec, ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
+from depin._core.spec import Ident, ParamSpec, ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
 from depin._core.teardown import Teardown
 from depin._core.typeguards import is_provider_key
 from depin._core.warmup import WarmupReport, reject_async_singletons, singleton_specs, warmup_report
@@ -143,10 +145,13 @@ class FrozenContainer:
         ```
     """
 
-    __slots__ = ('_lifecycle', '_plan', '_root', '_validate_key')
+    __slots__ = ('_generated_sync', '_lifecycle', '_plan', '_root', '_validate_key')
 
     def __init__(self, plan: ResolutionPlan) -> None:
         self._plan = plan
+        self._generated_sync: Mapping[Ident, Program] = (
+            compile_sync_transients(plan) if len(plan.order) < _RECURSIVE_PLAN_LIMIT else MappingProxyType({})
+        )
         self._lifecycle = create_lifecycle_gate()
         self._root = ScopeFrame(lifecycle=self._lifecycle)
         self._validate_key: Callable[[object], TypeGuard[ProviderKey]] = is_provider_key
@@ -206,8 +211,12 @@ class FrozenContainer:
             if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
                 resolved = self._resolve_sync_iterative(spec)
             else:
-                kwargs = self._resolve_params_sync(spec) if spec.params else {}
-                resolved = construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+                program = self._generated_sync.get((spec.key, spec.tag))
+                if program is not None and not overrides.present():
+                    resolved = program()
+                else:
+                    kwargs = self._resolve_params_sync(spec) if spec.params else {}
+                    resolved = construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
         elif spec.scope is Scope.SINGLETON:
             resolved = self._resolve_root_cached_sync(spec)
         else:
