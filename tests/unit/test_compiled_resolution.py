@@ -1,11 +1,15 @@
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from types import MappingProxyType
-from typing import TypeGuard
+from typing import Annotated, TypeGuard
+
+import pytest
 
 from depin._core.compiled import compile_sync_transients
 from depin._core.container import Container
+from depin._core.frozen import FrozenContainer
 from depin._core.graph import build_plan
-from depin._core.markers import Token
+from depin._core.markers import Tag, Token
 from depin._core.scope import Scope
 
 
@@ -207,6 +211,213 @@ def test_defaults_optional_parameters_and_frame_values_remain_interpreted() -> N
     with frozen.scope() as frame:
         frame.provide(str, 'frame')
         assert frozen.resolve(bytearray) == bytearray(b'frame')
+
+
+@dataclass(frozen=True)
+class _Resolved:
+    values: tuple[object, ...]
+
+
+@dataclass(frozen=True)
+class _Leaf:
+    label: str
+
+
+@pytest.mark.parametrize('shape', ['zero', 'one', 'multiple', 'tagged'])
+def test_compiled_transient_resolution_matches_interpreted_resolution(shape: str) -> None:
+    compiled_calls: list[str] = []
+    interpreted_calls: list[str] = []
+    compiled = _transient_container(shape, compiled_calls)
+    interpreted = _transient_container(shape, interpreted_calls)
+
+    compiled_result = compiled.resolve(_Resolved)
+    with interpreted.override(Token[object]('unrelated')).using(object()):
+        interpreted_result = interpreted.resolve(_Resolved)
+
+    assert type(compiled_result) is type(interpreted_result)
+    assert compiled_result == interpreted_result
+    assert compiled_calls == interpreted_calls
+
+
+def test_compiled_transient_factory_exception_matches_interpreted_resolution() -> None:
+    compiled_calls: list[str] = []
+    interpreted_calls: list[str] = []
+    compiled = _failing_transient_container(compiled_calls)
+    interpreted = _failing_transient_container(interpreted_calls)
+
+    with pytest.raises(_FactoryFailure) as compiled_error:
+        compiled.resolve(_Resolved)
+    with (
+        interpreted.override(Token[object]('unrelated')).using(object()),
+        pytest.raises(_FactoryFailure) as interpreted_error,
+    ):
+        interpreted.resolve(_Resolved)
+
+    assert type(compiled_error.value) is type(interpreted_error.value)
+    assert str(compiled_error.value) == str(interpreted_error.value)
+    assert compiled_calls == interpreted_calls == ['leaf', 'root']
+
+
+def test_nested_unrelated_overrides_keep_compiled_and_interpreted_results_equivalent() -> None:
+    compiled_calls: list[str] = []
+    interpreted_calls: list[str] = []
+    outer = Token[object]('outer')
+    inner = Token[object]('inner')
+    compiled = _transient_container('multiple', compiled_calls)
+    interpreted = _transient_container('multiple', interpreted_calls)
+
+    compiled_result = compiled.resolve(_Resolved)
+    with interpreted.override(outer).using(object()), interpreted.override(inner).using(object()):
+        interpreted_result = interpreted.resolve(_Resolved)
+
+    assert type(compiled_result) is type(interpreted_result)
+    assert compiled_result == interpreted_result
+    assert compiled_calls == interpreted_calls
+
+
+def test_repeated_compiled_and_interpreted_transient_resolution_rebuilds_every_value() -> None:
+    compiled_calls: list[str] = []
+    interpreted_calls: list[str] = []
+    compiled = _identity_transient_container(compiled_calls)
+    interpreted = _identity_transient_container(interpreted_calls)
+
+    compiled_first = compiled.resolve(_Resolved)
+    compiled_second = compiled.resolve(_Resolved)
+    with interpreted.override(Token[object]('unrelated')).using(object()):
+        interpreted_first = interpreted.resolve(_Resolved)
+        interpreted_second = interpreted.resolve(_Resolved)
+
+    assert type(compiled_first) is type(interpreted_first)
+    assert compiled_first == interpreted_first
+    assert type(compiled_second) is type(interpreted_second)
+    assert compiled_second == interpreted_second
+    assert compiled_first is not compiled_second
+    assert interpreted_first is not interpreted_second
+    assert compiled_first.values[0] is not compiled_second.values[0]
+    assert interpreted_first.values[0] is not interpreted_second.values[0]
+    assert compiled_calls == interpreted_calls == ['leaf', 'root', 'leaf', 'root']
+
+
+class _FactoryFailure(Exception):
+    pass
+
+
+def _transient_container(shape: str, calls: list[str]) -> FrozenContainer:
+    unrelated = Token[object]('unrelated')
+
+    if shape == 'zero':
+
+        def make_zero_root() -> _Resolved:
+            calls.append('root')
+            return _Resolved(('root',))
+
+        return (
+            Container()
+            .bind(make_zero_root, provides=_Resolved, scope=Scope.TRANSIENT)
+            .value(unrelated, object())
+            .freeze()
+        )
+
+    if shape == 'one':
+
+        def make_leaf() -> str:
+            calls.append('leaf')
+            return 'leaf'
+
+        def make_one_root(leaf: str) -> _Resolved:
+            calls.append('root')
+            return _Resolved((leaf, 'root'))
+
+        return (
+            Container()
+            .bind(make_leaf, provides=str, scope=Scope.TRANSIENT)
+            .bind(make_one_root, provides=_Resolved, scope=Scope.TRANSIENT)
+            .value(unrelated, object())
+            .freeze()
+        )
+
+    if shape == 'multiple':
+
+        def make_text() -> str:
+            calls.append('text')
+            return 'text'
+
+        def make_number() -> int:
+            calls.append('number')
+            return 7
+
+        def make_multiple_root(text: str, number: int) -> _Resolved:
+            calls.append('root')
+            return _Resolved((text, number))
+
+        return (
+            Container()
+            .bind(make_text, provides=str, scope=Scope.TRANSIENT)
+            .bind(make_number, provides=int, scope=Scope.TRANSIENT)
+            .bind(make_multiple_root, provides=_Resolved, scope=Scope.TRANSIENT)
+            .value(unrelated, object())
+            .freeze()
+        )
+
+    if shape == 'tagged':
+
+        def make_leaf() -> str:
+            calls.append('leaf')
+            return 'tagged'
+
+        def make_tagged_root(leaf: Annotated[str, Tag('primary')]) -> _Resolved:
+            calls.append('root')
+            return _Resolved((leaf, 'root'))
+
+        return (
+            Container()
+            .bind(make_leaf, provides=str, tag='primary', scope=Scope.TRANSIENT)
+            .bind(make_tagged_root, provides=_Resolved, scope=Scope.TRANSIENT)
+            .value(unrelated, object())
+            .freeze()
+        )
+
+    raise AssertionError(f'unknown transient shape: {shape}')
+
+
+def _failing_transient_container(calls: list[str]) -> FrozenContainer:
+    unrelated = Token[object]('unrelated')
+
+    def make_leaf() -> str:
+        calls.append('leaf')
+        return 'leaf'
+
+    def make_root(leaf: str) -> _Resolved:
+        calls.append('root')
+        raise _FactoryFailure(f'cannot use {leaf}')
+
+    return (
+        Container()
+        .bind(make_leaf, provides=str, scope=Scope.TRANSIENT)
+        .bind(make_root, provides=_Resolved, scope=Scope.TRANSIENT)
+        .value(unrelated, object())
+        .freeze()
+    )
+
+
+def _identity_transient_container(calls: list[str]) -> FrozenContainer:
+    unrelated = Token[object]('unrelated')
+
+    def make_leaf() -> _Leaf:
+        calls.append('leaf')
+        return _Leaf('leaf')
+
+    def make_root(leaf: _Leaf) -> _Resolved:
+        calls.append('root')
+        return _Resolved((leaf,))
+
+    return (
+        Container()
+        .bind(make_leaf, provides=_Leaf, scope=Scope.TRANSIENT)
+        .bind(make_root, provides=_Resolved, scope=Scope.TRANSIENT)
+        .value(unrelated, object())
+        .freeze()
+    )
 
 
 def _sync_transients(frozen: object) -> Mapping[object, object]:
