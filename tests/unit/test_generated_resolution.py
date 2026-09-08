@@ -8,6 +8,7 @@ from typing import Annotated
 import pytest
 
 from depin._core import frozen as frozen_module
+from depin._core import generated as generated_module
 from depin._core import overrides
 from depin._core.container import Container
 from depin._core.generated import Program, compile_sync_transients
@@ -44,6 +45,8 @@ def test_generates_a_single_nested_function_for_a_transient_chain() -> None:
     assert calls == ['leaf', 'root']
     assert program.__code__.co_filename == '<depin generated resolver>'
     assert 'user_parameter_name' not in program.__code__.co_names
+    assert '_sources' not in program.__globals__
+    assert program.__globals__['__builtins__'] == {}
 
 
 def test_generates_a_twenty_provider_chain_without_recursive_runtime_dispatch() -> None:
@@ -131,7 +134,7 @@ def test_excludes_a_keyword_collector_with_a_synthetic_positional_signature() ->
     assert (bytes, None) not in compile_sync_transients(plan)
 
 
-def test_generates_a_varargs_factory_with_a_synthetic_positional_signature() -> None:
+def test_excludes_a_varargs_factory_with_a_synthetic_positional_signature() -> None:
     def leaf() -> str:
         return 'value'
 
@@ -150,7 +153,41 @@ def test_generates_a_varargs_factory_with_a_synthetic_positional_signature() -> 
         .records()
     )
 
-    assert compile_sync_transients(plan)[(bytes, None)]() == b'value'
+    assert (bytes, None) not in compile_sync_transients(plan)
+
+
+def test_excludes_a_synthetic_signature_that_reorders_real_parameters() -> None:
+    @dataclass(frozen=True, slots=True)
+    class First: ...
+
+    @dataclass(frozen=True, slots=True)
+    class Second: ...
+
+    def first() -> First:
+        return First()
+
+    def second() -> Second:
+        return Second()
+
+    def root(first: First, second: Second) -> tuple[First, Second]:
+        return first, second
+
+    vars(root)['__signature__'] = inspect.Signature(
+        [
+            inspect.Parameter('second', inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Second),
+            inspect.Parameter('first', inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=First),
+        ],
+        return_annotation=tuple[First, Second],
+    )
+    plan = build_plan(
+        Container()
+        .bind(first, scope=Scope.TRANSIENT)
+        .bind(second, scope=Scope.TRANSIENT)
+        .bind(root, provides=tuple[First, Second], scope=Scope.TRANSIENT)
+        .records()
+    )
+
+    assert (tuple[First, Second], None) not in compile_sync_transients(plan)
 
 
 def test_excludes_parameterized_bound_methods() -> None:
@@ -202,6 +239,32 @@ def test_stops_generation_before_the_source_nesting_limit() -> None:
     assert (tokens[-1], None) not in generated
 
 
+def test_stops_generation_before_a_shared_dag_expands_exponentially() -> None:
+    depth = 16
+    tokens = [Token[object](f'shared-{index}') for index in range(depth)]
+    container = Container()
+
+    def leaf() -> object:
+        return 1
+
+    container.bind(leaf, provides=tokens[0], scope=Scope.TRANSIENT)
+    for index, token in enumerate(tokens[1:], start=1):
+        previous = tokens[index - 1]
+
+        def combine(left: object, right: object) -> object:
+            return left if left == right else right
+
+        combine.__annotations__['left'] = previous
+        combine.__annotations__['right'] = previous
+        container.bind(combine, provides=token, scope=Scope.TRANSIENT)
+
+    generated = compile_sync_transients(build_plan(container.records()))
+
+    assert (tokens[8], None) in generated
+    assert (tokens[9], None) not in generated
+    assert (tokens[-1], None) not in generated
+
+
 def test_rejects_a_broken_project_owned_template(monkeypatch: pytest.MonkeyPatch) -> None:
     def value() -> str:
         return 'value'
@@ -214,6 +277,44 @@ def test_rejects_a_broken_project_owned_template(monkeypatch: pytest.MonkeyPatch
 
     with pytest.raises(InvalidProviderError, match='could not build its generated resolver'):
         compile_sync_transients(plan)
+
+
+def test_wraps_a_generated_compiler_resource_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    def value() -> str:
+        return 'value'
+
+    def fail_compile(*_args: object, **_kwargs: object) -> object:
+        raise MemoryError('compiler allocation failed')
+
+    plan = build_plan(Container().bind(value, provides=str, scope=Scope.TRANSIENT).records())
+    monkeypatch.setattr(builtins, 'compile', fail_compile)
+
+    with pytest.raises(InvalidProviderError, match='could not build its generated resolver') as raised:
+        compile_sync_transients(plan)
+
+    assert isinstance(raised.value.__cause__, MemoryError)
+
+
+@pytest.mark.parametrize(
+    ('budget', 'value'),
+    [
+        ('_MAX_SOURCE_CHARS', 0),
+        ('_MAX_TOTAL_EXPANDED_CALLS', 0),
+        ('_MAX_TOTAL_SOURCE_CHARS', 0),
+    ],
+)
+def test_skips_generation_when_a_compiler_budget_is_exhausted(
+    monkeypatch: pytest.MonkeyPatch,
+    budget: str,
+    value: int,
+) -> None:
+    def provider() -> str:
+        return 'value'
+
+    monkeypatch.setattr(generated_module, budget, value)
+    plan = build_plan(Container().bind(provider, provides=str, scope=Scope.TRANSIENT).records())
+
+    assert not compile_sync_transients(plan)
 
 
 def test_excludes_non_function_cached_and_async_subgraphs() -> None:
