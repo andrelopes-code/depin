@@ -44,7 +44,7 @@ def test_competitive_workflow_is_locked_and_collects_separate_null_and_real_evid
     assert 'leadership evaluate' in workflow
     assert 'python -m benchmarks.comparison.report' in workflow
     assert '- name: Render Markdown summary\n        if: always()' in workflow
-    assert 'actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08' in workflow
+    assert 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' in workflow
     assert 'if: always()' in workflow
     assert 'git archive' in workflow
     assert 'baseline-revision' in workflow

@@ -117,7 +117,7 @@ bench = [
     "dependency-injector==4.49.1",
     "dishka==1.10.1",
     "wireup==2.12.0",
-    "svcs==26.2.0",
+    "svcs==26.1.0",
 ]
 docs = [
     # MkDocs 2.0 removes the plugin system and the theming system with no
