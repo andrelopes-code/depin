@@ -691,102 +691,16 @@ def test_skips_required_parameters_without_compiled_dependencies_and_compiles_va
     assert program.supports((bytes, None))
 
 
-def test_shallow_generated_transient_stays_ahead_of_dense_instructions(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_shallow_container_does_not_compile_dense_instructions(monkeypatch: pytest.MonkeyPatch) -> None:
     def value() -> str:
         return 'value'
 
-    def unexpected_resolve(
-        _program: SyncInstructionProgram,
-        _ident: Ident,
-        _runtime: object = None,
-    ) -> object:
-        raise AssertionError('generated shallow transient used dense instructions')
+    def unexpected_compile(_plan: object) -> SyncInstructionProgram:
+        raise AssertionError('shallow plan invoked the dense instruction compiler')
 
-    monkeypatch.setattr(SyncInstructionProgram, 'resolve', unexpected_resolve)
+    monkeypatch.setattr(frozen_module, 'compile_sync_instructions', unexpected_compile)
 
     assert Container().bind(value, provides=str, scope=Scope.TRANSIENT).freeze().resolve(str) == 'value'
-
-
-def test_shallow_cached_keyword_class_uses_instructions(monkeypatch: pytest.MonkeyPatch) -> None:
-    class Result:
-        def __init__(self, *, count: int, label: str = 'default') -> None:
-            self.value = f'{label}={count}'
-
-    def count() -> int:
-        return 7
-
-    frozen = Container().bind(count, scope=Scope.TRANSIENT).bind(Result).freeze()
-
-    def unexpected_construct(*_args: object, **_kwargs: object) -> object:
-        raise AssertionError('shallow cached keyword class used construct.sync')
-
-    monkeypatch.setattr('depin._core.frozen.construct.sync', unexpected_construct)
-
-    assert frozen.resolve(Result).value == 'default=7'
-
-
-def test_shallow_cached_warmup_uses_instructions(monkeypatch: pytest.MonkeyPatch) -> None:
-    class Result: ...
-
-    frozen = Container().bind(Result).freeze()
-
-    def unexpected_construct(*_args: object, **_kwargs: object) -> object:
-        raise AssertionError('shallow cached warmup used construct.sync')
-
-    monkeypatch.setattr('depin._core.frozen.construct.sync', unexpected_construct)
-
-    report = frozen.warmup()
-    assert report.constructed[0].key is Result
-
-
-def test_active_override_is_the_shallow_instruction_fallback_boundary(monkeypatch: pytest.MonkeyPatch) -> None:
-    def original() -> str:
-        return 'original'
-
-    def render(first: str, second: str) -> bytes:
-        return f'{first}/{second}'.encode()
-
-    frozen = (
-        Container().bind(original, provides=str, scope=Scope.TRANSIENT).bind(render, scope=Scope.TRANSIENT).freeze()
-    )
-
-    def unexpected_instruction(
-        _program: SyncInstructionProgram,
-        _ident: Ident,
-        _runtime: object = None,
-    ) -> object:
-        raise AssertionError('active override used an immutable instruction')
-
-    monkeypatch.setattr(SyncInstructionProgram, 'resolve', unexpected_instruction)
-
-    with frozen.override(str).using('outer'):
-        assert frozen.resolve(bytes) == b'outer/outer'
-        with frozen.override(str).using('inner'):
-            assert frozen.resolve(bytes) == b'inner/inner'
-        assert frozen.resolve(bytes) == b'outer/outer'
-
-
-def test_live_scope_value_precedence_is_the_shallow_instruction_fallback_boundary(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    class Result:
-        def __init__(self, value: str = 'default') -> None:
-            self.value = value
-
-    frozen = Container().bind(Result, scope=Scope.TRANSIENT).freeze()
-
-    def unexpected_instruction(
-        _program: SyncInstructionProgram,
-        _ident: Ident,
-        _runtime: object = None,
-    ) -> object:
-        raise AssertionError('live scope value used an immutable instruction')
-
-    monkeypatch.setattr(SyncInstructionProgram, 'resolve', unexpected_instruction)
-
-    with frozen.scope() as frame:
-        frame.provide(str, 'provided')
-        assert frozen.resolve(Result).value == 'provided'
 
 
 def test_active_override_bypasses_a_deep_instruction_program() -> None:

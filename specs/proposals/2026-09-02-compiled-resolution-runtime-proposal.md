@@ -1,7 +1,7 @@
 # Proposal: compile resolution instead of interpreting it
 
 Date: 2026-09-02
-Status: asynchronous instruction runtime accepted; final hybrid verification selected next
+Status: completed; bounded hybrid accepted, universal interpreter removal rejected
 Scope: synchronous and asynchronous core resolution, caching, overrides, depth, and teardown registration
 
 ## Nature of this document
@@ -340,6 +340,35 @@ blocked and fails the mutation proof by timeout. The retained evidence is
 This slice is a GO. Complete hybrid equivalence, the published benchmark
 matrix, and removal of covered production fallbacks are selected next.
 
+## Final hybrid decision: 2026-09-08
+
+The final experiment compiled dense instructions for every shallow and deep
+plan, retained generated functions as the first choice for their accepted
+slice, and routed every other cold no-override root through instructions. Its
+implementation and fallback boundary passed the unit suite, literal
+specification review, and quality review.
+
+The deterministic published gate rejected it before latency could decide the
+experiment. A request-shaped scope increased from 88 to 97 Python calls and
+from 27 to 29 allocation blocks, failing both zero-growth budgets. A frozen
+100-provider container retained 64,392 bytes instead of 36,144, a +78.15%
+change against a 2% budget. The exact failures cannot be offset by a noisy
+latency improvement, so the universal shallow expansion and its tests were
+removed and no budget was widened. Evidence is retained in the
+[final hybrid selection](../../benchmarks/results/2026-09-08-final-hybrid-selection.md).
+
+The selected production hybrid therefore keeps generated Python functions for
+eligible shallow synchronous transient roots and dense typed instructions for
+deep sync and async graphs. Warm cache hits retain the direct cache path. The
+existing shallow runtime and the explicit-stack override/frame-sensitive
+fallback remain concrete residuals: the measured replacement cost too much
+memory and added work to a request-shaped scope. Removing every interpreter
+path is a NO-GO under the current representation, not an unmeasured follow-up.
+
+This completes the bounded proposal. It accepts the portions that pass every
+existing gate and rejects universal interpreter removal rather than weakening
+semantics or performance budgets.
+
 ## Goals
 
 - Make the common no-override path execute a specialized program per requested
@@ -581,6 +610,8 @@ Retain generated synchronous functions for eligible shallow transient roots and
 the dense typed instruction program for deep synchronous and asynchronous
 transient, singleton, scoped, and resource-owning graphs. The instruction
 runtime owns cache claims but continues to use `ScopeFrame` as the
-synchronization and teardown authority. Complete the differential and
-published-performance matrix, then simplify the final hybrid without widening
-any budget.
+synchronization and teardown authority. Retain the shallow runtime and dynamic
+explicit-stack fallbacks because universal shallow instructions failed the
+published work, allocation, and retained-memory gates. Do not widen those
+budgets; a future replacement requires a more compact executable form or a
+context-sensitive overlay.

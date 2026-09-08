@@ -91,8 +91,6 @@ plans share the existing immutable operation representation.
 
 ### Task 6: Select and simplify the final hybrid
 
-Status: next.
-
 - Run the complete differential matrix and every published benchmark contract.
 - Keep generated functions only for the bounded slice where they beat the
   instruction executor materially; route every broader shape through the dense
@@ -100,3 +98,11 @@ Status: next.
 - Remove interpreter production paths only after the executable model covers
   the matrix, diagnostics remain stable, and full paired evidence passes without
   wider budgets.
+
+Result: partial GO, universal replacement NO-GO. A reviewed candidate routed
+all shallow non-generated shapes through dense instructions, but the exact
+published gates rejected it: request-shaped scope work rose from 88 to 97
+calls, allocation blocks from 27 to 29, and a frozen 100-provider container
+retained 78.15% more memory against a 2% budget. The candidate was removed.
+The final hybrid keeps the bounded generated shallow path, dense deep sync and
+async paths, and the existing shallow/dynamic fallbacks. No budget was widened.

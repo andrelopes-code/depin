@@ -9,23 +9,26 @@ The v1-readiness work at `59624cf` closed the identified lifecycle and
 type-correctness findings. A new finding that affects the public contract moves
 back to the front of this sequence.
 
+The compiled-resolution experiments completed on 2026-09-08. They selected
+generated functions for eligible shallow synchronous transient roots and dense
+typed instructions for deep sync and async graphs. Universal shallow
+instructions were rejected by the published work, allocation, and retained-
+memory gates; the remaining interpreter paths are an explicit residual, not
+unfinished expansion under the completed proposal.
+
 ## Active sequence
 
 1. Maintain comparative evidence under the accepted
    [competitive-performance leadership proposal](proposals/2026-09-02-competitive-performance-leadership-proposal.md).
-2. Continue bounded compiled-Python experiments under the
-   [compiled-resolution runtime proposal](proposals/2026-09-02-compiled-resolution-runtime-proposal.md),
-   with the generated shallow synchronous path and dense deep sync/async
-   instruction paths selected for final hybrid verification.
-3. Investigate
+2. Investigate
    [declarative provider discovery](proposals/2026-09-05-declarative-provider-discovery-proposal.md),
    keeping explicit package discovery as a hypothesis rather than an accepted
    API or mechanism.
-4. Recalibrate FastAPI application performance under the
+3. Recalibrate FastAPI application performance under the
    [FastAPI minimum-overhead proposal](proposals/2026-09-02-fastapi-minimum-overhead-proposal.md).
-5. Keep the optional native accelerator NO-GO under the
+4. Keep the optional native accelerator NO-GO under the
    [optional-native accelerator proposal](proposals/2026-09-02-optional-native-accelerator-proposal.md).
-6. Complete the final public-API audit, stability commitment, comparison page,
+5. Complete the final public-API audit, stability commitment, comparison page,
    and package classifier; maintainers then decide whether to tag `1.0.0`.
 
 ## Evidence and operating references

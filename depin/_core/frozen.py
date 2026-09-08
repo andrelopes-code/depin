@@ -12,6 +12,7 @@ from typing import TypeGuard, final, overload
 
 from depin._core import construct, injection, overrides
 from depin._core.async_instructions import (
+    EMPTY_ASYNC_INSTRUCTION_PROGRAM,
     AsyncInstructionProgram,
     compile_async_instructions,
     from_sync,
@@ -29,8 +30,10 @@ from depin._core.health import (
     run_check_async,
 )
 from depin._core.instructions import (
+    EMPTY_SYNC_INSTRUCTION_PROGRAM,
     InstructionReady,
     InstructionStart,
+    SyncInstructionProgram,
     compile_sync_instructions,
 )
 from depin._core.lifecycle import LifecycleState, create_lifecycle_gate
@@ -330,18 +333,20 @@ class FrozenContainer:
         self._generated_sync: Mapping[Ident, Program] = (
             MappingProxyType({}) if deep_plan else compile_sync_transients(plan)
         )
-        self._sync_instructions = compile_sync_instructions(plan)
+        self._sync_instructions: SyncInstructionProgram = (
+            compile_sync_instructions(plan) if deep_plan else EMPTY_SYNC_INSTRUCTION_PROGRAM
+        )
         self._async_instructions: AsyncInstructionProgram = (
             compile_async_instructions(plan)
-            if any(spec.needs_async for spec in plan.order)
+            if deep_plan and any(spec.needs_async for spec in plan.order)
             else from_sync(
                 self._sync_instructions.operations,
                 self._sync_instructions.roots,
                 self._sync_instructions.frame_sensitive,
             )
+            if deep_plan
+            else EMPTY_ASYNC_INSTRUCTION_PROGRAM
         )
-        if frozenset(self._async_instructions.roots) != frozenset(plan.by_key):
-            raise DepinError('resolution plan contains a provider that cannot be compiled into instructions')
         self._lifecycle = create_lifecycle_gate()
         self._root = ScopeFrame(lifecycle=self._lifecycle)
         self._instruction_runtime = _SyncInstructionRuntime(self._root, self._is_constructing)
@@ -399,12 +404,17 @@ class FrozenContainer:
         spec = self._lookup(key, tag)
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
+        deep_plan = len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT
         if spec.scope is Scope.TRANSIENT:
-            program = self._generated_sync.get((spec.key, spec.tag))
-            if program is not None and not overrides.present():
-                resolved = program()
+            if deep_plan:
+                resolved = self._resolve_deep_sync(spec)
             else:
-                resolved = self._resolve_instruction_sync(spec)
+                program = self._generated_sync.get((spec.key, spec.tag))
+                if program is not None and not overrides.present():
+                    resolved = program()
+                else:
+                    kwargs = self._resolve_params_sync(spec) if spec.params else {}
+                    resolved = construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
         elif spec.scope is Scope.SINGLETON:
             resolved = self._resolve_root_cached_sync(spec)
         else:
@@ -435,7 +445,11 @@ class FrozenContainer:
         spec = self._lookup(key, tag)
         # See the matching note in `resolve`: plan-level erasure of provider
         # return types forces a single documented widening at this boundary.
-        resolved = await self._resolve_async(spec)
+        resolved = await (
+            self._resolve_deep_async(spec)
+            if spec.scope is Scope.TRANSIENT and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT
+            else self._resolve_async(spec)
+        )
         return resolved  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
     @contextlib.contextmanager
@@ -761,7 +775,11 @@ class FrozenContainer:
             selected = self._lookup_optional(spec.key, spec.tag)
             if selected is None:
                 raise MissingProviderError(f'no provider for {fmt_key(spec.key)} (tag={spec.tag!r})')
-            _ = self._resolve_root_cached_sync(spec) if selected is spec else self._resolve_sync(selected)
+            _ = (
+                self._resolve_root_cached_sync(spec, allow_iterative=False)
+                if selected is spec
+                else self._resolve_sync(selected)
+            )
             constructed.append(spec)
         return warmup_report(self.graph(), constructed, cached)
 
@@ -1043,15 +1061,11 @@ class FrozenContainer:
         frame_active = optional_frame(self._root) is not None
         return self._sync_instructions.supports(ident, frame_active=frame_active)
 
-    def _resolve_instruction_sync(self, spec: ProviderSpec) -> object:
+    def _resolve_deep_sync(self, spec: ProviderSpec) -> object:
         ident = (spec.key, spec.tag)
         if self._can_use_sync_instructions(ident):
             return self._sync_instructions.resolve(ident, self._instruction_runtime)
-        if overrides.present() or (
-            optional_frame(self._root) is not None and ident in self._sync_instructions.frame_sensitive
-        ):
-            return self._resolve_sync_iterative(spec)
-        raise DepinError(f'{fmt_key(spec.key)} has no available synchronous instruction program')
+        return self._resolve_sync_iterative(spec)
 
     def _can_use_async_instructions(self, ident: Ident) -> bool:
         if overrides.present():
@@ -1059,32 +1073,36 @@ class FrozenContainer:
         frame_active = optional_frame(self._root) is not None
         return self._async_instructions.supports(ident, frame_active=frame_active)
 
-    async def _resolve_instruction_async(self, spec: ProviderSpec) -> object:
+    async def _resolve_deep_async(self, spec: ProviderSpec) -> object:
         ident = (spec.key, spec.tag)
         if self._can_use_async_instructions(ident):
             return await self._async_instructions.resolve(ident, self._async_instruction_runtime)
-        if overrides.present() or (
-            optional_frame(self._root) is not None and ident in self._async_instructions.frame_sensitive
-        ):
-            return await self._resolve_async_iterative(spec)
-        raise DepinError(f'{fmt_key(spec.key)} has no available asynchronous instruction program')
+        return await self._resolve_async_iterative(spec)
 
     def _resolve_any(self, key: ProviderKey, tag: str | None) -> object:
         spec = self._lookup(key, tag)
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
+        deep_plan = len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT
         if spec.scope is Scope.TRANSIENT:
+            if deep_plan:
+                return self._resolve_deep_sync(spec)
             program = self._generated_sync.get((spec.key, spec.tag))
             if program is not None and not overrides.present():
                 return program()
-            return self._resolve_instruction_sync(spec)
+            kwargs = self._resolve_params_sync(spec) if spec.params else {}
+            return construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
         if spec.scope is Scope.SINGLETON:
             return self._resolve_root_cached_sync(spec)
         return self._resolve_cached_sync(spec, active_frame(self._root))
 
     async def _aresolve_any(self, key: ProviderKey, tag: str | None) -> object:
         spec = self._lookup(key, tag)
-        return await self._resolve_async(spec)
+        return await (
+            self._resolve_deep_async(spec)
+            if spec.scope is Scope.TRANSIENT and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT
+            else self._resolve_async(spec)
+        )
 
     def _lookup(self, key: object, tag: str | None) -> ProviderSpec:
         if not self._validate_key(key):
@@ -1128,23 +1146,23 @@ class FrozenContainer:
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
         if spec.scope is Scope.TRANSIENT:
-            return self._resolve_instruction_sync(spec)
+            return self._construct_sync(spec)
         if spec.scope is Scope.SINGLETON:
             return self._resolve_root_cached_sync(spec)
         return self._resolve_cached_sync(spec, active_frame(self._root))
 
-    def _resolve_root_cached_sync(self, spec: ProviderSpec) -> object:
+    def _resolve_root_cached_sync(self, spec: ProviderSpec, *, allow_iterative: bool = True) -> object:
         cache_id = (spec.key, spec.tag)
         while True:
             cached, claim = self._root.claim_root_cached(cache_id)
             if cached is not MISSING:
                 return cached
-            if self._root.is_leader(claim) and self._can_use_sync_instructions(cache_id):
+            if allow_iterative and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT and self._root.is_leader(claim):
                 if claim is not None:
                     follower = self._root.abort(cache_id, claim)
                     if follower is not None:
                         follower.finish()
-                return self._resolve_instruction_sync(spec)
+                return self._resolve_deep_sync(spec)
             if not self._root.is_leader(claim):
                 if self._is_constructing(self._root, cache_id):
                     raise CircularDependencyError(
@@ -1177,12 +1195,12 @@ class FrozenContainer:
             cached, claim = frame.claim_cached(cache_id, cache_id)
             if cached is not MISSING:
                 return cached
-            if frame.is_leader(claim) and self._can_use_sync_instructions(cache_id):
+            if frame.is_leader(claim) and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
                 if claim is not None:
                     follower = frame.abort(cache_id, claim)
                     if follower is not None:
                         follower.finish()
-                return self._resolve_instruction_sync(spec)
+                return self._resolve_deep_sync(spec)
             if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
                 if frame.is_leader(claim) and claim is not None:
                     follower = frame.abort(cache_id, claim)
@@ -1268,7 +1286,7 @@ class FrozenContainer:
     async def _resolve_async(self, spec: ProviderSpec) -> object:
         frame = self._cache_target(spec)
         if frame is None:
-            return await self._resolve_instruction_async(spec)
+            return await self._construct_async(spec)
         cache_id = (spec.key, spec.tag)
         while True:
             if frame is self._root:
@@ -1277,12 +1295,12 @@ class FrozenContainer:
                 cached, claim = frame.claim_cached(cache_id, cache_id, asynchronous=True)
             if cached is not MISSING:
                 return cached
-            if frame.is_leader(claim) and self._can_use_async_instructions(cache_id):
+            if frame.is_leader(claim) and len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
                 if claim is not None:
                     follower = frame.abort(cache_id, claim)
                     if follower is not None:
                         follower.finish()
-                return await self._resolve_instruction_async(spec)
+                return await self._resolve_deep_async(spec)
             if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
                 if frame.is_leader(claim) and claim is not None:
                     follower = frame.abort(cache_id, claim)
@@ -1377,6 +1395,14 @@ class FrozenContainer:
         if spec.scope is Scope.SCOPED:
             return active_frame(self._root)
         return None
+
+    def _construct_sync(self, spec: ProviderSpec) -> object:
+        kwargs = self._resolve_params_sync(spec) if spec.params else {}
+        return construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
+
+    async def _construct_async(self, spec: ProviderSpec) -> object:
+        kwargs = await self._resolve_params_async(spec) if spec.params else {}
+        return await construct.asynchronous(spec, kwargs, self._teardown_sink(spec), self._read_frame)
 
     def _resolve_params_sync(self, spec: ProviderSpec) -> dict[str, object]:
         out: dict[str, object] = {}
