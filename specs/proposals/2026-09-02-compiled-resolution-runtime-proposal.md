@@ -1,7 +1,7 @@
 # Proposal: compile resolution instead of interpreting it
 
 Date: 2026-09-02
-Status: deep sync transient instructions accepted; complete sync calls selected next
+Status: complete sync instructions accepted; cached and scoped claims selected next
 Scope: synchronous and asynchronous core resolution, caching, overrides, depth, and teardown registration
 
 ## Nature of this document
@@ -217,6 +217,41 @@ deep interpreter, and preserves the bounded generated leader. The next slice
 encodes the complete synchronous call contract and override-aware execution;
 cached/scoped claims and resource lifecycles remain outside the instruction
 program until their dedicated correctness phases.
+
+## Experiment decision: 2026-09-08 complete synchronous calls
+
+The dense program now encodes resolved keyword arguments, omitted Python
+defaults, unbound optional values, classes, aliases, collections, and rewritten
+decorators as immutable typed operations. Each operation carries its stable key
+and tag. Malformed instruction errors render the dependency chain through those
+identities. Exact positional functions retain their specialized zero/one/many
+argument loop.
+
+Top-level resolution reads whether an override exists once. Any active override
+continues through the iterative executor, preserving nested substitution
+semantics. The compiler also marks roots whose transitive program contains an
+unbound default or optional; those roots fall back inside a live scope so a
+frame-provided value is not hidden by a precompiled default or `None`.
+
+A seven-repeat diagnostic against `c7c83de` reduced a 256-provider keyword-only
+transient chain from 704.564 to 430.698 microseconds (-38.87%). A keyword-only
+class in a 256-node plan improved from 7.361 to 4.974 microseconds (-32.43%).
+Freezing a 1,000-provider keyword chain changed from 41.382 to 43.525
+milliseconds (+5.18%). The previously accepted 1,000-provider positional path
+remained within the normal regression boundary at +5.22%, while still far
+ahead of its 2,617.506-microsecond iterative baseline.
+
+The richer keyword representation remains linear: 20, 100, 160, and 1,000
+providers store exactly the same number of operations, one fewer dependency
+edge, and one keyword slot per edge. Measured retained representation was
+5,192, 26,528, 39,488, and 253,192 bytes, a 20-to-160 exponent of 0.976.
+Focused correctness covers every new call form, active overrides, propagated
+scope sensitivity, stable error metadata, and malformed slots.
+
+This slice is a GO. The next phase integrates singleton and scoped claim-or-join
+operations without replacing the existing locks, cache state, or recursive
+construction detection. Resource ownership and async execution remain separate
+later phases.
 
 ## Goals
 

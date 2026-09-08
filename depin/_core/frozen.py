@@ -219,7 +219,7 @@ class FrozenContainer:
         if spec.scope is Scope.TRANSIENT:
             if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
                 ident = (spec.key, spec.tag)
-                if not overrides.present() and self._sync_transient_instructions.supports(ident):
+                if self._can_use_sync_transient_instructions(ident):
                     resolved = self._sync_transient_instructions.resolve(ident)
                 else:
                     resolved = self._resolve_sync_iterative(spec)
@@ -870,6 +870,12 @@ class FrozenContainer:
     def _is_registered(self, key: ProviderKey, tag: str | None) -> bool:
         return (key, tag) in self._plan.by_key
 
+    def _can_use_sync_transient_instructions(self, ident: Ident) -> bool:
+        if overrides.present():
+            return False
+        frame_active = optional_frame(self._root) is not None
+        return self._sync_transient_instructions.supports(ident, frame_active=frame_active)
+
     def _resolve_any(self, key: ProviderKey, tag: str | None) -> object:
         spec = self._lookup(key, tag)
         if spec.needs_async:
@@ -877,7 +883,7 @@ class FrozenContainer:
         if spec.scope is Scope.TRANSIENT:
             if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
                 ident = (spec.key, spec.tag)
-                if not overrides.present() and self._sync_transient_instructions.supports(ident):
+                if self._can_use_sync_transient_instructions(ident):
                     return self._sync_transient_instructions.resolve(ident)
                 return self._resolve_sync_iterative(spec)
             program = self._generated_sync.get((spec.key, spec.tag))

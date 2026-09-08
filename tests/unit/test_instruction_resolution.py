@@ -8,10 +8,19 @@ import pytest
 from depin._core import frozen as frozen_module
 from depin._core.container import Container
 from depin._core.graph import build_plan
-from depin._core.instructions import Operation, SyncTransientProgram, compile_sync_transient_instructions
+from depin._core.instructions import (
+    AliasOperation,
+    CollectionOperation,
+    KeywordOperation,
+    Operation,
+    ResolvedKeyword,
+    SyncTransientProgram,
+    compile_sync_transient_instructions,
+)
 from depin._core.markers import Tag, Token, injected
+from depin._core.overrides import present as override_present
 from depin._core.scope import Scope
-from depin._core.spec import ProviderSpec
+from depin._core.spec import Ident, ParamSpec, ProviderShape, ProviderSpec, ResolutionPlan
 from depin.errors import InvalidProviderError
 
 
@@ -94,27 +103,140 @@ def test_keeps_unsupported_call_contracts_and_lifetimes_out_of_the_program() -> 
     async def async_value() -> str:
         return 'async'
 
-    def defaulted(value: object = object()) -> bytes:
-        return repr(value).encode()
-
     def cached() -> int:
         return 1
 
-    def uses_defaulted(value: bytes) -> bytearray:
-        return bytearray(value)
+    def uses_cached(value: int) -> bytes:
+        return str(value).encode()
 
     plan = build_plan(
         Container()
         .bind(async_value, provides=str, scope=Scope.TRANSIENT)
-        .bind(defaulted, provides=bytes, scope=Scope.TRANSIENT)
-        .bind(uses_defaulted, provides=bytearray, scope=Scope.TRANSIENT)
         .bind(cached, provides=int, scope=Scope.SINGLETON)
+        .bind(uses_cached, provides=bytes, scope=Scope.TRANSIENT)
         .records()
     )
     program = compile_sync_transient_instructions(plan)
 
     assert not program.operations
     assert not program.roots
+
+
+def test_compiles_keyword_defaults_optionals_and_classes() -> None:
+    class Result:
+        def __init__(self, *, count: int, label: str = 'default', payload: bytes | None = None) -> None:
+            self.values = (count, label, payload)
+
+    def count() -> int:
+        return 7
+
+    plan = build_plan(Container().bind(count, scope=Scope.TRANSIENT).bind(Result, scope=Scope.TRANSIENT).records())
+    program = compile_sync_transient_instructions(plan)
+
+    assert isinstance(program.operations[-1], KeywordOperation)
+    result = program.resolve((Result, None))
+    assert isinstance(result, Result)
+    assert result.values == (7, 'default', None)
+
+
+def test_compiles_aliases_collections_and_decorators() -> None:
+    class Service:
+        def __init__(self, labels: tuple[str, ...]) -> None:
+            self.labels = labels
+
+    class Alias: ...
+
+    class Element: ...
+
+    class Second: ...
+
+    first_value = Element()
+    second_value = Second()
+
+    def service() -> Service:
+        return Service(('inner',))
+
+    def decorate(inner: Service, *, suffix: str = 'outer') -> Service:
+        return Service((*inner.labels, suffix))
+
+    def element() -> Element:
+        return first_value
+
+    def second() -> Second:
+        return second_value
+
+    plan = build_plan(
+        Container()
+        .bind(service, scope=Scope.TRANSIENT)
+        .decorate(Service, decorate)
+        .bind(element, scope=Scope.TRANSIENT)
+        .bind(second, scope=Scope.TRANSIENT)
+        .alias(Alias, to=Element)
+        .collect(Element, [Alias, Second])
+        .records()
+    )
+    program = compile_sync_transient_instructions(plan)
+
+    assert isinstance(program.operations[program.roots[(Alias, None)]], AliasOperation)
+    assert isinstance(program.operations[program.roots[(list[Element], None)]], CollectionOperation)
+    decorated = program.resolve((Service, None))
+    collection = program.resolve((list[Element], None))
+    assert isinstance(decorated, Service)
+    assert isinstance(collection, list)
+    assert decorated.labels == ('inner', 'outer')
+    assert collection == [first_value, second_value]
+
+
+def test_deep_keyword_root_uses_instructions_outside_a_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Result:
+        def __init__(self, *, value: int, missing: bytes | None = None) -> None:
+            self.values = (value, missing)
+
+    container = Container()
+    for index in range(254):
+        container.value(Token[int](f'keyword-padding-{index}'), index)
+
+    def value() -> int:
+        return 9
+
+    frozen = container.bind(value, scope=Scope.TRANSIENT).bind(Result, scope=Scope.TRANSIENT).freeze()
+    override_state_reads = 0
+    read_override_state = override_present
+
+    def unexpected_iterative(_self: object, _spec: ProviderSpec) -> object:
+        raise AssertionError('deep keyword root used the interpreted executor')
+
+    def count_override_state_reads() -> bool:
+        nonlocal override_state_reads
+        override_state_reads += 1
+        return read_override_state()
+
+    monkeypatch.setattr(frozen_module.FrozenContainer, '_resolve_sync_iterative', unexpected_iterative)
+    monkeypatch.setattr('depin._core.frozen.overrides.present', count_override_state_reads)
+
+    result = frozen.resolve(Result)
+    assert result.values == (9, None)
+    assert override_state_reads == 1
+
+
+def test_active_scope_falls_back_when_it_can_supply_an_unbound_parameter() -> None:
+    class Result:
+        def __init__(self, value: str | None) -> None:
+            self.value = value
+
+    class Outer:
+        def __init__(self, result: Result) -> None:
+            self.value = result.value
+
+    container = Container()
+    for index in range(254):
+        container.value(Token[int](f'scope-padding-{index}'), index)
+    frozen = container.bind(Result, scope=Scope.TRANSIENT).bind(Outer, scope=Scope.TRANSIENT).freeze()
+
+    assert frozen.resolve(Outer).value is None
+    with frozen.scope() as frame:
+        frame.provide(str, 'from scope')
+        assert frozen.resolve(Outer).value == 'from scope'
 
 
 def test_preserves_provider_exception_type_and_message() -> None:
@@ -155,10 +277,12 @@ def test_rejects_a_key_that_has_no_compiled_instruction_root() -> None:
 
 
 def test_rejects_a_malformed_dependency_slot() -> None:
-    operation = Operation(lambda: object(), (1,))
+    operation = Operation(lambda: object(), (1,), (str, None))
     program = SyncTransientProgram((operation,), MappingProxyType({(str, None): 0}))
 
-    with pytest.raises(InvalidProviderError, match='invalid dependency slot 1'):
+    with pytest.raises(
+        InvalidProviderError, match='invalid dependency slot 1 in synchronous transient program while resolving str'
+    ):
         program.resolve((str, None))
 
 
@@ -167,6 +291,56 @@ def test_rejects_a_malformed_operation_slot() -> None:
 
     with pytest.raises(InvalidProviderError, match='invalid operation slot 1'):
         program.resolve((str, None))
+
+
+def test_rejects_a_malformed_keyword_parameter_slot() -> None:
+    def accept_keywords(**_kwargs: object) -> object:
+        return object()
+
+    operation = KeywordOperation(accept_keywords, (), (ResolvedKeyword('value', 0),), (str, None))
+    program = SyncTransientProgram((operation,), MappingProxyType({(str, None): 0}))
+
+    with pytest.raises(InvalidProviderError, match=r'invalid parameter slot 0.*while resolving str'):
+        program.resolve((str, None))
+
+
+def test_rejects_a_malformed_alias_operation() -> None:
+    operation = AliasOperation((), (str, None))
+    program = SyncTransientProgram((operation,), MappingProxyType({(str, None): 0}))
+
+    with pytest.raises(InvalidProviderError, match='alias instruction for str requires exactly one dependency'):
+        program.resolve((str, None))
+
+
+def test_skips_unsupported_shapes_and_required_parameters_without_compiled_dependencies() -> None:
+    def stringify(value: object) -> str:
+        return str(value)
+
+    required = ParamSpec(name='value', key=int, tag=None, has_default=False, default=None)
+    function = ProviderSpec(
+        key=str,
+        tag=None,
+        source=stringify,
+        scope=Scope.TRANSIENT,
+        shape=ProviderShape.FUNCTION,
+        needs_async=False,
+        params=(required,),
+    )
+    value = ProviderSpec(
+        key=bytes,
+        tag=None,
+        source=b'value',
+        scope=Scope.TRANSIENT,
+        shape=ProviderShape.VALUE,
+        needs_async=False,
+        params=(),
+    )
+    mutable_by_key: dict[Ident, ProviderSpec] = {(str, None): function, (bytes, None): value}
+    by_key = MappingProxyType(mutable_by_key)
+
+    program = compile_sync_transient_instructions(ResolutionPlan((function, value), by_key))
+
+    assert not program.operations
 
 
 def test_shallow_container_does_not_compile_dense_instructions(monkeypatch: pytest.MonkeyPatch) -> None:

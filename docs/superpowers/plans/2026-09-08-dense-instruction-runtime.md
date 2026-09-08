@@ -35,15 +35,25 @@ remained slower than generated functions, so shallow routing is unchanged.
 
 ### Task 2: Encode complete synchronous calls and overrides
 
-Status: next.
-
 - Add explicit positional and keyword slots for defaults, optional parameters,
   keyword-only parameters, aliases, collections, and decorators.
 - Read override state once at the root and either execute an override-aware
   instruction path or fall back without changing nested override semantics.
 - Carry stable key, tag, and dependency-chain metadata for actionable errors.
 
+Result: GO. Immutable resolved/default/optional keyword slots and dedicated
+alias and collection operations now cover teardown-free synchronous functions,
+classes, decorators, aliases, and collections. Override state is read once at
+the root and any active override falls back to the iterative executor. A root
+whose subgraph contains an unbound default or optional also falls back inside a
+live scope so frame-provided values retain precedence. A 256-provider
+keyword-only chain improved from 704.564 to 430.698 microseconds (-38.87%),
+while representation growth remained linear at a 0.976 exponent. The accepted
+positional deep path remained within the 10% regression boundary.
+
 ### Task 3: Integrate singleton and scoped claims
+
+Status: next.
 
 - Add operations that enter the existing cache claim-or-join and scope-frame
   machinery rather than duplicating locks or cache state.
