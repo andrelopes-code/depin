@@ -11,23 +11,33 @@ from depin._core.typeguards import as_factory
 def sync_positional_factory(spec: ProviderSpec) -> Callable[..., object] | None:
     if spec.shape is not ProviderShape.FUNCTION or spec.needs_async:
         return None
-    if any(param.has_default or param.optional for param in spec.params):
-        return None
-    if any(not param.call_positionally for param in spec.params):
-        return None
+    params = spec.params
+    param_count = len(params)
+    if param_count == 1:
+        only = params[0]
+        if only.has_default or only.optional or not only.call_positionally:
+            return None
+    elif param_count > 1:
+        for param in params:
+            if param.has_default or param.optional or not param.call_positionally:
+                return None
 
-    factory = as_factory(spec.source, spec.key)
-    if not isinstance(factory, FunctionType):
-        return factory if not spec.params else None
+    source = spec.source
+    if not isinstance(source, FunctionType):
+        factory = as_factory(source, spec.key)
+        return factory if not params else None
 
-    code = factory.__code__
-    expected_names = tuple(param.name for param in spec.params)
-    actual_names = code.co_varnames[: code.co_argcount]
-    exact = (
-        not code.co_posonlyargcount
-        and not code.co_kwonlyargcount
-        and not code.co_flags & inspect.CO_VARARGS
-        and code.co_argcount == len(expected_names)
-        and actual_names == expected_names
-    )
-    return factory if exact else None
+    code = source.__code__
+    if (
+        code.co_posonlyargcount
+        or code.co_kwonlyargcount
+        or code.co_flags & inspect.CO_VARARGS
+        or code.co_argcount != param_count
+    ):
+        return None
+    if param_count == 1:
+        return source if code.co_varnames[0] == params[0].name else None
+    for index, param in enumerate(params):
+        if code.co_varnames[index] != param.name:
+            return None
+    return source

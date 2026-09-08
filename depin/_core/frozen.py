@@ -24,9 +24,11 @@ from depin._core.health import (
     run_check_async,
 )
 from depin._core.instructions import (
-    EMPTY_SYNC_TRANSIENT_PROGRAM,
-    SyncTransientProgram,
-    compile_sync_transient_instructions,
+    EMPTY_SYNC_INSTRUCTION_PROGRAM,
+    InstructionReady,
+    InstructionStart,
+    SyncInstructionProgram,
+    compile_sync_instructions,
 )
 from depin._core.lifecycle import LifecycleState, create_lifecycle_gate
 from depin._core.markers import Token
@@ -70,6 +72,111 @@ class _PendingResolution:
     kwargs: dict[str, object]
     param_index: int = 0
     waiting_name: str | None = None
+    instruction_claim: object | None = None
+
+
+@dataclass(slots=True)
+class _InstructionClaim:
+    frame: ScopeFrame
+    cache_id: object
+    leader: object
+    token: ContextToken[_Constructing | None]
+    active: bool = True
+
+    @property
+    def ready(self) -> bool:
+        return False
+
+    @property
+    def value(self) -> object:
+        return None
+
+
+class _SyncInstructionRuntime:
+    __slots__ = ('_is_constructing', '_root')
+
+    def __init__(
+        self,
+        root: ScopeFrame,
+        is_constructing: Callable[[ScopeFrame, object], bool],
+    ) -> None:
+        self._root = root
+        self._is_constructing = is_constructing
+
+    def begin(self, scope: Scope, ident: Ident, claims: list[object | None]) -> InstructionStart:
+        frame = self._root if scope is Scope.SINGLETON else active_frame(self._root)
+        while True:
+            claim: object | None = None
+            token: ContextToken[_Constructing | None] | None = None
+            leader = False
+            registered = False
+            try:
+                cached, claim = frame.claim_cached(ident, ident)
+                if cached is not MISSING:
+                    return InstructionReady(cached)
+                leader = frame.is_leader(claim)
+                constructing = (not leader or frame.parent is not None) and self._is_constructing(frame, ident)
+                if not leader or (frame.parent is not None and constructing):
+                    if leader and claim is not None:
+                        frame.abort(ident, claim, signal=True)
+                    if constructing:
+                        raise CircularDependencyError(
+                            f'{fmt_key(ident[0])} is already constructing in this context; '
+                            'resolve a different dependency or break the recursive provider call'
+                        )
+                if not leader:
+                    if claim is not None:
+                        frame.wait_sync(claim)
+                    continue
+                token = _constructing.set(_Constructing(frame, ident, _constructing.get()))
+                if claim is None:
+                    raise DepinError(f'cache claim for {fmt_key(ident[0])} completed without a leader')
+                owned = _InstructionClaim(frame, ident, claim, token)
+                claims.append(owned)
+                registered = True
+                return owned
+            except BaseException:
+                if not registered:
+                    if leader and claim is not None:
+                        frame.abort(ident, claim, signal=True)
+                    if token is not None:
+                        _constructing.reset(token)
+                raise
+
+    def publish(self, claim: object, value: object) -> None:
+        if not isinstance(claim, _InstructionClaim):
+            raise DepinError('synchronous instruction received an invalid cache claim')
+        if not claim.active:
+            return
+        try:
+            claim.frame.publish(claim.cache_id, claim.leader, value, signal=True)
+        except BaseException:
+            claim.frame.abort(claim.cache_id, claim.leader, signal=True)
+            raise
+        finally:
+            claim.active = False
+            _constructing.reset(claim.token)
+
+    def abort(self, claim: object) -> None:
+        if not isinstance(claim, _InstructionClaim):
+            raise DepinError('synchronous instruction received an invalid cache claim')
+        if not claim.active:
+            return
+        try:
+            claim.frame.abort(claim.cache_id, claim.leader, signal=True)
+        finally:
+            claim.active = False
+            _constructing.reset(claim.token)
+
+    def read_frame(self, ident: Ident) -> object:
+        value = active_frame(self._root).lookup_provided(*ident)
+        if value is MISSING:
+            raise MissingProviderError(
+                f'no value in the active scope for {fmt_key(ident[0])}; '
+                'a key declared with scope_value() must be supplied by whoever opens the scope, '
+                'with frame.provide(key, value)'
+            )
+        return value
 
 
 @final
@@ -150,7 +257,15 @@ class FrozenContainer:
         ```
     """
 
-    __slots__ = ('_generated_sync', '_lifecycle', '_plan', '_root', '_sync_transient_instructions', '_validate_key')
+    __slots__ = (
+        '_generated_sync',
+        '_instruction_runtime',
+        '_lifecycle',
+        '_plan',
+        '_root',
+        '_sync_instructions',
+        '_validate_key',
+    )
 
     def __init__(self, plan: ResolutionPlan) -> None:
         self._plan = plan
@@ -158,11 +273,12 @@ class FrozenContainer:
         self._generated_sync: Mapping[Ident, Program] = (
             MappingProxyType({}) if deep_plan else compile_sync_transients(plan)
         )
-        self._sync_transient_instructions: SyncTransientProgram = (
-            compile_sync_transient_instructions(plan) if deep_plan else EMPTY_SYNC_TRANSIENT_PROGRAM
+        self._sync_instructions: SyncInstructionProgram = (
+            compile_sync_instructions(plan) if deep_plan else EMPTY_SYNC_INSTRUCTION_PROGRAM
         )
         self._lifecycle = create_lifecycle_gate()
         self._root = ScopeFrame(lifecycle=self._lifecycle)
+        self._instruction_runtime = _SyncInstructionRuntime(self._root, self._is_constructing)
         self._validate_key: Callable[[object], TypeGuard[ProviderKey]] = is_provider_key
         self._lifecycle.on_quiesce = self._quiesce_resolution
         self._lifecycle.on_reopen = self._resume_resolution
@@ -216,13 +332,10 @@ class FrozenContainer:
         spec = self._lookup(key, tag)
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
+        deep_plan = len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT
         if spec.scope is Scope.TRANSIENT:
-            if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
-                ident = (spec.key, spec.tag)
-                if self._can_use_sync_transient_instructions(ident):
-                    resolved = self._sync_transient_instructions.resolve(ident)
-                else:
-                    resolved = self._resolve_sync_iterative(spec)
+            if deep_plan:
+                resolved = self._resolve_deep_sync(spec)
             else:
                 program = self._generated_sync.get((spec.key, spec.tag))
                 if program is not None and not overrides.present():
@@ -870,22 +983,26 @@ class FrozenContainer:
     def _is_registered(self, key: ProviderKey, tag: str | None) -> bool:
         return (key, tag) in self._plan.by_key
 
-    def _can_use_sync_transient_instructions(self, ident: Ident) -> bool:
+    def _can_use_sync_instructions(self, ident: Ident) -> bool:
         if overrides.present():
             return False
         frame_active = optional_frame(self._root) is not None
-        return self._sync_transient_instructions.supports(ident, frame_active=frame_active)
+        return self._sync_instructions.supports(ident, frame_active=frame_active)
+
+    def _resolve_deep_sync(self, spec: ProviderSpec) -> object:
+        ident = (spec.key, spec.tag)
+        if self._can_use_sync_instructions(ident):
+            return self._sync_instructions.resolve(ident, self._instruction_runtime)
+        return self._resolve_sync_iterative(spec)
 
     def _resolve_any(self, key: ProviderKey, tag: str | None) -> object:
         spec = self._lookup(key, tag)
         if spec.needs_async:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
+        deep_plan = len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT
         if spec.scope is Scope.TRANSIENT:
-            if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
-                ident = (spec.key, spec.tag)
-                if self._can_use_sync_transient_instructions(ident):
-                    return self._sync_transient_instructions.resolve(ident)
-                return self._resolve_sync_iterative(spec)
+            if deep_plan:
+                return self._resolve_deep_sync(spec)
             program = self._generated_sync.get((spec.key, spec.tag))
             if program is not None and not overrides.present():
                 return program()
@@ -961,7 +1078,7 @@ class FrozenContainer:
                     follower = self._root.abort(cache_id, claim)
                     if follower is not None:
                         follower.finish()
-                return self._resolve_sync_iterative(spec)
+                return self._resolve_deep_sync(spec)
             if not self._root.is_leader(claim):
                 if self._is_constructing(self._root, cache_id):
                     raise CircularDependencyError(
@@ -999,7 +1116,7 @@ class FrozenContainer:
                     follower = frame.abort(cache_id, claim)
                     if follower is not None:
                         follower.finish()
-                return self._resolve_sync_iterative(spec)
+                return self._resolve_deep_sync(spec)
             if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
                 if frame.is_leader(claim) and claim is not None:
                     follower = frame.abort(cache_id, claim)
@@ -1277,45 +1394,44 @@ class FrozenContainer:
             return _PENDING
 
     def _begin(self, spec: ProviderSpec, pending: list[_PendingResolution]) -> object:
-        if spec.scope is Scope.SINGLETON:
-            frame = self._root
-        elif spec.scope is Scope.SCOPED:
-            frame = active_frame(self._root)
-        else:
-            frame = None
-        if frame is None:
+        if spec.scope is Scope.TRANSIENT:
             pending.append(_PendingResolution(spec, None, None, None, None, {}))
             return _PENDING
-        cache_id = (spec.key, spec.tag)
-        while True:
-            cached, claim = frame.claim_cached(cache_id, cache_id)
-            if cached is not MISSING:
-                return cached
-            if not frame.is_leader(claim) or (frame.parent is not None and self._is_constructing(frame, cache_id)):
-                if frame.is_leader(claim) and claim is not None:
-                    follower = frame.abort(cache_id, claim)
-                    if follower is not None:
-                        follower.finish()
-                if self._is_constructing(frame, cache_id):
-                    raise CircularDependencyError(
-                        f'{fmt_key(spec.key)} is already constructing in this context; '
-                        'resolve a different dependency or break the recursive provider call'
-                    )
-            if not frame.is_leader(claim):
-                if claim is not None:
-                    frame.wait_sync(claim)
-                continue
-            token = _constructing.set(_Constructing(frame, cache_id, _constructing.get()))
-            pending.append(_PendingResolution(spec, frame, cache_id, claim, token, {}))
+        claims: list[object | None] = []
+        try:
+            started = self._instruction_runtime.begin(spec.scope, (spec.key, spec.tag), claims)
+            if started.ready:
+                return started.value
+            if not isinstance(started, _InstructionClaim):
+                raise DepinError(f'cache claim for {fmt_key(spec.key)} has an invalid instruction state')
+            pending.append(
+                _PendingResolution(
+                    spec,
+                    started.frame,
+                    started.cache_id,
+                    started.leader,
+                    started.token,
+                    {},
+                    instruction_claim=started,
+                )
+            )
+            claims.clear()
             return _PENDING
+        except BaseException:
+            for claim in reversed(claims):
+                if claim is not None:
+                    self._instruction_runtime.abort(claim)
+            raise
 
     def _complete(self, pending: list[_PendingResolution], value: object) -> None:
         current = pending.pop()
-        if current.frame is not None and current.cache_id is not None and current.leader is not None:
+        if current.instruction_claim is not None:
+            self._instruction_runtime.publish(current.instruction_claim, value)
+        elif current.frame is not None and current.cache_id is not None and current.leader is not None:
             follower = current.frame.publish(current.cache_id, current.leader, value)
             if follower is not None:
                 follower.finish()
-        if current.token is not None:
+        if current.token is not None and current.instruction_claim is None:
             _constructing.reset(current.token)
         if pending:
             parent = pending[-1]
@@ -1328,11 +1444,13 @@ class FrozenContainer:
     def _abort_pending(self, pending: list[_PendingResolution]) -> None:
         while pending:
             current = pending.pop()
-            if current.frame is not None and current.cache_id is not None and current.leader is not None:
+            if current.instruction_claim is not None:
+                self._instruction_runtime.abort(current.instruction_claim)
+            elif current.frame is not None and current.cache_id is not None and current.leader is not None:
                 follower = current.frame.abort(current.cache_id, current.leader)
                 if follower is not None:
                     follower.finish()
-            if current.token is not None:
+            if current.token is not None and current.instruction_claim is None:
                 _constructing.reset(current.token)
 
     def _teardown_sink(self, spec: ProviderSpec) -> Callable[[Teardown], None]:

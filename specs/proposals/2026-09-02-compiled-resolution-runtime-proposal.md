@@ -1,7 +1,7 @@
 # Proposal: compile resolution instead of interpreting it
 
 Date: 2026-09-02
-Status: complete sync instructions accepted; cached and scoped claims selected next
+Status: cached and scoped sync instructions accepted; resource ownership selected next
 Scope: synchronous and asynchronous core resolution, caching, overrides, depth, and teardown registration
 
 ## Nature of this document
@@ -253,6 +253,40 @@ operations without replacing the existing locks, cache state, or recursive
 construction detection. Resource ownership and async execution remain separate
 later phases.
 
+## Experiment decision: 2026-09-08 cached and scoped synchronous instructions
+
+The dense program now executes cold singleton and scoped graphs through the
+same immutable operation table as transient graphs. Operation lifetimes select
+the root or active scope frame, while the existing `ScopeFrame` locks, cache,
+claim-or-join state, and recursive-construction detection remain authoritative.
+Top-level warm cache hits keep their existing direct path.
+
+Claim ownership is recorded before control returns to the executor and remains
+on its cleanup stack until publication completes. Publication and abort reset
+the construction context in `finally` and request follower signalling from
+inside `ScopeFrame` after its lock is released. Deterministic fault injection
+covers interruption after root and dependency claims and before publication;
+the blocked-follower test was also shown to fail when the abort signal was
+removed. A critical concurrency review reproduced all three gaps and approved
+the corrected ownership protocol.
+
+A 1,000-provider cold singleton chain improved from 5,781.874 to 4,402.904
+microseconds (-23.85%), and a cold scoped chain improved from 6,383.748 to
+4,391.337 microseconds (-31.21%). Python calls for the cold singleton fell from
+17,007 to 11,016 (-35.23%); retained and peak traced bytes fell 33.69% and
+29.30%. Warm root lookups remained on their existing path and moved +6.59% for
+singleton and +4.82% for scoped diagnostics.
+
+Five alternating paired runs of the published 1,000-provider freeze workload
+measured a +5.07% median change, below its 8% budget. The complete benchmark
+contract suite passes 155 tests, and the focused cache, scope, iterative, and
+thread-safety selection passes 140 with six interpreter-specific skips. Full
+evidence is retained in [cached and scoped synchronous instructions](../../benchmarks/results/2026-09-08-cached-scoped-sync-instructions.md).
+
+This slice is a GO. Synchronous resource ownership is selected next; async
+execution remains separate so the sync loop pays no event-loop or awaitability
+branch per node.
+
 ## Goals
 
 - Make the common no-override path execute a specialized program per requested
@@ -490,10 +524,9 @@ has reached its demonstrated potential.
 
 ## Active decision
 
-Retain the bounded generated synchronous transient path. The 2026-09-04
-cached-runtime experiment and the 2026-09-08 closure-composition experiment are
-NO-GO; the generated-function experiment is a GO. Expand the winning generated
-representation across the required matrix while deduplicating its executable
-storage and preserving the iterative deep-graph path. Final runtime selection
-remains pending that expansion; the denser typed instruction strategy remains
-the planned complement or fallback.
+Retain generated synchronous functions for eligible shallow transient roots and
+the dense typed instruction program for deep synchronous transient, singleton,
+and scoped graphs. The instruction runtime owns cache claims but continues to
+use `ScopeFrame` as the synchronization authority. Expand the dense program to
+synchronous resource ownership next, preserving construction-order teardown;
+asynchronous execution remains a separate later phase.

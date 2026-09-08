@@ -1,7 +1,8 @@
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Annotated
+from typing import Annotated, Protocol, runtime_checkable
 
 import pytest
 
@@ -11,17 +12,19 @@ from depin._core.graph import build_plan
 from depin._core.instructions import (
     AliasOperation,
     CollectionOperation,
+    InstructionStart,
     KeywordOperation,
     Operation,
     ResolvedKeyword,
-    SyncTransientProgram,
-    compile_sync_transient_instructions,
+    SyncInstructionProgram,
+    ValueOperation,
+    compile_sync_instructions,
 )
 from depin._core.markers import Tag, Token, injected
 from depin._core.overrides import present as override_present
-from depin._core.scope import Scope
+from depin._core.scope import Scope, ScopeFrame
 from depin._core.spec import Ident, ParamSpec, ProviderShape, ProviderSpec, ResolutionPlan
-from depin.errors import InvalidProviderError
+from depin.errors import CircularDependencyError, InvalidProviderError, MissingProviderError
 
 
 def test_compiles_one_linear_operation_table_for_every_transient_root() -> None:
@@ -38,7 +41,7 @@ def test_compiles_one_linear_operation_table_for_every_transient_root() -> None:
         step.__annotations__['value'] = tokens[index - 1]
         container.bind(step, provides=token, scope=Scope.TRANSIENT)
 
-    program = compile_sync_transient_instructions(build_plan(container.records()))
+    program = compile_sync_instructions(build_plan(container.records()))
 
     assert isinstance(program.operations, tuple)
     assert isinstance(program.roots, MappingProxyType)
@@ -69,7 +72,7 @@ def test_rebuilds_repeated_transient_dependencies_without_memoizing_them() -> No
     plan = build_plan(
         Container().bind(leaf, scope=Scope.TRANSIENT).bind(root, provides=bytes, scope=Scope.TRANSIENT).records()
     )
-    program = compile_sync_transient_instructions(plan)
+    program = compile_sync_instructions(plan)
 
     assert program.resolve((bytes, None)) == b'result'
     assert program.resolve((bytes, None)) == b'result'
@@ -94,12 +97,12 @@ def test_resolves_tagged_dependencies_by_integer_slot() -> None:
         .bind(root, provides=bytes, scope=Scope.TRANSIENT)
         .records()
     )
-    program = compile_sync_transient_instructions(plan)
+    program = compile_sync_instructions(plan)
 
     assert program.resolve((bytes, None)) == b'preferred'
 
 
-def test_keeps_unsupported_call_contracts_and_lifetimes_out_of_the_program() -> None:
+def test_keeps_async_call_contracts_out_of_the_program_and_compiles_cached_dependencies() -> None:
     async def async_value() -> str:
         return 'async'
 
@@ -116,10 +119,11 @@ def test_keeps_unsupported_call_contracts_and_lifetimes_out_of_the_program() -> 
         .bind(uses_cached, provides=bytes, scope=Scope.TRANSIENT)
         .records()
     )
-    program = compile_sync_transient_instructions(plan)
+    program = compile_sync_instructions(plan)
 
-    assert not program.operations
-    assert not program.roots
+    assert not program.supports((str, None))
+    assert program.supports((int, None))
+    assert program.supports((bytes, None))
 
 
 def test_compiles_keyword_defaults_optionals_and_classes() -> None:
@@ -131,7 +135,7 @@ def test_compiles_keyword_defaults_optionals_and_classes() -> None:
         return 7
 
     plan = build_plan(Container().bind(count, scope=Scope.TRANSIENT).bind(Result, scope=Scope.TRANSIENT).records())
-    program = compile_sync_transient_instructions(plan)
+    program = compile_sync_instructions(plan)
 
     assert isinstance(program.operations[-1], KeywordOperation)
     result = program.resolve((Result, None))
@@ -175,7 +179,7 @@ def test_compiles_aliases_collections_and_decorators() -> None:
         .collect(Element, [Alias, Second])
         .records()
     )
-    program = compile_sync_transient_instructions(plan)
+    program = compile_sync_instructions(plan)
 
     assert isinstance(program.operations[program.roots[(Alias, None)]], AliasOperation)
     assert isinstance(program.operations[program.roots[(list[Element], None)]], CollectionOperation)
@@ -239,12 +243,353 @@ def test_active_scope_falls_back_when_it_can_supply_an_unbound_parameter() -> No
         assert frozen.resolve(Outer).value == 'from scope'
 
 
+def test_deep_singleton_chain_uses_instructions_for_cold_and_warm_resolution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    depth = 256
+    tokens = [Token[object](f'singleton-instruction-{index}') for index in range(depth)]
+    terminal = object()
+    container = Container()
+
+    def leaf() -> object:
+        return terminal
+
+    container.bind(leaf, provides=tokens[0], scope=Scope.SINGLETON)
+    for index, token in enumerate(tokens[1:], start=1):
+        step = _pass_through(tokens[index - 1])
+        container.bind(step, provides=token, scope=Scope.SINGLETON)
+    frozen = container.freeze()
+
+    def unexpected_iterative(_self: object, _spec: ProviderSpec) -> object:
+        raise AssertionError('deep singleton root used the interpreted executor')
+
+    monkeypatch.setattr(frozen_module.FrozenContainer, '_resolve_sync_iterative', unexpected_iterative)
+
+    assert frozen.resolve(tokens[-1]) is terminal
+    assert frozen.resolve(tokens[-1]) is terminal
+
+
+def test_deep_scoped_chain_uses_instructions_and_caches_per_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    depth = 256
+    tokens = [Token[object](f'scoped-instruction-{index}') for index in range(depth)]
+    calls = 0
+    container = Container()
+
+    def leaf() -> object:
+        nonlocal calls
+        calls += 1
+        return object()
+
+    container.bind(leaf, provides=tokens[0], scope=Scope.SCOPED)
+    for index, token in enumerate(tokens[1:], start=1):
+        step = _pass_through(tokens[index - 1])
+        container.bind(step, provides=token, scope=Scope.SCOPED)
+    frozen = container.freeze()
+
+    def unexpected_iterative(_self: object, _spec: ProviderSpec) -> object:
+        raise AssertionError('deep scoped root used the interpreted executor')
+
+    monkeypatch.setattr(frozen_module.FrozenContainer, '_resolve_sync_iterative', unexpected_iterative)
+
+    with frozen.scope():
+        first = frozen.resolve(tokens[-1])
+        assert frozen.resolve(tokens[-1]) is first
+    with frozen.scope():
+        second = frozen.resolve(tokens[-1])
+        assert frozen.resolve(tokens[-1]) is second
+    assert first is not second
+    assert calls == 2
+
+
+def test_transient_instruction_root_reuses_a_singleton_dependency(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+    root = Token[tuple[object]]('mixed-lifetime-root')
+    container = Container()
+    for index in range(254):
+        container.value(Token[int](f'mixed-lifetime-padding-{index}'), index)
+
+    def singleton() -> object:
+        nonlocal calls
+        calls += 1
+        return object()
+
+    def transient(value: object) -> tuple[object]:
+        return (value,)
+
+    frozen = (
+        container.bind(singleton, scope=Scope.SINGLETON).bind(transient, provides=root, scope=Scope.TRANSIENT).freeze()
+    )
+
+    def unexpected_iterative(_self: object, _spec: ProviderSpec) -> object:
+        raise AssertionError('mixed-lifetime root used the interpreted executor')
+
+    monkeypatch.setattr(frozen_module.FrozenContainer, '_resolve_sync_iterative', unexpected_iterative)
+
+    first = frozen.resolve(root)
+    second = frozen.resolve(root)
+    assert first is not second
+    assert first[0] is second[0]
+    assert calls == 1
+
+
+def test_deep_instruction_reads_a_scope_value_and_preserves_its_missing_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Request: ...
+
+    class Report:
+        def __init__(self, request: Request) -> None:
+            self.request = request
+
+    container = Container()
+    for index in range(254):
+        container.value(Token[int](f'frame-padding-{index}'), index)
+    frozen = container.scope_value(Request).bind(Report, scope=Scope.TRANSIENT).freeze()
+
+    def unexpected_iterative(_self: object, _spec: ProviderSpec) -> object:
+        raise AssertionError('scope-value root used the interpreted executor')
+
+    monkeypatch.setattr(frozen_module.FrozenContainer, '_resolve_sync_iterative', unexpected_iterative)
+
+    request = Request()
+    with frozen.scope() as frame:
+        frame.provide(Request, request)
+        assert frozen.resolve(Report).request is request
+    with (
+        frozen.scope(),
+        pytest.raises(
+            MissingProviderError,
+            match=r'no value in the active scope for .*Request.*a key declared with scope_value\(\)',
+        ),
+    ):
+        frozen.resolve(Report)
+
+
+def test_failed_instruction_claim_is_aborted_and_retried() -> None:
+    attempts = 0
+    container = Container()
+    for index in range(255):
+        container.value(Token[int](f'failure-padding-{index}'), index)
+
+    def unstable() -> str:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise LookupError('instruction singleton failed')
+        return 'recovered'
+
+    frozen = container.bind(unstable, provides=str, scope=Scope.SINGLETON).freeze()
+
+    with pytest.raises(LookupError, match='instruction singleton failed'):
+        frozen.resolve(str)
+    assert frozen.resolve(str) == 'recovered'
+    assert attempts == 2
+
+
+@runtime_checkable
+class _InstructionBegin(Protocol):
+    def begin(self, scope: Scope, ident: Ident, claims: list[object | None]) -> InstructionStart: ...
+
+
+def test_interrupted_instruction_start_aborts_its_registered_claim_and_retries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = 0
+    container = Container()
+    for index in range(255):
+        container.value(Token[int](f'interrupted-start-padding-{index}'), index)
+
+    def singleton() -> str:
+        nonlocal calls
+        calls += 1
+        return 'recovered'
+
+    frozen = container.bind(singleton, provides=str, scope=Scope.SINGLETON).freeze()
+    runtime = object.__getattribute__(frozen, '_instruction_runtime')
+    if not isinstance(runtime, _InstructionBegin):
+        raise AssertionError('frozen container has no instruction runtime')
+    original_begin = runtime.begin
+    interrupted = False
+
+    def interrupt_after_claim(
+        _runtime: _InstructionBegin,
+        scope: Scope,
+        ident: Ident,
+        claims: list[object | None],
+    ) -> InstructionStart:
+        nonlocal interrupted
+        started = original_begin(scope, ident, claims)
+        if not started.ready and not interrupted:
+            interrupted = True
+            raise KeyboardInterrupt('interrupt after instruction claim')
+        return started
+
+    monkeypatch.setattr(type(runtime), 'begin', interrupt_after_claim)
+
+    with pytest.raises(KeyboardInterrupt, match='interrupt after instruction claim'):
+        frozen.resolve(str)
+    assert frozen.resolve(str) == 'recovered'
+    assert calls == 1
+
+
+def test_recursive_instruction_claim_keeps_the_actionable_error() -> None:
+    frozen: frozen_module.FrozenContainer
+    container = Container()
+    for index in range(255):
+        container.value(Token[int](f'recursive-padding-{index}'), index)
+
+    def recursive() -> str:
+        return frozen.resolve(str)
+
+    frozen = container.bind(recursive, provides=str, scope=Scope.SINGLETON).freeze()
+
+    with pytest.raises(
+        CircularDependencyError,
+        match=(
+            r'^str is already constructing in this context; '
+            r'resolve a different dependency or break the recursive provider call$'
+        ),
+    ):
+        frozen.resolve(str)
+
+
+class _SyncWaiter(Protocol):
+    def wait_sync(self) -> None: ...
+
+
+def test_concurrent_instruction_claim_single_flights_one_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
+    start = threading.Barrier(3)
+    entered = threading.Event()
+    follower_waiting = threading.Event()
+    release = threading.Event()
+    calls = 0
+    value = object()
+    results: list[object] = []
+    failures: list[BaseException] = []
+    container = Container()
+    for index in range(255):
+        container.value(Token[int](f'concurrent-padding-{index}'), index)
+
+    def singleton() -> object:
+        nonlocal calls
+        calls += 1
+        entered.set()
+        if not release.wait(2):
+            raise RuntimeError('instruction concurrency test did not release the provider')
+        return value
+
+    frozen = container.bind(singleton, scope=Scope.SINGLETON).freeze()
+
+    def observe_wait(_frame: ScopeFrame, waiter: _SyncWaiter) -> None:
+        follower_waiting.set()
+        waiter.wait_sync()
+
+    def resolve() -> None:
+        try:
+            start.wait()
+            results.append(frozen.resolve(object))
+        except BaseException as exc:
+            failures.append(exc)
+
+    monkeypatch.setattr(ScopeFrame, 'wait_sync', observe_wait)
+
+    def unexpected_iterative(_self: object, _spec: ProviderSpec) -> object:
+        raise AssertionError('concurrent singleton root used the interpreted executor')
+
+    monkeypatch.setattr(frozen_module.FrozenContainer, '_resolve_sync_iterative', unexpected_iterative)
+    threads = [threading.Thread(target=resolve) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    start.wait()
+    assert entered.wait(2)
+    assert follower_waiting.wait(2)
+    release.set()
+    for thread in threads:
+        thread.join(2)
+
+    assert not failures
+    assert results == [value, value]
+    assert calls == 1
+
+
+def test_interrupted_instruction_publish_aborts_and_wakes_a_follower(monkeypatch: pytest.MonkeyPatch) -> None:
+    start = threading.Barrier(3)
+    entered = threading.Event()
+    follower_waiting = threading.Event()
+    interrupted = threading.Event()
+    calls = 0
+    value = object()
+    results: list[object] = []
+    interruptions: list[KeyboardInterrupt] = []
+    failures: list[BaseException] = []
+    container = Container()
+    for index in range(255):
+        container.value(Token[int](f'interrupted-publish-padding-{index}'), index)
+
+    def singleton() -> object:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            entered.set()
+            if not follower_waiting.wait(2):
+                raise RuntimeError('instruction publish test found no waiting follower')
+        return value
+
+    frozen = container.bind(singleton, scope=Scope.SINGLETON).freeze()
+    original_publish = ScopeFrame.publish
+
+    def observe_wait(_frame: ScopeFrame, waiter: _SyncWaiter) -> None:
+        follower_waiting.set()
+        waiter.wait_sync()
+
+    def interrupt_first_publish(
+        frame: ScopeFrame,
+        key: object,
+        leader: object,
+        resolved: object,
+        *,
+        signal: bool = False,
+    ) -> object:
+        if not interrupted.is_set():
+            interrupted.set()
+            raise KeyboardInterrupt('interrupt before instruction publish')
+        return original_publish(frame, key, leader, resolved, signal=signal)
+
+    def resolve() -> None:
+        try:
+            start.wait()
+            try:
+                resolved = frozen.resolve(object)
+            except KeyboardInterrupt as exc:
+                interruptions.append(exc)
+                resolved = frozen.resolve(object)
+            results.append(resolved)
+        except BaseException as exc:
+            failures.append(exc)
+
+    monkeypatch.setattr(ScopeFrame, 'wait_sync', observe_wait)
+    monkeypatch.setattr(ScopeFrame, 'publish', interrupt_first_publish)
+    threads = [threading.Thread(target=resolve) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    start.wait()
+    assert entered.wait(2)
+    for thread in threads:
+        thread.join(2)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert not failures
+    assert len(interruptions) == 1
+    assert results == [value, value]
+    assert calls == 2
+
+
 def test_preserves_provider_exception_type_and_message() -> None:
     def fail() -> str:
         raise LookupError('instruction provider failed')
 
     plan = build_plan(Container().bind(fail, provides=str, scope=Scope.TRANSIENT).records())
-    program = compile_sync_transient_instructions(plan)
+    program = compile_sync_instructions(plan)
 
     with pytest.raises(LookupError, match='instruction provider failed'):
         program.resolve((str, None))
@@ -264,30 +609,30 @@ def test_resolves_one_thousand_operations_without_python_recursion() -> None:
         step.__annotations__['value'] = tokens[index - 1]
         container.bind(step, provides=token, scope=Scope.TRANSIENT)
 
-    program = compile_sync_transient_instructions(build_plan(container.records()))
+    program = compile_sync_instructions(build_plan(container.records()))
 
     assert program.resolve((tokens[-1], None)) == depth
 
 
 def test_rejects_a_key_that_has_no_compiled_instruction_root() -> None:
-    program = compile_sync_transient_instructions(build_plan(Container().records()))
+    program = compile_sync_instructions(build_plan(Container().records()))
 
-    with pytest.raises(InvalidProviderError, match='has no synchronous transient instruction program'):
+    with pytest.raises(InvalidProviderError, match='has no synchronous instruction program'):
         program.resolve((str, None))
 
 
 def test_rejects_a_malformed_dependency_slot() -> None:
     operation = Operation(lambda: object(), (1,), (str, None))
-    program = SyncTransientProgram((operation,), MappingProxyType({(str, None): 0}))
+    program = SyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
 
     with pytest.raises(
-        InvalidProviderError, match='invalid dependency slot 1 in synchronous transient program while resolving str'
+        InvalidProviderError, match='invalid dependency slot 1 in synchronous instruction program while resolving str'
     ):
         program.resolve((str, None))
 
 
 def test_rejects_a_malformed_operation_slot() -> None:
-    program = SyncTransientProgram((), MappingProxyType({(str, None): 1}))
+    program = SyncInstructionProgram((), MappingProxyType({(str, None): 1}))
 
     with pytest.raises(InvalidProviderError, match='invalid operation slot 1'):
         program.resolve((str, None))
@@ -298,7 +643,7 @@ def test_rejects_a_malformed_keyword_parameter_slot() -> None:
         return object()
 
     operation = KeywordOperation(accept_keywords, (), (ResolvedKeyword('value', 0),), (str, None))
-    program = SyncTransientProgram((operation,), MappingProxyType({(str, None): 0}))
+    program = SyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
 
     with pytest.raises(InvalidProviderError, match=r'invalid parameter slot 0.*while resolving str'):
         program.resolve((str, None))
@@ -306,13 +651,13 @@ def test_rejects_a_malformed_keyword_parameter_slot() -> None:
 
 def test_rejects_a_malformed_alias_operation() -> None:
     operation = AliasOperation((), (str, None))
-    program = SyncTransientProgram((operation,), MappingProxyType({(str, None): 0}))
+    program = SyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
 
     with pytest.raises(InvalidProviderError, match='alias instruction for str requires exactly one dependency'):
         program.resolve((str, None))
 
 
-def test_skips_unsupported_shapes_and_required_parameters_without_compiled_dependencies() -> None:
+def test_skips_required_parameters_without_compiled_dependencies_and_compiles_values() -> None:
     def stringify(value: object) -> str:
         return str(value)
 
@@ -338,19 +683,22 @@ def test_skips_unsupported_shapes_and_required_parameters_without_compiled_depen
     mutable_by_key: dict[Ident, ProviderSpec] = {(str, None): function, (bytes, None): value}
     by_key = MappingProxyType(mutable_by_key)
 
-    program = compile_sync_transient_instructions(ResolutionPlan((function, value), by_key))
+    program = compile_sync_instructions(ResolutionPlan((function, value), by_key))
 
-    assert not program.operations
+    assert len(program.operations) == 1
+    assert isinstance(program.operations[0], ValueOperation)
+    assert not program.supports((str, None))
+    assert program.supports((bytes, None))
 
 
 def test_shallow_container_does_not_compile_dense_instructions(monkeypatch: pytest.MonkeyPatch) -> None:
     def value() -> str:
         return 'value'
 
-    def unexpected_compile(_plan: object) -> SyncTransientProgram:
+    def unexpected_compile(_plan: object) -> SyncInstructionProgram:
         raise AssertionError('shallow plan invoked the dense instruction compiler')
 
-    monkeypatch.setattr(frozen_module, 'compile_sync_transient_instructions', unexpected_compile)
+    monkeypatch.setattr(frozen_module, 'compile_sync_instructions', unexpected_compile)
 
     assert Container().bind(value, provides=str, scope=Scope.TRANSIENT).freeze().resolve(str) == 'value'
 
@@ -422,3 +770,11 @@ def _step() -> Callable[[object], object]:
         return value + 1
 
     return step
+
+
+def _pass_through(dependency: Token[object]) -> Callable[[object], object]:
+    def pass_through(value: object) -> object:
+        return value
+
+    pass_through.__annotations__['value'] = dependency
+    return pass_through

@@ -475,8 +475,8 @@ class ScopeFrame:
     def is_leader(self, claim: _Flight | _Leader | None) -> bool:
         return isinstance(claim, _Leader)
 
-    def publish(self, key: object, leader: object, value: object) -> _Flight | None:
-        """Cache a leader's value and return any followers to signal after unlocking."""
+    def publish(self, key: object, leader: object, value: object, *, signal: bool = False) -> _Flight | None:
+        """Cache a leader's value and return any followers after unlocking."""
         follower: _Flight | None = None
         with self._mutex:
             active = self._flights.get(key)
@@ -489,10 +489,12 @@ class ScopeFrame:
                 follower = active
             else:
                 return None
+        if signal and follower is not None:
+            follower.finish()
         return follower
 
-    def abort(self, key: object, leader: object) -> _Flight | None:
-        """Remove a failed leader's flight and return any followers to signal after unlocking."""
+    def abort(self, key: object, leader: object, *, signal: bool = False) -> _Flight | None:
+        """Remove a failed leader's flight and return any followers after unlocking."""
         follower: _Flight | None = None
         with self._mutex:
             active = self._flights.get(key)
@@ -503,6 +505,8 @@ class ScopeFrame:
                 follower = active
             else:
                 return None
+        if signal and follower is not None:
+            follower.finish()
         return follower
 
     def has_async_flights(self) -> bool:
