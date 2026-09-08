@@ -1,7 +1,7 @@
 # Proposal: compile resolution instead of interpreting it
 
 Date: 2026-09-02
-Status: synchronous instruction runtime accepted; asynchronous execution selected next
+Status: asynchronous instruction runtime accepted; final hybrid verification selected next
 Scope: synchronous and asynchronous core resolution, caching, overrides, depth, and teardown registration
 
 ## Nature of this document
@@ -313,6 +313,33 @@ This slice is a GO. A separately typed asynchronous instruction executor is
 selected next; synchronous resolution retains no event-loop or awaitability
 branch per node.
 
+## Experiment decision: 2026-09-08 asynchronous instructions
+
+The deep-plan runtime now has a separately typed async executor. Synchronous
+operation types are shared where their call contract is identical, while
+coroutine, async-generator, and async-context-manager providers use dedicated
+operations and an async-only loop. Sync-only plans reuse the same immutable
+operation tuple and root map for `aresolve()` rather than compiling a duplicate
+representation.
+
+Against `f04e458`, a 1,000-provider graph with one async leaf and 999 sync
+consumers improved by 72.21% for transient resolution, 25.37% for cold
+singletons, and 32.94% for scoped cycles. The corresponding async-resource
+cycle improved by 31.75%. Python calls fell by 31.87%, retained traced memory
+by 48.35%, and peak traced memory by 30.38%. Freeze cost changed by +5.02%,
+inside the existing 8% diagnostic budget. The unchanged shallow async-
+singleton route measured a -1.03% median paired change across five alternating
+local processes.
+
+Focused tests force every async shape, mixed synchronous consumers,
+decorators, aliases, collections, contention, cancellation, and resources
+through the instruction path. Removing the abort signal leaves a waiting task
+blocked and fails the mutation proof by timeout. The retained evidence is
+[asynchronous instructions](../../benchmarks/results/2026-09-08-async-instructions.md).
+
+This slice is a GO. Complete hybrid equivalence, the published benchmark
+matrix, and removal of covered production fallbacks are selected next.
+
 ## Goals
 
 - Make the common no-override path execute a specialized program per requested
@@ -551,8 +578,9 @@ has reached its demonstrated potential.
 ## Active decision
 
 Retain generated synchronous functions for eligible shallow transient roots and
-the dense typed instruction program for deep synchronous transient, singleton,
-scoped, and resource-owning graphs. The instruction runtime owns cache claims
-but continues to use `ScopeFrame` as the synchronization and teardown authority.
-Add a separately typed asynchronous instruction executor next, sharing the
-immutable operation model without adding async branches to the sync loop.
+the dense typed instruction program for deep synchronous and asynchronous
+transient, singleton, scoped, and resource-owning graphs. The instruction
+runtime owns cache claims but continues to use `ScopeFrame` as the
+synchronization and teardown authority. Complete the differential and
+published-performance matrix, then simplify the final hybrid without widening
+any budget.

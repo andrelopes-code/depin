@@ -53,7 +53,10 @@ positional deep path remained within the 10% regression boundary.
 
 ### Task 3: Integrate singleton and scoped claims
 
-Status: next.
+Result: GO. Cached instructions use `ScopeFrame` as the sole cache,
+synchronization, and teardown authority. Cold singleton and scoped graphs
+improved by 23.85% and 31.21%; contention, recursive construction, failure,
+interruption, and follower wakeup tests preserve the existing contract.
 
 - Add operations that enter the existing cache claim-or-join and scope-frame
   machinery rather than duplicating locks or cache state.
@@ -68,6 +71,11 @@ Status: next.
 - Preserve partial-construction cleanup, LIFO order, repeated close, and grouped
   teardown failures.
 
+Result: GO. Dedicated generator and context-manager operations improved the
+1,000-provider singleton and scoped resource diagnostics by 31.97% and 37.23%,
+while retaining exactly-once registration, partial-construction cleanup, and
+reverse acquisition order.
+
 ### Task 5: Add the typed async executor
 
 - Reuse the immutable operation tuple with a separate async execution loop for
@@ -76,7 +84,14 @@ Status: next.
   1,000-provider iterative guarantee without adding awaitability branches to
   the sync loop.
 
+Result: GO. The separate async loop improved the 1,000-provider transient,
+cold-singleton, scoped, and resource diagnostics by 72.21%, 25.37%, 32.94%,
+and 31.75%. Mutation testing proves cancelled owners wake joiners; sync-only
+plans share the existing immutable operation representation.
+
 ### Task 6: Select and simplify the final hybrid
+
+Status: next.
 
 - Run the complete differential matrix and every published benchmark contract.
 - Keep generated functions only for the bounded slice where they beat the

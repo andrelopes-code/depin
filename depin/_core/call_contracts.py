@@ -9,7 +9,7 @@ from depin._core.typeguards import as_factory
 
 
 def sync_positional_factory(spec: ProviderSpec) -> Callable[..., object] | None:
-    if spec.shape is not ProviderShape.FUNCTION or spec.needs_async:
+    if spec.shape is not ProviderShape.FUNCTION:
         return None
     params = spec.params
     param_count = len(params)

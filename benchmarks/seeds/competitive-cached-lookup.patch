@@ -1,7 +1,7 @@
 diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
 --- a/depin/_core/frozen.py
 +++ b/depin/_core/frozen.py
-@@ -237,6 +237,7 @@
+@@ -318,6 +318,7 @@
          '_plan',
          '_root',
          '_sync_instructions',
@@ -9,15 +9,15 @@ diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
          '_validate_key',
      )
  
-@@ -253,6 +254,7 @@
+@@ -350,6 +351,7 @@
          self._lifecycle = create_lifecycle_gate()
          self._root = ScopeFrame(lifecycle=self._lifecycle)
          self._instruction_runtime = _SyncInstructionRuntime(self._root, self._is_constructing)
 +        self._warm_cached_lookup_probe: dict[object, object] = {}
+         self._async_instruction_runtime = _AsyncInstructionRuntime(self._root, self._is_constructing)
          self._validate_key: Callable[[object], TypeGuard[ProviderKey]] = is_provider_key
          self._lifecycle.on_quiesce = self._quiesce_resolution
-         self._lifecycle.on_reopen = self._resume_resolution
-@@ -305,5 +307,9 @@
+@@ -403,5 +405,9 @@
          """
          spec = self._lookup(key, tag)
 +        if spec.scope is Scope.SINGLETON:

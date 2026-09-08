@@ -49,9 +49,7 @@ class InstructionReady:
         return True
 
 
-class SyncInstructionRuntime(Protocol):
-    def begin(self, scope: Scope, ident: Ident, claims: list[object | None]) -> InstructionStart: ...
-
+class InstructionRuntime(Protocol):
     def publish(self, claim: object, value: object) -> None: ...
 
     def abort(self, claim: object) -> None: ...
@@ -59,6 +57,10 @@ class SyncInstructionRuntime(Protocol):
     def read_frame(self, ident: Ident) -> object: ...
 
     def register_teardown(self, scope: Scope, record: Teardown) -> None: ...
+
+
+class SyncInstructionRuntime(InstructionRuntime, Protocol):
+    def begin(self, scope: Scope, ident: Ident, claims: list[object | None]) -> InstructionStart: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -214,7 +216,7 @@ class SyncInstructionProgram:
                     parameters = values[first_parameter:] if parameter_count else []
                     if parameter_count:
                         del values[first_parameter:]
-                    resolved = _invoke(operation, parameters, runtime)
+                    resolved = invoke_structured(operation, parameters, runtime)
 
                 claim = claims[-1]
                 if claim is not None:
@@ -236,7 +238,7 @@ class SyncInstructionProgram:
         idents = [self.operations[index].ident for index in operation_stack if 0 <= index < len(self.operations)]
         if not idents:
             return ''
-        rendered = ' -> '.join(_render_ident(ident) for ident in idents)
+        rendered = ' -> '.join(render_ident(ident) for ident in idents)
         return f' while resolving {rendered}'
 
 
@@ -248,19 +250,21 @@ def _start(
         return None
     if runtime is None:
         raise InvalidProviderError(
-            f'{_render_ident(operation.ident)} requires a cache runtime for synchronous instructions'
+            f'{render_ident(operation.ident)} requires a cache runtime for synchronous instructions'
         )
     return runtime.begin(operation.scope, operation.ident, claims)
 
 
-def _invoke(operation: StructuredOperation, parameters: list[object], runtime: SyncInstructionRuntime | None) -> object:
+def invoke_structured(
+    operation: StructuredOperation, parameters: list[object], runtime: InstructionRuntime | None
+) -> object:
     match operation:
         case KeywordOperation(factory=factory, keywords=keywords, ident=ident):
-            return factory(**_keyword_arguments(keywords, ident, parameters))
+            return factory(**keyword_arguments(keywords, ident, parameters))
         case AliasOperation(ident=ident):
             if len(parameters) != 1:
                 raise InvalidProviderError(
-                    f'alias instruction for {_render_ident(ident)} requires exactly one dependency'
+                    f'alias instruction for {render_ident(ident)} requires exactly one dependency'
                 )
             return parameters[0]
         case CollectionOperation():
@@ -270,30 +274,30 @@ def _invoke(operation: StructuredOperation, parameters: list[object], runtime: S
         case FrameOperation(ident=ident):
             if runtime is None:
                 raise InvalidProviderError(
-                    f'{_render_ident(ident)} requires a frame runtime for synchronous instructions'
+                    f'{render_ident(ident)} requires a frame runtime for synchronous instructions'
                 )
             return runtime.read_frame(ident)
         case GeneratorOperation(factory=factory, keywords=keywords, ident=ident, scope=scope):
             if runtime is None:
                 raise InvalidProviderError(
-                    f'{_render_ident(ident)} requires a resource runtime for synchronous instructions'
+                    f'{render_ident(ident)} requires a resource runtime for synchronous instructions'
                 )
-            gen = as_sync_iterator(factory(**_keyword_arguments(keywords, ident, parameters)), ident[0])
+            gen = as_sync_iterator(factory(**keyword_arguments(keywords, ident, parameters)), ident[0])
             value = next(gen)
             runtime.register_teardown(scope, SyncGenTeardown(gen))
             return value
         case ContextManagerOperation(factory=factory, keywords=keywords, ident=ident, scope=scope):
             if runtime is None:
                 raise InvalidProviderError(
-                    f'{_render_ident(ident)} requires a resource runtime for synchronous instructions'
+                    f'{render_ident(ident)} requires a resource runtime for synchronous instructions'
                 )
-            cm = as_sync_context_manager(factory(**_keyword_arguments(keywords, ident, parameters)), ident[0])
+            cm = as_sync_context_manager(factory(**keyword_arguments(keywords, ident, parameters)), ident[0])
             value = cm.__enter__()
             runtime.register_teardown(scope, SyncCMTeardown(cm))
             return value
 
 
-def _keyword_arguments(keywords: tuple[KeywordSlot, ...], ident: Ident, parameters: list[object]) -> dict[str, object]:
+def keyword_arguments(keywords: tuple[KeywordSlot, ...], ident: Ident, parameters: list[object]) -> dict[str, object]:
     kwargs: dict[str, object] = {}
     for keyword in keywords:
         match keyword:
@@ -301,7 +305,7 @@ def _keyword_arguments(keywords: tuple[KeywordSlot, ...], ident: Ident, paramete
                 if position < 0 or position >= len(parameters):
                     raise InvalidProviderError(
                         f'invalid parameter slot {position} in synchronous instruction program '
-                        f'while resolving {_render_ident(ident)}'
+                        f'while resolving {render_ident(ident)}'
                     )
                 kwargs[name] = parameters[position]
             case OptionalKeyword(name=name):
@@ -320,7 +324,7 @@ def compile_sync_instructions(plan: ResolutionPlan) -> SyncInstructionProgram:
         if spec.needs_async:
             continue
 
-        compiled = _compile_operation(spec, plan, roots)
+        compiled = compile_operation(spec, plan, roots)
         if compiled is None:
             continue
         operation, reads_frame = compiled
@@ -335,7 +339,7 @@ def compile_sync_instructions(plan: ResolutionPlan) -> SyncInstructionProgram:
     return SyncInstructionProgram(tuple(operations), MappingProxyType(roots), frozenset(frame_sensitive))
 
 
-def _compile_operation(
+def compile_operation(
     spec: ProviderSpec, plan: ResolutionPlan, roots: dict[Ident, int]
 ) -> tuple[SyncOperation, bool] | None:
     ident = (spec.key, spec.tag)
@@ -358,7 +362,7 @@ def _compile_operation(
             else:
                 return Operation(positional, tuple(positional_dependencies), ident, spec.scope), False
 
-    compiled_arguments = _compile_keyword_slots(spec, plan, roots)
+    compiled_arguments = compile_keyword_slots(spec, plan, roots)
     if compiled_arguments is None:
         return None
     dependencies, keywords, reads_frame = compiled_arguments
@@ -391,7 +395,7 @@ def _compile_operation(
     return None
 
 
-def _compile_keyword_slots(
+def compile_keyword_slots(
     spec: ProviderSpec, plan: ResolutionPlan, roots: dict[Ident, int]
 ) -> tuple[tuple[int, ...], tuple[KeywordSlot, ...], bool] | None:
     dependencies: list[int] = []
@@ -418,7 +422,7 @@ def _compile_keyword_slots(
     return tuple(dependencies), tuple(keywords), reads_frame
 
 
-def _render_ident(ident: Ident) -> str:
+def render_ident(ident: Ident) -> str:
     tag = f' (tag={ident[1]!r})' if ident[1] is not None else ''
     return f'{fmt_key(ident[0])}{tag}'
 

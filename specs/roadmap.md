@@ -15,8 +15,8 @@ back to the front of this sequence.
    [competitive-performance leadership proposal](proposals/2026-09-02-competitive-performance-leadership-proposal.md).
 2. Continue bounded compiled-Python experiments under the
    [compiled-resolution runtime proposal](proposals/2026-09-02-compiled-resolution-runtime-proposal.md),
-   with freeze-time composition of closures for synchronous transient chains
-   selected next after the 2026-09-04 cached-runtime experiment's NO-GO.
+   with the generated shallow synchronous path and dense deep sync/async
+   instruction paths selected for final hybrid verification.
 3. Investigate
    [declarative provider discovery](proposals/2026-09-05-declarative-provider-discovery-proposal.md),
    keeping explicit package discovery as a hypothesis rather than an accepted
