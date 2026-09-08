@@ -1,32 +1,36 @@
 # Proposal: compile resolution instead of interpreting it
 
 Date: 2026-09-02
-Status: proposed; depends on the competitive performance leadership baseline
+Status: accepted for bounded experiments; closure composition selected next
 Scope: synchronous and asynchronous core resolution, caching, overrides, depth, and teardown registration
 
 ## Nature of this document
 
-This proposal defines the outcome and proof required from a future runtime
-redesign. It does not select source generation, closure composition, or an
-instruction engine without measuring prototypes. That choice belongs to the
-design phase and must be supported by accepted evidence.
+This proposal defines the outcome and proof required from the remaining runtime
+experiments and any resulting redesign. It does not select source generation,
+closure composition, or an instruction engine without measuring prototypes.
+That choice belongs to a future design phase and must be supported by accepted
+evidence.
 
 ## Executive summary
 
-`FrozenContainer.resolve()` currently interprets the validated plan for every
-node of every resolution. A warm cache hit crosses roughly thirteen Python calls.
-A transient provider repeats key lookup, override lookup, lifetime branching,
-parameter traversal, construction dispatch, and recursion at every graph node.
-The same recursion causes cold resolution to fail near 332 providers even though
-`freeze()` accepts and validates much deeper graphs.
+`FrozenContainer.resolve()` still interprets recurring decisions from the
+validated plan. A warm cache hit crosses multiple Python helpers. A transient
+provider repeats key lookup, override lookup, lifetime branching, parameter
+traversal, and construction dispatch at every graph node.
+
+The runtime now uses explicit-stack sync and async executors for deep graphs, so
+the original cold-resolution failure near 332 providers is closed. Remaining
+experiments must preserve that support instead of treating depth as unfinished
+work.
 
 There is no dominant function to micro-optimize. The call graph is the cost.
 
 `freeze()` should compile the validated `ResolutionPlan` into provider-specific
 sync and async execution programs. The recurring path should execute already-made
 decisions, while diagnostics continue to read the declarative resolution plan.
-The redesign must remove the cold-depth cliff and preserve every lifecycle,
-override, concurrency, error, and teardown guarantee.
+The redesign must reduce recurring dispatch while preserving deep-graph support
+and every lifecycle, override, concurrency, error, and teardown guarantee.
 
 ## Evidence
 
@@ -65,8 +69,8 @@ and the native path remains NO-GO.
 - Remove repeated key normalization, plan lookup, parameter discovery, and
   lifetime branching from each node.
 - Read context-local override state once per top-level resolution where possible.
-- Make cold resolution depth limited by available memory and an explicit project
-  budget, not Python recursion depth.
+- Preserve the existing explicit-stack support for graphs beyond Python's
+  recursion limit.
 - Preserve exact sync and async construction semantics and teardown order.
 - Preserve atomic claim-or-join behavior for cached values under supported
   threaded and free-threaded interpreters.
@@ -120,7 +124,8 @@ the same immutable execution model:
 
 1. generated Python functions compiled at freeze time;
 2. provider-specific closure composition; and
-3. an iterative typed instruction program.
+3. a denser typed instruction program that refines or replaces the current
+   explicit-stack executor.
 
 Every prototype is compared with the current interpreter, direct Python, and the
 eligible competitors under the accepted equivalence contracts. The experiment
@@ -187,10 +192,12 @@ Concurrent construction retains the current guarantees:
 
 ### Iterative construction and teardown
 
-Cold graph traversal uses an explicit stack or a compiled straight-line program,
-not one Python recursion layer per provider. Sync and async executors share an
-immutable operation model but have separate typed execution paths; the sync path
-must not pay an event-loop or awaitability branch at each node.
+The current runtime already uses explicit stacks when graph depth requires them.
+A selected strategy retains that behavior or replaces it with a compiled
+straight-line program, never one Python recursion layer per provider. Sync and
+async executors share an immutable operation model but have separate typed
+execution paths; the sync path must not pay an event-loop or awaitability branch
+at each node.
 
 Teardown records are appended in construction order and drained in the current
 reverse order. Generator advancement, async-generator advancement, partial
@@ -234,8 +241,8 @@ behavioral implementation.
 
 ## Acceptance criteria
 
-- Cold resolution of the repository's 1,000-provider supported graph succeeds in
-  sync and async forms without changing the recursion limit.
+- Existing sync and async resolution of the repository's 1,000-provider
+  supported graph remains successful without changing the recursion limit.
 - Warm singleton, transient-chain, scoped-cycle, and representative DAG workloads
   reach the competitive leadership target or record a concrete residual owned by
   another accepted proposal.
@@ -259,7 +266,7 @@ The redesign is rejected or returned to design if:
 
 - its gain comes primarily from skipping a current guarantee;
 - it cannot explain generated failures using stable dependency metadata;
-- it solves cache hits while retaining the cold-depth failure;
+- it regresses existing deep-graph support or introduces a new depth cliff;
 - it creates unbounded code or memory growth per key;
 - it requires a public escape hatch to select the correct engine; or
 - it makes the pure-Python package depend on a compiler at installation time.
@@ -290,7 +297,7 @@ has reached its demonstrated potential.
 - differential, concurrency, depth, memory, and performance evidence; and
 - tightened regression budgets after the accepted improvement.
 
-## Decision requested
+## Active decision
 
 Continue bounded, measured experiments under this proposal. The 2026-09-04
 cached-runtime experiment is NO-GO; the next selected experiment is freeze-time
