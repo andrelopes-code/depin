@@ -68,6 +68,33 @@ def test_generates_a_twenty_provider_chain_without_recursive_runtime_dispatch() 
     assert generated[(tokens[-1], None)]() == depth
 
 
+def test_generated_programs_share_one_immutable_provider_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    namespaces: list[tuple[Callable[..., object], ...]] = []
+
+    def capture_namespace(_expression: str, sources: tuple[Callable[..., object], ...]) -> Program:
+        namespaces.append(sources)
+        return lambda: object()
+
+    def leaf() -> str:
+        return 'value'
+
+    def root(value: str) -> bytes:
+        return value.encode()
+
+    plan = build_plan(
+        Container()
+        .bind(leaf, provides=str, scope=Scope.TRANSIENT)
+        .bind(root, provides=bytes, scope=Scope.TRANSIENT)
+        .records()
+    )
+
+    monkeypatch.setattr(generated_module, '_program', capture_namespace)
+    compile_sync_transients(plan)
+
+    assert len(namespaces) == 2
+    assert namespaces[0] is namespaces[1]
+
+
 def test_generates_tagged_positional_dependencies() -> None:
     def preferred() -> str:
         return 'preferred'

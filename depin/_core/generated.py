@@ -23,7 +23,7 @@ _MAX_TOTAL_SOURCE_CHARS = 1_000_000
 
 def compile_sync_transients(plan: ResolutionPlan) -> Mapping[Ident, Program]:
     expressions: dict[Ident, Expression] = {}
-    programs: dict[Ident, Program] = {}
+    program_expressions: dict[Ident, str] = {}
     sources: list[Callable[..., object]] = []
     total_expanded_calls = 0
     total_source_chars = 0
@@ -34,15 +34,19 @@ def compile_sync_transients(plan: ResolutionPlan) -> Mapping[Ident, Program]:
             continue
         expression, _, expanded_calls = generated
         if total_expanded_calls + expanded_calls > _MAX_TOTAL_EXPANDED_CALLS:
+            sources.pop()
             continue
         if total_source_chars + len(expression) > _MAX_TOTAL_SOURCE_CHARS:
+            sources.pop()
             continue
         ident = (spec.key, spec.tag)
         expressions[ident] = generated
-        programs[ident] = _program(expression, tuple(sources))
+        program_expressions[ident] = expression
         total_expanded_calls += expanded_calls
         total_source_chars += len(expression)
 
+    provider_namespace = tuple(sources)
+    programs = {ident: _program(expression, provider_namespace) for ident, expression in program_expressions.items()}
     return MappingProxyType(programs)
 
 

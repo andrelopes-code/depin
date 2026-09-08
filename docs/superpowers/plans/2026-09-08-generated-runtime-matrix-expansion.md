@@ -1,5 +1,11 @@
 # Generated runtime matrix expansion plan
 
+**Outcome:** Stopped after Task 1. Namespace sharing succeeded, but executable
+storage remained superlinear because every root still owns duplicated nested
+bytecode. The proposal records this expansion as a NO-GO and selects the dense
+instruction complement. Tasks 2 through 6 below are retained as the rejected
+route's original acceptance criteria, not active work.
+
 **Goal:** Expand the accepted generated synchronous transient representation across the proposal's runtime matrix without losing its measured latency/allocation gains or the existing interpreter's lifecycle, concurrency, override, and deep-graph guarantees.
 
 **Accepted base:** security-hardened revision `2ea58f5`, the complete `c196d7c` paired matrix, and the focused `2ea58f5` hardening dataset retained in `benchmarks/results/2026-09-08-generated-sync-functions/`.
@@ -12,6 +18,12 @@
 - Preserve the hard compiler budgets for shared DAG expansion and cumulative source size; add a retained-memory workload for an adversarial shared DAG.
 - Add a deterministic retained-memory workload for generated transient chains at 20, 100, and 160 providers; report executable bytes per provider and total retained bytes.
 - Require linear retained growth across the bounded range, unchanged 12-block/1,224-byte transient allocation evidence, and no latency regression outside the existing interval.
+
+Result: one provider namespace was shared across all programs, but executable
+bytes were 12,120, 132,440, and 298,280 at 20, 100, and 160 providers. The 1.54
+growth exponent failed the linear requirement. Runtime and freeze diagnostics
+remained inside the accepted result, so namespace sharing stays while broader
+function generation stops.
 
 ### Task 2: Encode the complete synchronous call contract
 

@@ -1,7 +1,7 @@
 # Proposal: compile resolution instead of interpreting it
 
 Date: 2026-09-02
-Status: generated transient prototype accepted; full-matrix expansion selected next
+Status: bounded generated fast path accepted; dense instruction complement selected next
 Scope: synchronous and asynchronous core resolution, caching, overrides, depth, and teardown registration
 
 ## Nature of this document
@@ -163,12 +163,25 @@ matrix and the focused `2ea58f5` hardening dataset are retained separately so
 the evidence never presents the earlier revision as the final one.
 
 This bounded experiment is a GO. Its implementation, differential tests, and
-complete paired evidence are retained. Generated Python functions are selected
-for expansion across the proposal's required matrix, but not yet as the final
-runtime representation. The denser typed instruction program remains the
-fallback or deep-graph complement if generated functions cannot preserve the
-same result across cached, scoped, resource-owning, asynchronous, alias,
-collection, decorator, and active-override paths.
+complete paired evidence are retained.
+
+The first expansion prerequisite then shared one immutable provider namespace
+across every generated program. That removed the quadratic tuple snapshots, but
+not the duplicated nested bytecode: unique executable storage measured 12,120,
+132,440, and 298,280 bytes at 20, 100, and 160 providers. The corresponding
+growth exponent was 1.54 from 20 to 160 rather than linear. A one-run diagnostic
+kept the target path at 4.589 microseconds and the 10/100/1,000-provider freeze
+medians at 384.496 microseconds, 3.538 milliseconds, and 36.842 milliseconds,
+all consistent with the accepted intervals.
+
+Expanding generated functions across the full runtime matrix is therefore a
+NO-GO. The measured shallow transient path remains as a strictly bounded leaf
+fast path, with its compiler budgets unchanged. A linear dense instruction
+program is selected as the complement for deep graphs and for the cached,
+scoped, resource-owning, asynchronous, alias, collection, decorator, default,
+and active-override paths. Generated functions do not become the general
+runtime representation unless a later design removes their duplicated code
+without giving back the accepted latency and allocation result.
 
 ## Goals
 
