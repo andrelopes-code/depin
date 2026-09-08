@@ -10,6 +10,29 @@ from depin._core.scope import Scope, ScopeFrame
 from depin._core.spec import ProviderSpec
 
 
+def test_shallow_singleton_generator_uses_instructions(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Connection: ...
+
+    events: list[str] = []
+    value = Connection()
+
+    def connection() -> Generator[Connection]:
+        events.append('setup')
+        yield value
+        events.append('teardown')
+
+    frozen = Container().bind(connection, scope=Scope.SINGLETON).freeze()
+
+    def unexpected_construct(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError('shallow singleton generator used construct.sync')
+
+    monkeypatch.setattr('depin._core.frozen.construct.sync', unexpected_construct)
+
+    assert frozen.resolve(Connection) is value
+    frozen.close()
+    assert events == ['setup', 'teardown']
+
+
 def test_deep_singleton_generator_uses_instructions_and_closes_once(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

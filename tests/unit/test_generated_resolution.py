@@ -523,6 +523,8 @@ def test_cached_resolution_does_not_read_generated_routing_state(
     value = Cached()
     frozen = Container().value(Token[Cached]('cached'), value).freeze()
 
+    assert frozen.resolve(Token[Cached]('cached')) is value
+
     def unexpected_override_read() -> bool:
         raise AssertionError('cached resolution read generated routing state')
 

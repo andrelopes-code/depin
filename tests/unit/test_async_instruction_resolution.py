@@ -37,6 +37,24 @@ async def test_deep_sync_consumer_of_async_dependency_uses_async_instructions(
 
 
 @pytest.mark.asyncio
+async def test_shallow_async_singleton_uses_instructions(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Result: ...
+
+    async def result() -> Result:
+        return Result()
+
+    frozen = Container().bind(result, scope=Scope.SINGLETON).freeze()
+
+    async def unexpected_construct(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError('shallow async singleton used construct.asynchronous')
+
+    monkeypatch.setattr('depin._core.frozen.construct.asynchronous', unexpected_construct)
+
+    first = await frozen.aresolve(Result)
+    assert await frozen.aresolve(Result) is first
+
+
+@pytest.mark.asyncio
 async def test_deep_async_resources_use_instructions_and_close_in_lifo_order(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
