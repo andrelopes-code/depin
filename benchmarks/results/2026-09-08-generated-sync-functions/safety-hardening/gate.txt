@@ -1,0 +1,25 @@
+pass        allocations  allocations_of_a_cached_singleton_resolution: blocks 13 -> 13 (+0.00%) budget 0.0%
+pass        allocations  allocations_of_a_request_shaped_scope: blocks 27 -> 27 (+0.00%) budget 0.0%
+pass        allocations  allocations_of_a_scope_cycle: blocks 75 -> 75 (+0.00%) budget 0.0%
+pass        allocations  allocations_of_a_transient_chain: size 4904 -> 1224 (-75.04%) budget 0.0%
+pass        allocations  allocations_of_an_inject_call: blocks 17 -> 17 (+0.00%) budget 0.0%
+pass        latency      freeze_a_chain_of_10: +1.94% [-0.69%, +2.38%] budget 8.0% n=5
+pass        latency      freeze_a_chain_of_100: +0.22% [-1.53%, +1.54%] budget 5.0% n=5
+pass        latency      freeze_a_chain_of_1000: -0.57% [-1.62%, +2.59%] budget 8.0% n=5
+pass        latency      resolve_a_transient_chain: -86.47% [-87.24%, -85.93%] budget 5.0% n=5
+pass        retained     retained_by_a_frozen_container_of_100: 34984 -> 35096 (+0.32%) budget 2.0%
+pass        retained     retained_by_a_frozen_container_of_1000: 326416 -> 326528 (+0.03%) budget 2.0%
+pass        retained     retained_by_a_warm_singleton_cache_of_1000: 397560 -> 397560 (+0.00%) budget 2.0%
+pass        retained     retained_by_an_open_scope_of_20: 10624 -> 10624 (+0.00%) budget 2.0%
+pass        scaling      scale_async_teardown: worst size-to-size growth +4.05% budget 15.0%
+pass        scaling      scale_freeze_graph_size: worst size-to-size growth +0.11% budget 15.0%
+pass        scaling      scale_override_nesting: worst size-to-size growth +5.70% budget 15.0%
+pass        scaling      scale_resolve_collection: worst size-to-size growth -1.04% budget 15.0%
+pass        scaling      scale_resolve_fan_out: worst size-to-size growth -1.11% budget 15.0%
+pass        scaling      scale_resolve_transient_depth: worst size-to-size growth -3.73% budget 15.0%
+pass        scaling      scale_scope_teardown: worst size-to-size growth +0.19% budget 15.0%
+pass        work         allocations_of_a_cached_singleton_resolution: 8 -> 8 (+0.00%) budget 0.0%
+pass        work         allocations_of_a_request_shaped_scope: 88 -> 88 (+0.00%) budget 0.0%
+pass        work         allocations_of_a_scope_cycle: 358 -> 358 (+0.00%) budget 0.0%
+pass        work         allocations_of_a_transient_chain: 181 -> 28 (-84.53%) budget 0.0%
+pass        work         allocations_of_an_inject_call: 28 -> 28 (+0.00%) budget 0.0%

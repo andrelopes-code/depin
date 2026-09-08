@@ -1,7 +1,7 @@
 # Proposal: compile resolution instead of interpreting it
 
 Date: 2026-09-02
-Status: accepted for bounded experiments; generated functions selected next
+Status: generated transient prototype accepted; full-matrix expansion selected next
 Scope: synchronous and asynchronous core resolution, caching, overrides, depth, and teardown registration
 
 ## Nature of this document
@@ -62,7 +62,7 @@ experiment is freeze-time composition of closures for synchronous transient
 chains, subject to measurement. FastAPI remains subsequent to the core work,
 and the native path remains NO-GO.
 
-## Experiment decision: 2026-09-08
+## Experiment decision: 2026-09-08 closure composition
 
 The bounded closure-composition experiment compiled shallow synchronous
 transient function-provider chains during `freeze()`. A five-repetition paired
@@ -99,6 +99,76 @@ adding work to ineligible cached and override paths and must measure whether a
 single generated call graph removes the closure-chain allocation cost. The
 denser typed instruction program remains the subsequent private strategy; the
 native path remains NO-GO.
+
+## Experiment decision: 2026-09-08 generated functions
+
+The next bounded prototype generated one Python function per eligible shallow
+synchronous transient resolution. Generated source contained only fixed
+project-owned syntax and integer indexes into a namespace tuple; no provider
+name, key, tag, annotation, or representation was interpolated. Eligibility was
+limited to function providers whose complete dependency subgraph was transient,
+synchronous, positional-or-keyword, and no deeper than 200 providers. Plans at
+the runtime's 256-provider recursive threshold retained the iterative executor,
+as did defaults, optional or keyword-only parameters, cached dependencies,
+classes, resources, aliases, collections, async providers, and any active
+override.
+
+A five-repetition paired comparison of `c196d7c` against the prototype-free
+`d5d8d03`, with seed 20260902, reduced the isolated 20-provider transient-chain
+median from 34.405 to 4.687 microseconds. The paired change was -86.39% with a
+decisive [-86.60%, -85.79%] interval. In the competitive workload the generated
+path measured 4.618 microseconds, versus 2.267 for direct Python, 7.167 for
+Dishka, 7.465 for Wireup, and 17.009 for Dependency Injector. Python calls fell
+from 181 to 28 per resolution. Allocation size fell from 4,904 to 1,224 bytes
+(-75.04%); blocks fell from 52 to 12 and peak bytes from 5,688 to 2,008.
+
+The earlier 34.125-microsecond baseline was a single-run diagnostic used to
+decide whether to pay for the paired collection; 34.405 microseconds is the
+independently recalibrated median of the five accepted baseline repetitions.
+The raw repetitions, environment, generated report, gate output, revision
+identities, and verification commands are retained together under
+`benchmarks/results/2026-09-08-generated-sync-functions/`.
+
+The routing avoided the closure prototype's unrelated regressions. Cached
+singleton resolution changed from 1.876 to 1.837 microseconds (-2.23%), the
+no-active-override path from 1.832 to 1.839 microseconds (+0.43%), and the active
+override path from 3.868 to 4.022 microseconds (+3.98%); all remained within
+their existing budgets. Cached, request-scope, and scope-cycle work stayed
+exactly at 8, 88, and 358 calls, and their allocation counts did not change.
+Every latency, allocation, work, retained-memory, and scaling gate passed.
+
+Freeze workloads remained within budget: the paired changes were +1.71% at 10
+providers, +2.30% at 100, and +4.45% at 1,000. The generic retained-container
+measurements added 112 bytes at 100 and 1,000 providers (+0.32% and +0.03%). The
+generated executable itself retained 18,400 shallow bytes for a 20-provider
+chain and, because each root currently owns its namespace tuple and nested code,
+505,600 shallow bytes for 160 providers. Generation is therefore accepted only
+inside the existing shallow-plan and 200-expression limits. Sharing or otherwise
+deduplicating executable storage is a prerequisite for expanding the strategy,
+not a reason to broaden those limits now.
+
+Security review then found that synthetic signatures could disagree with the
+real function argument order and that a small shared DAG could expand into an
+exponential source expression. Revision `2ea58f5` made exact real parameter
+name/order/quantity matching an eligibility condition, rejected synthetic
+varargs and positional/keyword-only mismatches, and added per-program plus
+cumulative source-generation budgets before concatenation. The original
+16-provider reproducer fell from a 170.6 MB peak to 1.36 MB and stopped
+generation after provider 9. A focused five-pair rerun against `d5d8d03`
+covered every performance path changed by the hardening: transient latency was
+-86.47% [-87.24%, -85.93%], freeze changed +1.94% at 10 providers, +0.22% at
+100, and -0.57% at 1,000, while retained and deterministic results preserved
+the full-matrix result. Every applicable gate passed. The complete `c196d7c`
+matrix and the focused `2ea58f5` hardening dataset are retained separately so
+the evidence never presents the earlier revision as the final one.
+
+This bounded experiment is a GO. Its implementation, differential tests, and
+complete paired evidence are retained. Generated Python functions are selected
+for expansion across the proposal's required matrix, but not yet as the final
+runtime representation. The denser typed instruction program remains the
+fallback or deep-graph complement if generated functions cannot preserve the
+same result across cached, scoped, resource-owning, asynchronous, alias,
+collection, decorator, and active-override paths.
 
 ## Goals
 
@@ -337,9 +407,10 @@ has reached its demonstrated potential.
 
 ## Active decision
 
-Continue bounded, measured experiments under this proposal. The 2026-09-04
+Retain the bounded generated synchronous transient path. The 2026-09-04
 cached-runtime experiment and the 2026-09-08 closure-composition experiment are
-NO-GO. The next selected experiment is one generated Python function per
-eligible shallow synchronous transient resolution, followed by the denser typed
-instruction strategy if generation does not pass. The final execution strategy
-remains unselected until an experiment meets the acceptance criteria.
+NO-GO; the generated-function experiment is a GO. Expand the winning generated
+representation across the required matrix while deduplicating its executable
+storage and preserving the iterative deep-graph path. Final runtime selection
+remains pending that expansion; the denser typed instruction strategy remains
+the planned complement or fallback.
