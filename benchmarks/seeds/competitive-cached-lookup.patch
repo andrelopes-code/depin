@@ -9,7 +9,7 @@ diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
          '_validate_key',
      )
  
-@@ -350,6 +351,7 @@
+@@ -344,6 +345,7 @@
          self._lifecycle = create_lifecycle_gate()
          self._root = ScopeFrame(lifecycle=self._lifecycle)
          self._instruction_runtime = _SyncInstructionRuntime(self._root, self._is_constructing)
@@ -17,7 +17,7 @@ diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
          self._async_instruction_runtime = _AsyncInstructionRuntime(self._root, self._is_constructing)
          self._validate_key: Callable[[object], TypeGuard[ProviderKey]] = is_provider_key
          self._lifecycle.on_quiesce = self._quiesce_resolution
-@@ -403,5 +405,9 @@
+@@ -398,5 +400,9 @@
          """
          spec = self._lookup(key, tag)
 +        if spec.scope is Scope.SINGLETON:
@@ -26,4 +26,4 @@ diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
 +                self._warm_cached_lookup_probe = {(spec.key, spec.tag): cached}
          if spec.needs_async:
              raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
-         deep_plan = len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT
+         if spec.scope is Scope.TRANSIENT:
