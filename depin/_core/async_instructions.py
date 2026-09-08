@@ -178,27 +178,34 @@ async def _invoke_async(
     parameters: list[object],
     runtime: AsyncInstructionRuntime | None,
 ) -> object:
-    match operation:
-        case AsyncFunctionOperation(factory=factory, keywords=keywords, ident=ident):
-            return await as_awaitable(factory(**keyword_arguments(keywords, ident, parameters)), ident[0])
-        case AsyncGeneratorOperation(factory=factory, keywords=keywords, ident=ident, scope=scope):
-            if runtime is None:
-                raise InvalidProviderError(
-                    f'{render_ident(ident)} requires a resource runtime for asynchronous instructions'
-                )
-            agen = as_async_iterator(factory(**keyword_arguments(keywords, ident, parameters)), ident[0])
-            value = await agen.__anext__()
-            runtime.register_teardown(scope, AsyncGenTeardown(agen))
-            return value
-        case AsyncContextManagerOperation(factory=factory, keywords=keywords, ident=ident, scope=scope):
-            if runtime is None:
-                raise InvalidProviderError(
-                    f'{render_ident(ident)} requires a resource runtime for asynchronous instructions'
-                )
-            acm = as_async_context_manager(factory(**keyword_arguments(keywords, ident, parameters)), ident[0])
-            value = await acm.__aenter__()
-            runtime.register_teardown(scope, AsyncCMTeardown(acm))
-            return value
+    if isinstance(operation, AsyncFunctionOperation):
+        return await as_awaitable(
+            operation.factory(**keyword_arguments(operation.keywords, operation.ident, parameters)),
+            operation.ident[0],
+        )
+    if isinstance(operation, AsyncGeneratorOperation):
+        if runtime is None:
+            raise InvalidProviderError(
+                f'{render_ident(operation.ident)} requires a resource runtime for asynchronous instructions'
+            )
+        agen = as_async_iterator(
+            operation.factory(**keyword_arguments(operation.keywords, operation.ident, parameters)),
+            operation.ident[0],
+        )
+        value = await agen.__anext__()
+        runtime.register_teardown(operation.scope, AsyncGenTeardown(agen))
+        return value
+    if runtime is None:
+        raise InvalidProviderError(
+            f'{render_ident(operation.ident)} requires a resource runtime for asynchronous instructions'
+        )
+    acm = as_async_context_manager(
+        operation.factory(**keyword_arguments(operation.keywords, operation.ident, parameters)),
+        operation.ident[0],
+    )
+    value = await acm.__aenter__()
+    runtime.register_teardown(operation.scope, AsyncCMTeardown(acm))
+    return value
 
 
 def compile_async_instructions(plan: ResolutionPlan) -> AsyncInstructionProgram:

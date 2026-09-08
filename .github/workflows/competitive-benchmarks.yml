@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 120
     env:
       BASELINE_DIR: ${{ runner.temp }}/depin-comparison-base
-      BASELINE_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || inputs.baseline-revision }}
+      BASELINE_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || inputs['baseline-revision'] }}
       ARTIFACT_DIR: ${{ runner.temp }}/competitive-benchmark-artifacts
       REPETITIONS: ${{ inputs.repetitions || '5' }}
     steps:

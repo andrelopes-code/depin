@@ -262,7 +262,6 @@ class ParamSpec:
     has_default: bool
     default: object
     optional: bool = False
-    call_positionally: bool = True
 
 
 @dataclass(frozen=True, slots=True)

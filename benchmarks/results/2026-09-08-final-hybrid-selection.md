@@ -42,14 +42,37 @@ passed and 35 non-benchmark harness/comparison tests were skipped by that mode.
 This verifies that every published workload remains executable; the accepted
 per-slice paired and deterministic results remain the comparative evidence.
 
+## Pull-request gate correction
+
+The first pull-request comparison against `origin/main` caught a boundary that
+the incremental phase baselines did not: eagerly retained dense tables raised
+the frozen-container readings from 34,984 to 36,144 bytes at 100 providers
+(+3.32%) and from 326,416 to 624,892 bytes at 1,000 providers (+91.44%), failing
+the 2% budget. The decorated 1,000-provider freeze workload also failed its 5%
+latency budget at +9.40%.
+
+Dense programs are now materialized under a per-container lock on the first
+eligible deep resolution. Until then, the validated `ResolutionPlan` is the
+only graph-sized representation retained by the frozen container. The shallow
+generated fast path and the dynamic override/frame-sensitive fallbacks are
+unchanged.
+
+A post-correction deterministic collection measured 35,032 and 326,776 bytes
+for the 100- and 1,000-provider frozen containers, +0.14% and +0.11% against the
+pull-request baseline. The transient allocation workload remained at 12 blocks
+and 1,224 bytes. A sequential local diagnostic measured the decorated
+1,000-provider freeze median at 91.696 milliseconds versus 115.299 milliseconds
+on `origin/main` (-20.47%). The remote comparison remains authoritative for the
+final merge gate.
+
 ## Decision
 
 Universal shallow instruction compilation is a NO-GO and its implementation
 and tests were removed. The final accepted hybrid is:
 
 - generated Python functions for eligible shallow synchronous transient roots;
-- the dense typed sync executor for deep synchronous graphs;
-- the separately typed dense async executor for deep asynchronous graphs; and
+- the lazy dense typed sync executor for deep synchronous graphs;
+- the separately typed lazy dense async executor for deep asynchronous graphs; and
 - the existing shallow runtime plus explicit-stack dynamic fallback for shapes
   whose second executable representation or context-sensitive behavior failed
   the final gate.

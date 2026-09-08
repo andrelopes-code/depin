@@ -7,24 +7,33 @@ from typing import Annotated, Protocol, runtime_checkable
 import pytest
 
 from depin._core import frozen as frozen_module
+from depin._core import instructions as instructions_module
 from depin._core.container import Container
 from depin._core.graph import build_plan
 from depin._core.instructions import (
     AliasOperation,
     CollectionOperation,
+    ContextManagerOperation,
+    FrameOperation,
+    GeneratorOperation,
+    InstructionReady,
     InstructionStart,
     KeywordOperation,
     Operation,
     ResolvedKeyword,
+    StructuredOperation,
     SyncInstructionProgram,
     ValueOperation,
+    compile_operation,
     compile_sync_instructions,
+    invoke_structured,
 )
 from depin._core.markers import Tag, Token, injected
 from depin._core.overrides import present as override_present
 from depin._core.scope import Scope, ScopeFrame
 from depin._core.spec import Ident, ParamSpec, ProviderShape, ProviderSpec, ResolutionPlan
-from depin.errors import CircularDependencyError, InvalidProviderError, MissingProviderError
+from depin._core.teardown import Teardown
+from depin.errors import CircularDependencyError, DepinError, InvalidProviderError, MissingProviderError
 
 
 def test_compiles_one_linear_operation_table_for_every_transient_root() -> None:
@@ -391,6 +400,63 @@ class _InstructionBegin(Protocol):
     def begin(self, scope: Scope, ident: Ident, claims: list[object | None]) -> InstructionStart: ...
 
 
+@runtime_checkable
+class _InstructionControl(_InstructionBegin, Protocol):
+    def publish(self, claim: object, value: object) -> None: ...
+
+    def abort(self, claim: object) -> None: ...
+
+
+def _instruction_control() -> _InstructionControl:
+    container = Container()
+    for index in range(256):
+        container.value(Token[int](f'instruction-control-{index}'), index)
+    frozen = container.freeze()
+    runtime = object.__getattribute__(frozen, '_instruction_runtime')
+    if not isinstance(runtime, _InstructionControl):
+        raise AssertionError('frozen container has no controllable instruction runtime')
+    return runtime
+
+
+def test_instruction_runtime_rejects_invalid_claims_and_ignores_released_claims() -> None:
+    runtime = _instruction_control()
+
+    with pytest.raises(DepinError, match='invalid cache claim'):
+        runtime.publish(object(), object())
+    with pytest.raises(DepinError, match='invalid cache claim'):
+        runtime.abort(object())
+
+    claims: list[object | None] = []
+    started = runtime.begin(Scope.SINGLETON, (str, None), claims)
+    assert not started.ready
+    assert started.value is None
+    runtime.abort(started)
+    runtime.abort(started)
+    runtime.publish(started, object())
+
+
+def test_instruction_runtime_aborts_a_claim_when_publication_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    runtime = _instruction_control()
+    claims: list[object | None] = []
+    started = runtime.begin(Scope.SINGLETON, (str, None), claims)
+
+    def fail_publish(
+        _frame: ScopeFrame,
+        _key: object,
+        _leader: object,
+        _value: object,
+        *,
+        signal: bool = False,
+    ) -> None:
+        del signal
+        raise LookupError('cache publication failed')
+
+    monkeypatch.setattr(ScopeFrame, 'publish', fail_publish)
+
+    with pytest.raises(LookupError, match='cache publication failed'):
+        runtime.publish(started, object())
+
+
 def test_interrupted_instruction_start_aborts_its_registered_claim_and_retries(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -638,6 +704,89 @@ def test_rejects_a_malformed_operation_slot() -> None:
         program.resolve((str, None))
 
 
+class _ReadySyncRuntime:
+    def begin(self, scope: Scope, ident: Ident, claims: list[object | None]) -> InstructionStart:
+        del scope, ident, claims
+        return InstructionReady('cached')
+
+    def publish(self, claim: object, value: object) -> None:
+        del claim, value
+
+    def abort(self, claim: object) -> None:
+        del claim
+
+    def read_frame(self, ident: Ident) -> object:
+        del ident
+        return object()
+
+    def register_teardown(self, scope: Scope, record: Teardown) -> None:
+        del scope, record
+
+
+def test_returns_a_ready_cached_instruction_without_calling_its_factory() -> None:
+    def unexpected() -> object:
+        raise AssertionError('cached instruction called its factory')
+
+    operation = Operation(unexpected, (), (str, None), Scope.SINGLETON)
+    program = SyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
+
+    assert program.resolve((str, None), _ReadySyncRuntime()) == 'cached'
+
+
+def test_cached_instruction_requires_a_runtime() -> None:
+    operation = Operation(lambda: object(), (), (str, None), Scope.SINGLETON)
+    program = SyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
+
+    with pytest.raises(InvalidProviderError, match='requires a cache runtime'):
+        program.resolve((str, None))
+
+
+def test_rejects_a_claim_that_completes_without_a_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+    def start_with_claim(
+        _operation: object,
+        _runtime: object,
+        claims: list[object | None],
+    ) -> None:
+        claims.append(object())
+
+    monkeypatch.setattr(instructions_module, '_start', start_with_claim)
+    operation = Operation(lambda: object(), (), (str, None))
+    program = SyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
+
+    with pytest.raises(InvalidProviderError, match='cached instruction completed without a runtime'):
+        program.resolve((str, None))
+
+
+def test_an_empty_operation_chain_has_no_diagnostic_suffix() -> None:
+    program = SyncInstructionProgram((), MappingProxyType({}))
+    render_chain = object.__getattribute__(program, '_chain')
+    if not callable(render_chain):
+        raise AssertionError('instruction program has no chain renderer')
+
+    assert render_chain([]) == ''
+
+
+def test_multi_parameter_operation_stops_when_a_positional_dependency_is_not_compiled() -> None:
+    def combine(first: int, second: bytes) -> str:
+        return f'{first}:{second!r}'
+
+    first = ParamSpec(name='first', key=int, tag=None, has_default=False, default=None)
+    second = ParamSpec(name='second', key=bytes, tag=None, has_default=False, default=None)
+    spec = ProviderSpec(
+        key=str,
+        tag=None,
+        source=combine,
+        scope=Scope.TRANSIENT,
+        shape=ProviderShape.FUNCTION,
+        needs_async=False,
+        params=(first, second),
+    )
+    by_key: dict[Ident, ProviderSpec] = {(str, None): spec, (bytes, None): spec}
+    plan = ResolutionPlan((spec,), MappingProxyType(by_key))
+
+    assert compile_operation(spec, plan, {(int, None): 0}) is None
+
+
 def test_rejects_a_malformed_keyword_parameter_slot() -> None:
     def accept_keywords(**_kwargs: object) -> object:
         return object()
@@ -655,6 +804,19 @@ def test_rejects_a_malformed_alias_operation() -> None:
 
     with pytest.raises(InvalidProviderError, match='alias instruction for str requires exactly one dependency'):
         program.resolve((str, None))
+
+
+@pytest.mark.parametrize(
+    'operation',
+    [
+        FrameOperation((), (str, None), Scope.SCOPED),
+        GeneratorOperation(lambda: object(), (), (), (str, None), Scope.SINGLETON),
+        ContextManagerOperation(lambda: object(), (), (), (str, None), Scope.SINGLETON),
+    ],
+)
+def test_runtime_owned_structured_operations_require_a_runtime(operation: StructuredOperation) -> None:
+    with pytest.raises(InvalidProviderError, match=r'requires a (?:frame|resource) runtime'):
+        invoke_structured(operation, [], None)
 
 
 def test_skips_required_parameters_without_compiled_dependencies_and_compiles_values() -> None:

@@ -1,7 +1,7 @@
 diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
 --- a/depin/_core/frozen.py
 +++ b/depin/_core/frozen.py
-@@ -318,6 +318,7 @@
+@@ -319,6 +319,7 @@
          '_plan',
          '_root',
          '_sync_instructions',
@@ -9,14 +9,14 @@ diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
          '_validate_key',
      )
  
-@@ -350,6 +351,7 @@
+@@ -337,6 +338,7 @@
          self._lifecycle = create_lifecycle_gate()
          self._root = ScopeFrame(lifecycle=self._lifecycle)
-         self._instruction_runtime = _SyncInstructionRuntime(self._root, self._is_constructing)
+         self._instruction_lock = Lock() if deep_plan else None
+         self._instruction_runtime = _SyncInstructionRuntime(self._root, self._is_constructing) if deep_plan else None
 +        self._warm_cached_lookup_probe: dict[object, object] = {}
-         self._async_instruction_runtime = _AsyncInstructionRuntime(self._root, self._is_constructing)
-         self._validate_key: Callable[[object], TypeGuard[ProviderKey]] = is_provider_key
-         self._lifecycle.on_quiesce = self._quiesce_resolution
+         self._async_instruction_runtime = (
+             _AsyncInstructionRuntime(self._root, self._is_constructing) if deep_plan else None
 @@ -403,5 +405,9 @@
          """
          spec = self._lookup(key, tag)

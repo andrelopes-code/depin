@@ -2,7 +2,7 @@ import builtins
 import inspect
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from types import MappingProxyType
+from types import FunctionType, MappingProxyType
 from typing import Annotated
 
 import pytest
@@ -43,6 +43,7 @@ def test_generates_a_single_nested_function_for_a_transient_chain() -> None:
     assert isinstance(generated, MappingProxyType)
     assert program() == ['leaf', 'root']
     assert calls == ['leaf', 'root']
+    assert isinstance(program, FunctionType)
     assert program.__code__.co_filename == '<depin generated resolver>'
     assert 'user_parameter_name' not in program.__code__.co_names
     assert '_sources' not in program.__globals__

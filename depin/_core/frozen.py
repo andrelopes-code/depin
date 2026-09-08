@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Mapp
 from contextvars import ContextVar
 from contextvars import Token as ContextToken
 from dataclasses import dataclass
-from types import MappingProxyType
+from threading import Lock
 from typing import TypeGuard, final, overload
 
 from depin._core import construct, injection, overrides
@@ -18,7 +18,7 @@ from depin._core.async_instructions import (
     from_sync,
 )
 from depin._core.diagnostics import DependencyGraph, build_graph
-from depin._core.generated import Program, compile_sync_transients
+from depin._core.generated import EMPTY_PROGRAMS, Program, compile_sync_transients
 from depin._core.health import (
     HealthCheck,
     HealthReport,
@@ -319,6 +319,7 @@ class FrozenContainer:
         '_async_instruction_runtime',
         '_async_instructions',
         '_generated_sync',
+        '_instruction_lock',
         '_instruction_runtime',
         '_lifecycle',
         '_plan',
@@ -330,27 +331,16 @@ class FrozenContainer:
     def __init__(self, plan: ResolutionPlan) -> None:
         self._plan = plan
         deep_plan = len(plan.order) >= _RECURSIVE_PLAN_LIMIT
-        self._generated_sync: Mapping[Ident, Program] = (
-            MappingProxyType({}) if deep_plan else compile_sync_transients(plan)
-        )
-        self._sync_instructions: SyncInstructionProgram = (
-            compile_sync_instructions(plan) if deep_plan else EMPTY_SYNC_INSTRUCTION_PROGRAM
-        )
-        self._async_instructions: AsyncInstructionProgram = (
-            compile_async_instructions(plan)
-            if deep_plan and any(spec.needs_async for spec in plan.order)
-            else from_sync(
-                self._sync_instructions.operations,
-                self._sync_instructions.roots,
-                self._sync_instructions.frame_sensitive,
-            )
-            if deep_plan
-            else EMPTY_ASYNC_INSTRUCTION_PROGRAM
-        )
+        self._generated_sync: Mapping[Ident, Program] = EMPTY_PROGRAMS if deep_plan else compile_sync_transients(plan)
+        self._sync_instructions: SyncInstructionProgram = EMPTY_SYNC_INSTRUCTION_PROGRAM
+        self._async_instructions: AsyncInstructionProgram = EMPTY_ASYNC_INSTRUCTION_PROGRAM
         self._lifecycle = create_lifecycle_gate()
         self._root = ScopeFrame(lifecycle=self._lifecycle)
-        self._instruction_runtime = _SyncInstructionRuntime(self._root, self._is_constructing)
-        self._async_instruction_runtime = _AsyncInstructionRuntime(self._root, self._is_constructing)
+        self._instruction_lock = Lock() if deep_plan else None
+        self._instruction_runtime = _SyncInstructionRuntime(self._root, self._is_constructing) if deep_plan else None
+        self._async_instruction_runtime = (
+            _AsyncInstructionRuntime(self._root, self._is_constructing) if deep_plan else None
+        )
         self._validate_key: Callable[[object], TypeGuard[ProviderKey]] = is_provider_key
         self._lifecycle.on_quiesce = self._quiesce_resolution
         self._lifecycle.on_reopen = self._resume_resolution
@@ -1055,28 +1045,63 @@ class FrozenContainer:
     def _is_registered(self, key: ProviderKey, tag: str | None) -> bool:
         return (key, tag) in self._plan.by_key
 
+    def _compile_deep_instructions(self) -> None:
+        lock = self._instruction_lock
+        if lock is None:
+            return
+        with lock:
+            if self._instruction_lock is None:
+                return
+            sync_instructions = compile_sync_instructions(self._plan)
+            async_instructions = (
+                compile_async_instructions(self._plan)
+                if any(spec.needs_async for spec in self._plan.order)
+                else from_sync(
+                    sync_instructions.operations,
+                    sync_instructions.roots,
+                    sync_instructions.frame_sensitive,
+                )
+            )
+            self._sync_instructions = sync_instructions
+            self._async_instructions = async_instructions
+            self._instruction_lock = None
+
+    def _require_instruction_runtime(self) -> _SyncInstructionRuntime:
+        runtime = self._instruction_runtime
+        if runtime is None:
+            raise DepinError('deep resolution has no synchronous instruction runtime')
+        return runtime
+
+    def _require_async_instruction_runtime(self) -> _AsyncInstructionRuntime:
+        runtime = self._async_instruction_runtime
+        if runtime is None:
+            raise DepinError('deep resolution has no asynchronous instruction runtime')
+        return runtime
+
     def _can_use_sync_instructions(self, ident: Ident) -> bool:
         if overrides.present():
             return False
+        self._compile_deep_instructions()
         frame_active = optional_frame(self._root) is not None
         return self._sync_instructions.supports(ident, frame_active=frame_active)
 
     def _resolve_deep_sync(self, spec: ProviderSpec) -> object:
         ident = (spec.key, spec.tag)
         if self._can_use_sync_instructions(ident):
-            return self._sync_instructions.resolve(ident, self._instruction_runtime)
+            return self._sync_instructions.resolve(ident, self._require_instruction_runtime())
         return self._resolve_sync_iterative(spec)
 
     def _can_use_async_instructions(self, ident: Ident) -> bool:
         if overrides.present():
             return False
+        self._compile_deep_instructions()
         frame_active = optional_frame(self._root) is not None
         return self._async_instructions.supports(ident, frame_active=frame_active)
 
     async def _resolve_deep_async(self, spec: ProviderSpec) -> object:
         ident = (spec.key, spec.tag)
         if self._can_use_async_instructions(ident):
-            return await self._async_instructions.resolve(ident, self._async_instruction_runtime)
+            return await self._async_instructions.resolve(ident, self._require_async_instruction_runtime())
         return await self._resolve_async_iterative(spec)
 
     def _resolve_any(self, key: ProviderKey, tag: str | None) -> object:
@@ -1482,8 +1507,9 @@ class FrozenContainer:
             pending.append(_PendingResolution(spec, None, None, None, None, {}))
             return _PENDING
         claims: list[object | None] = []
+        runtime = self._require_instruction_runtime()
         try:
-            started = self._instruction_runtime.begin(spec.scope, (spec.key, spec.tag), claims)
+            started = runtime.begin(spec.scope, (spec.key, spec.tag), claims)
             if started.ready:
                 return started.value
             if not isinstance(started, _InstructionClaim):
@@ -1504,13 +1530,13 @@ class FrozenContainer:
         except BaseException:
             for claim in reversed(claims):
                 if claim is not None:
-                    self._instruction_runtime.abort(claim)
+                    runtime.abort(claim)
             raise
 
     def _complete(self, pending: list[_PendingResolution], value: object) -> None:
         current = pending.pop()
         if current.instruction_claim is not None:
-            self._instruction_runtime.publish(current.instruction_claim, value)
+            self._require_instruction_runtime().publish(current.instruction_claim, value)
         elif current.frame is not None and current.cache_id is not None and current.leader is not None:
             follower = current.frame.publish(current.cache_id, current.leader, value)
             if follower is not None:
@@ -1529,7 +1555,7 @@ class FrozenContainer:
         while pending:
             current = pending.pop()
             if current.instruction_claim is not None:
-                self._instruction_runtime.abort(current.instruction_claim)
+                self._require_instruction_runtime().abort(current.instruction_claim)
             elif current.frame is not None and current.cache_id is not None and current.leader is not None:
                 follower = current.frame.abort(current.cache_id, current.leader)
                 if follower is not None:

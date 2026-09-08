@@ -258,43 +258,47 @@ def _start(
 def invoke_structured(
     operation: StructuredOperation, parameters: list[object], runtime: InstructionRuntime | None
 ) -> object:
-    match operation:
-        case KeywordOperation(factory=factory, keywords=keywords, ident=ident):
-            return factory(**keyword_arguments(keywords, ident, parameters))
-        case AliasOperation(ident=ident):
-            if len(parameters) != 1:
-                raise InvalidProviderError(
-                    f'alias instruction for {render_ident(ident)} requires exactly one dependency'
-                )
-            return parameters[0]
-        case CollectionOperation():
-            return list(parameters)
-        case ValueOperation(value=value):
-            return value
-        case FrameOperation(ident=ident):
-            if runtime is None:
-                raise InvalidProviderError(
-                    f'{render_ident(ident)} requires a frame runtime for synchronous instructions'
-                )
-            return runtime.read_frame(ident)
-        case GeneratorOperation(factory=factory, keywords=keywords, ident=ident, scope=scope):
-            if runtime is None:
-                raise InvalidProviderError(
-                    f'{render_ident(ident)} requires a resource runtime for synchronous instructions'
-                )
-            gen = as_sync_iterator(factory(**keyword_arguments(keywords, ident, parameters)), ident[0])
-            value = next(gen)
-            runtime.register_teardown(scope, SyncGenTeardown(gen))
-            return value
-        case ContextManagerOperation(factory=factory, keywords=keywords, ident=ident, scope=scope):
-            if runtime is None:
-                raise InvalidProviderError(
-                    f'{render_ident(ident)} requires a resource runtime for synchronous instructions'
-                )
-            cm = as_sync_context_manager(factory(**keyword_arguments(keywords, ident, parameters)), ident[0])
-            value = cm.__enter__()
-            runtime.register_teardown(scope, SyncCMTeardown(cm))
-            return value
+    if isinstance(operation, KeywordOperation):
+        return operation.factory(**keyword_arguments(operation.keywords, operation.ident, parameters))
+    if isinstance(operation, AliasOperation):
+        if len(parameters) != 1:
+            raise InvalidProviderError(
+                f'alias instruction for {render_ident(operation.ident)} requires exactly one dependency'
+            )
+        return parameters[0]
+    if isinstance(operation, CollectionOperation):
+        return list(parameters)
+    if isinstance(operation, ValueOperation):
+        return operation.value
+    if isinstance(operation, FrameOperation):
+        if runtime is None:
+            raise InvalidProviderError(
+                f'{render_ident(operation.ident)} requires a frame runtime for synchronous instructions'
+            )
+        return runtime.read_frame(operation.ident)
+    if isinstance(operation, GeneratorOperation):
+        if runtime is None:
+            raise InvalidProviderError(
+                f'{render_ident(operation.ident)} requires a resource runtime for synchronous instructions'
+            )
+        gen = as_sync_iterator(
+            operation.factory(**keyword_arguments(operation.keywords, operation.ident, parameters)),
+            operation.ident[0],
+        )
+        value = next(gen)
+        runtime.register_teardown(operation.scope, SyncGenTeardown(gen))
+        return value
+    if runtime is None:
+        raise InvalidProviderError(
+            f'{render_ident(operation.ident)} requires a resource runtime for synchronous instructions'
+        )
+    cm = as_sync_context_manager(
+        operation.factory(**keyword_arguments(operation.keywords, operation.ident, parameters)),
+        operation.ident[0],
+    )
+    value = cm.__enter__()
+    runtime.register_teardown(operation.scope, SyncCMTeardown(cm))
+    return value
 
 
 def keyword_arguments(keywords: tuple[KeywordSlot, ...], ident: Ident, parameters: list[object]) -> dict[str, object]:

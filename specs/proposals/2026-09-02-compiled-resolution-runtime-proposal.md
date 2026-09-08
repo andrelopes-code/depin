@@ -365,6 +365,19 @@ fallback remain concrete residuals: the measured replacement cost too much
 memory and added work to a request-shaped scope. Removing every interpreter
 path is a NO-GO under the current representation, not an unmeasured follow-up.
 
+The pull-request gate against `origin/main` then exposed a second retained-
+memory boundary that the phase-to-phase comparisons had not isolated: eagerly
+holding the dense tables raised a frozen 1,000-provider container from 326,416
+to 624,892 bytes (+91.44%), and the decorated 1,000-provider freeze workload
+crossed its latency budget. The final implementation therefore materializes
+dense tables atomically on the first eligible deep resolution instead of during
+`freeze()`. The declarative plan remains the single retained representation
+until that path is used. A post-correction deterministic collection measured
+35,032 and 326,776 retained bytes at 100 and 1,000 providers (+0.14% and
++0.11% against the pull-request baseline), while the transient allocation path
+remained at 12 blocks / 1,224 bytes. A sequential diagnostic put the corrected
+decorated 1,000-provider freeze median 20.47% below `origin/main`.
+
 This completes the bounded proposal. It accepts the portions that pass every
 existing gate and rejects universal interpreter removal rather than weakening
 semantics or performance budgets.
@@ -399,8 +412,10 @@ semantics or performance budgets.
 
 ### Declarative plan and executable plan
 
-`ResolutionPlan` remains the immutable, inspectable result of validation. A new
-private executable representation is derived from it during `freeze()` and owns
+`ResolutionPlan` remains the immutable, inspectable result of validation. The
+bounded generated representation is derived from it during `freeze()`; dense
+instructions are derived atomically on the first eligible deep resolution so
+an unused graph retains only its declarative plan. Both executable forms own
 only recurring runtime decisions.
 
 For every resolvable key, the executable representation fixes:
@@ -414,12 +429,12 @@ For every resolvable key, the executable representation fixes:
 - the stable dependency-chain metadata required for errors.
 
 The selection experiment includes a dense private provider-ID representation as
-either a shared representation or a controlled sub-variant. `freeze()` assigns
-integer IDs and cache slots, and the recurring path reads immutable tuple- or
-array-backed tables instead of resolving `(key, tag)` pairs again. The IDs remain
-private: diagnostics, errors, and the public API continue to use the original
-typed keys. The experiment must measure this layout against a keyed control
-rather than assuming integer indexing is faster.
+either a shared representation or a controlled sub-variant. Its compiler
+assigns integer IDs and cache slots, and the recurring path reads immutable
+tuple- or array-backed tables instead of resolving `(key, tag)` pairs again.
+The IDs remain private: diagnostics, errors, and the public API continue to use
+the original typed keys. The experiment must measure this layout against a
+keyed control rather than assuming integer indexing is faster.
 
 Public diagnostics never reverse-engineer generated code. They continue to read
 the validated declarative plan.

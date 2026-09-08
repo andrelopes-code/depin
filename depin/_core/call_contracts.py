@@ -15,11 +15,11 @@ def sync_positional_factory(spec: ProviderSpec) -> Callable[..., object] | None:
     param_count = len(params)
     if param_count == 1:
         only = params[0]
-        if only.has_default or only.optional or not only.call_positionally:
+        if only.has_default or only.optional:
             return None
     elif param_count > 1:
         for param in params:
-            if param.has_default or param.optional or not param.call_positionally:
+            if param.has_default or param.optional:
                 return None
 
     source = spec.source

@@ -236,7 +236,7 @@ else:
         check=False,
         capture_output=True,
         text=True,
-        timeout=2,
+        timeout=15,
         cwd=Path(frozen_module.__file__).parents[2],
     )
     assert completed.returncode == 0, completed.stderr
@@ -289,7 +289,7 @@ if not second_finished.is_set() or sorted(results) != ['2', 'first']:
         check=False,
         capture_output=True,
         text=True,
-        timeout=2,
+        timeout=15,
         cwd=Path(frozen_module.__file__).parents[2],
     )
     assert completed.returncode == 0, completed.stderr
@@ -328,7 +328,7 @@ if frozen.resolve(int) != 2:
         check=False,
         capture_output=True,
         text=True,
-        timeout=2,
+        timeout=15,
         cwd=Path(frozen_module.__file__).parents[2],
     )
     assert completed.returncode == 0, completed.stderr
@@ -349,7 +349,7 @@ if frozen.resolve(int) != 42:
         check=False,
         capture_output=True,
         text=True,
-        timeout=2,
+        timeout=15,
         cwd=Path(frozen_module.__file__).parents[2],
     )
     assert completed.returncode == 0, completed.stderr

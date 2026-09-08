@@ -18,6 +18,7 @@ _MAX_EXPANDED_CALLS = 512
 _MAX_SOURCE_CHARS = 16_384
 _MAX_TOTAL_EXPANDED_CALLS = 32_768
 _MAX_TOTAL_SOURCE_CHARS = 1_000_000
+EMPTY_PROGRAMS: Mapping[Ident, Program] = MappingProxyType[Ident, Program]({})
 
 
 def compile_sync_transients(plan: ResolutionPlan) -> Mapping[Ident, Program]:
@@ -46,7 +47,7 @@ def compile_sync_transients(plan: ResolutionPlan) -> Mapping[Ident, Program]:
 
     provider_namespace = tuple(sources)
     programs = {ident: _program(expression, provider_namespace) for ident, expression in program_expressions.items()}
-    return MappingProxyType(programs)
+    return MappingProxyType(programs) if programs else EMPTY_PROGRAMS
 
 
 def _expression(

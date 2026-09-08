@@ -61,7 +61,6 @@ taskiq = ["taskiq>=0.11.19"]
 # made `Parameter.make_metavar()` take a context and Typer passes one only from
 # 0.16, so Typer 0.15 beside Click 8.2.1 raises `TypeError` on `--help`.
 typer = ["typer>=0.16"]
-
 # Declared by the distribution rather than by the extra, because that is how
 # pytest discovers a plugin. The extra states the floor the plugin is tested
 # against; `minimum-versions` and `latest-versions` exercise both ends.
@@ -89,7 +88,7 @@ dev = [
     "httpx>=0.27",
     "fastapi>=0.133",
     "mypy>=1.18",
-    "hypothesis>=6.138,<6.168",
+    "hypothesis>=6.138,<6.156",
     "mutmut>=3.7,<4",
     "pytest-timeout>=2.4,<3",
 ]
@@ -97,7 +96,7 @@ dev = [
 # `fastapi` and its compiled transitive dependencies have no wheels. The core
 # has zero runtime dependencies, so it needs nothing but a test runner.
 threads = [
-    "hypothesis>=6.138,<6.168",
+    "hypothesis>=6.138,<6.156",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3",
     "pytest-cov>=7.1,<8",

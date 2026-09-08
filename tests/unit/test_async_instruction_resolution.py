@@ -1,14 +1,147 @@
 import asyncio
 import contextlib
 from collections.abc import AsyncGenerator
+from types import MappingProxyType
 
 import pytest
 
+from depin._core import async_instructions as async_instructions_module
 from depin._core import frozen as frozen_module
+from depin._core.async_instructions import AsyncInstructionProgram, compile_async_instructions
 from depin._core.container import Container
+from depin._core.instructions import InstructionReady, InstructionStart, Operation
 from depin._core.markers import Token
 from depin._core.scope import Scope
-from depin._core.spec import ProviderSpec
+from depin._core.spec import Ident, ParamSpec, ProviderShape, ProviderSpec, ResolutionPlan
+from depin._core.teardown import Teardown
+from depin.errors import InvalidProviderError
+
+
+class _ReadyAsyncRuntime:
+    async def begin(self, scope: Scope, ident: Ident, claims: list[object | None]) -> InstructionStart:
+        del scope, ident, claims
+        return InstructionReady('cached')
+
+    def publish(self, claim: object, value: object) -> None:
+        del claim, value
+
+    def abort(self, claim: object) -> None:
+        del claim
+
+    def read_frame(self, ident: Ident) -> object:
+        del ident
+        return object()
+
+    def register_teardown(self, scope: Scope, record: Teardown) -> None:
+        del scope, record
+
+
+@pytest.mark.asyncio
+async def test_async_program_rejects_a_missing_tagged_root() -> None:
+    program = AsyncInstructionProgram((), MappingProxyType({}))
+
+    with pytest.raises(InvalidProviderError, match=r"with tag 'missing'.*has no asynchronous instruction program"):
+        await program.resolve((str, 'missing'))
+
+
+@pytest.mark.asyncio
+async def test_async_program_rejects_a_malformed_operation_slot() -> None:
+    program = AsyncInstructionProgram((), MappingProxyType({(str, None): 1}))
+
+    with pytest.raises(InvalidProviderError, match='invalid operation slot 1'):
+        await program.resolve((str, None))
+
+
+@pytest.mark.asyncio
+async def test_async_program_rejects_a_malformed_dependency_slot_with_its_chain() -> None:
+    operation = Operation(lambda: object(), (1,), (str, None))
+    program = AsyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
+
+    with pytest.raises(
+        InvalidProviderError, match='invalid dependency slot 1 in asynchronous instruction program while resolving str'
+    ):
+        await program.resolve((str, None))
+
+
+@pytest.mark.asyncio
+async def test_async_program_invokes_sync_operations_with_multiple_dependencies() -> None:
+    def pair(first: object, second: object) -> tuple[object, object]:
+        return first, second
+
+    left = Operation(lambda: 'left', (), (str, 'left'))
+    right = Operation(lambda: 'right', (), (str, 'right'))
+    root = Operation(pair, (0, 1), (tuple[str, str], None))
+    program = AsyncInstructionProgram((left, right, root), MappingProxyType({(tuple[str, str], None): 2}))
+
+    assert await program.resolve((tuple[str, str], None)) == ('left', 'right')
+
+
+@pytest.mark.asyncio
+async def test_async_program_returns_a_ready_cached_instruction() -> None:
+    def unexpected() -> object:
+        raise AssertionError('cached async instruction called its factory')
+
+    operation = Operation(unexpected, (), (str, None), Scope.SINGLETON)
+    program = AsyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
+
+    assert await program.resolve((str, None), _ReadyAsyncRuntime()) == 'cached'
+
+
+@pytest.mark.asyncio
+async def test_cached_async_instruction_requires_a_runtime() -> None:
+    operation = Operation(lambda: object(), (), (str, None), Scope.SINGLETON)
+    program = AsyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
+
+    with pytest.raises(InvalidProviderError, match='requires a cache runtime'):
+        await program.resolve((str, None))
+
+
+@pytest.mark.asyncio
+async def test_async_program_rejects_a_claim_that_completes_without_a_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def start_with_claim(
+        _operation: object,
+        _runtime: object,
+        claims: list[object | None],
+    ) -> None:
+        claims.append(object())
+
+    monkeypatch.setattr(async_instructions_module, '_start', start_with_claim)
+    operation = Operation(lambda: object(), (), (str, None))
+    program = AsyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
+
+    with pytest.raises(InvalidProviderError, match='cached instruction completed without a runtime'):
+        await program.resolve((str, None))
+
+
+def test_an_empty_async_operation_chain_has_no_diagnostic_suffix() -> None:
+    program = AsyncInstructionProgram((), MappingProxyType({}))
+    render_chain = object.__getattribute__(program, '_chain')
+    if not callable(render_chain):
+        raise AssertionError('async instruction program has no chain renderer')
+
+    assert render_chain([]) == ''
+
+
+def test_async_compiler_skips_a_root_whose_dependency_has_no_operation() -> None:
+    async def make(value: int) -> str:
+        return str(value)
+
+    parameter = ParamSpec(name='value', key=int, tag=None, has_default=False, default=None)
+    spec = ProviderSpec(
+        key=str,
+        tag=None,
+        source=make,
+        scope=Scope.TRANSIENT,
+        shape=ProviderShape.ASYNC_FUNCTION,
+        needs_async=True,
+        params=(parameter,),
+    )
+    by_key: dict[Ident, ProviderSpec] = {(str, None): spec, (int, None): spec}
+    plan = ResolutionPlan((spec,), MappingProxyType(by_key))
+
+    assert not compile_async_instructions(plan).supports((str, None))
 
 
 @pytest.mark.asyncio
@@ -252,6 +385,7 @@ def test_sync_only_deep_plan_shares_its_immutable_instructions_with_async_resolu
         container.value(Token[int](f'shared-instruction-{index}'), index)
 
     frozen = container.freeze()
+    assert frozen.resolve(Token[int]('shared-instruction-255')) == 255
     sync_program = object.__getattribute__(frozen, '_sync_instructions')
     async_program = object.__getattribute__(frozen, '_async_instructions')
 
