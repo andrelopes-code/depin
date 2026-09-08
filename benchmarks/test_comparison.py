@@ -287,7 +287,7 @@ def test_dishka_prepared_calls_preserve_core_lifetimes_and_allow_repeated_cleanu
 
 def test_dishka_scoped_prepared_cycle_closes_a_real_request_resource(monkeypatch: pytest.MonkeyPatch) -> None:
     log: list[str] = []
-    monkeypatch.setattr(dishka_adapter, 'chain', _tracked_chain_builder(log, CHAIN_DEPTH))
+    monkeypatch.setattr(dishka_adapter, 'chain_shape', _tracked_chain_builder(log, CHAIN_DEPTH))
     candidate = next(
         candidate
         for candidate in dishka_adapter.ADAPTER.candidates(WORKLOADS)
@@ -309,7 +309,7 @@ def test_dishka_scoped_prepared_cycle_closes_a_real_request_resource(monkeypatch
 
 def test_dishka_root_cleanup_closes_a_real_app_resource_once(monkeypatch: pytest.MonkeyPatch) -> None:
     log: list[str] = []
-    monkeypatch.setattr(dishka_adapter, 'chain', _tracked_chain_builder(log, HOT_GRAPH))
+    monkeypatch.setattr(dishka_adapter, 'chain_shape', _tracked_chain_builder(log, HOT_GRAPH))
     candidate = next(
         candidate
         for candidate in dishka_adapter.ADAPTER.candidates(WORKLOADS)
@@ -415,7 +415,7 @@ def test_wireup_singleton_prepare_warms_the_leaf_before_the_measured_call(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     log: list[str] = []
-    monkeypatch.setattr(wireup_adapter, 'chain', _tracked_chain_builder(log, HOT_GRAPH))
+    monkeypatch.setattr(wireup_adapter, 'chain_shape', _tracked_chain_builder(log, HOT_GRAPH))
     candidate = next(
         candidate
         for candidate in wireup_adapter.ADAPTER.candidates(WORKLOADS)
@@ -439,7 +439,7 @@ def test_wireup_singleton_prepare_warms_the_leaf_before_the_measured_call(
 
 def test_wireup_scoped_prepared_cycle_closes_a_real_request_resource(monkeypatch: pytest.MonkeyPatch) -> None:
     log: list[str] = []
-    monkeypatch.setattr(wireup_adapter, 'chain', _tracked_chain_builder(log, CHAIN_DEPTH))
+    monkeypatch.setattr(wireup_adapter, 'chain_shape', _tracked_chain_builder(log, CHAIN_DEPTH))
     candidate = next(
         candidate
         for candidate in wireup_adapter.ADAPTER.candidates(WORKLOADS)
