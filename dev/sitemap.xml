@@ -148,4 +148,20 @@
          <loc>https://andrelopes-code.github.io/depin/dev/reference/wsgi/</loc>
          <lastmod>2026-09-08</lastmod>
     </url>
+    <url>
+         <loc>https://andrelopes-code.github.io/depin/dev/superpowers/plans/2026-09-08-compiled-sync-transient-closures/</loc>
+         <lastmod>2026-09-08</lastmod>
+    </url>
+    <url>
+         <loc>https://andrelopes-code.github.io/depin/dev/superpowers/plans/2026-09-08-dense-instruction-runtime/</loc>
+         <lastmod>2026-09-08</lastmod>
+    </url>
+    <url>
+         <loc>https://andrelopes-code.github.io/depin/dev/superpowers/plans/2026-09-08-generated-runtime-matrix-expansion/</loc>
+         <lastmod>2026-09-08</lastmod>
+    </url>
+    <url>
+         <loc>https://andrelopes-code.github.io/depin/dev/superpowers/plans/2026-09-08-generated-sync-transient-functions/</loc>
+         <lastmod>2026-09-08</lastmod>
+    </url>
 </urlset>

@@ -2375,13 +2375,17 @@ reported, and the cache is dropped either way.</p>
 
 <a href="#depin.ScopeFrame.publish" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">publish</span><span class="p">(</span>
-    <span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">leader</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">object</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
+    <span class="n">leader</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
+    <span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">signal</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Cache a leader's value and return any followers to signal after unlocking.</p>
+        <p>Cache a leader's value and return any followers after unlocking.</p>
 
 
     </div>
@@ -2396,12 +2400,14 @@ reported, and the cache is dropped either way.</p>
 
 
 <a href="#depin.ScopeFrame.abort" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">abort</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">leader</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="kc">None</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">abort</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">leader</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">signal</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Flight</span> <span class="o">|</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Remove a failed leader's flight and return any followers to signal after unlocking.</p>
+        <p>Remove a failed leader's flight and return any followers after unlocking.</p>
 
 
     </div>
