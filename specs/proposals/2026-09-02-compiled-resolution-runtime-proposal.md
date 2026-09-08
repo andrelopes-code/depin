@@ -1,7 +1,7 @@
 # Proposal: compile resolution instead of interpreting it
 
 Date: 2026-09-02
-Status: accepted for bounded experiments; closure composition selected next
+Status: accepted for bounded experiments; generated functions selected next
 Scope: synchronous and asynchronous core resolution, caching, overrides, depth, and teardown registration
 
 ## Nature of this document
@@ -61,6 +61,44 @@ budget or code from this experiment is accepted. The next selected bounded
 experiment is freeze-time composition of closures for synchronous transient
 chains, subject to measurement. FastAPI remains subsequent to the core work,
 and the native path remains NO-GO.
+
+## Experiment decision: 2026-09-08
+
+The bounded closure-composition experiment compiled shallow synchronous
+transient function-provider chains during `freeze()`. A five-repetition paired
+comparison against `a4a7513` reduced the 20-provider transient-chain median from
+34.125 to 10.558 microseconds, a decisive -69.13% interval of [-69.77%,
+-68.65%]. Python calls fell from 181 to 47 per resolution. The profile retained
+one root lookup per resolution while removing per-node resolution, parameter,
+and construction dispatch; the 20-provider plan retained 20 closure objects
+with a shallow size of 3,200 bytes.
+
+The gain did not satisfy the experiment's system-wide acceptance rule.
+Transient-chain allocations increased from 52 to 72 blocks (+38.46%), from
+4,904 to 6,184 allocated bytes, and from 5,688 to 6,968 peak bytes. Warm cached
+singleton resolution regressed from 1.849 to 2.090 microseconds (+13.44%,
+[+9.54%, +15.61%]); a two-decorator singleton regressed from 1.864 to 2.101
+microseconds (+13.45%, [+9.57%, +16.27%]); and the no-active-override path
+regressed from 1.828 to 2.102 microseconds (+14.77%, [+11.58%, +19.02%]). The
+active-override path remained within budget at +2.61% [-0.64%, +3.38%]. Strict
+work budgets also failed when cached resolution rose from eight to nine calls,
+request-shaped scope work from 88 to 89, and scope-cycle work from 358 to 359.
+Transient-depth scaling exceeded its budget with a +104.76% change in the
+worst size-to-size growth ratio.
+
+Retained memory stayed bounded: containers of 100 and 1,000 providers each
+retained 112 additional bytes (+0.32% and +0.03%). The correctness suite,
+including 1,000-provider sync and async depth coverage, was green before the
+measurement. These passing guards do not offset the allocation and unrelated
+hot-path regressions.
+
+This is a NO-GO. No closure compiler, routing change, prototype-only test, or
+new budget is retained. The next bounded experiment is one generated Python
+function per eligible shallow synchronous transient resolution. It must avoid
+adding work to ineligible cached and override paths and must measure whether a
+single generated call graph removes the closure-chain allocation cost. The
+denser typed instruction program remains the subsequent private strategy; the
+native path remains NO-GO.
 
 ## Goals
 
@@ -300,6 +338,8 @@ has reached its demonstrated potential.
 ## Active decision
 
 Continue bounded, measured experiments under this proposal. The 2026-09-04
-cached-runtime experiment is NO-GO; the next selected experiment is freeze-time
-composition of closures for synchronous transient chains. The final execution
-strategy remains unselected until an experiment meets the acceptance criteria.
+cached-runtime experiment and the 2026-09-08 closure-composition experiment are
+NO-GO. The next selected experiment is one generated Python function per
+eligible shallow synchronous transient resolution, followed by the denser typed
+instruction strategy if generation does not pass. The final execution strategy
+remains unselected until an experiment meets the acceptance criteria.

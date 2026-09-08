@@ -12,11 +12,6 @@ type _Frame = dict[tuple[ProviderKey, str | None], object]
 _stack: ContextVar[tuple[_Frame, ...]] = ContextVar('depin_overrides', default=())
 
 
-def present() -> bool:
-    """Return whether this context has at least one active override frame."""
-    return bool(_stack.get())
-
-
 @contextlib.contextmanager
 def pushed(key: ProviderKey, tag: str | None, replacement: object) -> Generator[None]:
     """Make ``(key, tag)`` resolve to ``replacement`` for the duration of the block.

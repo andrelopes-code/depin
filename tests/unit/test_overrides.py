@@ -1,11 +1,9 @@
 """Context-local overrides: the testing seam that replaces a provider in place."""
 
-from contextvars import Context
 from typing import Annotated
 
 import pytest
 
-from depin._core import overrides
 from depin._core.container import Container
 from depin._core.markers import Tag, Token, injected
 from depin._core.scope import Scope
@@ -123,21 +121,6 @@ def test_override_resolves_a_key_that_was_never_bound() -> None:
         assert frozen[Marker] is sentinel
     with pytest.raises(MissingProviderError):
         _ = frozen[Marker]
-
-
-def test_override_presence_tracks_nested_contexts_without_leaking() -> None:
-    outer = Token[object]('outer')
-    inner = Token[object]('inner')
-    frozen = Container().freeze()
-
-    assert not overrides.present()
-    with frozen.override(outer).using(object()):
-        assert overrides.present()
-        assert not Context().run(overrides.present)
-        with frozen.override(inner).using(object()):
-            assert overrides.present()
-        assert overrides.present()
-    assert not overrides.present()
 
 
 def test_reset_makes_an_override_reach_a_consumer_built_before_the_block() -> None:
