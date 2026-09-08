@@ -1,16 +1,17 @@
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Annotated, TypeGuard
+from typing import Annotated, TypeGuard, override
 
 import pytest
 
-from depin._core.compiled import compile_sync_transients
+from depin._core.compiled import Program, compile_sync_transients
 from depin._core.container import Container
 from depin._core.frozen import FrozenContainer
 from depin._core.graph import build_plan
 from depin._core.markers import Tag, Token
 from depin._core.scope import Scope
+from depin._core.spec import Ident
 
 
 def test_compiles_a_transient_function_chain_in_dependency_order() -> None:
@@ -229,14 +230,21 @@ def test_compiled_transient_resolution_matches_interpreted_resolution(shape: str
     interpreted_calls: list[str] = []
     compiled = _transient_container(shape, compiled_calls)
     interpreted = _transient_container(shape, interpreted_calls)
+    target: Ident = (_Resolved, None)
+    compiled_program = _spy_on_program(compiled, target)
+    interpreted_program = _spy_on_program(interpreted, target)
 
     compiled_result = compiled.resolve(_Resolved)
     with interpreted.override(Token[object]('unrelated')).using(object()):
         interpreted_result = interpreted.resolve(_Resolved)
 
+    assert target in _sync_transient_programs(compiled)
+    assert target in _sync_transient_programs(interpreted)
     assert type(compiled_result) is type(interpreted_result)
     assert compiled_result == interpreted_result
     assert compiled_calls == interpreted_calls
+    assert compiled_program.invocations == 1
+    assert interpreted_program.invocations == 0
 
 
 def test_compiled_transient_factory_exception_matches_interpreted_resolution() -> None:
@@ -476,6 +484,48 @@ def _identity_transient_container(calls: list[str]) -> FrozenContainer:
     )
 
 
+class _ProgramSpy(Mapping[Ident, Program]):
+    def __init__(self, programs: Mapping[Ident, Program], target: Ident) -> None:
+        self._programs = programs
+        self._target = target
+        self.invocations = 0
+
+    @override
+    def __getitem__(self, key: Ident) -> Program:
+        program = self._programs[key]
+        if key != self._target:
+            return program
+
+        def invoke() -> object:
+            self.invocations += 1
+            return program()
+
+        return invoke
+
+    @override
+    def __iter__(self) -> Iterator[Ident]:
+        return iter(self._programs)
+
+    @override
+    def __len__(self) -> int:
+        return len(self._programs)
+
+
+def _spy_on_program(frozen: FrozenContainer, target: Ident) -> _ProgramSpy:
+    programs = _sync_transient_programs(frozen)
+    assert target in programs
+    spy = _ProgramSpy(programs, target)
+    frozen.__setattr__('_sync_transients', spy)
+    return spy
+
+
+def _sync_transient_programs(frozen: FrozenContainer) -> Mapping[Ident, Program]:
+    value = frozen.__getattribute__('_sync_transients')
+    if _is_program_mapping(value):
+        return value
+    raise AssertionError('FrozenContainer must store its compiled transient programs as a mapping')
+
+
 def _sync_transients(frozen: object) -> Mapping[object, object]:
     value = frozen.__getattribute__('_sync_transients')
     if _is_object_mapping(value):
@@ -484,4 +534,8 @@ def _sync_transients(frozen: object) -> Mapping[object, object]:
 
 
 def _is_object_mapping(value: object) -> TypeGuard[Mapping[object, object]]:
+    return isinstance(value, Mapping)
+
+
+def _is_program_mapping(value: object) -> TypeGuard[Mapping[Ident, Program]]:
     return isinstance(value, Mapping)
