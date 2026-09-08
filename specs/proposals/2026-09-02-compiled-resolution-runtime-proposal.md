@@ -1,7 +1,7 @@
 # Proposal: compile resolution instead of interpreting it
 
 Date: 2026-09-02
-Status: accepted for bounded experiments; closure composition selected next
+Status: completed; bounded hybrid accepted, universal interpreter removal rejected
 Scope: synchronous and asynchronous core resolution, caching, overrides, depth, and teardown registration
 
 ## Nature of this document
@@ -62,6 +62,326 @@ experiment is freeze-time composition of closures for synchronous transient
 chains, subject to measurement. FastAPI remains subsequent to the core work,
 and the native path remains NO-GO.
 
+## Experiment decision: 2026-09-08 closure composition
+
+The bounded closure-composition experiment compiled shallow synchronous
+transient function-provider chains during `freeze()`. A five-repetition paired
+comparison against `a4a7513` reduced the 20-provider transient-chain median from
+34.125 to 10.558 microseconds, a decisive -69.13% interval of [-69.77%,
+-68.65%]. Python calls fell from 181 to 47 per resolution. The profile retained
+one root lookup per resolution while removing per-node resolution, parameter,
+and construction dispatch; the 20-provider plan retained 20 closure objects
+with a shallow size of 3,200 bytes.
+
+The gain did not satisfy the experiment's system-wide acceptance rule.
+Transient-chain allocations increased from 52 to 72 blocks (+38.46%), from
+4,904 to 6,184 allocated bytes, and from 5,688 to 6,968 peak bytes. Warm cached
+singleton resolution regressed from 1.849 to 2.090 microseconds (+13.44%,
+[+9.54%, +15.61%]); a two-decorator singleton regressed from 1.864 to 2.101
+microseconds (+13.45%, [+9.57%, +16.27%]); and the no-active-override path
+regressed from 1.828 to 2.102 microseconds (+14.77%, [+11.58%, +19.02%]). The
+active-override path remained within budget at +2.61% [-0.64%, +3.38%]. Strict
+work budgets also failed when cached resolution rose from eight to nine calls,
+request-shaped scope work from 88 to 89, and scope-cycle work from 358 to 359.
+Transient-depth scaling exceeded its budget with a +104.76% change in the
+worst size-to-size growth ratio.
+
+Retained memory stayed bounded: containers of 100 and 1,000 providers each
+retained 112 additional bytes (+0.32% and +0.03%). The correctness suite,
+including 1,000-provider sync and async depth coverage, was green before the
+measurement. These passing guards do not offset the allocation and unrelated
+hot-path regressions.
+
+This is a NO-GO. No closure compiler, routing change, prototype-only test, or
+new budget is retained. The next bounded experiment is one generated Python
+function per eligible shallow synchronous transient resolution. It must avoid
+adding work to ineligible cached and override paths and must measure whether a
+single generated call graph removes the closure-chain allocation cost. The
+denser typed instruction program remains the subsequent private strategy; the
+native path remains NO-GO.
+
+## Experiment decision: 2026-09-08 generated functions
+
+The next bounded prototype generated one Python function per eligible shallow
+synchronous transient resolution. Generated source contained only fixed
+project-owned syntax and integer indexes into a namespace tuple; no provider
+name, key, tag, annotation, or representation was interpolated. Eligibility was
+limited to function providers whose complete dependency subgraph was transient,
+synchronous, positional-or-keyword, and no deeper than 200 providers. Plans at
+the runtime's 256-provider recursive threshold retained the iterative executor,
+as did defaults, optional or keyword-only parameters, cached dependencies,
+classes, resources, aliases, collections, async providers, and any active
+override.
+
+A five-repetition paired comparison of `c196d7c` against the prototype-free
+`d5d8d03`, with seed 20260902, reduced the isolated 20-provider transient-chain
+median from 34.405 to 4.687 microseconds. The paired change was -86.39% with a
+decisive [-86.60%, -85.79%] interval. In the competitive workload the generated
+path measured 4.618 microseconds, versus 2.267 for direct Python, 7.167 for
+Dishka, 7.465 for Wireup, and 17.009 for Dependency Injector. Python calls fell
+from 181 to 28 per resolution. Allocation size fell from 4,904 to 1,224 bytes
+(-75.04%); blocks fell from 52 to 12 and peak bytes from 5,688 to 2,008.
+
+The earlier 34.125-microsecond baseline was a single-run diagnostic used to
+decide whether to pay for the paired collection; 34.405 microseconds is the
+independently recalibrated median of the five accepted baseline repetitions.
+The raw repetitions, environment, generated report, gate output, revision
+identities, and verification commands are retained together under
+`benchmarks/results/2026-09-08-generated-sync-functions/`.
+
+The routing avoided the closure prototype's unrelated regressions. Cached
+singleton resolution changed from 1.876 to 1.837 microseconds (-2.23%), the
+no-active-override path from 1.832 to 1.839 microseconds (+0.43%), and the active
+override path from 3.868 to 4.022 microseconds (+3.98%); all remained within
+their existing budgets. Cached, request-scope, and scope-cycle work stayed
+exactly at 8, 88, and 358 calls, and their allocation counts did not change.
+Every latency, allocation, work, retained-memory, and scaling gate passed.
+
+Freeze workloads remained within budget: the paired changes were +1.71% at 10
+providers, +2.30% at 100, and +4.45% at 1,000. The generic retained-container
+measurements added 112 bytes at 100 and 1,000 providers (+0.32% and +0.03%). The
+generated executable itself retained 18,400 shallow bytes for a 20-provider
+chain and, because each root currently owns its namespace tuple and nested code,
+505,600 shallow bytes for 160 providers. Generation is therefore accepted only
+inside the existing shallow-plan and 200-expression limits. Sharing or otherwise
+deduplicating executable storage is a prerequisite for expanding the strategy,
+not a reason to broaden those limits now.
+
+Security review then found that synthetic signatures could disagree with the
+real function argument order and that a small shared DAG could expand into an
+exponential source expression. Revision `2ea58f5` made exact real parameter
+name/order/quantity matching an eligibility condition, rejected synthetic
+varargs and positional/keyword-only mismatches, and added per-program plus
+cumulative source-generation budgets before concatenation. The original
+16-provider reproducer fell from a 170.6 MB peak to 1.36 MB and stopped
+generation after provider 9. A focused five-pair rerun against `d5d8d03`
+covered every performance path changed by the hardening: transient latency was
+-86.47% [-87.24%, -85.93%], freeze changed +1.94% at 10 providers, +0.22% at
+100, and -0.57% at 1,000, while retained and deterministic results preserved
+the full-matrix result. Every applicable gate passed. The complete `c196d7c`
+matrix and the focused `2ea58f5` hardening dataset are retained separately so
+the evidence never presents the earlier revision as the final one.
+
+This bounded experiment is a GO. Its implementation, differential tests, and
+complete paired evidence are retained.
+
+The first expansion prerequisite then shared one immutable provider namespace
+across every generated program. That removed the quadratic tuple snapshots, but
+not the duplicated nested bytecode: unique executable storage measured 12,120,
+132,440, and 298,280 bytes at 20, 100, and 160 providers. The corresponding
+growth exponent was 1.54 from 20 to 160 rather than linear. A one-run diagnostic
+kept the target path at 4.589 microseconds and the 10/100/1,000-provider freeze
+medians at 384.496 microseconds, 3.538 milliseconds, and 36.842 milliseconds,
+all consistent with the accepted intervals.
+
+Expanding generated functions across the full runtime matrix is therefore a
+NO-GO. The measured shallow transient path remains as a strictly bounded leaf
+fast path, with its compiler budgets unchanged. A linear dense instruction
+program is selected as the complement for deep graphs and for the cached,
+scoped, resource-owning, asynchronous, alias, collection, decorator, default,
+and active-override paths. Generated functions do not become the general
+runtime representation unless a later design removes their duplicated code
+without giving back the accepted latency and allocation result.
+
+## Experiment decision: 2026-09-08 dense sync transient instructions
+
+The first dense prototype compiles one immutable `Operation` tuple in plan
+order, one integer dependency tuple per provider, and one key-to-index map. Its
+executor walks those indexes with local explicit stacks. It stores no transitive
+schedule per key and does not memoize repeated transient dependencies. Exact
+parameter callability is captured by `ParamSpec` while the provider signature
+is already inspected, so executable compilation does not repeat
+`inspect.signature`.
+
+Stored operations and edges were exactly 20/19, 100/99, 160/159, and 1,000/999.
+Measured representation bytes were 2,832, 15,208, 21,448, and 141,072 at those
+sizes; the 20-to-160 exponent was 0.974. On a 20-provider chain, the isolated
+instruction executor measured 14.052 microseconds versus 33.465 for the public
+interpreter, 4.161 for the generated public path, and 2.040 for direct Python.
+It used 22 Python calls and retained 12 blocks / 1,248 bytes for one operation,
+versus 181 calls and 54 blocks / 4,824 bytes for the interpreter. The generated
+fast path remains superior for this bounded shape.
+
+The first production routing is deliberately narrower than compiler
+eligibility: only synchronous transient roots in plans of at least 256 providers
+use dense instructions, and only when no override is active. Shallow plans keep
+the generated fast path; unsupported deep shapes and active overrides keep the
+iterative interpreter. At depth 1,000 the public instruction route measured
+724.930 microseconds against 2,617.506 for the interpreter (-72.3%). Compiling
+the deep executable changed `freeze()` from 34.051 to 36.166 milliseconds
+(+6.21%). Both `resolve()` and synchronous `inject()` select the instruction
+route; the async executor remains unchanged.
+
+This slice is a GO. The operation model is linear, immutable, faster than the
+deep interpreter, and preserves the bounded generated leader. The next slice
+encodes the complete synchronous call contract and override-aware execution;
+cached/scoped claims and resource lifecycles remain outside the instruction
+program until their dedicated correctness phases.
+
+## Experiment decision: 2026-09-08 complete synchronous calls
+
+The dense program now encodes resolved keyword arguments, omitted Python
+defaults, unbound optional values, classes, aliases, collections, and rewritten
+decorators as immutable typed operations. Each operation carries its stable key
+and tag. Malformed instruction errors render the dependency chain through those
+identities. Exact positional functions retain their specialized zero/one/many
+argument loop.
+
+Top-level resolution reads whether an override exists once. Any active override
+continues through the iterative executor, preserving nested substitution
+semantics. The compiler also marks roots whose transitive program contains an
+unbound default or optional; those roots fall back inside a live scope so a
+frame-provided value is not hidden by a precompiled default or `None`.
+
+A seven-repeat diagnostic against `c7c83de` reduced a 256-provider keyword-only
+transient chain from 704.564 to 430.698 microseconds (-38.87%). A keyword-only
+class in a 256-node plan improved from 7.361 to 4.974 microseconds (-32.43%).
+Freezing a 1,000-provider keyword chain changed from 41.382 to 43.525
+milliseconds (+5.18%). The previously accepted 1,000-provider positional path
+remained within the normal regression boundary at +5.22%, while still far
+ahead of its 2,617.506-microsecond iterative baseline.
+
+The richer keyword representation remains linear: 20, 100, 160, and 1,000
+providers store exactly the same number of operations, one fewer dependency
+edge, and one keyword slot per edge. Measured retained representation was
+5,192, 26,528, 39,488, and 253,192 bytes, a 20-to-160 exponent of 0.976.
+Focused correctness covers every new call form, active overrides, propagated
+scope sensitivity, stable error metadata, and malformed slots.
+
+This slice is a GO. The next phase integrates singleton and scoped claim-or-join
+operations without replacing the existing locks, cache state, or recursive
+construction detection. Resource ownership and async execution remain separate
+later phases.
+
+## Experiment decision: 2026-09-08 cached and scoped synchronous instructions
+
+The dense program now executes cold singleton and scoped graphs through the
+same immutable operation table as transient graphs. Operation lifetimes select
+the root or active scope frame, while the existing `ScopeFrame` locks, cache,
+claim-or-join state, and recursive-construction detection remain authoritative.
+Top-level warm cache hits keep their existing direct path.
+
+Claim ownership is recorded before control returns to the executor and remains
+on its cleanup stack until publication completes. Publication and abort reset
+the construction context in `finally` and request follower signalling from
+inside `ScopeFrame` after its lock is released. Deterministic fault injection
+covers interruption after root and dependency claims and before publication;
+the blocked-follower test was also shown to fail when the abort signal was
+removed. A critical concurrency review reproduced all three gaps and approved
+the corrected ownership protocol.
+
+A 1,000-provider cold singleton chain improved from 5,781.874 to 4,402.904
+microseconds (-23.85%), and a cold scoped chain improved from 6,383.748 to
+4,391.337 microseconds (-31.21%). Python calls for the cold singleton fell from
+17,007 to 11,016 (-35.23%); retained and peak traced bytes fell 33.69% and
+29.30%. Warm root lookups remained on their existing path and moved +6.59% for
+singleton and +4.82% for scoped diagnostics.
+
+Five alternating paired runs of the published 1,000-provider freeze workload
+measured a +5.07% median change, below its 8% budget. The complete benchmark
+contract suite passes 155 tests, and the focused cache, scope, iterative, and
+thread-safety selection passes 140 with six interpreter-specific skips. Full
+evidence is retained in [cached and scoped synchronous instructions](../../benchmarks/results/2026-09-08-cached-scoped-sync-instructions.md).
+
+This slice is a GO. Synchronous resource ownership is selected next; async
+execution remains separate so the sync loop pays no event-loop or awaitability
+branch per node.
+
+## Experiment decision: 2026-09-08 synchronous resource instructions
+
+Dedicated generator and context-manager operations now open synchronous
+resources inside the dense program and register their teardown on the
+singleton or scoped frame that owns the cache claim. Registration precedes
+publication. Existing frame drains retain construction-order registration and
+reverse-order teardown, including resources owned by decorators; aliases and
+collections remain non-owning.
+
+A graph with one synchronous resource below 999 consumers improved from
+7,694.414 to 5,234.384 microseconds for a cold singleton cycle (-31.97%) and
+from 8,423.711 to 5,287.776 microseconds for a scoped cycle (-37.23%). Python
+calls fell 36.98%, retained traced bytes fell 48.42%, and peak traced bytes fell
+40.36%. Freezing the resource graph changed by +0.08%.
+
+Five paired runs of the published shallow synchronous-resource workload
+measured a +0.50% median change. Focused tests force deep generator,
+context-manager, and resource-decorator graphs through the compiled path and
+cover exactly-once close, LIFO dependency ownership, and an interruption after
+resource acquisition but before publication. Full evidence is retained in
+[synchronous resource instructions](../../benchmarks/results/2026-09-08-sync-resource-instructions.md).
+
+This slice is a GO. A separately typed asynchronous instruction executor is
+selected next; synchronous resolution retains no event-loop or awaitability
+branch per node.
+
+## Experiment decision: 2026-09-08 asynchronous instructions
+
+The deep-plan runtime now has a separately typed async executor. Synchronous
+operation types are shared where their call contract is identical, while
+coroutine, async-generator, and async-context-manager providers use dedicated
+operations and an async-only loop. Sync-only plans reuse the same immutable
+operation tuple and root map for `aresolve()` rather than compiling a duplicate
+representation.
+
+Against `f04e458`, a 1,000-provider graph with one async leaf and 999 sync
+consumers improved by 72.21% for transient resolution, 25.37% for cold
+singletons, and 32.94% for scoped cycles. The corresponding async-resource
+cycle improved by 31.75%. Python calls fell by 31.87%, retained traced memory
+by 48.35%, and peak traced memory by 30.38%. Freeze cost changed by +5.02%,
+inside the existing 8% diagnostic budget. The unchanged shallow async-
+singleton route measured a -1.03% median paired change across five alternating
+local processes.
+
+Focused tests force every async shape, mixed synchronous consumers,
+decorators, aliases, collections, contention, cancellation, and resources
+through the instruction path. Removing the abort signal leaves a waiting task
+blocked and fails the mutation proof by timeout. The retained evidence is
+[asynchronous instructions](../../benchmarks/results/2026-09-08-async-instructions.md).
+
+This slice is a GO. Complete hybrid equivalence, the published benchmark
+matrix, and removal of covered production fallbacks are selected next.
+
+## Final hybrid decision: 2026-09-08
+
+The final experiment compiled dense instructions for every shallow and deep
+plan, retained generated functions as the first choice for their accepted
+slice, and routed every other cold no-override root through instructions. Its
+implementation and fallback boundary passed the unit suite, literal
+specification review, and quality review.
+
+The deterministic published gate rejected it before latency could decide the
+experiment. A request-shaped scope increased from 88 to 97 Python calls and
+from 27 to 29 allocation blocks, failing both zero-growth budgets. A frozen
+100-provider container retained 64,392 bytes instead of 36,144, a +78.15%
+change against a 2% budget. The exact failures cannot be offset by a noisy
+latency improvement, so the universal shallow expansion and its tests were
+removed and no budget was widened. Evidence is retained in the
+[final hybrid selection](../../benchmarks/results/2026-09-08-final-hybrid-selection.md).
+
+The selected production hybrid therefore keeps generated Python functions for
+eligible shallow synchronous transient roots and dense typed instructions for
+deep sync and async graphs. Warm cache hits retain the direct cache path. The
+existing shallow runtime and the explicit-stack override/frame-sensitive
+fallback remain concrete residuals: the measured replacement cost too much
+memory and added work to a request-shaped scope. Removing every interpreter
+path is a NO-GO under the current representation, not an unmeasured follow-up.
+
+The pull-request gate against `origin/main` then exposed a second retained-
+memory boundary that the phase-to-phase comparisons had not isolated: eagerly
+holding the dense tables raised a frozen 1,000-provider container from 326,416
+to 624,892 bytes (+91.44%), and the decorated 1,000-provider freeze workload
+crossed its latency budget. The final implementation therefore materializes
+dense tables atomically on the first eligible deep resolution instead of during
+`freeze()`. The declarative plan remains the single retained representation
+until that path is used. A post-correction deterministic collection measured
+35,032 and 326,776 retained bytes at 100 and 1,000 providers (+0.14% and
++0.11% against the pull-request baseline), while the transient allocation path
+remained at 12 blocks / 1,224 bytes. A sequential diagnostic put the corrected
+decorated 1,000-provider freeze median 20.47% below `origin/main`.
+
+This completes the bounded proposal. It accepts the portions that pass every
+existing gate and rejects universal interpreter removal rather than weakening
+semantics or performance budgets.
+
 ## Goals
 
 - Make the common no-override path execute a specialized program per requested
@@ -92,8 +412,10 @@ and the native path remains NO-GO.
 
 ### Declarative plan and executable plan
 
-`ResolutionPlan` remains the immutable, inspectable result of validation. A new
-private executable representation is derived from it during `freeze()` and owns
+`ResolutionPlan` remains the immutable, inspectable result of validation. The
+bounded generated representation is derived from it during `freeze()`; dense
+instructions are derived atomically on the first eligible deep resolution so
+an unused graph retains only its declarative plan. Both executable forms own
 only recurring runtime decisions.
 
 For every resolvable key, the executable representation fixes:
@@ -107,12 +429,12 @@ For every resolvable key, the executable representation fixes:
 - the stable dependency-chain metadata required for errors.
 
 The selection experiment includes a dense private provider-ID representation as
-either a shared representation or a controlled sub-variant. `freeze()` assigns
-integer IDs and cache slots, and the recurring path reads immutable tuple- or
-array-backed tables instead of resolving `(key, tag)` pairs again. The IDs remain
-private: diagnostics, errors, and the public API continue to use the original
-typed keys. The experiment must measure this layout against a keyed control
-rather than assuming integer indexing is faster.
+either a shared representation or a controlled sub-variant. Its compiler
+assigns integer IDs and cache slots, and the recurring path reads immutable
+tuple- or array-backed tables instead of resolving `(key, tag)` pairs again.
+The IDs remain private: diagnostics, errors, and the public API continue to use
+the original typed keys. The experiment must measure this layout against a
+keyed control rather than assuming integer indexing is faster.
 
 Public diagnostics never reverse-engineer generated code. They continue to read
 the validated declarative plan.
@@ -299,7 +621,12 @@ has reached its demonstrated potential.
 
 ## Active decision
 
-Continue bounded, measured experiments under this proposal. The 2026-09-04
-cached-runtime experiment is NO-GO; the next selected experiment is freeze-time
-composition of closures for synchronous transient chains. The final execution
-strategy remains unselected until an experiment meets the acceptance criteria.
+Retain generated synchronous functions for eligible shallow transient roots and
+the dense typed instruction program for deep synchronous and asynchronous
+transient, singleton, scoped, and resource-owning graphs. The instruction
+runtime owns cache claims but continues to use `ScopeFrame` as the
+synchronization and teardown authority. Retain the shallow runtime and dynamic
+explicit-stack fallbacks because universal shallow instructions failed the
+published work, allocation, and retained-memory gates. Do not widen those
+budgets; a future replacement requires a more compact executable form or a
+context-sensitive overlay.

@@ -35,6 +35,11 @@ def active(key: ProviderKey, tag: str | None) -> ProviderSpec | None:
     return None
 
 
+def present() -> bool:
+    """Return whether the current context has any active override frame."""
+    return bool(_stack.get())
+
+
 def _spec_for(key: ProviderKey, tag: str | None, replacement: object) -> ProviderSpec:
     """Wrap a replacement in a transient spec: a callable becomes a factory, anything else a value."""
     is_factory = callable(replacement) and not isinstance(replacement, type)

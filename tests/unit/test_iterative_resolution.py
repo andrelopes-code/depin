@@ -14,6 +14,8 @@ from depin.errors import AsyncInSyncContextError
 DEPTH = 1_000
 CONCURRENCY_DEPTH = 400
 
+pytestmark = pytest.mark.usefixtures('interpreted_runtime')
+
 
 def _sync_chain(scope: Scope, *, failure_at: int | None = None) -> tuple[Container, Token[object], object]:
     tokens = [Token[object](f'node-{index}') for index in range(DEPTH)]
