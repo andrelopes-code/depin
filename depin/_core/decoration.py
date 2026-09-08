@@ -143,4 +143,12 @@ def _rewrite(param: ParamSpec, inner: str, key: ProviderKey, tag: str | None) ->
     """
     if param.name != inner:
         return param
-    return ParamSpec(name=param.name, key=key, tag=tag, has_default=False, default=None, optional=False)
+    return ParamSpec(
+        name=param.name,
+        key=key,
+        tag=tag,
+        has_default=False,
+        default=None,
+        optional=False,
+        call_positionally=param.call_positionally,
+    )

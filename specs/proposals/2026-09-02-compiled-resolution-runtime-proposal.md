@@ -1,7 +1,7 @@
 # Proposal: compile resolution instead of interpreting it
 
 Date: 2026-09-02
-Status: bounded generated fast path accepted; dense instruction complement selected next
+Status: deep sync transient instructions accepted; complete sync calls selected next
 Scope: synchronous and asynchronous core resolution, caching, overrides, depth, and teardown registration
 
 ## Nature of this document
@@ -182,6 +182,41 @@ scoped, resource-owning, asynchronous, alias, collection, decorator, default,
 and active-override paths. Generated functions do not become the general
 runtime representation unless a later design removes their duplicated code
 without giving back the accepted latency and allocation result.
+
+## Experiment decision: 2026-09-08 dense sync transient instructions
+
+The first dense prototype compiles one immutable `Operation` tuple in plan
+order, one integer dependency tuple per provider, and one key-to-index map. Its
+executor walks those indexes with local explicit stacks. It stores no transitive
+schedule per key and does not memoize repeated transient dependencies. Exact
+parameter callability is captured by `ParamSpec` while the provider signature
+is already inspected, so executable compilation does not repeat
+`inspect.signature`.
+
+Stored operations and edges were exactly 20/19, 100/99, 160/159, and 1,000/999.
+Measured representation bytes were 2,832, 15,208, 21,448, and 141,072 at those
+sizes; the 20-to-160 exponent was 0.974. On a 20-provider chain, the isolated
+instruction executor measured 14.052 microseconds versus 33.465 for the public
+interpreter, 4.161 for the generated public path, and 2.040 for direct Python.
+It used 22 Python calls and retained 12 blocks / 1,248 bytes for one operation,
+versus 181 calls and 54 blocks / 4,824 bytes for the interpreter. The generated
+fast path remains superior for this bounded shape.
+
+The first production routing is deliberately narrower than compiler
+eligibility: only synchronous transient roots in plans of at least 256 providers
+use dense instructions, and only when no override is active. Shallow plans keep
+the generated fast path; unsupported deep shapes and active overrides keep the
+iterative interpreter. At depth 1,000 the public instruction route measured
+724.930 microseconds against 2,617.506 for the interpreter (-72.3%). Compiling
+the deep executable changed `freeze()` from 34.051 to 36.166 milliseconds
+(+6.21%). Both `resolve()` and synchronous `inject()` select the instruction
+route; the async executor remains unchanged.
+
+This slice is a GO. The operation model is linear, immutable, faster than the
+deep interpreter, and preserves the bounded generated leader. The next slice
+encodes the complete synchronous call contract and override-aware execution;
+cached/scoped claims and resource lifecycles remain outside the instruction
+program until their dedicated correctness phases.
 
 ## Goals
 

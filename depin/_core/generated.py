@@ -1,13 +1,12 @@
 """Freeze-time generation of bounded synchronous transient resolvers."""
 
-import inspect
 from collections.abc import Callable, Mapping
-from types import FunctionType, MappingProxyType
+from types import MappingProxyType
 from typing import TypeGuard
 
+from depin._core.call_contracts import sync_positional_factory
 from depin._core.scope import Scope
-from depin._core.spec import Ident, ProviderShape, ProviderSpec, ResolutionPlan
-from depin._core.typeguards import as_factory
+from depin._core.spec import Ident, ProviderSpec, ResolutionPlan
 from depin.errors import InvalidProviderError
 
 type Program = Callable[[], object]
@@ -55,13 +54,11 @@ def _expression(
     expressions: Mapping[Ident, Expression],
     sources: list[Callable[..., object]],
 ) -> Expression | None:
-    if spec.scope is not Scope.TRANSIENT or spec.shape is not ProviderShape.FUNCTION or spec.needs_async:
-        return None
-    if any(param.has_default or param.optional for param in spec.params):
+    if spec.scope is not Scope.TRANSIENT:
         return None
 
-    factory = as_factory(spec.source, spec.key)
-    if not _accepts_positional_dependencies(factory, spec):
+    factory = sync_positional_factory(spec)
+    if factory is None:
         return None
 
     dependencies: list[str] = []
@@ -86,32 +83,6 @@ def _expression(
         return None
     sources.append(factory)
     return f'_sources[{index}]({",".join(dependencies)})', depth, expanded_calls
-
-
-def _accepts_positional_dependencies(factory: Callable[..., object], spec: ProviderSpec) -> bool:
-    try:
-        parameters = inspect.signature(factory).parameters
-    except (TypeError, ValueError):
-        return False
-    advertised_positionals = all(
-        (parameter := parameters.get(param.name)) is not None
-        and parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
-        for param in spec.params
-    )
-    if not advertised_positionals or not spec.params:
-        return advertised_positionals
-    if not isinstance(factory, FunctionType):
-        return False
-    code = factory.__code__
-    expected_names = tuple(param.name for param in spec.params)
-    actual_names = code.co_varnames[: code.co_argcount]
-    return (
-        not code.co_posonlyargcount
-        and not code.co_kwonlyargcount
-        and not code.co_flags & inspect.CO_VARARGS
-        and code.co_argcount == len(expected_names)
-        and actual_names == expected_names
-    )
 
 
 def _program(expression: str, sources: tuple[Callable[..., object], ...]) -> Program:

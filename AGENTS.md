@@ -169,10 +169,13 @@ and listed in `examples/README.md`.
 | `container.py` | `Container.freeze()`. |
 | `registry.py` | `Registry` and its `|` composition. |
 | `providers.py` | `BindRecord` → `ProviderSpec`: key, shape, parameters. |
+| `call_contracts.py` | Safe callable contracts shared by executable representations. |
 | `graph.py` | Validation and ordering into a `ResolutionPlan`. |
 | `diagnostics.py` | The public graph view over a validated plan. |
 | `render.py` | The resolution tree, `dot`, and `mermaid` renderings of that view. |
 | `frozen.py` | The runtime: resolve, scope, inject, override. |
+| `generated.py` | The bounded shallow synchronous transient fast path. |
+| `instructions.py` | Linear immutable synchronous transient instructions. |
 | `hosting.py` | The public integration contract: `Host` and the ambient container. |
 | `construct.py` | Calling a provider according to its shape. |
 | `scope.py` | Lifetimes, the scope frame, and its locks. |

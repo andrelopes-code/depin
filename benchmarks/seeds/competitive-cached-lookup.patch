@@ -1,17 +1,21 @@
 diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
 --- a/depin/_core/frozen.py
 +++ b/depin/_core/frozen.py
-@@ -143,15 +143,16 @@
+@@ -153,19 +153,20 @@
          ```
      """
  
--    __slots__ = ('_generated_sync', '_lifecycle', '_plan', '_root', '_validate_key')
-+    __slots__ = ('_generated_sync', '_lifecycle', '_plan', '_root', '_validate_key', '_warm_cached_lookup_probe')
+-    __slots__ = ('_generated_sync', '_lifecycle', '_plan', '_root', '_sync_transient_instructions', '_validate_key')
++    __slots__ = ('_generated_sync', '_lifecycle', '_plan', '_root', '_sync_transient_instructions', '_validate_key', '_warm_cached_lookup_probe')
  
      def __init__(self, plan: ResolutionPlan) -> None:
          self._plan = plan
+         deep_plan = len(plan.order) >= _RECURSIVE_PLAN_LIMIT
          self._generated_sync: Mapping[Ident, Program] = (
-             compile_sync_transients(plan) if len(plan.order) < _RECURSIVE_PLAN_LIMIT else MappingProxyType({})
+             MappingProxyType({}) if deep_plan else compile_sync_transients(plan)
+         )
+         self._sync_transient_instructions: SyncTransientProgram = (
+             compile_sync_transient_instructions(plan) if deep_plan else EMPTY_SYNC_TRANSIENT_PROGRAM
          )
          self._lifecycle = create_lifecycle_gate()
          self._root = ScopeFrame(lifecycle=self._lifecycle)
@@ -19,7 +23,7 @@ diff --git a/depin/_core/frozen.py b/depin/_core/frozen.py
          self._validate_key: Callable[[object], TypeGuard[ProviderKey]] = is_provider_key
          self._lifecycle.on_quiesce = self._quiesce_resolution
          self._lifecycle.on_reopen = self._resume_resolution
-@@ -203,6 +204,10 @@
+@@ -216,6 +217,10 @@
              ```
          """
          spec = self._lookup(key, tag)

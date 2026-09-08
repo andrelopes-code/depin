@@ -26,7 +26,16 @@ generated path only where it remains both faster and bounded.
 - Compare calls, allocations, latency, and retained bytes against both the
   interpreter and bounded generated path before integrating routing.
 
+Result: GO. The model stores one operation and one dependency edge per provider
+in a chain, resolves 1,000 providers without recursion, and is routed for deep
+sync transient `resolve()` and `inject()` calls when no override is active. It
+measured 724.930 microseconds against the iterative executor's 2,617.506 at
+depth 1,000, with a +6.21% deep transient freeze cost. The 20-provider result
+remained slower than generated functions, so shallow routing is unchanged.
+
 ### Task 2: Encode complete synchronous calls and overrides
+
+Status: next.
 
 - Add explicit positional and keyword slots for defaults, optional parameters,
   keyword-only parameters, aliases, collections, and decorators.

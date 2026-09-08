@@ -23,6 +23,11 @@ from depin._core.health import (
     run_check,
     run_check_async,
 )
+from depin._core.instructions import (
+    EMPTY_SYNC_TRANSIENT_PROGRAM,
+    SyncTransientProgram,
+    compile_sync_transient_instructions,
+)
 from depin._core.lifecycle import LifecycleState, create_lifecycle_gate
 from depin._core.markers import Token
 from depin._core.render import render_tree
@@ -145,12 +150,16 @@ class FrozenContainer:
         ```
     """
 
-    __slots__ = ('_generated_sync', '_lifecycle', '_plan', '_root', '_validate_key')
+    __slots__ = ('_generated_sync', '_lifecycle', '_plan', '_root', '_sync_transient_instructions', '_validate_key')
 
     def __init__(self, plan: ResolutionPlan) -> None:
         self._plan = plan
+        deep_plan = len(plan.order) >= _RECURSIVE_PLAN_LIMIT
         self._generated_sync: Mapping[Ident, Program] = (
-            compile_sync_transients(plan) if len(plan.order) < _RECURSIVE_PLAN_LIMIT else MappingProxyType({})
+            MappingProxyType({}) if deep_plan else compile_sync_transients(plan)
+        )
+        self._sync_transient_instructions: SyncTransientProgram = (
+            compile_sync_transient_instructions(plan) if deep_plan else EMPTY_SYNC_TRANSIENT_PROGRAM
         )
         self._lifecycle = create_lifecycle_gate()
         self._root = ScopeFrame(lifecycle=self._lifecycle)
@@ -209,7 +218,11 @@ class FrozenContainer:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
         if spec.scope is Scope.TRANSIENT:
             if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
-                resolved = self._resolve_sync_iterative(spec)
+                ident = (spec.key, spec.tag)
+                if not overrides.present() and self._sync_transient_instructions.supports(ident):
+                    resolved = self._sync_transient_instructions.resolve(ident)
+                else:
+                    resolved = self._resolve_sync_iterative(spec)
             else:
                 program = self._generated_sync.get((spec.key, spec.tag))
                 if program is not None and not overrides.present():
@@ -863,7 +876,13 @@ class FrozenContainer:
             raise AsyncInSyncContextError(f'{fmt_key(spec.key)} requires async resolution; call aresolve() instead')
         if spec.scope is Scope.TRANSIENT:
             if len(self._plan.order) >= _RECURSIVE_PLAN_LIMIT:
+                ident = (spec.key, spec.tag)
+                if not overrides.present() and self._sync_transient_instructions.supports(ident):
+                    return self._sync_transient_instructions.resolve(ident)
                 return self._resolve_sync_iterative(spec)
+            program = self._generated_sync.get((spec.key, spec.tag))
+            if program is not None and not overrides.present():
+                return program()
             kwargs = self._resolve_params_sync(spec) if spec.params else {}
             return construct.sync(spec, kwargs, self._teardown_sink(spec), self._read_frame)
         if spec.scope is Scope.SINGLETON:

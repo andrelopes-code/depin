@@ -459,7 +459,16 @@ def _extract_params(source: object, shape: ProviderShape, localns: dict[str, obj
                     f"parameter '{name}' of {source!r} has no type annotation and no default, "
                     'so depin cannot tell what to inject'
                 )
-            params.append(ParamSpec(name=name, key=object, tag=None, has_default=True, default=param.default))
+            params.append(
+                ParamSpec(
+                    name=name,
+                    key=object,
+                    tag=None,
+                    has_default=True,
+                    default=param.default,
+                    call_positionally=param.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                )
+            )
             continue
 
         meta = extract_annotated_meta(raw_annotation)
@@ -472,6 +481,7 @@ def _extract_params(source: object, shape: ProviderShape, localns: dict[str, obj
                 has_default=has_default,
                 default=param.default if has_default else None,
                 optional=meta.optional,
+                call_positionally=param.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD,
             )
         )
 

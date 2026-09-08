@@ -15,7 +15,7 @@ from depin._core.generated import Program, compile_sync_transients
 from depin._core.graph import build_plan
 from depin._core.markers import Tag, Token
 from depin._core.scope import Scope
-from depin._core.spec import Ident, ResolutionPlan
+from depin._core.spec import Ident, ProviderSpec, ResolutionPlan
 from depin.errors import InvalidProviderError
 
 
@@ -232,7 +232,7 @@ def test_excludes_parameterized_bound_methods() -> None:
     assert (bytes, None) not in compile_sync_transients(plan)
 
 
-def test_excludes_a_factory_whose_signature_cannot_be_inspected(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_does_not_reinspect_a_validated_factory_signature(monkeypatch: pytest.MonkeyPatch) -> None:
     def value() -> str:
         return 'value'
 
@@ -243,7 +243,7 @@ def test_excludes_a_factory_whose_signature_cannot_be_inspected(monkeypatch: pyt
 
     monkeypatch.setattr(inspect, 'signature', uninspectable)
 
-    assert not compile_sync_transients(plan)
+    assert compile_sync_transients(plan)[(str, None)]() == 'value'
 
 
 def test_stops_generation_before_the_source_nesting_limit() -> None:
@@ -531,7 +531,7 @@ def test_cached_resolution_does_not_read_generated_routing_state(
     assert frozen.resolve(Token[Cached]('cached')) is value
 
 
-def test_deep_plan_keeps_the_iterative_executor_without_generated_programs(
+def test_deep_plan_uses_dense_instructions_without_generated_programs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     depth = 1_000
@@ -552,6 +552,11 @@ def test_deep_plan_keeps_the_iterative_executor_without_generated_programs(
 
     monkeypatch.setattr(frozen_module, 'compile_sync_transients', unexpected_compile)
     frozen = container.freeze()
+
+    def unexpected_iterative(_self: object, _spec: ProviderSpec) -> object:
+        raise AssertionError('eligible deep plan used the interpreted executor')
+
+    monkeypatch.setattr(frozen_module.FrozenContainer, '_resolve_sync_iterative', unexpected_iterative)
 
     assert frozen.resolve(tokens[-1]) == depth
 
