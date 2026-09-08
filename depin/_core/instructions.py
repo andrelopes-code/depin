@@ -8,7 +8,8 @@ from typing import Protocol
 from depin._core.call_contracts import sync_positional_factory
 from depin._core.scope import Scope
 from depin._core.spec import Ident, ProviderShape, ProviderSpec, ResolutionPlan, fmt_key
-from depin._core.typeguards import as_class, as_factory
+from depin._core.teardown import SyncCMTeardown, SyncGenTeardown, Teardown
+from depin._core.typeguards import as_class, as_factory, as_sync_context_manager, as_sync_iterator
 from depin.errors import InvalidProviderError
 
 
@@ -57,6 +58,8 @@ class SyncInstructionRuntime(Protocol):
 
     def read_frame(self, ident: Ident) -> object: ...
 
+    def register_teardown(self, scope: Scope, record: Teardown) -> None: ...
+
 
 @dataclass(frozen=True, slots=True)
 class Operation:
@@ -104,10 +107,43 @@ class FrameOperation:
     scope: Scope
 
 
+@dataclass(frozen=True, slots=True)
+class GeneratorOperation:
+    factory: Callable[..., object]
+    dependencies: tuple[int, ...]
+    keywords: tuple[KeywordSlot, ...]
+    ident: Ident
+    scope: Scope
+
+
+@dataclass(frozen=True, slots=True)
+class ContextManagerOperation:
+    factory: Callable[..., object]
+    dependencies: tuple[int, ...]
+    keywords: tuple[KeywordSlot, ...]
+    ident: Ident
+    scope: Scope
+
+
 type SyncOperation = (
-    Operation | KeywordOperation | AliasOperation | CollectionOperation | ValueOperation | FrameOperation
+    Operation
+    | KeywordOperation
+    | AliasOperation
+    | CollectionOperation
+    | ValueOperation
+    | FrameOperation
+    | GeneratorOperation
+    | ContextManagerOperation
 )
-type StructuredOperation = KeywordOperation | AliasOperation | CollectionOperation | ValueOperation | FrameOperation
+type StructuredOperation = (
+    KeywordOperation
+    | AliasOperation
+    | CollectionOperation
+    | ValueOperation
+    | FrameOperation
+    | GeneratorOperation
+    | ContextManagerOperation
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -220,21 +256,7 @@ def _start(
 def _invoke(operation: StructuredOperation, parameters: list[object], runtime: SyncInstructionRuntime | None) -> object:
     match operation:
         case KeywordOperation(factory=factory, keywords=keywords, ident=ident):
-            kwargs: dict[str, object] = {}
-            for keyword in keywords:
-                match keyword:
-                    case ResolvedKeyword(name=name, position=position):
-                        if position < 0 or position >= len(parameters):
-                            raise InvalidProviderError(
-                                f'invalid parameter slot {position} in synchronous instruction program '
-                                f'while resolving {_render_ident(ident)}'
-                            )
-                        kwargs[name] = parameters[position]
-                    case OptionalKeyword(name=name):
-                        kwargs[name] = None
-                    case DefaultKeyword():
-                        continue
-            return factory(**kwargs)
+            return factory(**_keyword_arguments(keywords, ident, parameters))
         case AliasOperation(ident=ident):
             if len(parameters) != 1:
                 raise InvalidProviderError(
@@ -251,6 +273,42 @@ def _invoke(operation: StructuredOperation, parameters: list[object], runtime: S
                     f'{_render_ident(ident)} requires a frame runtime for synchronous instructions'
                 )
             return runtime.read_frame(ident)
+        case GeneratorOperation(factory=factory, keywords=keywords, ident=ident, scope=scope):
+            if runtime is None:
+                raise InvalidProviderError(
+                    f'{_render_ident(ident)} requires a resource runtime for synchronous instructions'
+                )
+            gen = as_sync_iterator(factory(**_keyword_arguments(keywords, ident, parameters)), ident[0])
+            value = next(gen)
+            runtime.register_teardown(scope, SyncGenTeardown(gen))
+            return value
+        case ContextManagerOperation(factory=factory, keywords=keywords, ident=ident, scope=scope):
+            if runtime is None:
+                raise InvalidProviderError(
+                    f'{_render_ident(ident)} requires a resource runtime for synchronous instructions'
+                )
+            cm = as_sync_context_manager(factory(**_keyword_arguments(keywords, ident, parameters)), ident[0])
+            value = cm.__enter__()
+            runtime.register_teardown(scope, SyncCMTeardown(cm))
+            return value
+
+
+def _keyword_arguments(keywords: tuple[KeywordSlot, ...], ident: Ident, parameters: list[object]) -> dict[str, object]:
+    kwargs: dict[str, object] = {}
+    for keyword in keywords:
+        match keyword:
+            case ResolvedKeyword(name=name, position=position):
+                if position < 0 or position >= len(parameters):
+                    raise InvalidProviderError(
+                        f'invalid parameter slot {position} in synchronous instruction program '
+                        f'while resolving {_render_ident(ident)}'
+                    )
+                kwargs[name] = parameters[position]
+            case OptionalKeyword(name=name):
+                kwargs[name] = None
+            case DefaultKeyword():
+                continue
+    return kwargs
 
 
 def compile_sync_instructions(plan: ResolutionPlan) -> SyncInstructionProgram:
@@ -320,6 +378,16 @@ def _compile_operation(
         return ValueOperation(spec.source, dependencies, ident, spec.scope), reads_frame
     if spec.shape is ProviderShape.FRAME:
         return FrameOperation(dependencies, ident, spec.scope), reads_frame
+    if spec.shape is ProviderShape.GENERATOR:
+        return (
+            GeneratorOperation(as_factory(spec.source, spec.key), dependencies, keywords, ident, spec.scope),
+            reads_frame,
+        )
+    if spec.shape is ProviderShape.CONTEXT_MANAGER:
+        return (
+            ContextManagerOperation(as_factory(spec.source, spec.key), dependencies, keywords, ident, spec.scope),
+            reads_frame,
+        )
     return None
 
 

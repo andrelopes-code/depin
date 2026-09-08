@@ -1,7 +1,7 @@
 # Proposal: compile resolution instead of interpreting it
 
 Date: 2026-09-02
-Status: cached and scoped sync instructions accepted; resource ownership selected next
+Status: synchronous instruction runtime accepted; asynchronous execution selected next
 Scope: synchronous and asynchronous core resolution, caching, overrides, depth, and teardown registration
 
 ## Nature of this document
@@ -287,6 +287,32 @@ This slice is a GO. Synchronous resource ownership is selected next; async
 execution remains separate so the sync loop pays no event-loop or awaitability
 branch per node.
 
+## Experiment decision: 2026-09-08 synchronous resource instructions
+
+Dedicated generator and context-manager operations now open synchronous
+resources inside the dense program and register their teardown on the
+singleton or scoped frame that owns the cache claim. Registration precedes
+publication. Existing frame drains retain construction-order registration and
+reverse-order teardown, including resources owned by decorators; aliases and
+collections remain non-owning.
+
+A graph with one synchronous resource below 999 consumers improved from
+7,694.414 to 5,234.384 microseconds for a cold singleton cycle (-31.97%) and
+from 8,423.711 to 5,287.776 microseconds for a scoped cycle (-37.23%). Python
+calls fell 36.98%, retained traced bytes fell 48.42%, and peak traced bytes fell
+40.36%. Freezing the resource graph changed by +0.08%.
+
+Five paired runs of the published shallow synchronous-resource workload
+measured a +0.50% median change. Focused tests force deep generator,
+context-manager, and resource-decorator graphs through the compiled path and
+cover exactly-once close, LIFO dependency ownership, and an interruption after
+resource acquisition but before publication. Full evidence is retained in
+[synchronous resource instructions](../../benchmarks/results/2026-09-08-sync-resource-instructions.md).
+
+This slice is a GO. A separately typed asynchronous instruction executor is
+selected next; synchronous resolution retains no event-loop or awaitability
+branch per node.
+
 ## Goals
 
 - Make the common no-override path execute a specialized program per requested
@@ -526,7 +552,7 @@ has reached its demonstrated potential.
 
 Retain generated synchronous functions for eligible shallow transient roots and
 the dense typed instruction program for deep synchronous transient, singleton,
-and scoped graphs. The instruction runtime owns cache claims but continues to
-use `ScopeFrame` as the synchronization authority. Expand the dense program to
-synchronous resource ownership next, preserving construction-order teardown;
-asynchronous execution remains a separate later phase.
+scoped, and resource-owning graphs. The instruction runtime owns cache claims
+but continues to use `ScopeFrame` as the synchronization and teardown authority.
+Add a separately typed asynchronous instruction executor next, sharing the
+immutable operation model without adding async branches to the sync loop.

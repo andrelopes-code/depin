@@ -178,6 +178,10 @@ class _SyncInstructionRuntime:
             )
         return value
 
+    def register_teardown(self, scope: Scope, record: Teardown) -> None:
+        frame = self._root if scope is Scope.SINGLETON else active_frame(self._root)
+        frame.add_teardown(record)
+
 
 @final
 class ProviderOverride:
