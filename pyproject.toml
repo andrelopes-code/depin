@@ -89,7 +89,7 @@ dev = [
     "httpx>=0.27",
     "fastapi>=0.133",
     "mypy>=1.18",
-    "hypothesis>=6.138,<6.156",
+    "hypothesis>=6.138,<6.168",
     "mutmut>=3.7,<4",
     "pytest-timeout>=2.4,<3",
 ]
@@ -97,7 +97,7 @@ dev = [
 # `fastapi` and its compiled transitive dependencies have no wheels. The core
 # has zero runtime dependencies, so it needs nothing but a test runner.
 threads = [
-    "hypothesis>=6.138,<6.156",
+    "hypothesis>=6.138,<6.168",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3",
     "pytest-cov>=7.1,<8",
@@ -117,7 +117,7 @@ bench = [
     "dependency-injector==4.49.1",
     "dishka==1.10.1",
     "wireup==2.12.0",
-    "svcs==26.1.0",
+    "svcs==26.2.0",
 ]
 docs = [
     # MkDocs 2.0 removes the plugin system and the theming system with no
