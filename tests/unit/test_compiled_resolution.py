@@ -1,8 +1,8 @@
 from types import MappingProxyType
 
 from depin._core.compiled import compile_sync_transients
+from depin._core.container import Container
 from depin._core.graph import build_plan
-from depin._core.registry import Registry
 from depin._core.scope import Scope
 
 
@@ -18,7 +18,7 @@ def test_compiles_a_transient_function_chain_in_dependency_order() -> None:
         return [leaf, 'root']
 
     plan = (
-        Registry()
+        Container()
         .bind(make_root, scope=Scope.TRANSIENT, provides=list[str])
         .bind(make_leaf, scope=Scope.TRANSIENT, provides=str)
     )
@@ -47,7 +47,7 @@ def test_excludes_transient_functions_with_cached_or_scoped_dependencies() -> No
         return b'scoped'
 
     plan = (
-        Registry()
+        Container()
         .bind(make_singleton, scope=Scope.SINGLETON)
         .bind(make_scoped, scope=Scope.SCOPED)
         .bind(use_singleton, scope=Scope.TRANSIENT, provides=str)
@@ -71,7 +71,7 @@ def test_excludes_transient_classes_and_async_resolution_paths() -> None:
         return 'async'
 
     plan = (
-        Registry()
+        Container()
         .bind(Constructed, scope=Scope.TRANSIENT)
         .bind(make_async_dependency, scope=Scope.TRANSIENT)
         .bind(use_async_dependency, scope=Scope.TRANSIENT, provides=str)
