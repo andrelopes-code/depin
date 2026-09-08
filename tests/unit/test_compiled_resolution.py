@@ -275,6 +275,62 @@ def test_nested_unrelated_overrides_keep_compiled_and_interpreted_results_equiva
     assert compiled_calls == interpreted_calls
 
 
+def test_nested_real_override_matches_compiled_equivalent_and_rebuilds_transients() -> None:
+    compiled_calls: list[str] = []
+    interpreted_calls: list[str] = []
+    outer = Token[object]('outer')
+
+    def make_compiled_leaf() -> _Leaf:
+        compiled_calls.append('leaf')
+        return _Leaf('replacement')
+
+    def make_compiled_root(leaf: _Leaf) -> _Resolved:
+        compiled_calls.append('root')
+        return _Resolved((leaf,))
+
+    compiled = (
+        Container()
+        .bind(make_compiled_leaf, provides=_Leaf, scope=Scope.TRANSIENT)
+        .bind(make_compiled_root, provides=_Resolved, scope=Scope.TRANSIENT)
+        .freeze()
+    )
+
+    def make_original_leaf() -> _Leaf:
+        interpreted_calls.append('original-leaf')
+        return _Leaf('original')
+
+    def make_interpreted_root(leaf: _Leaf) -> _Resolved:
+        interpreted_calls.append('root')
+        return _Resolved((leaf,))
+
+    def make_replacement_leaf() -> _Leaf:
+        interpreted_calls.append('leaf')
+        return _Leaf('replacement')
+
+    interpreted = (
+        Container()
+        .bind(make_original_leaf, provides=_Leaf, scope=Scope.TRANSIENT)
+        .bind(make_interpreted_root, provides=_Resolved, scope=Scope.TRANSIENT)
+        .freeze()
+    )
+
+    compiled_first = compiled.resolve(_Resolved)
+    compiled_second = compiled.resolve(_Resolved)
+    with interpreted.override(outer).using(object()), interpreted.override(_Leaf).using(make_replacement_leaf):
+        interpreted_first = interpreted.resolve(_Resolved)
+        interpreted_second = interpreted.resolve(_Resolved)
+
+    assert type(compiled_first) is type(interpreted_first)
+    assert compiled_first == interpreted_first == _Resolved((_Leaf('replacement'),))
+    assert type(compiled_second) is type(interpreted_second)
+    assert compiled_second == interpreted_second == _Resolved((_Leaf('replacement'),))
+    assert compiled_first is not compiled_second
+    assert interpreted_first is not interpreted_second
+    assert compiled_first.values[0] is not compiled_second.values[0]
+    assert interpreted_first.values[0] is not interpreted_second.values[0]
+    assert compiled_calls == interpreted_calls == ['leaf', 'root', 'leaf', 'root']
+
+
 def test_repeated_compiled_and_interpreted_transient_resolution_rebuilds_every_value() -> None:
     compiled_calls: list[str] = []
     interpreted_calls: list[str] = []
