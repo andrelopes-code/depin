@@ -2,6 +2,7 @@ import hashlib
 import inspect
 import json
 import subprocess
+import tomllib
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -20,6 +21,13 @@ BUDGETS = Path('benchmarks/budgets.toml')
 BASELINE_REVISION = 'a' * 40
 REAL_DETERMINISTIC = comparison.collect_deterministic
 REAL_BASELINE_VALIDATION = protocol.validate_baseline_archive
+
+
+def test_expected_pins_follow_the_checkout_project_version() -> None:
+    project = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))
+    version = project['project']['version']
+
+    assert comparison.expected_pins()['pydepin'] == version
 
 
 def _skip_baseline_validation(directory: Path, revision: str) -> None:
@@ -185,7 +193,7 @@ def test_collector_output_flows_directly_into_leadership_evaluation(
     child = _child(tmp_path)
     monkeypatch.setenv('CALL_LOG', str(tmp_path / 'calls.txt'))
     monkeypatch.setattr(comparison, '_revision', lambda: 'head-revision')
-    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, 'expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
     monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
@@ -322,7 +330,7 @@ def test_collection_counterbalances_children_and_reduces_their_reports(
     calls = tmp_path / 'calls.txt'
     monkeypatch.setenv('CALL_LOG', str(calls))
     monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
-    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
+    monkeypatch.setattr(comparison, 'expected_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
     monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
@@ -437,7 +445,7 @@ def test_dirty_collection_is_diagnostic_evidence_when_explicitly_allowed(
     child = _child(tmp_path)
     monkeypatch.setenv('CALL_LOG', str(tmp_path / 'calls.txt'))
     monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
-    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
+    monkeypatch.setattr(comparison, 'expected_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1', 'wireup': '2.12.0'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: False)
     monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
@@ -463,7 +471,7 @@ raise SystemExit(23)
         encoding='utf-8',
     )
     monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
-    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, 'expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
     monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
@@ -478,7 +486,7 @@ def test_collection_times_out_a_blocked_child_and_cleans_up(tmp_path: Path, monk
     child = tmp_path / 'blocked.py'
     child.write_text("import signal\nprint('blocked-marker', flush=True)\nsignal.pause()\n", encoding='utf-8')
     monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
-    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, 'expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
     monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
@@ -522,7 +530,7 @@ def test_collection_uses_one_total_deadline_and_refuses_a_second_spawn_after_exp
     monkeypatch.setattr(comparison, '_monotonic', monotonic)
     monkeypatch.setattr(comparison, '_run', run)
     monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
-    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, 'expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
     monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
@@ -543,7 +551,7 @@ def test_atomic_collection_preserves_existing_evidence_when_finalization_fails(
     destination.write_text('{"existing": true}\n', encoding='utf-8')
     monkeypatch.setenv('CALL_LOG', str(tmp_path / 'calls.txt'))
     monkeypatch.setattr(comparison, '_revision', lambda: 'source-revision')
-    monkeypatch.setattr(comparison, '_expected_pins', lambda: {'pydepin': '0.17.1'})
+    monkeypatch.setattr(comparison, 'expected_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_pins', lambda: {'pydepin': '0.17.1'})
     monkeypatch.setattr(comparison, '_clean_tree', lambda: True)
     monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)

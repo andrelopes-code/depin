@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 from collections.abc import Sequence
 from importlib import metadata
 from pathlib import Path
@@ -33,6 +34,7 @@ REPORT_PLACEHOLDER = '{report}'
 COMPARISON_FILE = 'comparison.json'
 COMMAND = ('-m', 'pytest', 'benchmarks/test_comparison.py', '--benchmark-only', '-q', '--benchmark-json={report}')
 DEFAULT_TIMEOUT_SECONDS = 5400
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _revision(directory: Path | None = None) -> str:
@@ -51,10 +53,18 @@ def _clean_tree(directory: Path | None = None) -> bool:
     return not completed.stdout
 
 
-def _expected_pins() -> dict[str, str]:
+def expected_pins() -> dict[str, str]:
     from benchmarks.comparison.adapters import ADAPTERS
 
-    expected: dict[str, str] = {'pydepin': '0.17.1'}
+    project_file = ROOT / 'pyproject.toml'
+    try:
+        project = tomllib.loads(project_file.read_text(encoding='utf-8'))
+    except (OSError, UnicodeError, tomllib.TOMLDecodeError) as error:
+        raise HarnessError(f'{project_file}: cannot read the project version ({error})') from error
+    metadata_table = require_object(project.get('project'), f'{project_file}.project')
+    expected: dict[str, str] = {
+        'pydepin': require_text(metadata_table.get('version'), f'{project_file}.project.version')
+    }
     for adapter in ADAPTERS:
         expected[adapter.competitor.distribution] = adapter.competitor.version
     return {distribution: expected[distribution] for distribution in sorted(expected)}
@@ -62,7 +72,7 @@ def _expected_pins() -> dict[str, str]:
 
 def _pins() -> dict[str, str]:
     pins: dict[str, str] = {}
-    for distribution in _expected_pins():
+    for distribution in expected_pins():
         try:
             pins[distribution] = metadata.version(distribution)
         except metadata.PackageNotFoundError:
@@ -128,7 +138,7 @@ def _environment() -> dict[str, object]:
 def _preflight(*, allow_dirty: bool) -> tuple[str, dict[str, str]]:
     if not _clean_tree() and not allow_dirty:
         raise HarnessError('the Git worktree is dirty; commit or stash changes, or pass --allow-dirty for diagnosis')
-    expected = _expected_pins()
+    expected = expected_pins()
     pins = _pins()
     for distribution, version in expected.items():
         if pins.get(distribution) != version:
