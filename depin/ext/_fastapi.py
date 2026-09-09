@@ -12,6 +12,7 @@ from fastapi.dependencies.utils import get_dependant
 from fastapi.params import Depends
 from fastapi.routing import APIRoute, request_response
 from starlette.concurrency import run_in_threadpool
+from starlette.middleware import Middleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from depin import FrozenContainer, Token, optional_hosted_container
@@ -69,6 +70,14 @@ class _RoutePlan:
     endpoint: Callable[..., object]
 
 
+@dataclass(frozen=True, slots=True)
+class _AppliedRoute:
+    route: APIRoute
+    call: Callable[..., object] | None
+    dependencies: list[Dependant]
+    app: ASGIApp
+
+
 class _LazyRequestScope:
     __slots__ = ('_app', '_container')
 
@@ -81,8 +90,7 @@ class _LazyRequestScope:
         if scope['type'] not in ('http', 'websocket'):
             await self._app(scope, receive, send)
             return
-        seeds = (LazyScopeSeed(Request, lambda: Request(scope)),) if scope['type'] == 'http' else ()
-        async with _lazy_host(self._container, seeds=seeds):
+        async with _lazy_host(self._container):
             await self._app(scope, receive, send)
 
 
@@ -102,13 +110,14 @@ def install(app: FastAPI, container: FrozenContainer) -> None:
             installed with another container, or exposes an unsupported route
             shape. Upgrade FastAPI or use `RequestScope` compatibility middleware.
     """
+    user_middleware = _require_application_shape(app)
     if app.middleware_stack is not None:
         raise _setup_error('the application middleware stack has already been built; call install before startup')
 
-    installed = [middleware for middleware in app.user_middleware if _is_installed_middleware(middleware.args)]
+    installed = [middleware for middleware in user_middleware if _is_installed_middleware(_middleware_args(middleware))]
     if len(installed) > 1:
         raise _setup_error('the application has multiple depin lazy request middleware entries')
-    if installed and _middleware_container(installed[0].args) is not container:
+    if installed and _middleware_container(_middleware_args(installed[0])) is not container:
         raise _setup_error('the application was already installed with a different FrozenContainer')
 
     plans = tuple(
@@ -117,10 +126,20 @@ def install(app: FastAPI, container: FrozenContainer) -> None:
         if isinstance(route, APIRoute)
         if (plan := _plan_route(route, container)) is not None
     )
-    for plan in plans:
-        _apply_plan(plan)
-    if not installed:
-        app.add_middleware(_LazyRequestScope, container, _INSTALLATION_MARKER)
+    applied: list[_AppliedRoute] = []
+    original_middleware = tuple(user_middleware)
+    try:
+        for plan in plans:
+            applied.append(_apply_plan(plan))
+        if not installed:
+            app.add_middleware(_LazyRequestScope, container, _INSTALLATION_MARKER)
+    except (AttributeError, FastAPIIntegrationError, RuntimeError, TypeError) as error:
+        for route in reversed(applied):
+            _restore_route(route)
+        user_middleware[:] = original_middleware
+        if isinstance(error, FastAPIIntegrationError):
+            raise
+        raise _setup_error(f'application installation failed: {error}') from error
 
 
 def compile_route(route: APIRoute, container: FrozenContainer) -> bool:
@@ -166,9 +185,10 @@ def _plan_route(route: APIRoute, container: FrozenContainer) -> _RoutePlan | Non
     return _RoutePlan(route, program, replacement, endpoint)
 
 
-def _apply_plan(plan: _RoutePlan) -> None:
+def _apply_plan(plan: _RoutePlan) -> _AppliedRoute:
     route = plan.route
     original = plan.endpoint
+    applied = _AppliedRoute(route, route.dependant.call, route.dependant.dependencies, route.app)
 
     async def endpoint(**arguments: object) -> object:
         injected = arguments.pop(_PROGRAM_ARGUMENT)
@@ -179,9 +199,20 @@ def _apply_plan(plan: _RoutePlan) -> None:
             return await original(**arguments)
         return await run_in_threadpool(original, **arguments)
 
-    route.dependant.dependencies = plan.dependencies
-    route.dependant.call = endpoint
-    route.app = request_response(route.get_route_handler())
+    try:
+        route.dependant.dependencies = plan.dependencies
+        route.dependant.call = endpoint
+        route.app = request_response(route.get_route_handler())
+    except (AttributeError, RuntimeError, TypeError) as error:
+        _restore_route(applied)
+        raise _setup_error(f'route {route.path!r} could not rebuild: {error}') from error
+    return applied
+
+
+def _restore_route(applied: _AppliedRoute) -> None:
+    applied.route.dependant.dependencies = applied.dependencies
+    applied.route.dependant.call = applied.call
+    applied.route.app = applied.app
 
 
 def _require_route_shape(route: APIRoute) -> None:
@@ -198,6 +229,25 @@ def _require_route_shape(route: APIRoute) -> None:
         for name in ('call', 'name'):
             if not hasattr(dependency, name):
                 raise _setup_error(f'route {route.path!r} dependency does not provide required attribute {name!r}')
+
+
+def _require_application_shape(app: FastAPI) -> list[Middleware]:
+    try:
+        middleware_stack = app.middleware_stack
+        user_middleware = app.user_middleware
+        routes = app.routes
+        add_middleware = app.add_middleware
+    except (AttributeError, TypeError) as error:
+        raise _setup_error(f'application does not expose the required FastAPI installation shape: {error}') from error
+    if middleware_stack is not None and not callable(middleware_stack):
+        raise _setup_error('application middleware stack is not callable')
+    if type(user_middleware) is not list:
+        raise _setup_error('application user_middleware is not a mutable list')
+    if type(routes) is not list:
+        raise _setup_error('application routes is not a mutable list')
+    if not callable(add_middleware):
+        raise _setup_error('application does not expose a callable add_middleware')
+    return user_middleware
 
 
 def _setup_error(reason: str) -> FastAPIIntegrationError:
@@ -217,3 +267,8 @@ def _is_installed_middleware(args: tuple[object, ...]) -> bool:
 
 def _middleware_container(args: tuple[object, ...]) -> object:
     return args[0]
+
+
+def _middleware_args(middleware: Middleware) -> tuple[object, ...]:
+    args: tuple[object, ...] = middleware.args
+    return args

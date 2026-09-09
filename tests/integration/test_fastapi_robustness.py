@@ -2,7 +2,7 @@ import asyncio
 from collections.abc import AsyncIterator
 
 import pytest
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi import Request as FastAPIRequest
 from fastapi.dependencies.models import Dependant
 from fastapi.responses import StreamingResponse
@@ -260,6 +260,96 @@ def test_install_does_not_mutate_earlier_routes_when_a_later_route_is_malformed(
 
     assert first_route.dependant.call is original_call
     assert _dependency_call_name(first_route.dependant.dependencies[0]) == '_InjectResolver'
+
+
+def test_install_rolls_back_when_a_later_route_cannot_rebuild() -> None:
+    """A failed route rebuild must not leave earlier routes compiled."""
+
+    class First:
+        pass
+
+    class Second:
+        pass
+
+    app = FastAPI()
+
+    @app.get('/first')
+    async def first(service: Inject[First]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        del service
+        return {'ok': True}
+
+    @app.get('/second')
+    async def second(service: Inject[Second]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        del service
+        return {'ok': True}
+
+    first_route = _route(app, '/first')
+    second_route = _route(app, '/second')
+
+    def fail_rebuild() -> object:
+        raise RuntimeError('rebuild failed')
+
+    object.__setattr__(second_route, 'get_route_handler', fail_rebuild)
+    original_call: object = first_route.dependant.call
+    original_dependencies = first_route.dependant.dependencies
+    original_app: object = first_route.app
+
+    with pytest.raises(FastAPIIntegrationError, match='rebuild'):
+        fastapi_ext.install(app, Container().bind(First).bind(Second).freeze())
+
+    assert first_route.dependant.call is original_call
+    assert first_route.dependant.dependencies is original_dependencies
+    assert first_route.app is original_app
+    assert app.user_middleware == []
+
+
+def test_install_rejects_an_invalid_application_shape_without_mutating_routes() -> None:
+    """Application preflight must translate internal shape failures."""
+
+    class Service:
+        pass
+
+    app = FastAPI()
+
+    @app.get('/value')
+    async def value(service: Inject[Service]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        del service
+        return {'ok': True}
+
+    route = _route(app, '/value')
+    original_call: object = route.dependant.call
+    object.__setattr__(app, 'user_middleware', None)
+
+    with pytest.raises(FastAPIIntegrationError, match='application'):
+        fastapi_ext.install(app, Container().bind(Service).freeze())
+
+    assert route.dependant.call is original_call
+
+
+@pytest.mark.asyncio
+async def test_install_uses_the_actual_request_after_an_earlier_native_dependency_reads_its_body() -> None:
+    """A synthetic middleware request would lose identity and receive semantics."""
+    seen: list[FastAPIRequest] = []
+
+    class Probe:
+        def __init__(self, request: FastAPIRequest) -> None:
+            self.request = request
+
+    async def native(request: FastAPIRequest) -> None:
+        assert await request.json() == {'name': 'zoe'}
+        seen.append(request)
+
+    app = FastAPI()
+
+    @app.post('/body', dependencies=[Depends(native)])
+    async def body(probe: Inject[Probe], request: FastAPIRequest) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        return {'same': probe.request is request and seen == [request]}
+
+    fastapi_ext.install(app, Container().scope_value(FastAPIRequest).bind(Probe, scope=Scope.SCOPED).freeze())
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        response = await client.post('/body', json={'name': 'zoe'})
+    assert response.json() == {'same': True}
 
 
 class _Service:
