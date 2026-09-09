@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from starlette.types import Message, Receive, Send
 from starlette.types import Scope as ASGIScope
 
-from depin import Container, FrozenContainer, Scope, hosted_container, optional_hosted_container
+from depin import Container, FrozenContainer, Host, Scope, hosted_container, optional_hosted_container
 from depin._core.scope import active_frame
 from depin.errors import FastAPIIntegrationError, OutsideScopeError
 from depin.ext import fastapi as fastapi_ext
@@ -982,3 +982,36 @@ async def test_installed_no_inject_route_hosts_container_without_opening_a_frame
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url='http://t') as client:
         assert (await client.get('/')).json() == {'hosted': True, 'frame': False}
+
+
+@pytest.mark.asyncio
+async def test_installed_no_inject_failure_re_raises_and_restores_outer_host() -> None:
+    container = Container().freeze()
+    outer = Container().freeze()
+    failure = RuntimeError('sentinel handler failure')
+    frames: list[bool] = []
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint() -> None:
+        try:
+            active_frame()
+        except OutsideScopeError:
+            frames.append(False)
+        else:
+            frames.append(True)
+        assert hosted_container() is container
+        raise failure
+
+    _ = endpoint
+    fastapi_ext.install(app, container)
+
+    with Host(outer).activated():
+        with pytest.raises(RuntimeError) as raised:
+            await app(_http_scope('GET', '/'), _json_body_receive, _noop_send)
+        assert raised.value is failure
+        assert hosted_container() is outer
+
+    assert frames == [False]
+    assert container.scope_activity() == (0, 0)
+    assert optional_hosted_container() is None
