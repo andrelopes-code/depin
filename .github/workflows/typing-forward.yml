@@ -103,7 +103,7 @@ jobs:
           python-version: '3.12'
 
       - name: Sync dependencies
-        run: uv sync --locked --all-extras
+        run: uv sync --locked --all-extras --group bench
 
       - name: Resolve the newest release
         id: release

@@ -71,7 +71,9 @@ def run_on_the_checkout(command: Sequence[str], environment: Mapping[str, str]) 
 
 
 def venv_python(venv: Path) -> Path:
-    return venv / ('Scripts' if os.name == 'nt' else 'bin') / 'python'
+    if os.name == 'nt':
+        return venv / 'Scripts' / 'python.exe'
+    return venv / 'bin' / 'python'
 
 
 def require_wheel(supplied: Path) -> Path:

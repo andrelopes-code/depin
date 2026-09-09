@@ -75,17 +75,34 @@ def test_competitive_workflow_is_locked_and_collects_separate_null_and_real_evid
     assert '\n  push:' not in workflow
 
 
-def test_source_checking_syncs_the_locked_benchmark_group() -> None:
-    workflow = Path('.github/workflows/ci.yml').read_text(encoding='utf-8')
-
-    assert 'uv sync --locked --all-extras --group bench' in workflow
-
-
 def _workflow_step(workflow: str, name: str) -> str:
     marker = f'      - name: {name}\n'
     start = workflow.index(marker)
     end = workflow.find('\n      - name: ', start + len(marker))
     return workflow[start:] if end < 0 else workflow[start:end]
+
+
+def _workflow_job(workflow: str, name: str) -> str:
+    marker = f'  {name}:\n'
+    start = workflow.index(marker)
+    following_job = re.search(r'^  [a-z][a-z0-9-]*:\n', workflow[start + len(marker) :], flags=re.MULTILINE)
+    end = len(workflow) if following_job is None else start + len(marker) + following_job.start()
+    return workflow[start:end]
+
+
+@pytest.mark.parametrize(
+    ('workflow_path', 'job_name'),
+    [
+        (Path('.github/workflows/ci.yml'), 'typing-source'),
+        (Path('.github/workflows/typing-forward.yml'), 'source'),
+    ],
+    ids=['ci', 'typing-forward'],
+)
+def test_source_checking_syncs_the_locked_benchmark_group(workflow_path: Path, job_name: str) -> None:
+    workflow = workflow_path.read_text(encoding='utf-8')
+    sync = _workflow_step(_workflow_job(workflow, job_name), 'Sync dependencies')
+
+    assert 'uv sync --locked --all-extras --group bench' in sync
 
 
 def test_competitive_workflow_bounds_collection_timeouts_and_keeps_step_arguments_isolated() -> None:
