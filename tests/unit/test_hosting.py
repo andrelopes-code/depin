@@ -257,7 +257,8 @@ async def test_lazy_state_activates_one_frame_across_threads() -> None:
     class Service: ...
 
     container = Container().bind(Service, scope=Scope.SCOPED).freeze()
-    state = LazyScopeState(container, (), None)
+    opened: list[ScopeFrame] = []
+    state = LazyScopeState(container, (), opened.append)
     barrier = threading.Barrier(3)
     frames: list[ScopeFrame] = []
     lock = threading.Lock()
@@ -276,10 +277,13 @@ async def test_lazy_state_activates_one_frame_across_threads() -> None:
     first.join()
     second.join()
 
-    await state.aclose(None)
-
     assert len(frames) == 2
     assert frames[0] is frames[1]
+    assert opened == [frames[0]]
+    assert container.scope_activity() == (1, 1)
+
+    await state.aclose(None)
+
     assert container.scope_activity() == (0, 0)
 
 
