@@ -638,8 +638,14 @@ async def test_install_reserves_fastapi_special_value_names_in_direct_and_nested
     }
     assert nested_http_response.headers['x-nested-response'] == 'yes'
     schema = app.openapi()
-    assert '__depin_request__' not in schema['paths']['/connection']['get'].get('parameters', [])
-    assert '__depin_request__' not in schema['paths']['/nested']['get'].get('parameters', [])
+    assert all(
+        parameter['name'] != '__depin_request__'
+        for parameter in schema['paths']['/connection']['get'].get('parameters', [])
+    )
+    assert all(
+        parameter['name'] != '__depin_request__'
+        for parameter in schema['paths']['/nested']['get'].get('parameters', [])
+    )
 
 
 @pytest.mark.asyncio
