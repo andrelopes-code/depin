@@ -2636,11 +2636,6 @@
 </thead>
 <tbody>
 <tr>
-<td>Concurrent requests, active scopes, and singleton first-use contention.</td>
-<td>Timed sleeps are forbidden here, so contention has to be created with explicit synchronisation — a barrier, a reduced switch interval — and a benchmark built that way measures the synchronisation as much as it measures the lock. The invariants themselves are already tested for correctness under free-threading in <code>tests/unit/test_free_threading.py</code>, where the guarantee rather than the number is what matters.</td>
-<td>A design of its own, alongside the free-threading work that owns what the public surface commits to under concurrency. Routed to Step 8.</td>
-</tr>
-<tr>
 <td>Long-running allocation and retention drift.</td>
 <td>Retention here is a point-in-time reading. Drift is only visible over a soak, and how much runner time a soak may consume in a blocking pull-request gate is a budget decision rather than a methodological one.</td>
 <td>A scheduled job with its own time budget, not a check on the pull-request path.</td>
