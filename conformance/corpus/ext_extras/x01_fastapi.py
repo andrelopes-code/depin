@@ -20,7 +20,7 @@ from fastapi import FastAPI, Query
 from pydantic import BaseModel
 
 from depin import Container, FrozenContainer
-from depin.ext.fastapi import Inject, RequestScope
+from depin.ext.fastapi import Inject, RequestScope, install
 
 
 class Settings:
@@ -92,3 +92,15 @@ def the_middleware_is_installed_with_the_container() -> None:
 def the_middleware_wraps_an_application_directly() -> None:
     application = FastAPI()
     _wrapped: RequestScope = RequestScope(application, build())
+
+
+def installed_routes_keep_the_underlying_injected_type() -> None:
+    application = FastAPI()
+
+    @application.get('/')
+    async def endpoint(service: Inject[UserService]) -> str:
+        assert_type(service, UserService)
+        return service.name(1)
+
+    install(application, build())
+    _ = endpoint

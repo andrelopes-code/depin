@@ -100,6 +100,9 @@ def install(app: FastAPI, container: FrozenContainer) -> None:
     The compiled route resolves all direct injections once per request while
     preserving FastAPI's native dependency graph. Call this before application
     startup; repeat calls with the same container compile newly added routes.
+    `RequestScope` remains the eager compatibility path. HTTP scopes are opened
+    only for scoped values, request seeds, or request-owned resources; streaming,
+    background, and WebSocket cleanup retains the same lifetime as `RequestScope`.
 
     Args:
         app: Application whose existing path operation routes to compile.
@@ -109,6 +112,18 @@ def install(app: FastAPI, container: FrozenContainer) -> None:
         FastAPIIntegrationError: The application has already started, was
             installed with another container, or exposes an unsupported route
             shape. Upgrade FastAPI or use `RequestScope` compatibility middleware.
+
+    Example:
+        >>> from fastapi import FastAPI
+        >>> from depin import Container
+        >>> from depin.ext.fastapi import Inject, install
+        >>> class Service:
+        ...     value = 'ready'
+        >>> app = FastAPI()
+        >>> @app.get('/')
+        ... async def endpoint(service: Inject[Service]) -> str:
+        ...     return service.value
+        >>> install(app, Container().bind(Service).freeze())
     """
     user_middleware = _require_application_shape(app)
     if app.middleware_stack is not None:

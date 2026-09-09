@@ -1,18 +1,19 @@
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 import pytest
-from fastapi import Depends, FastAPI
+from fastapi import BackgroundTasks, Depends, FastAPI, Security, WebSocket
 from fastapi import Request as FastAPIRequest
 from fastapi.dependencies.models import Dependant
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRoute
+from fastapi.security import HTTPBearer
 from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel
 from starlette.types import Message, Receive, Send
 from starlette.types import Scope as ASGIScope
 
-from depin import Container, Scope, hosted_container
+from depin import Container, FrozenContainer, Scope, hosted_container
 from depin._core.scope import active_frame
 from depin.errors import FastAPIIntegrationError, OutsideScopeError
 from depin.ext import fastapi as fastapi_ext
@@ -402,3 +403,257 @@ class _Service:
 
 async def _noop_send(message: object) -> None:
     return None
+
+
+type _Setup = Callable[[FastAPI, FrozenContainer], None]
+
+
+def _compatibility_setup(app: FastAPI, container: FrozenContainer) -> None:
+    app.add_middleware(RequestScope, container=container)
+
+
+def _optimized_setup(app: FastAPI, container: FrozenContainer) -> None:
+    fastapi_ext.install(app, container)
+
+
+class _MixedPayload(BaseModel):
+    name: str
+
+
+def _mixed_application(setup: _Setup) -> tuple[FastAPI, list[str]]:
+    events: list[str] = []
+
+    class Singleton:
+        def __init__(self) -> None:
+            events.append('singleton')
+
+    class Transient:
+        def __init__(self) -> None:
+            events.append('transient')
+
+    class Tenant:
+        def __init__(self, request: FastAPIRequest) -> None:
+            self.name = request.headers['x-tenant']
+            events.append('scoped')
+
+    class Resource:
+        pass
+
+    async def resource() -> AsyncIterator[Resource]:
+        events.append('resource')
+        yield Resource()
+        events.append('close')
+
+    async def native() -> None:
+        events.append('dependency')
+
+    security = HTTPBearer(auto_error=False)
+    container = (
+        Container()
+        .scope_value(FastAPIRequest)
+        .bind(Singleton)
+        .bind(Transient, scope=Scope.TRANSIENT)
+        .bind(Tenant, scope=Scope.SCOPED)
+        .bind(resource, scope=Scope.SCOPED)
+        .freeze()
+    )
+    app = FastAPI()
+
+    @app.post('/users/{user_id}', dependencies=[Depends(native)])
+    async def user(  # pyright: ignore[reportUnusedFunction]
+        user_id: int,
+        active: bool,
+        payload: _MixedPayload,
+        singleton: Inject[Singleton],
+        transient: Inject[Transient],
+        tenant: Inject[Tenant],
+        resource_value: Inject[Resource],
+        token: str | None = Security(security),
+    ) -> dict[str, object]:
+        del singleton, transient, resource_value
+        events.append('handler')
+        return {'id': user_id, 'active': active, 'name': payload.name, 'tenant': tenant.name, 'token': token}
+
+    setup(app, container)
+    return app, events
+
+
+@pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
+@pytest.mark.asyncio
+async def test_mixed_fastapi_inputs_remain_equivalent(setup: _Setup) -> None:
+    app, events = _mixed_application(setup)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        response = await client.post('/users/7?active=true', json={'name': 'Ada'}, headers={'x-tenant': 'acme'})
+
+    assert response.status_code == 200
+    assert response.json() == {'id': 7, 'active': True, 'name': 'Ada', 'tenant': 'acme', 'token': None}
+    assert events == ['dependency', 'singleton', 'transient', 'scoped', 'resource', 'handler', 'close']
+
+
+@pytest.mark.asyncio
+async def test_optimized_openapi_and_validation_match_compatibility() -> None:
+    compatibility = _mixed_application(_compatibility_setup)[0]
+    optimized = _mixed_application(_optimized_setup)[0]
+    compatibility_transport = ASGITransport(app=compatibility)
+    optimized_transport = ASGITransport(app=optimized)
+    async with (
+        AsyncClient(transport=compatibility_transport, base_url='http://t') as compatibility_client,
+        AsyncClient(transport=optimized_transport, base_url='http://t') as optimized_client,
+    ):
+        compatibility_response = await compatibility_client.post(
+            '/users/not-an-int?active=true', json={'name': 1}, headers={'x-tenant': 'acme'}
+        )
+        optimized_response = await optimized_client.post(
+            '/users/not-an-int?active=true', json={'name': 1}, headers={'x-tenant': 'acme'}
+        )
+
+    assert optimized.openapi() == compatibility.openapi()
+    assert optimized_response.status_code == compatibility_response.status_code == 422
+    assert optimized_response.json() == compatibility_response.json()
+
+
+@pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
+@pytest.mark.asyncio
+async def test_sync_handler_and_background_task_drain_before_scope_closes(setup: _Setup) -> None:
+    events: list[str] = []
+
+    class Resource:
+        pass
+
+    async def resource() -> AsyncIterator[Resource]:
+        events.append('construct')
+        yield Resource()
+        events.append('close')
+
+    container = Container().bind(resource, scope=Scope.SCOPED).freeze()
+    app = FastAPI()
+
+    @app.get('/background')
+    def background(  # pyright: ignore[reportUnusedFunction]
+        tasks: BackgroundTasks, resource_value: Inject[Resource]
+    ) -> dict[str, bool]:
+        del resource_value
+        tasks.add_task(events.append, 'background')
+        events.append('handler')
+        return {'ok': True}
+
+    setup(app, container)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        response = await client.get('/background')
+
+    assert response.json() == {'ok': True}
+    assert events == ['construct', 'handler', 'background', 'close']
+
+
+@pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
+@pytest.mark.asyncio
+async def test_streaming_response_drains_resource_after_final_body_event(setup: _Setup) -> None:
+    events: list[str] = []
+
+    class Resource:
+        pass
+
+    async def resource() -> AsyncIterator[Resource]:
+        events.append('construct')
+        yield Resource()
+        events.append('close')
+
+    async def chunks() -> AsyncIterator[bytes]:
+        events.append('first-body')
+        yield b'first;'
+        events.append('last-body')
+        yield b'last;'
+
+    container = Container().bind(resource, scope=Scope.SCOPED).freeze()
+    app = FastAPI()
+
+    @app.get('/stream')
+    async def stream(resource_value: Inject[Resource]) -> StreamingResponse:  # pyright: ignore[reportUnusedFunction]
+        del resource_value
+        return StreamingResponse(chunks(), media_type='text/plain')
+
+    setup(app, container)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        response = await client.get('/stream')
+
+    assert response.text == 'first;last;'
+    assert events == ['construct', 'first-body', 'last-body', 'close']
+
+
+@pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
+@pytest.mark.asyncio
+async def test_two_concurrent_scoped_requests_do_not_share_a_frame(setup: _Setup) -> None:
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    arrived = 0
+    identifiers: list[int] = []
+
+    class Scoped:
+        pass
+
+    container = Container().bind(Scoped, scope=Scope.SCOPED).freeze()
+    app = FastAPI()
+
+    @app.get('/concurrent')
+    async def concurrent(scoped: Inject[Scoped]) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]
+        nonlocal arrived
+        identifiers.append(id(scoped))
+        arrived += 1
+        if arrived == 2:
+            entered.set()
+        await release.wait()
+        return {'id': id(scoped)}
+
+    setup(app, container)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        first = asyncio.create_task(client.get('/concurrent'))
+        second = asyncio.create_task(client.get('/concurrent'))
+        await asyncio.wait_for(entered.wait(), timeout=1.0)
+        assert len(set(identifiers)) == 2
+        release.set()
+        first_response, second_response = await asyncio.gather(first, second)
+
+    assert first_response.json()['id'] != second_response.json()['id']
+
+
+@pytest.mark.asyncio
+async def test_installed_websocket_closes_scoped_resource_after_close_event() -> None:
+    events: list[str] = []
+
+    class Connection:
+        pass
+
+    async def connection() -> AsyncIterator[Connection]:
+        events.append('construct')
+        yield Connection()
+        events.append('close')
+
+    app = FastAPI()
+
+    @app.websocket('/ws')
+    async def websocket(socket: WebSocket) -> None:  # pyright: ignore[reportUnusedFunction]
+        _ = await hosted_container().aresolve(Connection)
+        await socket.accept()
+        await socket.send_text('ready')
+        await socket.close()
+
+    fastapi_ext.install(app, Container().bind(connection, scope=Scope.SCOPED).freeze())
+    sent: list[Message] = []
+    receive_events = iter(({'type': 'websocket.connect'},))
+
+    async def receive() -> Message:
+        return next(receive_events)
+
+    async def send(message: Message) -> None:
+        sent.append(message)
+
+    await app(
+        {'type': 'websocket', 'path': '/ws', 'raw_path': b'/ws', 'headers': [], 'query_string': b''}, receive, send
+    )
+
+    assert [message['type'] for message in sent] == ['websocket.accept', 'websocket.send', 'websocket.close']
+    assert events == ['construct', 'close']

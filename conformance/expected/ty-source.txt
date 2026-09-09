@@ -41,6 +41,7 @@ depin/_core/graph.py:unsound-return-statement:1 the captive-chain walk reassigns
 depin/_core/longest_chain.py:unsound-assignment:1 `_chain` reassigns its `position` parameter from `parents[position]` while the loop condition also reads it; ty breaks that cycle with `Unknown` in the element type, the same shape as the `graph.py` entry above
 depin/_core/markers.py:unsound-return-statement:1 `getattr` with a non-literal attribute name is `Any` to ty, and `--error all` refuses to return it as `ProviderKey | None`
 depin/_core/typeguards.py:unsound-return-statement:1 ty's gradual model of `Callable`: `callable()` narrows to `Top[(...) -> object]`, which it will not return as `Callable[[object], object]`
+depin/ext/_fastapi.py:invalid-type-form:2 ty treats the PEP 695 `type[T] | Token[T]` key accepted by `Inject.__class_getitem__` as runtime variables rather than type expressions; the other four checkers preserve the public `Inject[T] = T` contract
 tests/integration/test_fastapi_ext.py:redundant-condition-strict:1 the fixture deliberately uses a false production flag to exercise selection of the fallback binding
 tests/integration/test_taskiq_ext.py:invalid-argument-type:1 ty resolves `taskiq.TaskiqResult` through pydantic's `PydanticRecursiveRef`, so the constructed result reads as `BaseModel | None | Any`
 tests/integration/test_taskiq_ext.py:unknown-argument:3 the same `PydanticRecursiveRef` resolution: `is_err`, `return_value` and `execution_time` match no parameter of its `__call__`

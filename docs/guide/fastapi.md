@@ -18,7 +18,7 @@ from collections.abc import AsyncGenerator
 from fastapi import FastAPI, Request
 
 from depin import Container, FrozenContainer
-from depin.ext.fastapi import Inject, RequestScope
+from depin.ext.fastapi import Inject, install
 
 from .wiring import infra, services
 
@@ -32,18 +32,41 @@ def create_app(container: FrozenContainer | None = None) -> FastAPI:
         await di.aclose()
 
     app = FastAPI(lifespan=lifespan)
-    app.add_middleware(RequestScope, container=di)
 
     @app.get('/users/{uid}')
     async def get_user(uid: int, svc: Inject[UserService]) -> User:
         return await svc.get(uid)
+
+    install(app, di)
 
     return app
 ```
 
 Taking the container as an argument is what makes the app testable: a test
 passes its own graph instead of patching module state. `aclose()` in the
-lifespan drains the singletons that own resources.
+lifespan drains the singletons that own resources. Call `install` after every
+path operation and router has been registered, before startup. A repeated call
+with the same container compiles routes added since the first call; routes
+added after the final call remain correct on the compatibility resolver but do
+not receive the compiled fast path.
+
+`install` is tested against FastAPI 0.133 with Starlette 1.1 and the latest
+allowed pair. If a future framework shape cannot be compiled, it raises
+`FastAPIIntegrationError` at setup and tells you to upgrade or use the eager
+compatibility path:
+
+```python
+from depin.ext.fastapi import RequestScope
+
+app.add_middleware(RequestScope, container=di)
+```
+
+`RequestScope` opens one eager depin frame for every HTTP request. `install`
+hosts the container immediately but opens a frame only when resolution needs a
+scoped value, a request seed, or a request-owned resource. Singleton-only and
+ordinary transient routes therefore avoid an empty request frame. This changes
+only activation cost: construction identity, teardown order, failures,
+streaming, background work, and WebSocket lifetime are unchanged.
 
 ## `Inject[T]`
 
@@ -83,7 +106,8 @@ async def open_session(db: Database) -> AsyncGenerator[Session]:
 
 ## Reading the request
 
-For HTTP requests the middleware places a `Request` into the scope frame. A
+For HTTP requests, `install` records FastAPI's actual `Request` and places it
+into the scope frame only if a provider reads the matching `scope_value` key. A
 scoped provider reads it back because the container declares the key with
 `scope_value(Request)`, as the wiring above does; without that declaration the
 graph fails at `freeze()`:
