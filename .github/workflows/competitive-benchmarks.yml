@@ -61,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$BASELINE_DIR"
-          git archive "$BASELINE_REVISION" | tar -x -C "$BASELINE_DIR"
+          git archive "$BASELINE_REVISION" | tar --extract --same-permissions --directory "$BASELINE_DIR"
           printf '%s\n' "$BASELINE_REVISION" > "$BASELINE_DIR/.depin-baseline-revision"
 
       - name: Observe adapter equivalence before collection
