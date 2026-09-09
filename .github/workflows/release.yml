@@ -98,6 +98,8 @@ jobs:
           git push origin "HEAD:${BRANCH}"
 
   verify-release:
+    permissions:
+      contents: read
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     uses: ./.github/workflows/release-verification.yml
