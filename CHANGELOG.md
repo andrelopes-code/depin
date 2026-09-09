@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0](https://github.com/andrelopes-code/depin/compare/v0.18.0...v0.19.0) (2026-09-09)
+
+
+### Features
+
+* prepare the v1 API and repository ([#88](https://github.com/andrelopes-code/depin/issues/88)) ([59624cf](https://github.com/andrelopes-code/depin/commit/59624cfc8d5161cee2f60eeef8e32fcdcc87f0c8))
+
+
+### Performance Improvements
+
+* compile resolution runtime ([7207179](https://github.com/andrelopes-code/depin/commit/7207179a4b78e88f28a634e0fc057a58c171cb9b))
+
 ## [0.18.0](https://github.com/andrelopes-code/depin/compare/v0.17.2...v0.18.0) (2026-09-03)
 
 
