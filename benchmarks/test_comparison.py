@@ -487,10 +487,10 @@ def test_svcs_container_caches_one_shared_chain_per_container_and_closes_it() ->
         if candidate.workload == 'resolve_cached_singleton'
     )
 
-    assert candidate.competitor == Competitor('svcs', '26.1.0')
+    assert candidate.competitor == Competitor('svcs', '26.2.0')
     assert candidate.equivalence is Equivalence.PARTIAL
     assert candidate.implementation is not None
-    assert candidate.implementation.label == 'svcs-26.1.0'
+    assert candidate.implementation.label == 'svcs-26.2.0'
     assert candidate.reason == (
         'per-container caching has no singleton single-flight guarantee or nested lifetime contract'
     )
@@ -512,7 +512,7 @@ def test_svcs_candidates_cover_workloads_in_order_with_one_partial_shape() -> No
     candidates = svcs_adapter.ADAPTER.candidates(WORKLOADS)
 
     assert tuple(candidate.workload for candidate in candidates) == tuple(workload.name for workload in WORKLOADS)
-    assert all(candidate.competitor == Competitor('svcs', '26.1.0') for candidate in candidates)
+    assert all(candidate.competitor == Competitor('svcs', '26.2.0') for candidate in candidates)
     assert tuple(candidate.workload for candidate in candidates if candidate.equivalence is Equivalence.PARTIAL) == (
         'resolve_cached_singleton',
     )

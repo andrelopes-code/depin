@@ -95,7 +95,7 @@ def test_focused_collection_limits_the_expected_matrix_to_one_declared_workload(
         'resolve_cached_singleton-dependency-injector-4.49.1',
         'resolve_cached_singleton-dishka-1.10.1',
         'resolve_cached_singleton-wireup-2.12.0',
-        'resolve_cached_singleton-svcs-26.1.0',
+        'resolve_cached_singleton-svcs-26.2.0',
     }
 
     assert comparison.expected_ids(focus=('resolve_cached_singleton',)) == expected

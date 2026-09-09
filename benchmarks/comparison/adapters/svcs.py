@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from benchmarks.comparison.adapters import Adapter
 
 _DISTRIBUTION = 'svcs'
-_VERSION = '26.1.0'
+_VERSION = '26.2.0'
 
 
 class _Registry(Protocol):
