@@ -3,8 +3,8 @@
 #
 #   uvx ty@<pinned> check --error all --output-format concise
 #
-# Paths come from `[tool.ty.src] include` in pyproject.toml. 47 diagnostics in
-# 30 entries. A previously recorded figure of 32 was counted under a bare
+# Paths come from `[tool.ty.src] include` in pyproject.toml. 55 diagnostics in
+# 34 entries. A previously recorded figure of 32 was counted under a bare
 # `uvx ty check`; `--error all` adds ty's unsoundness lints, so it is not the
 # same measurement.
 #
@@ -17,7 +17,7 @@
 #
 # Three classifications recur.
 #
-# 1. Suppression spelling. 26 of the 47 sit on a line that already carries a
+# 1. Suppression spelling. 26 of the 55 sit on a line that already carries a
 #    `# type: ignore[code]  # pyright: ignore[code]` pair. ty honours a bare
 #    `# type: ignore` and its own `# ty: ignore[...]`, and reads neither of
 #    those two, so it re-reports code the other checkers have already been
@@ -36,18 +36,22 @@
 
 benchmarks/comparison/adapters/dependency_injector.py:unsound-assignment:4 ty does not recognise Dependency Injector's generic providers as the two structural provider protocols used to keep the adapter independent of its concrete classes
 depin/_core/frozen.py:invalid-return-type:2 the two `_resolve_sync` / `_resolve_async` delegations that return `object` where `T` is promised; both lines carry the waiver pair ty does not read
+depin/_core/frozen.py:redundant-condition-strict:2 the sync and async claim handlers set `registered` only immediately before returning; retaining the explicit ownership state keeps their exception cleanup symmetric
 depin/_core/frozen.py:unsound-return-statement:1 ty does not solve `T` through a `type[T] | Token[T]` parameter, so `__getitem__`'s delegation to `resolve` infers `Unknown`
 depin/_core/graph.py:unsound-return-statement:1 the captive-chain walk reassigns `node` from a lookup keyed by `node`'s own attributes while the loop condition also reads it; ty breaks that cycle with `Unknown` in the unannotated `chain`
 depin/_core/longest_chain.py:unsound-assignment:1 `_chain` reassigns its `position` parameter from `parents[position]` while the loop condition also reads it; ty breaks that cycle with `Unknown` in the element type, the same shape as the `graph.py` entry above
 depin/_core/markers.py:unsound-return-statement:1 `getattr` with a non-literal attribute name is `Any` to ty, and `--error all` refuses to return it as `ProviderKey | None`
-depin/_core/typeguards.py:invalid-return-type:1 ty's gradual model of `Callable`: `callable()` narrows to `Top[(...) -> object]`, which it will not return as `Callable[[object], object]`
+depin/_core/typeguards.py:unsound-return-statement:1 ty's gradual model of `Callable`: `callable()` narrows to `Top[(...) -> object]`, which it will not return as `Callable[[object], object]`
+tests/integration/test_fastapi_ext.py:redundant-condition-strict:1 the fixture deliberately uses a false production flag to exercise selection of the fallback binding
 tests/integration/test_taskiq_ext.py:invalid-argument-type:1 ty resolves `taskiq.TaskiqResult` through pydantic's `PydanticRecursiveRef`, so the constructed result reads as `BaseModel | None | Any`
 tests/integration/test_taskiq_ext.py:unknown-argument:3 the same `PydanticRecursiveRef` resolution: `is_err`, `return_value` and `execution_time` match no parameter of its `__call__`
 tests/typing/test_conformance.py:unsound-return-statement:1 ty does not solve a constructor's type parameter from the declared return type, so `return Repo()` infers `Repo[Unknown]`
 tests/unit/test_conditional.py:no-matching-overload:2 two deliberate `when=` misuses, both lines carrying the waiver pair ty does not read
+tests/unit/test_conditional.py:redundant-condition-strict:1 the fixture deliberately closes over a false production flag to exercise selection of the fallback binding
 tests/unit/test_container.py:no-matching-overload:2 two deliberate `singleton()` and `provides=` misuses, both lines carrying the waiver pair ty does not read
 tests/unit/test_free_threading.py:unsound-assignment:1 `getattr(sys, '_is_gil_enabled', None)` is `Any | None` to ty, and `--error all` refuses the annotated assignment
 tests/unit/test_frozen_async.py:unsound-assignment:1 `object.__getattribute__` is `Any` to ty, and `--error all` refuses the annotated assignment
+tests/unit/test_frozen_async.py:redundant-condition-strict:4 cleanup guards remain necessary when setup raises before the follower or task assignments that ty treats as unconditional
 tests/unit/test_generic_keys.py:invalid-argument-type:1 a deliberate `alias()` misuse on a line carrying the waiver pair ty does not read
 tests/unit/test_generic_keys.py:no-matching-overload:2 two deliberate `provides=` misuses, both lines carrying the waiver pair ty does not read
 tests/unit/test_generic_keys.py:unsound-return-statement:3 three `return Repo()` fixtures; ty does not solve the constructor's type parameter from the declared return type
@@ -63,4 +67,4 @@ tests/unit/test_providers.py:no-matching-overload:1 a deliberate `bind(42, ...)`
 tests/unit/test_providers.py:unresolved-reference:2 two `'NeverDefined'` forward-reference fixtures, both lines carrying the waiver pair ty does not read
 tests/unit/test_providers.py:unsound-return-statement:2 one `return Repo()` fixture with an unsolved constructor type parameter, and one deliberately unannotated parameter returned as `int` behind the waiver pair ty does not read
 tests/unit/test_resolution.py:invalid-argument-type:1 a deliberate `resolve(42)` misuse on a line carrying the waiver pair ty does not read
-tests/unit/test_wsgi.py:call-top-callable:1 ty's gradual model of `Callable`: `assert callable(...)` narrows to `Top[(...) -> object]`, which it will not call
+tests/unit/test_scope_frame.py:redundant-condition-strict:1 the cleanup guard remains necessary when setup raises before assigning the live waiter that ty treats as unconditional

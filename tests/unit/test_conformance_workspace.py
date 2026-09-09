@@ -1,9 +1,15 @@
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 
 from scripts.conformance import workspace
+
+
+def test_configuration_path_uses_toml_and_json_safe_separators() -> None:
+    windows_path = PureWindowsPath(r'C:\Users\runneradmin\AppData\Local\Temp\venvs\core')
+
+    assert workspace.configuration_path(windows_path) == 'C:/Users/runneradmin/AppData/Local/Temp/venvs/core'
 
 
 @pytest.mark.parametrize(
