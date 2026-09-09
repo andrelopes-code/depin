@@ -6,8 +6,8 @@ import pytest
 from fastapi import BackgroundTasks, Depends, FastAPI, Response
 from fastapi import Request as FastAPIRequest
 from fastapi.dependencies.models import Dependant
-from fastapi.security import SecurityScopes
 from fastapi.routing import APIRoute
+from fastapi.security import SecurityScopes
 from httpx import ASGITransport, AsyncClient
 from starlette.requests import HTTPConnection
 

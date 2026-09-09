@@ -19,6 +19,7 @@ from depin._core.lazy_scope import LazyScopeSeed, LazyScopeState
 from depin._core.lazy_scope import lazy_host as _lazy_host
 from depin._core.lazy_scope import provide_lazy_seed as _provide_lazy_seed
 from depin._core.scope import ScopeFrame
+from depin._integration import _begin_lazy_host, _finish_lazy_host
 from depin.errors import ContainerNotBoundError, OutsideScopeError
 
 REQUEST = Token[str]('request')
@@ -35,6 +36,39 @@ async def test_lazy_host_does_not_open_a_frame_for_a_singleton() -> None:
         assert await hosted_container().aresolve(Service) is await container.aresolve(Service)
 
     assert opened == []
+
+
+@pytest.mark.asyncio
+async def test_imperative_lazy_host_publishes_without_opening_a_frame() -> None:
+    class Service: ...
+
+    container = Container().bind(Service, scope=Scope.SINGLETON).freeze()
+    state, publication = _begin_lazy_host(container)
+
+    try:
+        assert hosted_container() is container
+        assert await hosted_container().aresolve(Service) is await container.aresolve(Service)
+    finally:
+        await _finish_lazy_host(state, publication, None)
+
+    assert optional_hosted_container() is None
+
+
+@pytest.mark.asyncio
+async def test_lazy_state_defers_seed_mapping_until_a_second_distinct_seed() -> None:
+    first = Token[str]('first')
+    second = Token[str]('second')
+    container = Container().scope_value(first).scope_value(second).freeze()
+    state, publication = _begin_lazy_host(container)
+
+    _provide_lazy_seed(LazyScopeSeed(first, lambda: 'one'))
+
+    assert not state.has_seed_mapping()
+
+    _provide_lazy_seed(LazyScopeSeed(second, lambda: 'two'))
+
+    assert state.has_seed_mapping()
+    await _finish_lazy_host(state, publication, None)
 
 
 @pytest.mark.asyncio

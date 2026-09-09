@@ -54,7 +54,10 @@ def _claim(question: str, work: str, semantics: str) -> Claim:
         question=question,
         work=work,
         included='One installed FastAPI route invocation through the in-process ASGI transport.',
-        excluded='Application construction, container freeze, client construction, and route priming.',
+        excluded=(
+            'No direct baseline: this isolates a named depin integration transition. '
+            'Application construction, container freeze, client construction, and route priming.'
+        ),
         semantics=semantics,
         shape='One FastAPI route and the smallest dependency graph needed for this integration transition.',
         concurrency=CONCURRENCY,

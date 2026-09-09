@@ -15,7 +15,13 @@ from starlette.middleware import Middleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from depin import FrozenContainer, Token, optional_hosted_container
-from depin._integration import LazyScopeSeed, _lazy_host, _provide_active_eager_seed, _provide_lazy_seed
+from depin._integration import (
+    LazyScopeSeed,
+    _begin_lazy_host,
+    _finish_lazy_host,
+    _provide_active_eager_seed,
+    _provide_lazy_seed,
+)
 from depin.errors import ContainerNotBoundError, FastAPIIntegrationError
 
 __all__: list[str] = []
@@ -111,8 +117,14 @@ class _LazyRequestScope:
         if scope['type'] not in ('http', 'websocket'):
             await self._app(scope, receive, send)
             return
-        async with _lazy_host(self._container):
+        state, publication = _begin_lazy_host(self._container)
+        try:
             await self._app(scope, receive, send)
+        except BaseException as error:
+            await _finish_lazy_host(state, publication, error)
+            raise
+        else:
+            await _finish_lazy_host(state, publication, None)
 
 
 class _ObservedLazyRequestScope(_LazyRequestScope):
@@ -129,8 +141,14 @@ class _ObservedLazyRequestScope(_LazyRequestScope):
         if scope['type'] not in ('http', 'websocket'):
             await self._app(scope, receive, send)
             return
-        async with _lazy_host(self._container, on_open=self._observation.frame_opened):
+        state, publication = _begin_lazy_host(self._container, on_open=self._observation.frame_opened)
+        try:
             await self._app(scope, receive, send)
+        except BaseException as error:
+            await _finish_lazy_host(state, publication, error)
+            raise
+        else:
+            await _finish_lazy_host(state, publication, None)
 
 
 def install(app: FastAPI, container: FrozenContainer) -> None:
