@@ -294,16 +294,32 @@ def _require_route_shape(route: APIRoute) -> None:
     for name in ('dependant', 'path', 'path_format', 'get_route_handler', 'app'):
         if not hasattr(route, name):
             raise _setup_error(f'route {route!r} does not provide required attribute {name!r}')
-    dependant = route.dependant
-    for name in ('call', 'dependencies', 'request_param_name'):
+    _require_dependant_shape(route, route.dependant)
+
+
+def _require_dependant_shape(route: APIRoute, dependant: Dependant) -> None:
+    for name in (
+        'call',
+        'dependencies',
+        'name',
+        'request_param_name',
+        'websocket_param_name',
+        'http_connection_param_name',
+        'response_param_name',
+        'background_tasks_param_name',
+        'security_scopes_param_name',
+        'path_params',
+        'query_params',
+        'header_params',
+        'cookie_params',
+        'body_params',
+    ):
         if not hasattr(dependant, name):
             raise _setup_error(f'route {route.path!r} dependant does not provide required attribute {name!r}')
     if type(dependant.dependencies) is not list:
         raise _setup_error(f'route {route.path!r} dependant dependencies are not a mutable list')
     for dependency in dependant.dependencies:
-        for name in ('call', 'name'):
-            if not hasattr(dependency, name):
-                raise _setup_error(f'route {route.path!r} dependency does not provide required attribute {name!r}')
+        _require_dependant_shape(route, dependency)
 
 
 def _require_application_shape(app: FastAPI) -> list[Middleware]:
@@ -351,7 +367,15 @@ def _request_argument_name(dependant: Dependant) -> str:
 def _dependency_value_names(dependant: Dependant) -> set[str]:
     names = {
         name
-        for name in (dependant.name, dependant.request_param_name, dependant.websocket_param_name)
+        for name in (
+            dependant.name,
+            dependant.request_param_name,
+            dependant.websocket_param_name,
+            dependant.http_connection_param_name,
+            dependant.response_param_name,
+            dependant.background_tasks_param_name,
+            dependant.security_scopes_param_name,
+        )
         if name is not None
     }
     for fields in (

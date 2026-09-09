@@ -3,11 +3,13 @@ from collections.abc import AsyncGenerator
 from typing import Annotated, Protocol
 
 import pytest
-from fastapi import Depends, FastAPI
+from fastapi import BackgroundTasks, Depends, FastAPI, Response
 from fastapi import Request as FastAPIRequest
 from fastapi.dependencies.models import Dependant
+from fastapi.security import SecurityScopes
 from fastapi.routing import APIRoute
 from httpx import ASGITransport, AsyncClient
+from starlette.requests import HTTPConnection
 
 from depin import Container, FrozenContainer, Host, Scope
 from depin._core.scope import active_frame
@@ -549,6 +551,95 @@ async def test_install_keeps_internal_request_argument_distinct_from_fastapi_val
     schema = app.openapi()
     assert schema['paths']['/query']['get']['parameters'][0]['name'] == '__depin_request__'
     assert schema['paths']['/path/{__depin_request__}']['get']['parameters'][0]['name'] == '__depin_request__'
+
+
+@pytest.mark.asyncio
+async def test_install_reserves_fastapi_special_value_names_in_direct_and_nested_dependants() -> None:
+    """The synthetic request argument cannot shadow FastAPI's special values."""
+
+    class Singleton:
+        pass
+
+    async def nested_connection(__depin_request__: HTTPConnection) -> str:
+        return __depin_request__.url.path
+
+    async def nested_response_dependency(__depin_request__: Response) -> str:
+        __depin_request__.headers['x-nested-response'] = 'yes'
+        return 'response'
+
+    async def nested_background(__depin_request__: BackgroundTasks) -> str:
+        __depin_request__.add_task(lambda: None)
+        return 'background'
+
+    async def nested_security(__depin_request__: SecurityScopes) -> str:
+        return ','.join(__depin_request__.scopes)
+
+    app = FastAPI()
+
+    @app.get('/connection')
+    async def connection(singleton: Inject[Singleton], __depin_request__: HTTPConnection) -> dict[str, str]:
+        del singleton
+        return {'value': __depin_request__.url.path}
+
+    @app.get('/response')
+    async def response(singleton: Inject[Singleton], __depin_request__: Response) -> dict[str, str]:
+        del singleton
+        __depin_request__.headers['x-response'] = 'yes'
+        return {'value': 'response'}
+
+    @app.get('/background')
+    async def background(singleton: Inject[Singleton], __depin_request__: BackgroundTasks) -> dict[str, str]:
+        del singleton
+        __depin_request__.add_task(lambda: None)
+        return {'value': 'background'}
+
+    @app.get('/security')
+    async def security(singleton: Inject[Singleton], __depin_request__: SecurityScopes) -> dict[str, str]:
+        del singleton
+        return {'value': ','.join(__depin_request__.scopes)}
+
+    @app.get('/nested')
+    async def nested(
+        singleton: Inject[Singleton],
+        connection_value: str = Depends(nested_connection),
+        response_value: str = Depends(nested_response_dependency),
+        background_value: str = Depends(nested_background),
+        security_value: str = Depends(nested_security),
+    ) -> dict[str, str]:
+        del singleton
+        return {
+            'connection': connection_value,
+            'response': response_value,
+            'background': background_value,
+            'security': security_value,
+        }
+
+    _ = connection, response, background, security, nested
+    fastapi_ext.install(app, Container().bind(Singleton).freeze())
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        connection_response = await client.get('/connection')
+        response_response = await client.get('/response')
+        background_response = await client.get('/background')
+        security_response = await client.get('/security')
+        nested_http_response = await client.get('/nested')
+
+    assert connection_response.json() == {'value': '/connection'}
+    assert response_response.json() == {'value': 'response'}
+    assert response_response.headers['x-response'] == 'yes'
+    assert background_response.json() == {'value': 'background'}
+    assert security_response.json() == {'value': ''}
+    assert nested_http_response.json() == {
+        'connection': '/nested',
+        'response': 'response',
+        'background': 'background',
+        'security': '',
+    }
+    assert nested_http_response.headers['x-nested-response'] == 'yes'
+    schema = app.openapi()
+    assert '__depin_request__' not in schema['paths']['/connection']['get'].get('parameters', [])
+    assert '__depin_request__' not in schema['paths']['/nested']['get'].get('parameters', [])
 
 
 @pytest.mark.asyncio
