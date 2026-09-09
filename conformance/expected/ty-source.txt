@@ -36,7 +36,6 @@
 
 benchmarks/comparison/adapters/dependency_injector.py:unsound-assignment:4 ty does not recognise Dependency Injector's generic providers as the two structural provider protocols used to keep the adapter independent of its concrete classes
 depin/_core/frozen.py:invalid-return-type:2 the two `_resolve_sync` / `_resolve_async` delegations that return `object` where `T` is promised; both lines carry the waiver pair ty does not read
-depin/_core/frozen.py:redundant-condition-strict:2 the sync and async claim handlers set `registered` only immediately before returning; retaining the explicit ownership state keeps their exception cleanup symmetric
 depin/_core/frozen.py:unsound-return-statement:1 ty does not solve `T` through a `type[T] | Token[T]` parameter, so `__getitem__`'s delegation to `resolve` infers `Unknown`
 depin/_core/graph.py:unsound-return-statement:1 the captive-chain walk reassigns `node` from a lookup keyed by `node`'s own attributes while the loop condition also reads it; ty breaks that cycle with `Unknown` in the unannotated `chain`
 depin/_core/longest_chain.py:unsound-assignment:1 `_chain` reassigns its `position` parameter from `parents[position]` while the loop condition also reads it; ty breaks that cycle with `Unknown` in the element type, the same shape as the `graph.py` entry above
