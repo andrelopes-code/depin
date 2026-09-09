@@ -158,6 +158,17 @@ def test_a_material_p50_win_without_the_tail_margin_is_not_leadership() -> None:
     assert verdict.status is leadership.Status.COMPETITIVE
 
 
+def test_material_p50_and_p95_wins_without_the_p99_margin_are_not_leadership() -> None:
+    dataset = _leadership_dataset(depin=(0.7,) * 5)
+    for repetition in require_array(dataset['repetitions'], 'repetitions'):
+        samples = require_object(require_object(repetition, 'repetition')['samples'], 'samples')
+        require_object(samples['test_comparison[resolve-depin]'], 'depin')['p99'] = 0.85
+
+    verdict = leadership.evaluate(dataset, _calibration(dataset), BUDGETS)[0]
+
+    assert verdict.status is leadership.Status.COMPETITIVE
+
+
 def test_a_thirty_percent_win_with_tail_margin_is_material_leadership() -> None:
     dataset = _leadership_dataset(depin=(0.7,) * 5)
 

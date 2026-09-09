@@ -1,9 +1,8 @@
 # Competitive rebaseline and performance direction
 
-Date: 2026-09-09  
-Subject: `main` at `7207179`, measured through harness-only commits ending at
-`25d48bc`  
-Baseline revision: `4ad63e77bd21eefab15f1dde44c7e62460533da7`
+- Date: 2026-09-09
+- Subject: `main` at `7207179`, measured through harness-only commits ending at `25d48bc`
+- Baseline revision: `4ad63e77bd21eefab15f1dde44c7e62460533da7`
 
 ## Method
 
