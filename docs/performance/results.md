@@ -168,4 +168,11 @@ Asked for by the performance proposal and not measured here, with what an honest
 
 | Case | Why it is refused | What it would need |
 | --- | --- | --- |
+| fastapi_no_injection | The installed no-injection route exists only in the FastAPI optimization head; the accepted dataset predates it, so an archived baseline cannot supply a paired observation. It remains a head-only diagnostic and is reported separately rather than silently treated as paired evidence. | A five-repetition head-only diagnostic collection alongside the next accepted paired FastAPI run. |
+| fastapi_lazy_host_publication | The accepted dataset predates the lazy FastAPI host-publication component diagnostic. | A dedicated component collection in a new accepted FastAPI evidence dataset. |
+| fastapi_lazy_frame_activation_and_drain | The accepted dataset predates the lazy FastAPI frame-activation component diagnostic. | A dedicated component collection in a new accepted FastAPI evidence dataset. |
+| fastapi_endpoint_program_one_key | The accepted dataset predates the one-key compiled FastAPI endpoint-program diagnostic. | A dedicated component collection in a new accepted FastAPI evidence dataset. |
+| fastapi_endpoint_program_many_keys | The accepted dataset predates the multi-key compiled FastAPI endpoint-program diagnostic. | A dedicated component collection in a new accepted FastAPI evidence dataset. |
+| fastapi_request_seed_read | The accepted dataset predates the lazy FastAPI request-seed component diagnostic. | A dedicated component collection in a new accepted FastAPI evidence dataset. |
+| fastapi_async_resource_close | The accepted dataset predates the async FastAPI resource-close component diagnostic. | A dedicated component collection in a new accepted FastAPI evidence dataset. |
 | Long-running allocation and retention drift. | Retention here is a point-in-time reading. Drift is only visible over a soak, and how much runner time a soak may consume in a blocking pull-request gate is a budget decision rather than a methodological one. | A scheduled job with its own time budget, not a check on the pull-request path. |

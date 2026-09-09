@@ -1,5 +1,7 @@
 import io
+import json
 import subprocess
+import sys
 import tarfile
 from pathlib import Path
 
@@ -7,13 +9,46 @@ import pytest
 
 import benchmarks.comparison.collection as comparison
 from benchmarks.comparison import protocol
-from benchmarks.harness import HarnessError
+from benchmarks.harness import HarnessError, unmeasured
+from benchmarks.workloads import WORKLOADS
 
 EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
 BUDGETS = Path('benchmarks/budgets.toml')
 BASELINE_REVISION = 'a' * 40
 REAL_DETERMINISTIC = comparison.collect_deterministic
 REAL_BASELINE_VALIDATION = protocol.validate_baseline_archive
+FASTAPI_BASELINE_REVISION = '483aba23b4964b2a91f238df60725323be7b9e35'
+
+
+def test_fastapi_no_injection_is_a_reported_head_only_diagnostic(tmp_path: Path) -> None:
+    archive = subprocess.run(
+        ('git', 'archive', '--format=tar', FASTAPI_BASELINE_REVISION), capture_output=True, check=True
+    ).stdout
+    baseline = tmp_path / 'baseline'
+    baseline.mkdir()
+    with tarfile.open(fileobj=io.BytesIO(archive), mode='r:') as stream:
+        stream.extractall(baseline, filter='data')
+    completed = subprocess.run(
+        (
+            sys.executable,
+            '-c',
+            (
+                'import json; from benchmarks.workloads import WORKLOADS; '
+                'print(json.dumps([item.name for item in WORKLOADS]))'
+            ),
+        ),
+        cwd=baseline,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    baseline_names = set(json.loads(completed.stdout))
+    head_names = {workload.name for workload in WORKLOADS}
+
+    assert 'fastapi_no_injection' not in baseline_names
+    assert 'fastapi_no_injection' in head_names
+    assert any(refusal.case == 'fastapi_no_injection' for refusal in unmeasured.REFUSED)
 
 
 def _expected_file(revision: str) -> dict[str, tuple[str, int, bytes]]:

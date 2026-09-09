@@ -92,6 +92,45 @@ RETIRED: tuple[Retirement, ...] = (
 
 REFUSED: tuple[Refusal, ...] = (
     Refusal(
+        case='fastapi_no_injection',
+        reason=(
+            'The installed no-injection route exists only in the FastAPI optimization head; the accepted '
+            'dataset predates it, so an archived baseline cannot supply a paired observation. It remains a '
+            'head-only diagnostic and is reported separately rather than silently treated as paired evidence.'
+        ),
+        needed='A five-repetition head-only diagnostic collection alongside the next accepted paired FastAPI run.',
+    ),
+    Refusal(
+        case='fastapi_lazy_host_publication',
+        reason='The accepted dataset predates the lazy FastAPI host-publication component diagnostic.',
+        needed='A dedicated component collection in a new accepted FastAPI evidence dataset.',
+    ),
+    Refusal(
+        case='fastapi_lazy_frame_activation_and_drain',
+        reason='The accepted dataset predates the lazy FastAPI frame-activation component diagnostic.',
+        needed='A dedicated component collection in a new accepted FastAPI evidence dataset.',
+    ),
+    Refusal(
+        case='fastapi_endpoint_program_one_key',
+        reason='The accepted dataset predates the one-key compiled FastAPI endpoint-program diagnostic.',
+        needed='A dedicated component collection in a new accepted FastAPI evidence dataset.',
+    ),
+    Refusal(
+        case='fastapi_endpoint_program_many_keys',
+        reason='The accepted dataset predates the multi-key compiled FastAPI endpoint-program diagnostic.',
+        needed='A dedicated component collection in a new accepted FastAPI evidence dataset.',
+    ),
+    Refusal(
+        case='fastapi_request_seed_read',
+        reason='The accepted dataset predates the lazy FastAPI request-seed component diagnostic.',
+        needed='A dedicated component collection in a new accepted FastAPI evidence dataset.',
+    ),
+    Refusal(
+        case='fastapi_async_resource_close',
+        reason='The accepted dataset predates the async FastAPI resource-close component diagnostic.',
+        needed='A dedicated component collection in a new accepted FastAPI evidence dataset.',
+    ),
+    Refusal(
         case='Long-running allocation and retention drift.',
         reason=(
             'Retention here is a point-in-time reading. Drift is only visible over a soak, and how much '
