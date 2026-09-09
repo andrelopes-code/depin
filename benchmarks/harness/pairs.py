@@ -84,10 +84,19 @@ class Side:
     directory: Path
 
 
+def python_executable(directory: Path) -> Path:
+    relative = Path('Scripts/python.exe') if os.name == 'nt' else Path('bin/python')
+    isolated = directory / '.venv' / relative
+    return isolated if isolated.is_file() else Path(sys.executable)
+
+
 def _run(side: Side, template: Sequence[str], report: Path) -> None:
     # `str.replace`, not `str.format`: an argument can be a whole program, and a
     # program is full of braces `format` would read as fields of its own.
-    argv = [sys.executable, *(part.replace(REPORT_PLACEHOLDER, str(report)) for part in template)]
+    argv = [
+        str(python_executable(side.directory)),
+        *(part.replace(REPORT_PLACEHOLDER, str(report)) for part in template),
+    ]
     child = os.environ | {'PYTHONHASHSEED': memory.HASH_SEED, 'PYTHONPATH': str(side.directory)}
     completed = subprocess.run(argv, cwd=side.directory, env=child, capture_output=True, text=True, check=False)
     if completed.returncode != 0:

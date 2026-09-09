@@ -1,7 +1,7 @@
 # Proposal: evidence-gated optional native accelerator
 
 Date: 2026-09-02
-Status: NO-GO pending optimized Python and FastAPI recalibration
+Status: NO-GO after optimized-Python rebaseline; reconsider only after FastAPI work
 Scope: Rust feasibility, Python/native boundary, packaging, semantic parity, and adoption thresholds
 
 ## Nature of this document
@@ -30,18 +30,36 @@ a supported platform.
 
 ## Why Rust is not first
 
-The preliminary comparison found pure-Python Dishka and Wireup far ahead of the
-current `depin` interpreter on transient and scoped graphs. That demonstrates a
-large architectural opportunity before native code.
+The compiled-Python proposal made the architectural gain first. On 2026-09-09,
+the resulting transient chain became 36.0% faster at p50, 40.2% at p95, and
+33.6% at p99 by point estimate than its fastest equivalent competitor. Its p99
+confidence interval does not prove the required tail margin, so it is competitive
+rather than a proven leader. Python calls nevertheless fell from 202 to 28 and
+allocated bytes fell from 4,968 to 1,224. That result removes transient execution
+from the case for Rust rather than giving a native prototype credit for the
+Python compiler's work.
 
-Measuring Rust against today's runtime would conflate two gains:
+The residual gaps do not satisfy the native entry threshold. Pure-Python Wireup
+is 6.6 times faster at warm-cache p50 and 20 times faster for the full scope-cycle
+p50, demonstrating remaining Python-design headroom. FastAPI adds 60.7 to 150.6
+microseconds at p50 across the freshly measured request workloads, while the
+existing decomposition attributes only about 8 microseconds of the light route
+to core resolution. Framework traversal and unconditional request lifecycle are
+the next boundary to change.
 
-- compiling repeated resolution decisions; and
-- executing residual bookkeeping outside the Python interpreter.
+## Rebaseline attribution
 
-The experiment begins only after the Python proposal has made the first gain. It
-then answers the useful question: whether native execution materially improves
-the best maintainable Python design.
+| Residual | Can remain native | Must return to Python | Boundary consequence | Decision |
+| --- | --- | --- | --- | --- |
+| Immutable plan traversal and cache-slot state | Operation arrays, indexes, ownership flags | Provider callable, returned value, provider exception | At least one Python call and object crossing per constructed provider | Eligible in principle, but Python already produces a material transient point win and lacks only tail confidence |
+| Warm singleton lookup | Cache slot and key index | Public Python result and `ContextVar` override visibility | A crossing surrounds a sub-two-microsecond operation | Do not prototype; pure-Python competitors prove the gap is attackable without native code |
+| Scoped construction and teardown | Frame indexes and teardown-record bookkeeping | Python providers, context-local frame, context managers, finalizers | Repeated provider/finalizer crossings remain in every graph | Do not prototype before a Python scope redesign and renewed attribution |
+| First-use contention | Native owner/joiner state | Thread scheduling, Python provider, cancellation and exception propagation | Eight-worker p50/p95 overhead is 503/1,077 microseconds but is not isolated to native-resident work | No entry: synchronized evidence shows a tail, not a native attribution |
+| FastAPI requests | Nothing in FastAPI dependency traversal | FastAPI `Depends`, request state, `Host`, ASGI response lifetime | Most DI-attributable time is outside the core execution engine | Execute the FastAPI proposal first |
+
+The only credible boundary remains an end-to-end immutable execution program. A
+helper port, cache lookup extension, or lock wrapper would cross Python too often
+and is explicitly excluded.
 
 ## Goals
 
@@ -269,6 +287,18 @@ maintenance needs a deliberately high adoption threshold.
 
 ## Entry decision
 
-Keep native work NO-GO. A future session may authorize a bounded optional-native
-experiment after Python optimization and FastAPI recalibration, with shipping
-contingent on semantic parity, broad fallback, and material application gain.
+Keep native work NO-GO. Optimized-Python evidence now exists, and it does not
+attribute a qualifying residual to work that can remain native across two
+recurring core workloads. The transient path already has a material point win but
+lacks p99 confidence; the warm
+cache and scope losses are beaten by pure-Python implementations; contention is
+dominated by Python scheduling and provider boundaries; and FastAPI overhead is
+owned primarily by the integration.
+
+Reconsider a bounded optional-native experiment only after the FastAPI proposal
+has produced fresh application attribution. Entry still requires a native-
+resident end-to-end execution program, at least 30% incremental core reduction
+on two recurring workloads, at least 20% application reduction after framework
+subtraction, no p95/p99 contention regression, and accepted packaging evidence.
+Until every condition is supported by a fresh profile, no Rust prototype is
+authorized.

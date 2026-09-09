@@ -42,6 +42,8 @@ from benchmarks.harness import budgets as budget_module
 
 MAXIMUM_ALLOWANCE = 0.05
 CALIBRATION_INCREMENT = 0.001
+MATERIAL_P50_MARGIN = 0.25
+MATERIAL_TAIL_MARGIN = 0.20
 EXIT_PASS = 0
 EXIT_FAILURE = 1
 EXIT_MALFORMED = 2
@@ -50,7 +52,7 @@ EXIT_UNSTABLE = 3
 
 class Status(Enum):
     LEADER = 'leader'
-    SHARED_LEADER = 'shared-leader'
+    COMPETITIVE = 'competitive'
     LOSS = 'loss'
     ABSOLUTE_FAILURE = 'absolute-failure'
     REGRESSION = 'regression'
@@ -62,6 +64,8 @@ class Status(Enum):
 class CompetitorVerdict:
     label: str
     paired: stats.Paired
+    p95: stats.Paired
+    p99: stats.Paired
     passed: bool
 
 
@@ -118,6 +122,12 @@ def _qualified(sample: dict[str, object], where: str) -> float | None:
 def paired_medians(
     repetitions: Sequence[dict[str, object]], workload: str, base: str, head: str
 ) -> tuple[list[float], list[float]]:
+    return paired_values(repetitions, workload, base, head, 'median')
+
+
+def paired_values(
+    repetitions: Sequence[dict[str, object]], workload: str, base: str, head: str, statistic: str
+) -> tuple[list[float], list[float]]:
     before: list[float] = []
     after: list[float] = []
     for index, repetition in enumerate(repetitions):
@@ -128,8 +138,16 @@ def paired_medians(
         left_median, right_median = _qualified(left, f'{where}.{base}'), _qualified(right, f'{where}.{head}')
         if left_median is None or right_median is None:
             continue
-        before.append(left_median)
-        after.append(right_median)
+        before.append(
+            left_median
+            if statistic == 'median'
+            else finite_positive(left.get(statistic), f'{where}.{base}.{statistic}')
+        )
+        after.append(
+            right_median
+            if statistic == 'median'
+            else finite_positive(right.get(statistic), f'{where}.{head}.{statistic}')
+        )
     return before, after
 
 
@@ -307,20 +325,34 @@ def evaluate(
         competitor: CompetitorVerdict | None = None
         competitive: bool | None = None
         if eligible and allowance is not None and len(depin) >= MINIMUM_REPETITIONS and equivalents:
-            measured: list[tuple[float, str, stats.Paired]] = []
+            measured: list[tuple[float, str, stats.Paired, stats.Paired, stats.Paired]] = []
             for label, _ in equivalents:
                 candidate, subject = paired_medians(collected, workload, label, 'depin')
-                if len(candidate) < MINIMUM_REPETITIONS or len(subject) < MINIMUM_REPETITIONS:
+                candidate_p95, subject_p95 = paired_values(collected, workload, label, 'depin', 'p95')
+                candidate_p99, subject_p99 = paired_values(collected, workload, label, 'depin', 'p99')
+                if any(
+                    len(values) < MINIMUM_REPETITIONS
+                    for values in (candidate, subject, candidate_p95, subject_p95, candidate_p99, subject_p99)
+                ):
                     continue
                 paired = stats.paired_ratio(candidate, subject, seed=random_seed)
-                measured.append((statistics.median(candidate), label, paired))
+                paired_p95 = stats.paired_ratio(candidate_p95, subject_p95, seed=random_seed)
+                paired_p99 = stats.paired_ratio(candidate_p99, subject_p99, seed=random_seed)
+                measured.append((statistics.median(candidate), label, paired, paired_p95, paired_p99))
             if len(measured) != len(equivalents):
                 status = Status.UNSTABLE
             else:
-                _, label, paired = min(measured)
-                competitive = paired.ratio <= 0.0 and paired.high <= allowance
-                competitor = CompetitorVerdict(label=label, paired=paired, passed=competitive)
-                status = Status.LEADER if competitive and paired.high < 0.0 else Status.SHARED_LEADER
+                _, label, paired, paired_p95, paired_p99 = min(measured)
+                competitive = paired.high <= allowance
+                leadership = (
+                    paired.high <= -MATERIAL_P50_MARGIN
+                    and paired_p95.high <= -MATERIAL_TAIL_MARGIN
+                    and paired_p99.high <= -MATERIAL_TAIL_MARGIN
+                )
+                competitor = CompetitorVerdict(
+                    label=label, paired=paired, p95=paired_p95, p99=paired_p99, passed=leadership
+                )
+                status = Status.LEADER if leadership else Status.COMPETITIVE
         elif not eligible or len(depin) < MINIMUM_REPETITIONS or len(direct) < MINIMUM_REPETITIONS:
             status = Status.UNSTABLE
         elif not equivalents:
@@ -373,7 +405,7 @@ def _exit(verdicts: Sequence[WorkloadVerdict]) -> int:
     statuses = {verdict.status for verdict in verdicts}
     if Status.UNSTABLE in statuses:
         return EXIT_UNSTABLE
-    if statuses - {Status.LEADER, Status.SHARED_LEADER, Status.NO_EQUIVALENT_COMPETITOR}:
+    if statuses - {Status.LEADER, Status.COMPETITIVE, Status.NO_EQUIVALENT_COMPETITOR}:
         return EXIT_FAILURE
     return EXIT_PASS
 

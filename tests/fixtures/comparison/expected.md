@@ -5,17 +5,19 @@
 | Measure | Result |
 | --- | --- |
 | Claim | What does one resolution allocate once the value is already built? |
-| Status | leader |
+| Status | competitive |
 | Noise allowance | 1.0% |
+| Material p50 margin | 25.0% |
+| Material p95/p99 margin | 20.0% |
 | Direct overhead | +500.000 ms |
 | Absolute target | 1.000 s |
 | Secondary verdict | allocations: pass, work: pass |
 
-| Candidate | Classification | Reason | Candidate median | depin median | 95% CI vs depin |
-| --- | --- | --- | --- | --- | --- |
-| dependency-injector-4.49.1 | equivalent | same observed cached resolution | 1.000 s | 900.000 ms | [-10.00%, -10.00%] |
-| dishka-1.10.1 | partial | does not preserve the complete observation | — | — | — |
-| wireup-2.12.0 | incomparable | cannot express this cache lifecycle | — | — | — |
+| Candidate | Classification | Reason | Candidate median | depin median | p50 95% CI vs depin | p95 95% CI vs depin | p99 95% CI vs depin |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| dependency-injector-4.49.1 | equivalent | same observed cached resolution | 1.000 s | 900.000 ms | [-10.00%, -10.00%] | [-10.00%, -10.00%] | [-10.00%, -10.00%] |
+| dishka-1.10.1 | partial | does not preserve the complete observation | — | — | — | — | — |
+| wireup-2.12.0 | incomparable | cannot express this cache lifecycle | — | — | — | — | — |
 
 ## Provenance
 

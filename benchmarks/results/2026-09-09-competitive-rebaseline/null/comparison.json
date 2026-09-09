@@ -1,0 +1,4108 @@
+{
+  "accepted": true,
+  "collection_command": "python -m pytest benchmarks/test_comparison.py --benchmark-only -q --benchmark-json={report} --null",
+  "deterministic": {
+    "base": {
+      "readings": {
+        "allocations": {
+          "allocations_of_a_cached_singleton_resolution": {
+            "blocks": 13,
+            "peak": 2056,
+            "size": 1168
+          },
+          "allocations_of_a_request_shaped_scope": {
+            "blocks": 27,
+            "peak": 4360,
+            "size": 2360
+          },
+          "allocations_of_a_scope_cycle": {
+            "blocks": 76,
+            "peak": 14496,
+            "size": 6240
+          },
+          "allocations_of_a_transient_chain": {
+            "blocks": 53,
+            "peak": 5752,
+            "size": 4968
+          },
+          "allocations_of_an_inject_call": {
+            "blocks": 17,
+            "peak": 2064,
+            "size": 1360
+          }
+        },
+        "retained": {
+          "retained_by_a_frozen_container_of_100": 34568,
+          "retained_by_a_frozen_container_of_1000": 326000,
+          "retained_by_a_warm_singleton_cache_of_1000": 397560,
+          "retained_by_an_open_scope_of_20": 10512
+        },
+        "scaling": {
+          "scale_async_teardown": {
+            "costs": [
+              0.0001630964042078631,
+              0.00027260416004537547,
+              0.00046828192944303737
+            ],
+            "sizes": [
+              10,
+              20,
+              40
+            ]
+          },
+          "scale_freeze_graph_size": {
+            "costs": [
+              0.003622628439188702,
+              0.007156167754146736,
+              0.014279011738835834
+            ],
+            "sizes": [
+              100,
+              200,
+              400
+            ]
+          },
+          "scale_override_nesting": {
+            "costs": [
+              2.2905703733755445e-06,
+              3.943751650581362e-06,
+              1.0618011721419407e-05
+            ],
+            "sizes": [
+              8,
+              32,
+              128
+            ]
+          },
+          "scale_resolve_collection": {
+            "costs": [
+              2.4500951667505433e-05,
+              0.00019536444938239583,
+              0.00038133824227770674
+            ],
+            "sizes": [
+              10,
+              100,
+              200
+            ]
+          },
+          "scale_resolve_fan_out": {
+            "costs": [
+              1.94070524912604e-05,
+              3.761701515259119e-05,
+              7.375119531616292e-05
+            ],
+            "sizes": [
+              10,
+              20,
+              40
+            ]
+          },
+          "scale_resolve_transient_depth": {
+            "costs": [
+              1.9582152091857097e-05,
+              0.00020626479295060562,
+              0.0007752491719656973
+            ],
+            "sizes": [
+              10,
+              40,
+              160
+            ]
+          },
+          "scale_scope_teardown": {
+            "costs": [
+              0.0001029188066468123,
+              0.00018260191404806392,
+              0.0003555396447154635
+            ],
+            "sizes": [
+              10,
+              20,
+              40
+            ]
+          }
+        },
+        "work": {
+          "allocations_of_a_cached_singleton_resolution": 9,
+          "allocations_of_a_request_shaped_scope": 105,
+          "allocations_of_a_scope_cycle": 396,
+          "allocations_of_a_transient_chain": 202,
+          "allocations_of_an_inject_call": 29
+        }
+      },
+      "source_revision": "4ad63e77bd21eefab15f1dde44c7e62460533da7"
+    },
+    "budget_contract": {
+      "path": "benchmarks/budgets.toml",
+      "sha256": "8142bcee8b717d86184c7c6daff05d5b521a26d0850d0d6f94c848d08cd17a6b"
+    },
+    "head": {
+      "readings": {
+        "allocations": {
+          "allocations_of_a_cached_singleton_resolution": {
+            "blocks": 13,
+            "peak": 2056,
+            "size": 1168
+          },
+          "allocations_of_a_request_shaped_scope": {
+            "blocks": 27,
+            "peak": 4480,
+            "size": 2360
+          },
+          "allocations_of_a_scope_cycle": {
+            "blocks": 75,
+            "peak": 14552,
+            "size": 6176
+          },
+          "allocations_of_a_transient_chain": {
+            "blocks": 12,
+            "peak": 2008,
+            "size": 1224
+          },
+          "allocations_of_an_inject_call": {
+            "blocks": 17,
+            "peak": 2064,
+            "size": 1360
+          }
+        },
+        "retained": {
+          "retained_by_a_frozen_container_of_100": 35032,
+          "retained_by_a_frozen_container_of_1000": 326776,
+          "retained_by_a_warm_singleton_cache_of_1000": 397560,
+          "retained_by_an_open_scope_of_20": 10624
+        },
+        "scaling": {
+          "scale_async_teardown": {
+            "costs": [
+              0.00020347213671811915,
+              0.0002680779530237487,
+              0.00046182408595996094
+            ],
+            "sizes": [
+              10,
+              20,
+              40
+            ]
+          },
+          "scale_freeze_graph_size": {
+            "costs": [
+              0.0036731891887029633,
+              0.007227621623314917,
+              0.014599302492570132
+            ],
+            "sizes": [
+              100,
+              200,
+              400
+            ]
+          },
+          "scale_override_nesting": {
+            "costs": [
+              2.364816955591209e-06,
+              3.964753965135515e-06,
+              1.0647137081321034e-05
+            ],
+            "sizes": [
+              8,
+              32,
+              128
+            ]
+          },
+          "scale_resolve_collection": {
+            "costs": [
+              2.4222101799864504e-05,
+              0.00019199865823793516,
+              0.0003886983436132141
+            ],
+            "sizes": [
+              10,
+              100,
+              200
+            ]
+          },
+          "scale_resolve_fan_out": {
+            "costs": [
+              1.9524508786616934e-05,
+              3.845251316647591e-05,
+              7.32007744090879e-05
+            ],
+            "sizes": [
+              10,
+              20,
+              40
+            ]
+          },
+          "scale_resolve_transient_depth": {
+            "costs": [
+              3.887691345738631e-06,
+              1.0866523197705646e-05,
+              4.493664405913478e-05
+            ],
+            "sizes": [
+              10,
+              40,
+              160
+            ]
+          },
+          "scale_scope_teardown": {
+            "costs": [
+              0.00010263139461130777,
+              0.0001851951171829569,
+              0.00034845112872972095
+            ],
+            "sizes": [
+              10,
+              20,
+              40
+            ]
+          }
+        },
+        "work": {
+          "allocations_of_a_cached_singleton_resolution": 8,
+          "allocations_of_a_request_shaped_scope": 88,
+          "allocations_of_a_scope_cycle": 358,
+          "allocations_of_a_transient_chain": 28,
+          "allocations_of_an_inject_call": 28
+        }
+      },
+      "source_revision": "4ea1475bd0110b2b7824431d80672eda10059fba"
+    }
+  },
+  "environment": {
+    "distributions": {
+      "pydepin": "0.18.0",
+      "pytest": "9.1.1",
+      "pytest-benchmark": "5.3.0"
+    },
+    "host": {
+      "available_processors": 4,
+      "cpu_model": "Intel(R) Xeon(R) CPU E5-2683 v4 @ 2.10GHz",
+      "load_average": [
+        2.67,
+        2.72,
+        3.96
+      ],
+      "machine": "x86_64",
+      "processor": "x86_64",
+      "processors": 4,
+      "release": "6.8.0-138-generic",
+      "system": "Linux"
+    },
+    "interpreter": {
+      "compiler": "Clang 22.1.3 ",
+      "free_threading": false,
+      "hash_randomization": true,
+      "implementation": "CPython",
+      "recursion_limit": 1000,
+      "version": "3.12.13"
+    },
+    "python_hash_seed": "0"
+  },
+  "harness_revision": "4ea1475bd0110b2b7824431d80672eda10059fba",
+  "pins": {
+    "dependency-injector": "4.49.1",
+    "dishka": "1.10.1",
+    "pydepin": "0.18.0",
+    "svcs": "26.2.0",
+    "wireup": "2.12.0"
+  },
+  "protocol": "counterbalanced-comparison-v1",
+  "repetitions": [
+    {
+      "duration": 55.96111305395607,
+      "medians": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": 5.640031304210424e-06,
+        "test_comparison[call_through_an_inject_wrapper-direct]": 5.7390425354242325e-06,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": 6.845977623015642e-06,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": 6.869027856737375e-06,
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": 5.836016498506069e-06,
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": 5.779031198471785e-06,
+        "test_comparison[fastapi_application_startup-depin]": 0.00253871051245369,
+        "test_comparison[fastapi_application_startup-direct]": 0.0025282350252382457,
+        "test_comparison[fastapi_async_resource_teardown-depin]": 0.0006058530416339636,
+        "test_comparison[fastapi_async_resource_teardown-direct]": 0.0006083769840188324,
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": 0.0005508979666046798,
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": 0.0005590130458585918,
+        "test_comparison[fastapi_endpoint_with_work-depin]": 0.0008250179816968739,
+        "test_comparison[fastapi_endpoint_with_work-direct]": 0.0008209429797716439,
+        "test_comparison[fastapi_request_scoped_graph-depin]": 0.0006048314971849322,
+        "test_comparison[fastapi_request_scoped_graph-direct]": 0.0006025200127623975,
+        "test_comparison[fastapi_singletons_and_transients-depin]": 0.0005698769818991423,
+        "test_comparison[fastapi_singletons_and_transients-direct]": 0.0005748585099354386,
+        "test_comparison[open_a_request_shaped_scope-depin]": 2.6078952942043543e-05,
+        "test_comparison[open_a_request_shaped_scope-direct]": 2.6596011593937874e-05,
+        "test_comparison[open_and_close_a_scope-depin]": 0.0001906990073621273,
+        "test_comparison[open_and_close_a_scope-direct]": 0.00018809453467838466,
+        "test_comparison[resolve_a_collection_of_10-depin]": 1.9181985408067703e-05,
+        "test_comparison[resolve_a_collection_of_10-direct]": 1.9422033801674843e-05,
+        "test_comparison[resolve_a_collection_of_100-depin]": 0.00013731204671785235,
+        "test_comparison[resolve_a_collection_of_100-direct]": 0.00013855096767656505,
+        "test_comparison[resolve_a_generic_key-depin]": 6.059999577701092e-06,
+        "test_comparison[resolve_a_generic_key-direct]": 6.071990355849266e-06,
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": 1.5497033018618822e-05,
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": 1.4829973224550486e-05,
+        "test_comparison[resolve_a_transient_chain-depin]": 4.614994395524263e-06,
+        "test_comparison[resolve_a_transient_chain-direct]": 4.664994776248932e-06,
+        "test_comparison[resolve_an_async_singleton-depin]": 1.703202724456787e-05,
+        "test_comparison[resolve_an_async_singleton-direct]": 1.687603071331978e-05,
+        "test_comparison[resolve_cached_singleton-depin]": 1.929991412907839e-06,
+        "test_comparison[resolve_cached_singleton-direct]": 1.907988917082548e-06,
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": 3.910972736775875e-06,
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": 3.930996172130108e-06,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": 1.929991412907839e-06,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": 1.894019078463316e-06,
+        "test_comparison[resolve_through_an_active_override-depin]": 4.047004040330648e-06,
+        "test_comparison[resolve_through_an_active_override-direct]": 3.980996552854776e-06,
+        "test_comparison[resolve_with_no_active_override-depin]": 1.8669525161385536e-06,
+        "test_comparison[resolve_with_no_active_override-direct]": 1.8929713405668736e-06,
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": 0.011359120981069282,
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": 0.011323551996611059
+      },
+      "order": "forward",
+      "rounds": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": 42354,
+        "test_comparison[call_through_an_inject_wrapper-direct]": 27825,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": 50536,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": 56288,
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": 51621,
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": 58932,
+        "test_comparison[fastapi_application_startup-depin]": 1000,
+        "test_comparison[fastapi_application_startup-direct]": 1000,
+        "test_comparison[fastapi_async_resource_teardown-depin]": 1591,
+        "test_comparison[fastapi_async_resource_teardown-direct]": 1491,
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": 1438,
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": 1795,
+        "test_comparison[fastapi_endpoint_with_work-depin]": 1101,
+        "test_comparison[fastapi_endpoint_with_work-direct]": 1175,
+        "test_comparison[fastapi_request_scoped_graph-depin]": 1542,
+        "test_comparison[fastapi_request_scoped_graph-direct]": 1485,
+        "test_comparison[fastapi_singletons_and_transients-depin]": 1701,
+        "test_comparison[fastapi_singletons_and_transients-direct]": 1606,
+        "test_comparison[open_a_request_shaped_scope-depin]": 13569,
+        "test_comparison[open_a_request_shaped_scope-direct]": 17383,
+        "test_comparison[open_and_close_a_scope-depin]": 1000,
+        "test_comparison[open_and_close_a_scope-direct]": 3708,
+        "test_comparison[resolve_a_collection_of_10-depin]": 27804,
+        "test_comparison[resolve_a_collection_of_10-direct]": 29373,
+        "test_comparison[resolve_a_collection_of_100-depin]": 6599,
+        "test_comparison[resolve_a_collection_of_100-direct]": 5378,
+        "test_comparison[resolve_a_generic_key-depin]": 59784,
+        "test_comparison[resolve_a_generic_key-direct]": 63493,
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": 13371,
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": 20897,
+        "test_comparison[resolve_a_transient_chain-depin]": 61373,
+        "test_comparison[resolve_a_transient_chain-direct]": 66384,
+        "test_comparison[resolve_an_async_singleton-depin]": 18215,
+        "test_comparison[resolve_an_async_singleton-direct]": 21089,
+        "test_comparison[resolve_cached_singleton-depin]": 114772,
+        "test_comparison[resolve_cached_singleton-direct]": 25022,
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": 70369,
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": 77586,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": 125110,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": 122190,
+        "test_comparison[resolve_through_an_active_override-depin]": 84962,
+        "test_comparison[resolve_through_an_active_override-direct]": 102208,
+        "test_comparison[resolve_with_no_active_override-depin]": 150717,
+        "test_comparison[resolve_with_no_active_override-direct]": 160592,
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": 1000,
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": 1000
+      },
+      "samples": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": {
+          "iqr": 2.2299354895949364e-07,
+          "mean": 5.903544873798272e-06,
+          "median": 5.640031304210424e-06,
+          "minimum": 4.862027708441019e-06,
+          "p95": 5.887995939701796e-06,
+          "p99": 2.0038392976857727e-05,
+          "rounds": 42354,
+          "stddev": 2.7866491335429942e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper-direct]": {
+          "iqr": 8.300412446260452e-08,
+          "mean": 5.958113837769625e-06,
+          "median": 5.7390425354242325e-06,
+          "minimum": 4.851026460528374e-06,
+          "p95": 5.88403781875968e-06,
+          "p99": 1.2758360244333733e-05,
+          "rounds": 27825,
+          "stddev": 2.4093441200405592e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": {
+          "iqr": 4.559406079351902e-07,
+          "mean": 7.093929848950683e-06,
+          "median": 6.845977623015642e-06,
+          "minimum": 5.809997674077749e-06,
+          "p95": 7.13299959897995e-06,
+          "p99": 2.176664129365236e-05,
+          "rounds": 50536,
+          "stddev": 4.020620038747801e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": {
+          "iqr": 2.0797597244381905e-07,
+          "mean": 7.250986362194866e-06,
+          "median": 6.869027856737375e-06,
+          "minimum": 5.812966264784336e-06,
+          "p95": 7.099995855242014e-06,
+          "p99": 2.2224034182727337e-05,
+          "rounds": 56288,
+          "stddev": 4.630456336960464e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": {
+          "iqr": 1.7898855730891228e-07,
+          "mean": 6.061254668197401e-06,
+          "median": 5.836016498506069e-06,
+          "minimum": 4.8800138756632805e-06,
+          "p95": 6.064015906304121e-06,
+          "p99": 2.0228407811373494e-05,
+          "rounds": 51621,
+          "stddev": 2.6841564888772066e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": {
+          "iqr": 4.0297163650393486e-07,
+          "mean": 6.063165719077122e-06,
+          "median": 5.779031198471785e-06,
+          "minimum": 4.874018486589193e-06,
+          "p95": 6.090034730732441e-06,
+          "p99": 2.1077172714285566e-05,
+          "rounds": 58932,
+          "stddev": 3.6937642909864876e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[fastapi_application_startup-depin]": {
+          "cpu": 2688047.0,
+          "iqr": 0.0002441899850964546,
+          "mean": 0.002794426540262066,
+          "median": 0.00253871051245369,
+          "minimum": 0.0021234849700704217,
+          "p95": 0.00340194427408278,
+          "p99": 0.004035923733608797,
+          "rounds": 1000,
+          "stddev": 0.004297163856919911,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_application_startup-direct]": {
+          "cpu": 2551235.0,
+          "iqr": 0.00025033848942257464,
+          "mean": 0.0028281882570590825,
+          "median": 0.0025282350252382457,
+          "minimum": 0.0022197060170583427,
+          "p95": 0.0029165372310671956,
+          "p99": 0.0041186467959778384,
+          "rounds": 1000,
+          "stddev": 0.004915329441014803,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_async_resource_teardown-depin]": {
+          "cpu": 606669.0,
+          "iqr": 4.571197496261448e-05,
+          "mean": 0.0006123660351070713,
+          "median": 0.0006058530416339636,
+          "minimum": 0.0005174549878574908,
+          "p95": 0.0006736454670317471,
+          "p99": 0.0008693245472386479,
+          "rounds": 1591,
+          "stddev": 5.580919208127637e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_async_resource_teardown-direct]": {
+          "cpu": 561415.0,
+          "iqr": 4.820401954930276e-05,
+          "mean": 0.0006132996700829648,
+          "median": 0.0006083769840188324,
+          "minimum": 0.0005169499781914055,
+          "p95": 0.0006827104953117669,
+          "p99": 0.0008608011528849601,
+          "rounds": 1491,
+          "stddev": 5.59586325976078e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": {
+          "cpu": 549435.0,
+          "iqr": 3.8814032450318336e-05,
+          "mean": 0.0005580017920220802,
+          "median": 0.0005508979666046798,
+          "minimum": 0.0004685079911723733,
+          "p95": 0.0006177693838253617,
+          "p99": 0.0007711396715603769,
+          "rounds": 1438,
+          "stddev": 7.168313382460964e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": {
+          "cpu": 584556.0,
+          "iqr": 4.3413019739091396e-05,
+          "mean": 0.0005654765670460163,
+          "median": 0.0005590130458585918,
+          "minimum": 0.0004720470169559121,
+          "p95": 0.0006317613995634019,
+          "p99": 0.0007932764152064919,
+          "rounds": 1795,
+          "stddev": 5.303303930002137e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_endpoint_with_work-depin]": {
+          "cpu": 797108.0,
+          "iqr": 5.878924275748432e-05,
+          "mean": 0.0008272888971772637,
+          "median": 0.0008250179816968739,
+          "minimum": 0.0006986829685047269,
+          "p95": 0.0009032710222527385,
+          "p99": 0.0010777040151879191,
+          "rounds": 1101,
+          "stddev": 6.126158785951577e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_endpoint_with_work-direct]": {
+          "cpu": 843648.0,
+          "iqr": 3.613501030486077e-05,
+          "mean": 0.0008292165977702021,
+          "median": 0.0008209429797716439,
+          "minimum": 0.0007143399561755359,
+          "p95": 0.0008960276842117309,
+          "p99": 0.001078627579845488,
+          "rounds": 1175,
+          "stddev": 5.3989347705344566e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_request_scoped_graph-depin]": {
+          "cpu": 651601.0,
+          "iqr": 5.014502676203847e-05,
+          "mean": 0.0006091959303623637,
+          "median": 0.0006048314971849322,
+          "minimum": 0.0005118639674037695,
+          "p95": 0.0006738551426678896,
+          "p99": 0.0008407976868329567,
+          "rounds": 1542,
+          "stddev": 5.4982572417037316e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_request_scoped_graph-direct]": {
+          "cpu": 546114.0,
+          "iqr": 5.639974551741034e-05,
+          "mean": 0.0006066550723330341,
+          "median": 0.0006025200127623975,
+          "minimum": 0.0005131379584781826,
+          "p95": 0.0006836708053015172,
+          "p99": 0.0008491609129123393,
+          "rounds": 1485,
+          "stddev": 5.642255762046601e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_singletons_and_transients-depin]": {
+          "cpu": 568591.0,
+          "iqr": 4.7428751713596284e-05,
+          "mean": 0.0005769290944078455,
+          "median": 0.0005698769818991423,
+          "minimum": 0.0004857830354012549,
+          "p95": 0.0006437650299631059,
+          "p99": 0.0008012930047698319,
+          "rounds": 1701,
+          "stddev": 5.161813367662444e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_singletons_and_transients-direct]": {
+          "cpu": 628416.0,
+          "iqr": 4.258501576259732e-05,
+          "mean": 0.0005802588839536814,
+          "median": 0.0005748585099354386,
+          "minimum": 0.0004907849943265319,
+          "p95": 0.0006409002526197582,
+          "p99": 0.0008135337237035856,
+          "rounds": 1606,
+          "stddev": 5.227298605434701e-05,
+          "tier": "application"
+        },
+        "test_comparison[open_a_request_shaped_scope-depin]": {
+          "iqr": 2.931992639787495e-06,
+          "mean": 2.800204001865527e-05,
+          "median": 2.6078952942043543e-05,
+          "minimum": 2.3247965145856142e-05,
+          "p95": 4.2223162017762656e-05,
+          "p99": 5.7847101707011455e-05,
+          "rounds": 13569,
+          "stddev": 6.94849504926416e-06,
+          "tier": "component"
+        },
+        "test_comparison[open_a_request_shaped_scope-direct]": {
+          "iqr": 1.8477439880371094e-06,
+          "mean": 2.787626524743177e-05,
+          "median": 2.6596011593937874e-05,
+          "minimum": 2.317002508789301e-05,
+          "p95": 4.177093505859375e-05,
+          "p99": 5.689261830411852e-05,
+          "rounds": 17383,
+          "stddev": 6.170617447860027e-06,
+          "tier": "component"
+        },
+        "test_comparison[open_and_close_a_scope-depin]": {
+          "iqr": 1.2921489542350173e-05,
+          "mean": 0.0001995003228657879,
+          "median": 0.0001906990073621273,
+          "minimum": 0.00017918896628543735,
+          "p95": 0.00024543195904698224,
+          "p99": 0.00029751407739240674,
+          "rounds": 1000,
+          "stddev": 2.248140652537729e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[open_and_close_a_scope-direct]": {
+          "iqr": 1.399798202328384e-05,
+          "mean": 0.00019806054331417,
+          "median": 0.00018809453467838466,
+          "minimum": 0.00016377598512917757,
+          "p95": 0.0002434317575534805,
+          "p99": 0.0003121971088694406,
+          "rounds": 3708,
+          "stddev": 3.527210874859579e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_10-depin]": {
+          "iqr": 3.5899574868381023e-07,
+          "mean": 1.99219799037005e-05,
+          "median": 1.9181985408067703e-05,
+          "minimum": 1.6425037756562233e-05,
+          "p95": 2.320593921467661e-05,
+          "p99": 3.5453635500744e-05,
+          "rounds": 27804,
+          "stddev": 6.021400982466525e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_10-direct]": {
+          "iqr": 6.919726729393005e-07,
+          "mean": 2.020402947830483e-05,
+          "median": 1.9422033801674843e-05,
+          "minimum": 1.661700662225485e-05,
+          "p95": 2.5007198564708227e-05,
+          "p99": 3.602205775678156e-05,
+          "rounds": 29373,
+          "stddev": 1.2073106738787276e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_100-depin]": {
+          "iqr": 7.415699656121433e-06,
+          "mean": 0.00014222639883542526,
+          "median": 0.00013731204671785235,
+          "minimum": 0.00011845101835206151,
+          "p95": 0.00016254212241619822,
+          "p99": 0.00021304890629835418,
+          "rounds": 6599,
+          "stddev": 2.4171518538475673e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_100-direct]": {
+          "iqr": 9.425973985344172e-06,
+          "mean": 0.0001426874121280291,
+          "median": 0.00013855096767656505,
+          "minimum": 0.00011922902194783092,
+          "p95": 0.000164140056585893,
+          "p99": 0.00018836366303730728,
+          "rounds": 5378,
+          "stddev": 1.479240347494913e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_generic_key-depin]": {
+          "iqr": 1.6507692635059357e-07,
+          "mean": 6.27670565457398e-06,
+          "median": 6.059999577701092e-06,
+          "minimum": 5.0889793783426285e-06,
+          "p95": 6.3219922594726086e-06,
+          "p99": 1.734866469632816e-05,
+          "rounds": 59784,
+          "stddev": 2.5444160336267567e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_generic_key-direct]": {
+          "iqr": 1.5797559171915054e-07,
+          "mean": 6.271068446702005e-06,
+          "median": 6.071990355849266e-06,
+          "minimum": 5.172973033040762e-06,
+          "p95": 6.299000233411789e-06,
+          "p99": 1.2487131170928504e-05,
+          "rounds": 63493,
+          "stddev": 2.654474437785824e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": {
+          "iqr": 6.757181836292148e-07,
+          "mean": 1.6780061900029775e-05,
+          "median": 1.5497033018618822e-05,
+          "minimum": 1.3594981282949448e-05,
+          "p95": 3.0038499971851707e-05,
+          "p99": 4.373621777631319e-05,
+          "rounds": 13371,
+          "stddev": 1.0702289237413092e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": {
+          "iqr": 1.424996298737824e-06,
+          "mean": 1.608383842291709e-05,
+          "median": 1.4829973224550486e-05,
+          "minimum": 1.3370008673518896e-05,
+          "p95": 2.9844196978956462e-05,
+          "p99": 4.392440896481277e-05,
+          "rounds": 20897,
+          "stddev": 5.651301970740799e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_transient_chain-depin]": {
+          "iqr": 1.00000761449337e-07,
+          "mean": 4.764604082097461e-06,
+          "median": 4.614994395524263e-06,
+          "minimum": 3.904977347701788e-06,
+          "p95": 4.733970854431391e-06,
+          "p99": 1.2673360761255012e-05,
+          "rounds": 61373,
+          "stddev": 2.4659075988864147e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_transient_chain-direct]": {
+          "iqr": 8.300412446260452e-08,
+          "mean": 4.81839201328891e-06,
+          "median": 4.664994776248932e-06,
+          "minimum": 4.196015652269125e-06,
+          "p95": 4.78298170492053e-06,
+          "p99": 9.970407118089482e-06,
+          "rounds": 66384,
+          "stddev": 2.538586614612164e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_an_async_singleton-depin]": {
+          "iqr": 7.220078259706497e-07,
+          "mean": 1.8189606681668574e-05,
+          "median": 1.703202724456787e-05,
+          "minimum": 1.475098542869091e-05,
+          "p95": 3.1373294768854974e-05,
+          "p99": 3.932612831704327e-05,
+          "rounds": 18215,
+          "stddev": 5.882328513253686e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_an_async_singleton-direct]": {
+          "iqr": 5.220063030719757e-07,
+          "mean": 1.787525466484513e-05,
+          "median": 1.687603071331978e-05,
+          "minimum": 1.4430028386414051e-05,
+          "p95": 2.634582342579959e-05,
+          "p99": 3.511503804475058e-05,
+          "rounds": 21089,
+          "stddev": 5.818605416236104e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton-depin]": {
+          "iqr": 4.4994521886110306e-08,
+          "mean": 1.9997933763083403e-06,
+          "median": 1.929991412907839e-06,
+          "minimum": 1.6140402294695377e-06,
+          "p95": 1.9849976524710655e-06,
+          "p99": 2.1510059013962746e-06,
+          "rounds": 114772,
+          "stddev": 1.7245347349960256e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton-direct]": {
+          "iqr": 9.69739630818367e-08,
+          "mean": 2.068211800930869e-06,
+          "median": 1.907988917082548e-06,
+          "minimum": 1.5909899957478046e-06,
+          "p95": 1.999025698751211e-06,
+          "p99": 4.284526803530796e-06,
+          "rounds": 25022,
+          "stddev": 2.2533464767812953e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": {
+          "iqr": 1.3498356565833092e-07,
+          "mean": 4.1190933561131925e-06,
+          "median": 3.910972736775875e-06,
+          "minimum": 3.288034349679947e-06,
+          "p95": 4.028028342872858e-06,
+          "p99": 1.573431305587291e-05,
+          "rounds": 70369,
+          "stddev": 2.9464443105020274e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": {
+          "iqr": 9.097857400774956e-08,
+          "mean": 4.087732326892303e-06,
+          "median": 3.930996172130108e-06,
+          "minimum": 3.3269752748310566e-06,
+          "p95": 4.041008651256561e-06,
+          "p99": 9.543981286696782e-06,
+          "rounds": 77586,
+          "stddev": 1.988953023799242e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": {
+          "iqr": 5.704350769519806e-08,
+          "mean": 2.0193557332239105e-06,
+          "median": 1.929991412907839e-06,
+          "minimum": 1.6230042092502117e-06,
+          "p95": 2.002983819693327e-06,
+          "p99": 2.273998688906431e-06,
+          "rounds": 125110,
+          "stddev": 2.43346509823964e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": {
+          "iqr": 4.604225978255272e-08,
+          "mean": 2.0113318634318324e-06,
+          "median": 1.894019078463316e-06,
+          "minimum": 1.5980331227183342e-06,
+          "p95": 1.962005626410246e-06,
+          "p99": 2.2581522352993494e-06,
+          "rounds": 122190,
+          "stddev": 5.63615009376509e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_through_an_active_override-depin]": {
+          "iqr": 5.4016709327697754e-08,
+          "mean": 4.143432991522437e-06,
+          "median": 4.047004040330648e-06,
+          "minimum": 3.700028173625469e-06,
+          "p95": 4.127039574086666e-06,
+          "p99": 4.891015123575926e-06,
+          "rounds": 84962,
+          "stddev": 1.5696223566483588e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_through_an_active_override-direct]": {
+          "iqr": 8.102506399154663e-08,
+          "mean": 4.242149281244832e-06,
+          "median": 3.980996552854776e-06,
+          "minimum": 3.4009572118520737e-06,
+          "p95": 4.09100903198123e-06,
+          "p99": 9.624639642424847e-06,
+          "rounds": 102208,
+          "stddev": 8.76515390671359e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_with_no_active_override-depin]": {
+          "iqr": 8.102506399154663e-08,
+          "mean": 1.938827328264885e-06,
+          "median": 1.8669525161385536e-06,
+          "minimum": 1.5649711713194847e-06,
+          "p95": 1.9400031305849552e-06,
+          "p99": 2.1979794837534428e-06,
+          "rounds": 150717,
+          "stddev": 1.6163117253561962e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_with_no_active_override-direct]": {
+          "iqr": 5.4016709327697754e-08,
+          "mean": 1.9741189914320205e-06,
+          "median": 1.8929713405668736e-06,
+          "minimum": 1.5789992175996304e-06,
+          "p95": 1.962995156645775e-06,
+          "p99": 2.232030965387821e-06,
+          "rounds": 160592,
+          "stddev": 1.5158297623493595e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": {
+          "iqr": 0.00035902700619772077,
+          "mean": 0.014511963596567512,
+          "median": 0.011359120981069282,
+          "minimum": 0.010400981002021581,
+          "p95": 0.012109334551496431,
+          "p99": 0.09695074721472338,
+          "rounds": 1000,
+          "stddev": 0.01601834542235092,
+          "tier": "component"
+        },
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": {
+          "iqr": 0.0004131419991608709,
+          "mean": 0.01454130018147407,
+          "median": 0.011323551996611059,
+          "minimum": 0.010266695986501873,
+          "p95": 0.012010952024138532,
+          "p99": 0.09673380443826318,
+          "rounds": 1000,
+          "stddev": 0.01622935748504318,
+          "tier": "component"
+        }
+      }
+    },
+    {
+      "duration": 53.11340478830971,
+      "medians": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": 5.7879951782524586e-06,
+        "test_comparison[call_through_an_inject_wrapper-direct]": 5.698006134480238e-06,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": 6.806978490203619e-06,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": 6.627989932894707e-06,
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": 5.634035915136337e-06,
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": 5.885027348995209e-06,
+        "test_comparison[fastapi_application_startup-depin]": 0.002467254496878013,
+        "test_comparison[fastapi_application_startup-direct]": 0.0024703275121282786,
+        "test_comparison[fastapi_async_resource_teardown-depin]": 0.0006033590179868042,
+        "test_comparison[fastapi_async_resource_teardown-direct]": 0.0005967869947198778,
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": 0.0005396130145527422,
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": 0.000537881045602262,
+        "test_comparison[fastapi_endpoint_with_work-depin]": 0.0008097325044218451,
+        "test_comparison[fastapi_endpoint_with_work-direct]": 0.0008101974963210523,
+        "test_comparison[fastapi_request_scoped_graph-depin]": 0.0005908129969611764,
+        "test_comparison[fastapi_request_scoped_graph-direct]": 0.0005890504980925471,
+        "test_comparison[fastapi_singletons_and_transients-depin]": 0.0005852024769410491,
+        "test_comparison[fastapi_singletons_and_transients-direct]": 0.0005789024871774018,
+        "test_comparison[open_a_request_shaped_scope-depin]": 2.7662987122312188e-05,
+        "test_comparison[open_a_request_shaped_scope-direct]": 2.717797178775072e-05,
+        "test_comparison[open_and_close_a_scope-depin]": 0.00019284849986433983,
+        "test_comparison[open_and_close_a_scope-direct]": 0.0001929930003825575,
+        "test_comparison[resolve_a_collection_of_10-depin]": 1.912197330966592e-05,
+        "test_comparison[resolve_a_collection_of_10-direct]": 1.886900281533599e-05,
+        "test_comparison[resolve_a_collection_of_100-depin]": 0.00013651500921696424,
+        "test_comparison[resolve_a_collection_of_100-direct]": 0.00013582699466496706,
+        "test_comparison[resolve_a_generic_key-depin]": 5.8559817261993885e-06,
+        "test_comparison[resolve_a_generic_key-direct]": 6.094982381910086e-06,
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": 1.5555997379124165e-05,
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": 1.525948755443096e-05,
+        "test_comparison[resolve_a_transient_chain-depin]": 4.677975084632635e-06,
+        "test_comparison[resolve_a_transient_chain-direct]": 4.569010343402624e-06,
+        "test_comparison[resolve_an_async_singleton-depin]": 1.6606994904577732e-05,
+        "test_comparison[resolve_an_async_singleton-direct]": 1.666403841227293e-05,
+        "test_comparison[resolve_cached_singleton-depin]": 1.8790015019476414e-06,
+        "test_comparison[resolve_cached_singleton-direct]": 1.8360442481935024e-06,
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": 3.71196074411273e-06,
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": 3.8130092434585094e-06,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": 1.8500140868127346e-06,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": 1.91305298358202e-06,
+        "test_comparison[resolve_through_an_active_override-depin]": 3.9539881981909275e-06,
+        "test_comparison[resolve_through_an_active_override-direct]": 3.898981958627701e-06,
+        "test_comparison[resolve_with_no_active_override-depin]": 1.7980346456170082e-06,
+        "test_comparison[resolve_with_no_active_override-direct]": 1.7999554984271526e-06,
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": 0.011335402494296432,
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": 0.011296267010038719
+      },
+      "order": "reverse",
+      "rounds": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": 60758,
+        "test_comparison[call_through_an_inject_wrapper-direct]": 57684,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": 54900,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": 40261,
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": 28024,
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": 51000,
+        "test_comparison[fastapi_application_startup-depin]": 1000,
+        "test_comparison[fastapi_application_startup-direct]": 1000,
+        "test_comparison[fastapi_async_resource_teardown-depin]": 1519,
+        "test_comparison[fastapi_async_resource_teardown-direct]": 1584,
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": 1873,
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": 1769,
+        "test_comparison[fastapi_endpoint_with_work-depin]": 1202,
+        "test_comparison[fastapi_endpoint_with_work-direct]": 1002,
+        "test_comparison[fastapi_request_scoped_graph-depin]": 1477,
+        "test_comparison[fastapi_request_scoped_graph-direct]": 1650,
+        "test_comparison[fastapi_singletons_and_transients-depin]": 1608,
+        "test_comparison[fastapi_singletons_and_transients-direct]": 1654,
+        "test_comparison[open_a_request_shaped_scope-depin]": 14882,
+        "test_comparison[open_a_request_shaped_scope-direct]": 12145,
+        "test_comparison[open_and_close_a_scope-depin]": 1762,
+        "test_comparison[open_and_close_a_scope-direct]": 3046,
+        "test_comparison[resolve_a_collection_of_10-depin]": 1121,
+        "test_comparison[resolve_a_collection_of_10-direct]": 32631,
+        "test_comparison[resolve_a_collection_of_100-depin]": 6347,
+        "test_comparison[resolve_a_collection_of_100-direct]": 5326,
+        "test_comparison[resolve_a_generic_key-depin]": 32143,
+        "test_comparison[resolve_a_generic_key-direct]": 64772,
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": 19313,
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": 12900,
+        "test_comparison[resolve_a_transient_chain-depin]": 67995,
+        "test_comparison[resolve_a_transient_chain-direct]": 58258,
+        "test_comparison[resolve_an_async_singleton-depin]": 17997,
+        "test_comparison[resolve_an_async_singleton-direct]": 25166,
+        "test_comparison[resolve_cached_singleton-depin]": 133763,
+        "test_comparison[resolve_cached_singleton-direct]": 116374,
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": 88215,
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": 68564,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": 109470,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": 88763,
+        "test_comparison[resolve_through_an_active_override-depin]": 103062,
+        "test_comparison[resolve_through_an_active_override-direct]": 77961,
+        "test_comparison[resolve_with_no_active_override-depin]": 166335,
+        "test_comparison[resolve_with_no_active_override-direct]": 155352,
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": 1000,
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": 1000
+      },
+      "samples": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": {
+          "iqr": 1.3702083379030228e-07,
+          "mean": 6.145126655061204e-06,
+          "median": 5.7879951782524586e-06,
+          "minimum": 4.893983714282513e-06,
+          "p95": 5.962967406958342e-06,
+          "p99": 1.851756183896214e-05,
+          "rounds": 60758,
+          "stddev": 1.364575035966912e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper-direct]": {
+          "iqr": 8.405186235904694e-08,
+          "mean": 5.987781144915411e-06,
+          "median": 5.698006134480238e-06,
+          "minimum": 4.845962394028902e-06,
+          "p95": 5.843001417815685e-06,
+          "p99": 1.2458179262466726e-05,
+          "rounds": 57684,
+          "stddev": 5.3667730635478e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": {
+          "iqr": 2.2904714569449425e-07,
+          "mean": 7.448470141935435e-06,
+          "median": 6.806978490203619e-06,
+          "minimum": 5.8130244724452496e-06,
+          "p95": 7.028985419310629e-06,
+          "p99": 2.1862002904526895e-05,
+          "rounds": 54900,
+          "stddev": 1.9099026942391892e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": {
+          "iqr": 3.1205127015709877e-07,
+          "mean": 7.239640809111938e-06,
+          "median": 6.627989932894707e-06,
+          "minimum": 5.695968866348267e-06,
+          "p95": 7.884984370321035e-06,
+          "p99": 2.2033182904124278e-05,
+          "rounds": 40261,
+          "stddev": 5.509113017972821e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": {
+          "iqr": 2.2095628082752228e-07,
+          "mean": 5.8822854366666595e-06,
+          "median": 5.634035915136337e-06,
+          "minimum": 4.896020982414484e-06,
+          "p95": 5.914806388318537e-06,
+          "p99": 1.8329555750824524e-05,
+          "rounds": 28024,
+          "stddev": 1.9215381776620478e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": {
+          "iqr": 1.650187186896801e-07,
+          "mean": 6.0595903356157825e-06,
+          "median": 5.885027348995209e-06,
+          "minimum": 4.959991201758385e-06,
+          "p95": 6.0979538829997175e-06,
+          "p99": 1.5265397378243582e-05,
+          "rounds": 51000,
+          "stddev": 1.873856132090062e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[fastapi_application_startup-depin]": {
+          "cpu": 2394470.0,
+          "iqr": 0.00024611796834506094,
+          "mean": 0.002691581764956936,
+          "median": 0.002467254496878013,
+          "minimum": 0.0021545860217884183,
+          "p95": 0.0027925065194722262,
+          "p99": 0.004031174930860288,
+          "rounds": 1000,
+          "stddev": 0.0031486364360205515,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_application_startup-direct]": {
+          "cpu": 2707079.0,
+          "iqr": 0.0002203849726356566,
+          "mean": 0.0026534034095238896,
+          "median": 0.0024703275121282786,
+          "minimum": 0.00204330199630931,
+          "p95": 0.0031790076231118275,
+          "p99": 0.0038836100115440778,
+          "rounds": 1000,
+          "stddev": 0.0026483944723069857,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_async_resource_teardown-depin]": {
+          "cpu": 601029.0,
+          "iqr": 3.2761236070655286e-05,
+          "mean": 0.000611907870501373,
+          "median": 0.0006033590179868042,
+          "minimum": 0.0005197279970161617,
+          "p95": 0.0006674292322713882,
+          "p99": 0.0008834266150370239,
+          "rounds": 1519,
+          "stddev": 5.620988242214839e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_async_resource_teardown-direct]": {
+          "cpu": 595135.0,
+          "iqr": 3.806696622632444e-05,
+          "mean": 0.0006047603587509424,
+          "median": 0.0005967869947198778,
+          "minimum": 0.000506561016663909,
+          "p95": 0.0006632665463257581,
+          "p99": 0.0008886452583828942,
+          "rounds": 1584,
+          "stddev": 5.767228783354393e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": {
+          "cpu": 532574.0,
+          "iqr": 3.071024548262358e-05,
+          "mean": 0.0005488572152429924,
+          "median": 0.0005396130145527422,
+          "minimum": 0.0004586289869621396,
+          "p95": 0.0005962195922620591,
+          "p99": 0.0007994987349957228,
+          "rounds": 1873,
+          "stddev": 7.368453399183843e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": {
+          "cpu": 574670.0,
+          "iqr": 4.359173181001097e-05,
+          "mean": 0.0005438087681553723,
+          "median": 0.000537881045602262,
+          "minimum": 0.0004561610403470695,
+          "p95": 0.0006038519903086124,
+          "p99": 0.0008011605334468186,
+          "rounds": 1769,
+          "stddev": 5.366448203674656e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_endpoint_with_work-depin]": {
+          "cpu": 793264.0,
+          "iqr": 3.433600068092346e-05,
+          "mean": 0.0008180712737311948,
+          "median": 0.0008097325044218451,
+          "minimum": 0.0006923920009285212,
+          "p95": 0.0008825083146803081,
+          "p99": 0.0010919296671636403,
+          "rounds": 1202,
+          "stddev": 6.232667089135628e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_endpoint_with_work-direct]": {
+          "cpu": 803932.0,
+          "iqr": 3.0384922865778208e-05,
+          "mean": 0.0008204545273966976,
+          "median": 0.0008101974963210523,
+          "minimum": 0.000692230009008199,
+          "p95": 0.0008750460518058388,
+          "p99": 0.001077811173745431,
+          "rounds": 1002,
+          "stddev": 8.25251057419547e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_request_scoped_graph-depin]": {
+          "cpu": 588780.0,
+          "iqr": 2.7657501050271094e-05,
+          "mean": 0.0005995122973252902,
+          "median": 0.0005908129969611764,
+          "minimum": 0.0004977700300514698,
+          "p95": 0.0006469927961006761,
+          "p99": 0.0008550474117510021,
+          "rounds": 1477,
+          "stddev": 4.9461106348238206e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_request_scoped_graph-direct]": {
+          "cpu": 594342.0,
+          "iqr": 3.383401781320572e-05,
+          "mean": 0.0006490884883907822,
+          "median": 0.0005890504980925471,
+          "minimum": 0.000500991998706013,
+          "p95": 0.0006526446581119671,
+          "p99": 0.0008545946015510708,
+          "rounds": 1650,
+          "stddev": 0.002113765006918396,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_singletons_and_transients-depin]": {
+          "cpu": 574424.0,
+          "iqr": 3.79490084014833e-05,
+          "mean": 0.0006005776017242278,
+          "median": 0.0005852024769410491,
+          "minimum": 0.0005121389986015856,
+          "p95": 0.0006756455200957135,
+          "p99": 0.0008711194893112406,
+          "rounds": 1608,
+          "stddev": 6.381892926493648e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_singletons_and_transients-direct]": {
+          "cpu": 582954.0,
+          "iqr": 2.4474982637912035e-05,
+          "mean": 0.0005876628151743424,
+          "median": 0.0005789024871774018,
+          "minimum": 0.000493374012876302,
+          "p95": 0.0006204884266480803,
+          "p99": 0.0008660743257496505,
+          "rounds": 1654,
+          "stddev": 6.312579646885886e-05,
+          "tier": "application"
+        },
+        "test_comparison[open_a_request_shaped_scope-depin]": {
+          "iqr": 1.3799872249364853e-06,
+          "mean": 2.8791492712735167e-05,
+          "median": 2.7662987122312188e-05,
+          "minimum": 2.365099499002099e-05,
+          "p95": 4.179457027930766e-05,
+          "p99": 5.685289215762174e-05,
+          "rounds": 14882,
+          "stddev": 9.621095283351013e-06,
+          "tier": "component"
+        },
+        "test_comparison[open_a_request_shaped_scope-direct]": {
+          "iqr": 1.3139215297996998e-06,
+          "mean": 2.8082580333817158e-05,
+          "median": 2.717797178775072e-05,
+          "minimum": 2.3336033336818218e-05,
+          "p95": 4.11595799960196e-05,
+          "p99": 5.511425202712417e-05,
+          "rounds": 12145,
+          "stddev": 5.7379521261771825e-06,
+          "tier": "component"
+        },
+        "test_comparison[open_and_close_a_scope-depin]": {
+          "iqr": 1.2775999493896961e-05,
+          "mean": 0.00020454454735353817,
+          "median": 0.00019284849986433983,
+          "minimum": 0.00016789999790489674,
+          "p95": 0.0002752080414211377,
+          "p99": 0.00034353920142166306,
+          "rounds": 1762,
+          "stddev": 3.5775714066979776e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[open_and_close_a_scope-direct]": {
+          "iqr": 1.4338002074509859e-05,
+          "mean": 0.0002051342147971471,
+          "median": 0.0001929930003825575,
+          "minimum": 0.00016808899817988276,
+          "p95": 0.00027613528072834015,
+          "p99": 0.000350195373175666,
+          "rounds": 3046,
+          "stddev": 3.8009306852717445e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_10-depin]": {
+          "iqr": 1.7527781892567873e-07,
+          "mean": 1.958615027565798e-05,
+          "median": 1.912197330966592e-05,
+          "minimum": 1.8341001123189926e-05,
+          "p95": 2.0297011360526085e-05,
+          "p99": 3.3025001175701615e-05,
+          "rounds": 1121,
+          "stddev": 2.516830760528587e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_10-direct]": {
+          "iqr": 2.4103792384266853e-07,
+          "mean": 1.959219763627349e-05,
+          "median": 1.886900281533599e-05,
+          "minimum": 1.6188016161322594e-05,
+          "p95": 2.069151378236711e-05,
+          "p99": 3.4417700953781603e-05,
+          "rounds": 32631,
+          "stddev": 7.072363833714401e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_100-depin]": {
+          "iqr": 1.2468764907680452e-05,
+          "mean": 0.00014357826759177697,
+          "median": 0.00013651500921696424,
+          "minimum": 0.0001180139952339232,
+          "p95": 0.00016538030467927456,
+          "p99": 0.0002183303527999669,
+          "rounds": 6347,
+          "stddev": 6.78938925479947e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_100-direct]": {
+          "iqr": 1.260003773495555e-05,
+          "mean": 0.00014201180628734146,
+          "median": 0.00013582699466496706,
+          "minimum": 0.00011747604003176093,
+          "p95": 0.00016550751752220094,
+          "p99": 0.000226796735660173,
+          "rounds": 5326,
+          "stddev": 3.253215287224902e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_generic_key-depin]": {
+          "iqr": 2.4097971618175507e-07,
+          "mean": 6.154319410522161e-06,
+          "median": 5.8559817261993885e-06,
+          "minimum": 5.111971404403448e-06,
+          "p95": 6.15399912931025e-06,
+          "p99": 2.0564203150570376e-05,
+          "rounds": 32143,
+          "stddev": 2.0919417189674274e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_generic_key-direct]": {
+          "iqr": 1.130392774939537e-07,
+          "mean": 6.256211794635196e-06,
+          "median": 6.094982381910086e-06,
+          "minimum": 5.548994522541761e-06,
+          "p95": 6.234040483832359e-06,
+          "p99": 1.3156124041415776e-05,
+          "rounds": 64772,
+          "stddev": 1.82967422374602e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": {
+          "iqr": 5.119945853948593e-07,
+          "mean": 1.6202370514692476e-05,
+          "median": 1.5555997379124165e-05,
+          "minimum": 1.3503013178706169e-05,
+          "p95": 1.7946399748325347e-05,
+          "p99": 3.226827597245575e-05,
+          "rounds": 19313,
+          "stddev": 3.668507768967677e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": {
+          "iqr": 5.83502696827054e-07,
+          "mean": 1.605476597919627e-05,
+          "median": 1.525948755443096e-05,
+          "minimum": 1.4160992577672005e-05,
+          "p95": 1.8469599308446042e-05,
+          "p99": 3.223930136300624e-05,
+          "rounds": 12900,
+          "stddev": 3.630212298388285e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_transient_chain-depin]": {
+          "iqr": 7.898779585957527e-08,
+          "mean": 5.00144454487519e-06,
+          "median": 4.677975084632635e-06,
+          "minimum": 3.97401163354516e-06,
+          "p95": 4.792993422597647e-06,
+          "p99": 1.1539120459928988e-05,
+          "rounds": 67995,
+          "stddev": 9.747932477120667e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_transient_chain-direct]": {
+          "iqr": 6.50179572403431e-08,
+          "mean": 4.695004476292506e-06,
+          "median": 4.569010343402624e-06,
+          "minimum": 4.1530001908540726e-06,
+          "p95": 4.669150803238148e-06,
+          "p99": 5.812298622913662e-06,
+          "rounds": 58258,
+          "stddev": 2.3013313280573255e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_an_async_singleton-depin]": {
+          "iqr": 5.420297384262085e-07,
+          "mean": 1.7431252115034697e-05,
+          "median": 1.6606994904577732e-05,
+          "minimum": 1.4632008969783783e-05,
+          "p95": 2.2571207955479627e-05,
+          "p99": 3.334911074489355e-05,
+          "rounds": 17997,
+          "stddev": 3.5161246548193366e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_an_async_singleton-direct]": {
+          "iqr": 8.51054210215807e-07,
+          "mean": 1.7736318845217933e-05,
+          "median": 1.666403841227293e-05,
+          "minimum": 1.4373974408954382e-05,
+          "p95": 2.6118475943803787e-05,
+          "p99": 3.4861362655646924e-05,
+          "rounds": 25166,
+          "stddev": 1.1681586838281686e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton-depin]": {
+          "iqr": 7.398193702101707e-08,
+          "mean": 1.9496397388491025e-06,
+          "median": 1.8790015019476414e-06,
+          "minimum": 1.5830155462026596e-06,
+          "p95": 1.9519939087331295e-06,
+          "p99": 2.228014636784792e-06,
+          "rounds": 133763,
+          "stddev": 1.2889877143276863e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton-direct]": {
+          "iqr": 8.096685633063316e-08,
+          "mean": 1.941235942173636e-06,
+          "median": 1.8360442481935024e-06,
+          "minimum": 1.5770201571285725e-06,
+          "p95": 1.933018211275339e-06,
+          "p99": 2.2202491527423303e-06,
+          "rounds": 116374,
+          "stddev": 1.9876726270539297e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": {
+          "iqr": 1.519802026450634e-07,
+          "mean": 3.9222844809731665e-06,
+          "median": 3.71196074411273e-06,
+          "minimum": 3.225053660571575e-06,
+          "p95": 3.901019226759672e-06,
+          "p99": 1.5300158411264425e-05,
+          "rounds": 88215,
+          "stddev": 2.407144894793366e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": {
+          "iqr": 1.3102544471621513e-07,
+          "mean": 3.950557133169192e-06,
+          "median": 3.8130092434585094e-06,
+          "minimum": 3.223016392439604e-06,
+          "p95": 3.9130100049078465e-06,
+          "p99": 6.948932423256263e-06,
+          "rounds": 68564,
+          "stddev": 2.4044866636345903e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": {
+          "iqr": 8.597271516919136e-08,
+          "mean": 1.9430349617058177e-06,
+          "median": 1.8500140868127346e-06,
+          "minimum": 1.5730038285255432e-06,
+          "p95": 1.935986801981926e-06,
+          "p99": 2.213303814642129e-06,
+          "rounds": 109470,
+          "stddev": 1.8322605978399335e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": {
+          "iqr": 3.899913281202316e-08,
+          "mean": 1.983250865243486e-06,
+          "median": 1.91305298358202e-06,
+          "minimum": 1.5890109352767467e-06,
+          "p95": 1.975975465029478e-06,
+          "p99": 2.210959792137146e-06,
+          "rounds": 88763,
+          "stddev": 1.5886211557085834e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_through_an_active_override-depin]": {
+          "iqr": 1.1402880772948265e-07,
+          "mean": 4.12223377718471e-06,
+          "median": 3.9539881981909275e-06,
+          "minimum": 3.5809935070574284e-06,
+          "p95": 4.060042556375265e-06,
+          "p99": 8.678589365445065e-06,
+          "rounds": 103062,
+          "stddev": 4.733063029967339e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_through_an_active_override-direct]": {
+          "iqr": 1.5401747077703476e-07,
+          "mean": 4.113405837839801e-06,
+          "median": 3.898981958627701e-06,
+          "minimum": 3.378954716026783e-06,
+          "p95": 4.110974259674549e-06,
+          "p99": 1.596142537891864e-05,
+          "rounds": 77961,
+          "stddev": 2.0385222216499263e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_with_no_active_override-depin]": {
+          "iqr": 7.101334631443024e-08,
+          "mean": 1.9313742832448135e-06,
+          "median": 1.7980346456170082e-06,
+          "minimum": 1.5599653124809265e-06,
+          "p95": 1.8900027498602867e-06,
+          "p99": 2.244991483166814e-06,
+          "rounds": 166335,
+          "stddev": 3.1645508994891895e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_with_no_active_override-direct]": {
+          "iqr": 6.397021934390068e-08,
+          "mean": 1.9152530287378288e-06,
+          "median": 1.7999554984271526e-06,
+          "minimum": 1.5519908629357815e-06,
+          "p95": 1.8980354070663452e-06,
+          "p99": 2.186046913266182e-06,
+          "rounds": 155352,
+          "stddev": 3.929832800520859e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": {
+          "iqr": 0.00037094048457220197,
+          "mean": 0.013559756915667093,
+          "median": 0.011335402494296432,
+          "minimum": 0.010344525973778218,
+          "p95": 0.011941245073103346,
+          "p99": 0.10090632220380939,
+          "rounds": 1000,
+          "stddev": 0.013785239520152485,
+          "tier": "component"
+        },
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": {
+          "iqr": 0.0003764175053220242,
+          "mean": 0.013301503533613868,
+          "median": 0.011296267010038719,
+          "minimum": 0.01030548696871847,
+          "p95": 0.011880937402020208,
+          "p99": 0.0911916183232097,
+          "rounds": 1000,
+          "stddev": 0.012493460076402176,
+          "tier": "component"
+        }
+      }
+    },
+    {
+      "duration": 57.39286850922508,
+      "medians": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": 5.723035428673029e-06,
+        "test_comparison[call_through_an_inject_wrapper-direct]": 5.800975486636162e-06,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": 6.804009899497032e-06,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": 6.771006155759096e-06,
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": 5.863024853169918e-06,
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": 5.896028596907854e-06,
+        "test_comparison[fastapi_application_startup-depin]": 0.0025477125018369406,
+        "test_comparison[fastapi_application_startup-direct]": 0.0025389740185346454,
+        "test_comparison[fastapi_async_resource_teardown-depin]": 0.0006071964744478464,
+        "test_comparison[fastapi_async_resource_teardown-direct]": 0.0005980450077913702,
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": 0.000550021999515593,
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": 0.0005531440256163478,
+        "test_comparison[fastapi_endpoint_with_work-depin]": 0.000806736497906968,
+        "test_comparison[fastapi_endpoint_with_work-direct]": 0.0008056029910221696,
+        "test_comparison[fastapi_request_scoped_graph-depin]": 0.0005892189801670611,
+        "test_comparison[fastapi_request_scoped_graph-direct]": 0.0005999699933454394,
+        "test_comparison[fastapi_singletons_and_transients-depin]": 0.0005725524970330298,
+        "test_comparison[fastapi_singletons_and_transients-direct]": 0.0005817810306325555,
+        "test_comparison[open_a_request_shaped_scope-depin]": 2.666999353095889e-05,
+        "test_comparison[open_a_request_shaped_scope-direct]": 2.6910973247140646e-05,
+        "test_comparison[open_and_close_a_scope-depin]": 0.00019882398191839457,
+        "test_comparison[open_and_close_a_scope-direct]": 0.00019430150859989226,
+        "test_comparison[resolve_a_collection_of_10-depin]": 1.8302001990377903e-05,
+        "test_comparison[resolve_a_collection_of_10-direct]": 1.8417020328342915e-05,
+        "test_comparison[resolve_a_collection_of_100-depin]": 0.00013580999802798033,
+        "test_comparison[resolve_a_collection_of_100-direct]": 0.0001365724892821163,
+        "test_comparison[resolve_a_generic_key-depin]": 5.744979716837406e-06,
+        "test_comparison[resolve_a_generic_key-direct]": 5.7889847084879875e-06,
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": 1.57069880515337e-05,
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": 1.5238008927553892e-05,
+        "test_comparison[resolve_a_transient_chain-depin]": 4.391011316329241e-06,
+        "test_comparison[resolve_a_transient_chain-direct]": 4.360510502010584e-06,
+        "test_comparison[resolve_an_async_singleton-depin]": 1.7167010810226202e-05,
+        "test_comparison[resolve_an_async_singleton-direct]": 1.7319980543106794e-05,
+        "test_comparison[resolve_cached_singleton-depin]": 1.8269638530910015e-06,
+        "test_comparison[resolve_cached_singleton-direct]": 1.8690479919314384e-06,
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": 3.7060235626995564e-06,
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": 3.7939753383398056e-06,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": 1.8199789337813854e-06,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": 1.80897768586874e-06,
+        "test_comparison[resolve_through_an_active_override-depin]": 3.8549769669771194e-06,
+        "test_comparison[resolve_through_an_active_override-direct]": 3.7830322980880737e-06,
+        "test_comparison[resolve_with_no_active_override-depin]": 1.800013706088066e-06,
+        "test_comparison[resolve_with_no_active_override-direct]": 1.7680577002465725e-06,
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": 0.011230271513340995,
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": 0.01142575652920641
+      },
+      "order": "forward",
+      "rounds": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": 41639,
+        "test_comparison[call_through_an_inject_wrapper-direct]": 59137,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": 51089,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": 54565,
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": 54586,
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": 57173,
+        "test_comparison[fastapi_application_startup-depin]": 1000,
+        "test_comparison[fastapi_application_startup-direct]": 1000,
+        "test_comparison[fastapi_async_resource_teardown-depin]": 1508,
+        "test_comparison[fastapi_async_resource_teardown-direct]": 1505,
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": 1438,
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": 1787,
+        "test_comparison[fastapi_endpoint_with_work-depin]": 1200,
+        "test_comparison[fastapi_endpoint_with_work-direct]": 1239,
+        "test_comparison[fastapi_request_scoped_graph-depin]": 1599,
+        "test_comparison[fastapi_request_scoped_graph-direct]": 1562,
+        "test_comparison[fastapi_singletons_and_transients-depin]": 1562,
+        "test_comparison[fastapi_singletons_and_transients-direct]": 1815,
+        "test_comparison[open_a_request_shaped_scope-depin]": 13136,
+        "test_comparison[open_a_request_shaped_scope-direct]": 15864,
+        "test_comparison[open_and_close_a_scope-depin]": 1000,
+        "test_comparison[open_and_close_a_scope-direct]": 3600,
+        "test_comparison[resolve_a_collection_of_10-depin]": 27958,
+        "test_comparison[resolve_a_collection_of_10-direct]": 35271,
+        "test_comparison[resolve_a_collection_of_100-depin]": 6411,
+        "test_comparison[resolve_a_collection_of_100-direct]": 5924,
+        "test_comparison[resolve_a_generic_key-depin]": 61377,
+        "test_comparison[resolve_a_generic_key-direct]": 72010,
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": 12665,
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": 19907,
+        "test_comparison[resolve_a_transient_chain-depin]": 66055,
+        "test_comparison[resolve_a_transient_chain-direct]": 68442,
+        "test_comparison[resolve_an_async_singleton-depin]": 12450,
+        "test_comparison[resolve_an_async_singleton-direct]": 25357,
+        "test_comparison[resolve_cached_singleton-depin]": 119475,
+        "test_comparison[resolve_cached_singleton-direct]": 130582,
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": 70240,
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": 37763,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": 125930,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": 142227,
+        "test_comparison[resolve_through_an_active_override-depin]": 90761,
+        "test_comparison[resolve_through_an_active_override-direct]": 95175,
+        "test_comparison[resolve_with_no_active_override-depin]": 161734,
+        "test_comparison[resolve_with_no_active_override-direct]": 172474,
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": 1000,
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": 1000
+      },
+      "samples": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": {
+          "iqr": 1.9295839592814445e-07,
+          "mean": 6.054880258726834e-06,
+          "median": 5.723035428673029e-06,
+          "minimum": 4.859990440309048e-06,
+          "p95": 5.923036951571703e-06,
+          "p99": 2.0732033299282193e-05,
+          "rounds": 41639,
+          "stddev": 6.3890839374497084e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper-direct]": {
+          "iqr": 2.3801112547516823e-07,
+          "mean": 6.122002489920891e-06,
+          "median": 5.800975486636162e-06,
+          "minimum": 4.889967385679483e-06,
+          "p95": 6.062036845833063e-06,
+          "p99": 2.1228576079010962e-05,
+          "rounds": 59137,
+          "stddev": 3.1818589344688767e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": {
+          "iqr": 1.4097895473241806e-07,
+          "mean": 7.085969884836483e-06,
+          "median": 6.804009899497032e-06,
+          "minimum": 5.743990186601877e-06,
+          "p95": 7.011985871940851e-06,
+          "p99": 2.1494086831808113e-05,
+          "rounds": 51089,
+          "stddev": 2.606213982498628e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": {
+          "iqr": 1.1798692867159843e-07,
+          "mean": 7.0298869417283765e-06,
+          "median": 6.771006155759096e-06,
+          "minimum": 5.8150035329163074e-06,
+          "p95": 6.94196205586195e-06,
+          "p99": 2.0915684290230296e-05,
+          "rounds": 54565,
+          "stddev": 2.4584794807479343e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": {
+          "iqr": 3.9301812648773193e-07,
+          "mean": 6.170813077032957e-06,
+          "median": 5.863024853169918e-06,
+          "minimum": 4.949979484081268e-06,
+          "p95": 6.27199187874794e-06,
+          "p99": 2.1012983052060028e-05,
+          "rounds": 54586,
+          "stddev": 2.6780376340519803e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": {
+          "iqr": 3.029126673936844e-07,
+          "mean": 6.174492293554814e-06,
+          "median": 5.896028596907854e-06,
+          "minimum": 4.943984095007181e-06,
+          "p95": 6.2400358729064465e-06,
+          "p99": 2.0709005184471607e-05,
+          "rounds": 57173,
+          "stddev": 2.4794157117977207e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[fastapi_application_startup-depin]": {
+          "cpu": 2372789.0,
+          "iqr": 0.00024724096874706447,
+          "mean": 0.0028463831320405006,
+          "median": 0.0025477125018369406,
+          "minimum": 0.0022002769983373582,
+          "p95": 0.0036493061837973052,
+          "p99": 0.004552251389250158,
+          "rounds": 1000,
+          "stddev": 0.004814318346655783,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_application_startup-direct]": {
+          "cpu": 2914823.0,
+          "iqr": 0.00026322295889258385,
+          "mean": 0.002859736958751455,
+          "median": 0.0025389740185346454,
+          "minimum": 0.0022434950224123895,
+          "p95": 0.0034760013193590516,
+          "p99": 0.004424189007258974,
+          "rounds": 1000,
+          "stddev": 0.00520635794360971,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_async_resource_teardown-depin]": {
+          "cpu": 578282.0,
+          "iqr": 4.4838496251031756e-05,
+          "mean": 0.0006183395304655982,
+          "median": 0.0006071964744478464,
+          "minimum": 0.0005166080081835389,
+          "p95": 0.0007053644134430212,
+          "p99": 0.000858178219641559,
+          "rounds": 1508,
+          "stddev": 6.389258585508602e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_async_resource_teardown-direct]": {
+          "cpu": 595350.0,
+          "iqr": 5.176899139769375e-05,
+          "mean": 0.0006510923327677001,
+          "median": 0.0005980450077913702,
+          "minimum": 0.0005038970266468823,
+          "p95": 0.0009479587781243027,
+          "p99": 0.0015861771558411419,
+          "rounds": 1505,
+          "stddev": 0.00022632189015499797,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": {
+          "cpu": 546212.0,
+          "iqr": 3.433803794905543e-05,
+          "mean": 0.000557358272652814,
+          "median": 0.000550021999515593,
+          "minimum": 0.00046999799087643623,
+          "p95": 0.0006027590425219387,
+          "p99": 0.0007698897813679647,
+          "rounds": 1438,
+          "stddev": 7.224270920306153e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": {
+          "cpu": 546045.0,
+          "iqr": 3.790276241488755e-05,
+          "mean": 0.000560579446749475,
+          "median": 0.0005531440256163478,
+          "minimum": 0.00047604599967598915,
+          "p95": 0.0006090740032959728,
+          "p99": 0.0007899590919259934,
+          "rounds": 1787,
+          "stddev": 4.644656656160366e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_endpoint_with_work-depin]": {
+          "cpu": 832993.0,
+          "iqr": 4.3978478061035275e-05,
+          "mean": 0.0008375136886024847,
+          "median": 0.000806736497906968,
+          "minimum": 0.0007041009957902133,
+          "p95": 0.0010169784713070836,
+          "p99": 0.0015475240012165158,
+          "rounds": 1200,
+          "stddev": 0.0001576490292415835,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_endpoint_with_work-direct]": {
+          "cpu": 836302.0,
+          "iqr": 3.9691542042419314e-05,
+          "mean": 0.0008249016033479518,
+          "median": 0.0008056029910221696,
+          "minimum": 0.0007265319582074881,
+          "p95": 0.000996229809243232,
+          "p99": 0.0011971283506136369,
+          "rounds": 1239,
+          "stddev": 0.00010003997754648383,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_request_scoped_graph-depin]": {
+          "cpu": 625163.0,
+          "iqr": 3.421997826080769e-05,
+          "mean": 0.0005994836787860363,
+          "median": 0.0005892189801670611,
+          "minimum": 0.0005264319479465485,
+          "p95": 0.0006537323992233722,
+          "p99": 0.0008438443078193814,
+          "rounds": 1599,
+          "stddev": 6.103905797776619e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_request_scoped_graph-direct]": {
+          "cpu": 568064.0,
+          "iqr": 4.0762999560683966e-05,
+          "mean": 0.0006098195396720881,
+          "median": 0.0005999699933454394,
+          "minimum": 0.0005159740103408694,
+          "p95": 0.0006664469372481107,
+          "p99": 0.0008453424629988138,
+          "rounds": 1562,
+          "stddev": 8.959094801773879e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_singletons_and_transients-depin]": {
+          "cpu": 567034.0,
+          "iqr": 3.614096203818917e-05,
+          "mean": 0.0005885979146356771,
+          "median": 0.0005725524970330298,
+          "minimum": 0.0005127000040374696,
+          "p95": 0.0006689899484626938,
+          "p99": 0.0008309183031087741,
+          "rounds": 1562,
+          "stddev": 0.00010980394955994392,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_singletons_and_transients-direct]": {
+          "cpu": 613728.0,
+          "iqr": 5.378625064622611e-05,
+          "mean": 0.0005972424415889461,
+          "median": 0.0005817810306325555,
+          "minimum": 0.0004921009531244636,
+          "p95": 0.0006881155772134661,
+          "p99": 0.0008245049335528164,
+          "rounds": 1815,
+          "stddev": 8.612633383002449e-05,
+          "tier": "application"
+        },
+        "test_comparison[open_a_request_shaped_scope-depin]": {
+          "iqr": 1.1579832062125206e-06,
+          "mean": 2.8341576070024208e-05,
+          "median": 2.666999353095889e-05,
+          "minimum": 2.3453030735254288e-05,
+          "p95": 4.1976250940933824e-05,
+          "p99": 5.5512221297249195e-05,
+          "rounds": 13136,
+          "stddev": 5.918480527856825e-06,
+          "tier": "component"
+        },
+        "test_comparison[open_a_request_shaped_scope-direct]": {
+          "iqr": 9.500072337687016e-07,
+          "mean": 2.8606103477514416e-05,
+          "median": 2.6910973247140646e-05,
+          "minimum": 2.3550994228571653e-05,
+          "p95": 4.139723605476319e-05,
+          "p99": 5.598109448328596e-05,
+          "rounds": 15864,
+          "stddev": 1.8375849653187223e-05,
+          "tier": "component"
+        },
+        "test_comparison[open_and_close_a_scope-depin]": {
+          "iqr": 1.621298724785447e-05,
+          "mean": 0.00020915874605998398,
+          "median": 0.00019882398191839457,
+          "minimum": 0.00017224496696144342,
+          "p95": 0.00025457411538809527,
+          "p99": 0.00033121345448307695,
+          "rounds": 1000,
+          "stddev": 2.9367202543777118e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[open_and_close_a_scope-direct]": {
+          "iqr": 1.702446024864912e-05,
+          "mean": 0.00020551783706954059,
+          "median": 0.00019430150859989226,
+          "minimum": 0.00016818300355225801,
+          "p95": 0.0002649227593792601,
+          "p99": 0.0003265231463592499,
+          "rounds": 3600,
+          "stddev": 3.079048840697091e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_10-depin]": {
+          "iqr": 1.3409880921244621e-06,
+          "mean": 1.989591416768395e-05,
+          "median": 1.8302001990377903e-05,
+          "minimum": 1.6246980521827936e-05,
+          "p95": 3.330914187245071e-05,
+          "p99": 4.9974761786870665e-05,
+          "rounds": 27958,
+          "stddev": 8.725761949401672e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_10-direct]": {
+          "iqr": 1.100997906178236e-06,
+          "mean": 1.9830184132727337e-05,
+          "median": 1.8417020328342915e-05,
+          "minimum": 1.617299858480692e-05,
+          "p95": 3.301200922578573e-05,
+          "p99": 4.712885711342097e-05,
+          "rounds": 35271,
+          "stddev": 1.8434613407717588e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_100-depin]": {
+          "iqr": 1.638826506678015e-05,
+          "mean": 0.0001395337546894054,
+          "median": 0.00013580999802798033,
+          "minimum": 0.00011724798241630197,
+          "p95": 0.00016553897876292467,
+          "p99": 0.00018536642310209566,
+          "rounds": 6411,
+          "stddev": 1.642552325073804e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_100-direct]": {
+          "iqr": 1.6741512808948755e-05,
+          "mean": 0.00014110260396753423,
+          "median": 0.0001365724892821163,
+          "minimum": 0.00011823000386357307,
+          "p95": 0.000165978618315421,
+          "p99": 0.0001877712237183004,
+          "rounds": 5924,
+          "stddev": 4.173675413453978e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_generic_key-depin]": {
+          "iqr": 4.519824869930744e-07,
+          "mean": 6.15678986378095e-06,
+          "median": 5.744979716837406e-06,
+          "minimum": 5.06499782204628e-06,
+          "p95": 6.249989382922649e-06,
+          "p99": 2.1450438071042287e-05,
+          "rounds": 61377,
+          "stddev": 3.0000069973851187e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_generic_key-direct]": {
+          "iqr": 4.3708132579922676e-07,
+          "mean": 6.215870325112012e-06,
+          "median": 5.7889847084879875e-06,
+          "minimum": 5.100038833916187e-06,
+          "p95": 6.283025140874088e-06,
+          "p99": 2.1576363942585912e-05,
+          "rounds": 72010,
+          "stddev": 3.0099895412841356e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": {
+          "iqr": 8.0897007137537e-07,
+          "mean": 1.646827992682036e-05,
+          "median": 1.57069880515337e-05,
+          "minimum": 1.3466982636600733e-05,
+          "p95": 2.201637253165238e-05,
+          "p99": 3.295213915407658e-05,
+          "rounds": 12665,
+          "stddev": 4.227503147230385e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": {
+          "iqr": 1.0069925338029861e-06,
+          "mean": 1.6200938449180074e-05,
+          "median": 1.5238008927553892e-05,
+          "minimum": 1.3346027117222548e-05,
+          "p95": 2.624188782647255e-05,
+          "p99": 3.396296990104013e-05,
+          "rounds": 19907,
+          "stddev": 6.145282164520708e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_transient_chain-depin]": {
+          "iqr": 3.019813448190689e-07,
+          "mean": 4.710857898661539e-06,
+          "median": 4.391011316329241e-06,
+          "minimum": 3.848981577903032e-06,
+          "p95": 4.671979695558548e-06,
+          "p99": 1.9696124363690606e-05,
+          "rounds": 66055,
+          "stddev": 4.121097188130772e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_transient_chain-direct]": {
+          "iqr": 4.5995693653821945e-07,
+          "mean": 4.6091226677506565e-06,
+          "median": 4.360510502010584e-06,
+          "minimum": 3.825000021606684e-06,
+          "p95": 4.650920163840053e-06,
+          "p99": 1.9492583232931788e-05,
+          "rounds": 68442,
+          "stddev": 2.4145112777037197e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_an_async_singleton-depin]": {
+          "iqr": 5.879555828869343e-07,
+          "mean": 1.8219376173633407e-05,
+          "median": 1.7167010810226202e-05,
+          "minimum": 1.4760997146368027e-05,
+          "p95": 2.956691023427986e-05,
+          "p99": 4.267905314918612e-05,
+          "rounds": 12450,
+          "stddev": 5.159411960064875e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_an_async_singleton-direct]": {
+          "iqr": 7.799826562404633e-07,
+          "mean": 1.8331825142371434e-05,
+          "median": 1.7319980543106794e-05,
+          "minimum": 1.4990975614637136e-05,
+          "p95": 3.071541432291269e-05,
+          "p99": 3.593058325350282e-05,
+          "rounds": 25357,
+          "stddev": 4.653906951349567e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton-depin]": {
+          "iqr": 1.0401709005236626e-07,
+          "mean": 2.026612361568391e-06,
+          "median": 1.8269638530910015e-06,
+          "minimum": 1.567997969686985e-06,
+          "p95": 1.9229482859373093e-06,
+          "p99": 2.142299199476833e-06,
+          "rounds": 119475,
+          "stddev": 1.591608715415844e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton-direct]": {
+          "iqr": 1.0099029168486595e-07,
+          "mean": 2.025142909915139e-06,
+          "median": 1.8690479919314384e-06,
+          "minimum": 1.6079866327345371e-06,
+          "p95": 1.9819708541035652e-06,
+          "p99": 2.3809843696653843e-06,
+          "rounds": 130582,
+          "stddev": 9.107685309081304e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": {
+          "iqr": 2.3102620616555214e-07,
+          "mean": 4.0751768357705445e-06,
+          "median": 3.7060235626995564e-06,
+          "minimum": 3.2249954529106617e-06,
+          "p95": 3.925000783056021e-06,
+          "p99": 1.8646612879820168e-05,
+          "rounds": 70240,
+          "stddev": 1.7061340742697924e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": {
+          "iqr": 1.8702121451497078e-07,
+          "mean": 4.095130329514381e-06,
+          "median": 3.7939753383398056e-06,
+          "minimum": 3.2819807529449463e-06,
+          "p95": 3.975001163780689e-06,
+          "p99": 1.7326410161331294e-05,
+          "rounds": 37763,
+          "stddev": 7.792390611652765e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": {
+          "iqr": 1.3702083379030228e-07,
+          "mean": 1.9764586172728456e-06,
+          "median": 1.8199789337813854e-06,
+          "minimum": 1.567997969686985e-06,
+          "p95": 1.929991412907839e-06,
+          "p99": 2.262997440993786e-06,
+          "rounds": 125930,
+          "stddev": 1.0773089881827172e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": {
+          "iqr": 1.6595004126429558e-07,
+          "mean": 2.023514239611953e-06,
+          "median": 1.80897768586874e-06,
+          "minimum": 1.5859841369092464e-06,
+          "p95": 1.953041646629572e-06,
+          "p99": 3.393025835976004e-06,
+          "rounds": 142227,
+          "stddev": 1.2091662990610862e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_through_an_active_override-depin]": {
+          "iqr": 2.069864422082901e-07,
+          "mean": 4.122832732292388e-06,
+          "median": 3.8549769669771194e-06,
+          "minimum": 3.370980266481638e-06,
+          "p95": 4.097993951290846e-06,
+          "p99": 1.8707406707108017e-05,
+          "rounds": 90761,
+          "stddev": 2.5188378014733027e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_through_an_active_override-direct]": {
+          "iqr": 2.1693995222449303e-07,
+          "mean": 4.046970072865588e-06,
+          "median": 3.7830322980880737e-06,
+          "minimum": 3.350956831127405e-06,
+          "p95": 4.0529994294047356e-06,
+          "p99": 1.8648245604708786e-05,
+          "rounds": 95175,
+          "stddev": 2.539014120873415e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_with_no_active_override-depin]": {
+          "iqr": 1.1100200936198235e-07,
+          "mean": 1.9202132449495646e-06,
+          "median": 1.800013706088066e-06,
+          "minimum": 1.574982888996601e-06,
+          "p95": 1.9230064935982227e-06,
+          "p99": 2.5240005925297737e-06,
+          "rounds": 161734,
+          "stddev": 1.6017662107307219e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_with_no_active_override-direct]": {
+          "iqr": 1.630396582186222e-07,
+          "mean": 1.9019405129161133e-06,
+          "median": 1.7680577002465725e-06,
+          "minimum": 1.5730038285255432e-06,
+          "p95": 1.9060098566114902e-06,
+          "p99": 2.610833034850626e-06,
+          "rounds": 172474,
+          "stddev": 1.6553834185690177e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": {
+          "iqr": 0.0003961299662478268,
+          "mean": 0.01439753169339383,
+          "median": 0.011230271513340995,
+          "minimum": 0.010169112996663898,
+          "p95": 0.011882426188094541,
+          "p99": 0.09793659635586664,
+          "rounds": 1000,
+          "stddev": 0.016219956373738985,
+          "tier": "component"
+        },
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": {
+          "iqr": 0.0006114745046943426,
+          "mean": 0.015264208882988897,
+          "median": 0.01142575652920641,
+          "minimum": 0.01084835798246786,
+          "p95": 0.017554701509652642,
+          "p99": 0.10600739627494477,
+          "rounds": 1000,
+          "stddev": 0.0177586090831004,
+          "tier": "component"
+        }
+      }
+    },
+    {
+      "duration": 55.77237479103496,
+      "medians": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": 5.804002285003662e-06,
+        "test_comparison[call_through_an_inject_wrapper-direct]": 5.788053385913372e-06,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": 6.886024493724108e-06,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": 6.76099443808198e-06,
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": 5.826994311064482e-06,
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": 5.886016879230738e-06,
+        "test_comparison[fastapi_application_startup-depin]": 0.002521641494240612,
+        "test_comparison[fastapi_application_startup-direct]": 0.002505121985450387,
+        "test_comparison[fastapi_async_resource_teardown-depin]": 0.0006085139757487923,
+        "test_comparison[fastapi_async_resource_teardown-direct]": 0.0006039060244802386,
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": 0.0005494399811141193,
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": 0.0005445189890451729,
+        "test_comparison[fastapi_endpoint_with_work-depin]": 0.0008149865025188774,
+        "test_comparison[fastapi_endpoint_with_work-direct]": 0.0008091350318863988,
+        "test_comparison[fastapi_request_scoped_graph-depin]": 0.0005936429952271283,
+        "test_comparison[fastapi_request_scoped_graph-direct]": 0.0005932439817115664,
+        "test_comparison[fastapi_singletons_and_transients-depin]": 0.0005775624886155128,
+        "test_comparison[fastapi_singletons_and_transients-direct]": 0.0005788060370832682,
+        "test_comparison[open_a_request_shaped_scope-depin]": 2.6726978830993176e-05,
+        "test_comparison[open_a_request_shaped_scope-direct]": 2.6848050765693188e-05,
+        "test_comparison[open_and_close_a_scope-depin]": 0.00020506800501607358,
+        "test_comparison[open_and_close_a_scope-direct]": 0.00020237697754055262,
+        "test_comparison[resolve_a_collection_of_10-depin]": 1.9157014321535826e-05,
+        "test_comparison[resolve_a_collection_of_10-direct]": 1.9456027075648308e-05,
+        "test_comparison[resolve_a_collection_of_100-depin]": 0.00013653398491442204,
+        "test_comparison[resolve_a_collection_of_100-direct]": 0.00013602100079879165,
+        "test_comparison[resolve_a_generic_key-depin]": 6.176996976137161e-06,
+        "test_comparison[resolve_a_generic_key-direct]": 6.071000825613737e-06,
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": 1.608103048056364e-05,
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": 1.587503356859088e-05,
+        "test_comparison[resolve_a_transient_chain-depin]": 4.539033398032188e-06,
+        "test_comparison[resolve_a_transient_chain-direct]": 4.604982677847147e-06,
+        "test_comparison[resolve_an_async_singleton-depin]": 1.7651007510721684e-05,
+        "test_comparison[resolve_an_async_singleton-direct]": 1.7640995793044567e-05,
+        "test_comparison[resolve_cached_singleton-depin]": 1.8969876691699028e-06,
+        "test_comparison[resolve_cached_singleton-direct]": 1.9039725884795189e-06,
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": 3.888970240950584e-06,
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": 3.951019607484341e-06,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": 1.8840073607861996e-06,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": 1.895008608698845e-06,
+        "test_comparison[resolve_through_an_active_override-depin]": 3.9949663914740086e-06,
+        "test_comparison[resolve_through_an_active_override-direct]": 4.005967639386654e-06,
+        "test_comparison[resolve_with_no_active_override-depin]": 1.8849968910217285e-06,
+        "test_comparison[resolve_with_no_active_override-direct]": 1.8819700926542282e-06,
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": 0.011502720473799855,
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": 0.011381549498764798
+      },
+      "order": "reverse",
+      "rounds": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": 62066,
+        "test_comparison[call_through_an_inject_wrapper-direct]": 61324,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": 53428,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": 34883,
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": 58012,
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": 52193,
+        "test_comparison[fastapi_application_startup-depin]": 1000,
+        "test_comparison[fastapi_application_startup-direct]": 1000,
+        "test_comparison[fastapi_async_resource_teardown-depin]": 1438,
+        "test_comparison[fastapi_async_resource_teardown-direct]": 1566,
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": 1805,
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": 1803,
+        "test_comparison[fastapi_endpoint_with_work-depin]": 1200,
+        "test_comparison[fastapi_endpoint_with_work-direct]": 1043,
+        "test_comparison[fastapi_request_scoped_graph-depin]": 1639,
+        "test_comparison[fastapi_request_scoped_graph-direct]": 1739,
+        "test_comparison[fastapi_singletons_and_transients-depin]": 1584,
+        "test_comparison[fastapi_singletons_and_transients-direct]": 1633,
+        "test_comparison[open_a_request_shaped_scope-depin]": 14941,
+        "test_comparison[open_a_request_shaped_scope-direct]": 12216,
+        "test_comparison[open_and_close_a_scope-depin]": 1774,
+        "test_comparison[open_and_close_a_scope-direct]": 3095,
+        "test_comparison[resolve_a_collection_of_10-depin]": 1169,
+        "test_comparison[resolve_a_collection_of_10-direct]": 31153,
+        "test_comparison[resolve_a_collection_of_100-depin]": 5779,
+        "test_comparison[resolve_a_collection_of_100-direct]": 5813,
+        "test_comparison[resolve_a_generic_key-depin]": 60292,
+        "test_comparison[resolve_a_generic_key-direct]": 59081,
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": 20157,
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": 13207,
+        "test_comparison[resolve_a_transient_chain-depin]": 65364,
+        "test_comparison[resolve_a_transient_chain-direct]": 60191,
+        "test_comparison[resolve_an_async_singleton-depin]": 12339,
+        "test_comparison[resolve_an_async_singleton-direct]": 24100,
+        "test_comparison[resolve_cached_singleton-depin]": 140430,
+        "test_comparison[resolve_cached_singleton-direct]": 122190,
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": 47115,
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": 74711,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": 120920,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": 111050,
+        "test_comparison[resolve_through_an_active_override-depin]": 99701,
+        "test_comparison[resolve_through_an_active_override-direct]": 76729,
+        "test_comparison[resolve_with_no_active_override-depin]": 169838,
+        "test_comparison[resolve_with_no_active_override-direct]": 147908,
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": 1000,
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": 1000
+      },
+      "samples": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": {
+          "iqr": 1.5704426914453506e-07,
+          "mean": 6.09131090364036e-06,
+          "median": 5.804002285003662e-06,
+          "minimum": 5.2209943532943726e-06,
+          "p95": 5.993002559989691e-06,
+          "p99": 2.0073732594028107e-05,
+          "rounds": 62066,
+          "stddev": 4.677529935023505e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper-direct]": {
+          "iqr": 1.4103716239333153e-07,
+          "mean": 6.264229548686689e-06,
+          "median": 5.788053385913372e-06,
+          "minimum": 4.931993316859007e-06,
+          "p95": 5.989836063235997e-06,
+          "p99": 2.0834783790633078e-05,
+          "rounds": 61324,
+          "stddev": 9.911068046684587e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": {
+          "iqr": 1.730513758957386e-07,
+          "mean": 8.334696015526867e-06,
+          "median": 6.886024493724108e-06,
+          "minimum": 6.243004463613033e-06,
+          "p95": 8.16794054117052e-06,
+          "p99": 2.2684849100187386e-05,
+          "rounds": 53428,
+          "stddev": 3.2656242032406595e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": {
+          "iqr": 1.2398231774568558e-07,
+          "mean": 7.390109336642449e-06,
+          "median": 6.76099443808198e-06,
+          "minimum": 6.137997843325138e-06,
+          "p95": 7.121998351067305e-06,
+          "p99": 2.1803741110488775e-05,
+          "rounds": 34883,
+          "stddev": 9.116294315108812e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": {
+          "iqr": 1.619919203221798e-07,
+          "mean": 6.294819592484565e-06,
+          "median": 5.826994311064482e-06,
+          "minimum": 5.244044587016106e-06,
+          "p95": 6.076996214687824e-06,
+          "p99": 2.1216045715846122e-05,
+          "rounds": 58012,
+          "stddev": 1.4609288344059611e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": {
+          "iqr": 1.7095590010285378e-07,
+          "mean": 6.511783160731344e-06,
+          "median": 5.886016879230738e-06,
+          "minimum": 5.24899223819375e-06,
+          "p95": 6.210396531969303e-06,
+          "p99": 2.2131255827844147e-05,
+          "rounds": 52193,
+          "stddev": 1.0308413576863576e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[fastapi_application_startup-depin]": {
+          "cpu": 2465959.0,
+          "iqr": 0.000270168500719592,
+          "mean": 0.0027892075072741135,
+          "median": 0.002521641494240612,
+          "minimum": 0.0022125939722172916,
+          "p95": 0.0032810493285069233,
+          "p99": 0.004132637059665285,
+          "rounds": 1000,
+          "stddev": 0.00394883071450006,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_application_startup-direct]": {
+          "cpu": 2718447.0,
+          "iqr": 0.00022670452017337084,
+          "mean": 0.002716281030443497,
+          "median": 0.002505121985450387,
+          "minimum": 0.002226891985628754,
+          "p95": 0.0031584443291649213,
+          "p99": 0.0039823591202730315,
+          "rounds": 1000,
+          "stddev": 0.0032202673071730706,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_async_resource_teardown-depin]": {
+          "cpu": 621606.0,
+          "iqr": 3.087602090090513e-05,
+          "mean": 0.0006204338707285642,
+          "median": 0.0006085139757487923,
+          "minimum": 0.000546882045455277,
+          "p95": 0.0006963614170672371,
+          "p99": 0.0009216266934527084,
+          "rounds": 1438,
+          "stddev": 6.07422496513106e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_async_resource_teardown-direct]": {
+          "cpu": 607841.0,
+          "iqr": 3.793899668380618e-05,
+          "mean": 0.0006163952464629132,
+          "median": 0.0006039060244802386,
+          "minimum": 0.0005154040409252048,
+          "p95": 0.0006907539791427553,
+          "p99": 0.0009063138510100543,
+          "rounds": 1566,
+          "stddev": 6.436443970219045e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": {
+          "cpu": 537182.0,
+          "iqr": 3.9363541873171926e-05,
+          "mean": 0.000562971076312787,
+          "median": 0.0005494399811141193,
+          "minimum": 0.0004701120196841657,
+          "p95": 0.0006320993998087942,
+          "p99": 0.0008391840476542712,
+          "rounds": 1805,
+          "stddev": 7.298968134935565e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": {
+          "cpu": 546869.0,
+          "iqr": 3.431621007621288e-05,
+          "mean": 0.0005523967250605144,
+          "median": 0.0005445189890451729,
+          "minimum": 0.00046265096170827746,
+          "p95": 0.000601146591361612,
+          "p99": 0.0008037672750651837,
+          "rounds": 1803,
+          "stddev": 5.0702622366548404e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_endpoint_with_work-depin]": {
+          "cpu": 784239.0,
+          "iqr": 4.324948531575501e-05,
+          "mean": 0.0008278906860020167,
+          "median": 0.0008149865025188774,
+          "minimum": 0.0007144379778765142,
+          "p95": 0.0009460174478590488,
+          "p99": 0.0011214598978403956,
+          "rounds": 1200,
+          "stddev": 6.575472058080562e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_endpoint_with_work-direct]": {
+          "cpu": 853447.0,
+          "iqr": 4.513276508077979e-05,
+          "mean": 0.0008248340174728114,
+          "median": 0.0008091350318863988,
+          "minimum": 0.0007191110053099692,
+          "p95": 0.0009106511250138282,
+          "p99": 0.0011212654085829853,
+          "rounds": 1043,
+          "stddev": 0.00010097267609574698,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_request_scoped_graph-depin]": {
+          "cpu": 631701.0,
+          "iqr": 3.5252756788395345e-05,
+          "mean": 0.0006092870385298542,
+          "median": 0.0005936429952271283,
+          "minimum": 0.0005009640008211136,
+          "p95": 0.0007309334876481438,
+          "p99": 0.0008993634814396494,
+          "rounds": 1639,
+          "stddev": 7.944792663202706e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_request_scoped_graph-direct]": {
+          "cpu": 600223.0,
+          "iqr": 3.8700003642588854e-05,
+          "mean": 0.0006519991435153949,
+          "median": 0.0005932439817115664,
+          "minimum": 0.0005064660217612982,
+          "p95": 0.0006615499150939285,
+          "p99": 0.000862424301449209,
+          "rounds": 1739,
+          "stddev": 0.002052655528578099,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_singletons_and_transients-depin]": {
+          "cpu": 605068.0,
+          "iqr": 3.530949470587075e-05,
+          "mean": 0.0005875165494731533,
+          "median": 0.0005775624886155128,
+          "minimum": 0.0004980149678885937,
+          "p95": 0.0006506819045171139,
+          "p99": 0.0008468515961430967,
+          "rounds": 1584,
+          "stddev": 5.498743054172351e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_singletons_and_transients-direct]": {
+          "cpu": 539124.0,
+          "iqr": 3.9728503907099366e-05,
+          "mean": 0.0005886196004485156,
+          "median": 0.0005788060370832682,
+          "minimum": 0.0004912760341539979,
+          "p95": 0.0006434110226109623,
+          "p99": 0.0008763267728500073,
+          "rounds": 1633,
+          "stddev": 5.7288666832058516e-05,
+          "tier": "application"
+        },
+        "test_comparison[open_a_request_shaped_scope-depin]": {
+          "iqr": 1.0780058801174164e-06,
+          "mean": 2.8771390259627683e-05,
+          "median": 2.6726978830993176e-05,
+          "minimum": 2.323399530723691e-05,
+          "p95": 4.199001705273986e-05,
+          "p99": 6.528538651764394e-05,
+          "rounds": 14941,
+          "stddev": 9.530425185904644e-06,
+          "tier": "component"
+        },
+        "test_comparison[open_a_request_shaped_scope-direct]": {
+          "iqr": 1.6365083865821362e-06,
+          "mean": 2.8711998535286008e-05,
+          "median": 2.6848050765693188e-05,
+          "minimum": 2.351601142436266e-05,
+          "p95": 4.243025614414364e-05,
+          "p99": 5.703742790501568e-05,
+          "rounds": 12216,
+          "stddev": 6.314656863322236e-06,
+          "tier": "component"
+        },
+        "test_comparison[open_and_close_a_scope-depin]": {
+          "iqr": 1.8339022062718868e-05,
+          "mean": 0.00021832526492541855,
+          "median": 0.00020506800501607358,
+          "minimum": 0.00018001499120146036,
+          "p95": 0.00027063731395173815,
+          "p99": 0.00031860513787250965,
+          "rounds": 1774,
+          "stddev": 5.7223801773519915e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[open_and_close_a_scope-direct]": {
+          "iqr": 1.8265534890815616e-05,
+          "mean": 0.00021767485815345615,
+          "median": 0.00020237697754055262,
+          "minimum": 0.00018435000674799085,
+          "p95": 0.0002642906154505908,
+          "p99": 0.00032171790837310255,
+          "rounds": 3095,
+          "stddev": 8.431147765771599e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_10-depin]": {
+          "iqr": 3.5147240851074457e-07,
+          "mean": 2.0740142449022767e-05,
+          "median": 1.9157014321535826e-05,
+          "minimum": 1.8160033505409956e-05,
+          "p95": 3.375940723344683e-05,
+          "p99": 5.948447622358779e-05,
+          "rounds": 1169,
+          "stddev": 9.538093187844511e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_10-direct]": {
+          "iqr": 3.030290827155113e-07,
+          "mean": 2.191693644187523e-05,
+          "median": 1.9456027075648308e-05,
+          "minimum": 1.6618985682725906e-05,
+          "p95": 3.322340780869126e-05,
+          "p99": 5.883370293304321e-05,
+          "rounds": 31153,
+          "stddev": 3.9456387860262153e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_100-depin]": {
+          "iqr": 1.2202464859001338e-05,
+          "mean": 0.00014729484065673855,
+          "median": 0.00013653398491442204,
+          "minimum": 0.0001256749965250492,
+          "p95": 0.00016767841298133133,
+          "p99": 0.0002566481556277723,
+          "rounds": 5779,
+          "stddev": 7.563581696627962e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_100-direct]": {
+          "iqr": 1.4758494216948748e-05,
+          "mean": 0.00014863879791839516,
+          "median": 0.00013602100079879165,
+          "minimum": 0.000123832025565207,
+          "p95": 0.00017721778713166708,
+          "p99": 0.000320415438618511,
+          "rounds": 5813,
+          "stddev": 6.876971973692068e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_generic_key-depin]": {
+          "iqr": 1.7206184566020966e-07,
+          "mean": 6.6130754198142e-06,
+          "median": 6.176996976137161e-06,
+          "minimum": 5.599984433501959e-06,
+          "p95": 6.372469943016765e-06,
+          "p99": 2.1387227461673307e-05,
+          "rounds": 60292,
+          "stddev": 1.3783300262250554e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_generic_key-direct]": {
+          "iqr": 1.5390105545520782e-07,
+          "mean": 6.489613200800874e-06,
+          "median": 6.071000825613737e-06,
+          "minimum": 5.516980309039354e-06,
+          "p95": 6.282993126660585e-06,
+          "p99": 2.124820603057742e-05,
+          "rounds": 59081,
+          "stddev": 9.18067079959334e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": {
+          "iqr": 6.039626896381378e-07,
+          "mean": 2.0162515558721746e-05,
+          "median": 1.608103048056364e-05,
+          "minimum": 1.4715013094246387e-05,
+          "p95": 3.088280791416765e-05,
+          "p99": 7.930238032713507e-05,
+          "rounds": 20157,
+          "stddev": 6.598134756513218e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": {
+          "iqr": 4.720059223473072e-07,
+          "mean": 1.681235026737557e-05,
+          "median": 1.587503356859088e-05,
+          "minimum": 1.4760007616132498e-05,
+          "p95": 1.973169855773441e-05,
+          "p99": 3.2639011042192575e-05,
+          "rounds": 13207,
+          "stddev": 6.793667959924178e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_transient_chain-depin]": {
+          "iqr": 7.904600352048874e-08,
+          "mean": 5.9610040249047315e-06,
+          "median": 4.539033398032188e-06,
+          "minimum": 4.127970896661282e-06,
+          "p95": 4.668021574616432e-06,
+          "p99": 1.911896513774993e-05,
+          "rounds": 65364,
+          "stddev": 5.743758109465617e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_transient_chain-direct]": {
+          "iqr": 1.1693919077515602e-07,
+          "mean": 4.8432090723517376e-06,
+          "median": 4.604982677847147e-06,
+          "minimum": 4.199042450636625e-06,
+          "p95": 4.724017344415188e-06,
+          "p99": 1.6153277829289434e-05,
+          "rounds": 60191,
+          "stddev": 6.683666895820501e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_an_async_singleton-depin]": {
+          "iqr": 4.6798959374427795e-07,
+          "mean": 1.9506894830244183e-05,
+          "median": 1.7651007510721684e-05,
+          "minimum": 1.649296609684825e-05,
+          "p95": 2.6034115580841896e-05,
+          "p99": 5.145175498910068e-05,
+          "rounds": 12339,
+          "stddev": 2.1192148388096332e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_an_async_singleton-direct]": {
+          "iqr": 6.079790182411671e-07,
+          "mean": 2.3639444901832065e-05,
+          "median": 1.7640995793044567e-05,
+          "minimum": 1.5933997929096222e-05,
+          "p95": 3.287098370492457e-05,
+          "p99": 9.320963581558307e-05,
+          "rounds": 24100,
+          "stddev": 7.144906892393427e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton-depin]": {
+          "iqr": 3.6961864680051804e-08,
+          "mean": 2.0024374829941993e-06,
+          "median": 1.8969876691699028e-06,
+          "minimum": 1.7579877749085426e-06,
+          "p95": 1.9569997675716877e-06,
+          "p99": 2.642988692969027e-06,
+          "rounds": 140430,
+          "stddev": 2.088085435781088e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton-direct]": {
+          "iqr": 4.196772351861e-08,
+          "mean": 1.9837217747472145e-06,
+          "median": 1.9039725884795189e-06,
+          "minimum": 1.7780112102627754e-06,
+          "p95": 1.969980075955391e-06,
+          "p99": 2.2979802452027798e-06,
+          "rounds": 122190,
+          "stddev": 1.5516238105805901e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": {
+          "iqr": 5.407491698861122e-08,
+          "mean": 4.0789321932226505e-06,
+          "median": 3.888970240950584e-06,
+          "minimum": 3.663008101284504e-06,
+          "p95": 3.980996552854776e-06,
+          "p99": 6.888569332659246e-06,
+          "rounds": 47115,
+          "stddev": 3.0388334439522182e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": {
+          "iqr": 6.594927981495857e-08,
+          "mean": 4.2017182274599585e-06,
+          "median": 3.951019607484341e-06,
+          "minimum": 3.7050340324640274e-06,
+          "p95": 4.061032086610794e-06,
+          "p99": 8.971861097961659e-06,
+          "rounds": 74711,
+          "stddev": 3.0929715725240424e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": {
+          "iqr": 4.196772351861e-08,
+          "mean": 1.995134019360514e-06,
+          "median": 1.8840073607861996e-06,
+          "minimum": 1.6979756765067577e-06,
+          "p95": 1.9529834389686584e-06,
+          "p99": 2.441043616272509e-06,
+          "rounds": 120920,
+          "stddev": 2.0313592269289676e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": {
+          "iqr": 3.405148163437843e-08,
+          "mean": 2.01019238169443e-06,
+          "median": 1.895008608698845e-06,
+          "minimum": 1.7130514606833458e-06,
+          "p95": 1.95804750546813e-06,
+          "p99": 2.5060144253075123e-06,
+          "rounds": 111050,
+          "stddev": 1.9713079852913215e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_through_an_active_override-depin]": {
+          "iqr": 7.596099749207497e-08,
+          "mean": 4.356920280738263e-06,
+          "median": 3.9949663914740086e-06,
+          "minimum": 3.404973540455103e-06,
+          "p95": 4.107016138732433e-06,
+          "p99": 1.6117002815008163e-05,
+          "rounds": 99701,
+          "stddev": 1.0672229947799378e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_through_an_active_override-direct]": {
+          "iqr": 8.800998330116272e-08,
+          "mean": 4.167729515452837e-06,
+          "median": 4.005967639386654e-06,
+          "minimum": 3.4050317481160164e-06,
+          "p95": 4.115980118513107e-06,
+          "p99": 1.3841893523931624e-05,
+          "rounds": 76729,
+          "stddev": 2.033222155183385e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_with_no_active_override-depin]": {
+          "iqr": 5.5995769798755646e-08,
+          "mean": 3.1762447238824896e-06,
+          "median": 1.8849968910217285e-06,
+          "minimum": 1.7389538697898388e-06,
+          "p95": 1.9799917936325073e-06,
+          "p99": 7.88162811659277e-06,
+          "rounds": 169838,
+          "stddev": 4.744170339687551e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_with_no_active_override-direct]": {
+          "iqr": 4.895264282822609e-08,
+          "mean": 2.7040803030280943e-06,
+          "median": 1.8819700926542282e-06,
+          "minimum": 1.7450074665248394e-06,
+          "p95": 1.959037035703659e-06,
+          "p99": 3.4539151238277485e-06,
+          "rounds": 147908,
+          "stddev": 4.414932697949974e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": {
+          "iqr": 0.000656195537885651,
+          "mean": 0.014239465324673801,
+          "median": 0.011502720473799855,
+          "minimum": 0.010798448987770826,
+          "p95": 0.014685519094928158,
+          "p99": 0.10648611285665538,
+          "rounds": 1000,
+          "stddev": 0.015062432581473918,
+          "tier": "component"
+        },
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": {
+          "iqr": 0.0003808914916589856,
+          "mean": 0.013755615733622108,
+          "median": 0.011381549498764798,
+          "minimum": 0.010824979981407523,
+          "p95": 0.012525375158293172,
+          "p99": 0.09738088875834365,
+          "rounds": 1000,
+          "stddev": 0.01444355876698002,
+          "tier": "component"
+        }
+      }
+    },
+    {
+      "duration": 56.42904936586274,
+      "medians": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": 5.884969141334295e-06,
+        "test_comparison[call_through_an_inject_wrapper-direct]": 5.73496799916029e-06,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": 6.772985216230154e-06,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": 6.8160006776452065e-06,
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": 5.968031473457813e-06,
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": 5.977984983474016e-06,
+        "test_comparison[fastapi_application_startup-depin]": 0.002558343519922346,
+        "test_comparison[fastapi_application_startup-direct]": 0.002538781991461292,
+        "test_comparison[fastapi_async_resource_teardown-depin]": 0.0006012135127093643,
+        "test_comparison[fastapi_async_resource_teardown-direct]": 0.0006008330383338034,
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": 0.0005402410170063376,
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": 0.00054792599985376,
+        "test_comparison[fastapi_endpoint_with_work-depin]": 0.000809966993983835,
+        "test_comparison[fastapi_endpoint_with_work-direct]": 0.0008068949973676354,
+        "test_comparison[fastapi_request_scoped_graph-depin]": 0.0005931470077484846,
+        "test_comparison[fastapi_request_scoped_graph-direct]": 0.000593137985561043,
+        "test_comparison[fastapi_singletons_and_transients-depin]": 0.0005716229788959026,
+        "test_comparison[fastapi_singletons_and_transients-direct]": 0.000572469987673685,
+        "test_comparison[open_a_request_shaped_scope-depin]": 2.7147994842380285e-05,
+        "test_comparison[open_a_request_shaped_scope-direct]": 2.7093978133052588e-05,
+        "test_comparison[open_and_close_a_scope-depin]": 0.00019562049419619143,
+        "test_comparison[open_and_close_a_scope-direct]": 0.00019360799342393875,
+        "test_comparison[resolve_a_collection_of_10-depin]": 1.9019003957509995e-05,
+        "test_comparison[resolve_a_collection_of_10-direct]": 1.9230006728321314e-05,
+        "test_comparison[resolve_a_collection_of_100-depin]": 0.00013840000610798597,
+        "test_comparison[resolve_a_collection_of_100-direct]": 0.00013779898290522397,
+        "test_comparison[resolve_a_generic_key-depin]": 5.971989594399929e-06,
+        "test_comparison[resolve_a_generic_key-direct]": 5.937996320426464e-06,
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": 1.5722995158284903e-05,
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": 1.5617493772879243e-05,
+        "test_comparison[resolve_a_transient_chain-depin]": 4.564994014799595e-06,
+        "test_comparison[resolve_a_transient_chain-direct]": 4.60201408714056e-06,
+        "test_comparison[resolve_an_async_singleton-depin]": 1.7132028006017208e-05,
+        "test_comparison[resolve_an_async_singleton-direct]": 1.7278012819588184e-05,
+        "test_comparison[resolve_cached_singleton-depin]": 1.8569990061223507e-06,
+        "test_comparison[resolve_cached_singleton-direct]": 1.8700375221669674e-06,
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": 3.825989551842213e-06,
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": 3.8869911804795265e-06,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": 1.86101533472538e-06,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": 1.869979314506054e-06,
+        "test_comparison[resolve_through_an_active_override-depin]": 3.975001163780689e-06,
+        "test_comparison[resolve_through_an_active_override-direct]": 4.004978109151125e-06,
+        "test_comparison[resolve_with_no_active_override-depin]": 1.9000144675374031e-06,
+        "test_comparison[resolve_with_no_active_override-direct]": 1.8869759514927864e-06,
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": 0.011464943992905319,
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": 0.011472269980004057
+      },
+      "order": "forward",
+      "rounds": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": 41357,
+        "test_comparison[call_through_an_inject_wrapper-direct]": 17957,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": 52494,
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": 30849,
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": 46383,
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": 57671,
+        "test_comparison[fastapi_application_startup-depin]": 1000,
+        "test_comparison[fastapi_application_startup-direct]": 1000,
+        "test_comparison[fastapi_async_resource_teardown-depin]": 1598,
+        "test_comparison[fastapi_async_resource_teardown-direct]": 1515,
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": 1433,
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": 1733,
+        "test_comparison[fastapi_endpoint_with_work-depin]": 1217,
+        "test_comparison[fastapi_endpoint_with_work-direct]": 1208,
+        "test_comparison[fastapi_request_scoped_graph-depin]": 1609,
+        "test_comparison[fastapi_request_scoped_graph-direct]": 1101,
+        "test_comparison[fastapi_singletons_and_transients-depin]": 1125,
+        "test_comparison[fastapi_singletons_and_transients-direct]": 1748,
+        "test_comparison[open_a_request_shaped_scope-depin]": 12667,
+        "test_comparison[open_a_request_shaped_scope-direct]": 15073,
+        "test_comparison[open_and_close_a_scope-depin]": 1000,
+        "test_comparison[open_and_close_a_scope-direct]": 3632,
+        "test_comparison[resolve_a_collection_of_10-depin]": 27788,
+        "test_comparison[resolve_a_collection_of_10-direct]": 32411,
+        "test_comparison[resolve_a_collection_of_100-depin]": 5911,
+        "test_comparison[resolve_a_collection_of_100-direct]": 6666,
+        "test_comparison[resolve_a_generic_key-depin]": 60969,
+        "test_comparison[resolve_a_generic_key-direct]": 68980,
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": 12645,
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": 19352,
+        "test_comparison[resolve_a_transient_chain-depin]": 61350,
+        "test_comparison[resolve_a_transient_chain-direct]": 65574,
+        "test_comparison[resolve_an_async_singleton-depin]": 17984,
+        "test_comparison[resolve_an_async_singleton-direct]": 25819,
+        "test_comparison[resolve_cached_singleton-depin]": 122835,
+        "test_comparison[resolve_cached_singleton-direct]": 123093,
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": 66641,
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": 78598,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": 124970,
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": 135245,
+        "test_comparison[resolve_through_an_active_override-depin]": 88551,
+        "test_comparison[resolve_through_an_active_override-direct]": 99761,
+        "test_comparison[resolve_with_no_active_override-depin]": 153070,
+        "test_comparison[resolve_with_no_active_override-direct]": 162154,
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": 1000,
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": 1000
+      },
+      "samples": {
+        "test_comparison[call_through_an_inject_wrapper-depin]": {
+          "iqr": 1.4703255146741867e-07,
+          "mean": 6.108996421307686e-06,
+          "median": 5.884969141334295e-06,
+          "minimum": 4.992994945496321e-06,
+          "p95": 6.104004569351673e-06,
+          "p99": 1.8823184072971356e-05,
+          "rounds": 41357,
+          "stddev": 2.1321945905794728e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper-direct]": {
+          "iqr": 1.9598519429564476e-07,
+          "mean": 6.510105286593909e-06,
+          "median": 5.73496799916029e-06,
+          "minimum": 4.8800138756632805e-06,
+          "p95": 6.024376489222051e-06,
+          "p99": 2.1433366928249574e-05,
+          "rounds": 17957,
+          "stddev": 1.887295967649504e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-depin]": {
+          "iqr": 1.41968484967947e-07,
+          "mean": 7.129346594226788e-06,
+          "median": 6.772985216230154e-06,
+          "minimum": 5.765992682427168e-06,
+          "p95": 6.949994713068008e-06,
+          "p99": 2.2081087226979435e-05,
+          "rounds": 52494,
+          "stddev": 2.752762414383813e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[call_through_an_inject_wrapper_with_explicit_arguments-direct]": {
+          "iqr": 2.0902371034026146e-07,
+          "mean": 7.189963326574699e-06,
+          "median": 6.8160006776452065e-06,
+          "minimum": 5.7800207287073135e-06,
+          "p95": 7.031578570604323e-06,
+          "p99": 2.214052714407444e-05,
+          "rounds": 30849,
+          "stddev": 2.9076966492857675e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[construct_a_singleton_for_the_first_time-depin]": {
+          "iqr": 3.440072759985924e-07,
+          "mean": 6.3155101538078736e-06,
+          "median": 5.968031473457813e-06,
+          "minimum": 4.99701127409935e-06,
+          "p95": 6.299989763647318e-06,
+          "p99": 2.123669255524874e-05,
+          "rounds": 46383,
+          "stddev": 2.7764896467878613e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[construct_a_singleton_for_the_first_time-direct]": {
+          "iqr": 1.8399441614747047e-07,
+          "mean": 6.299211243878555e-06,
+          "median": 5.977984983474016e-06,
+          "minimum": 4.967034328728914e-06,
+          "p95": 6.2480103224515915e-06,
+          "p99": 2.0629621576517824e-05,
+          "rounds": 57671,
+          "stddev": 3.7706425163900036e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[fastapi_application_startup-depin]": {
+          "cpu": 2495132.0,
+          "iqr": 0.00023269152734428644,
+          "mean": 0.002821026693447493,
+          "median": 0.002558343519922346,
+          "minimum": 0.0023549440084025264,
+          "p95": 0.0028549365932121875,
+          "p99": 0.004229763082112185,
+          "rounds": 1000,
+          "stddev": 0.004586453211015507,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_application_startup-direct]": {
+          "cpu": 2474364.0,
+          "iqr": 0.0002565125178080052,
+          "mean": 0.0029185923527693374,
+          "median": 0.002538781991461292,
+          "minimum": 0.002384924970101565,
+          "p95": 0.0028608671709662303,
+          "p99": 0.0045588967931689695,
+          "rounds": 1000,
+          "stddev": 0.0059918793548186106,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_async_resource_teardown-depin]": {
+          "cpu": 572564.0,
+          "iqr": 2.5880930479615927e-05,
+          "mean": 0.000615478978932046,
+          "median": 0.0006012135127093643,
+          "minimum": 0.000528684991877526,
+          "p95": 0.0006999718898441643,
+          "p99": 0.0008570936875184997,
+          "rounds": 1598,
+          "stddev": 5.423798806807571e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_async_resource_teardown-direct]": {
+          "cpu": 591739.0,
+          "iqr": 2.5402288883924484e-05,
+          "mean": 0.000612486254580614,
+          "median": 0.0006008330383338034,
+          "minimum": 0.0005706020165234804,
+          "p95": 0.0006638274935539811,
+          "p99": 0.0008415487350430339,
+          "rounds": 1515,
+          "stddev": 4.8917366548692494e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_cpu_light_endpoint-depin]": {
+          "cpu": 538414.0,
+          "iqr": 1.9640690879896283e-05,
+          "mean": 0.0005488267158004095,
+          "median": 0.0005402410170063376,
+          "minimum": 0.00050457997713238,
+          "p95": 0.0005899118143133818,
+          "p99": 0.0007607260998338465,
+          "rounds": 1433,
+          "stddev": 7.026807410222158e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_cpu_light_endpoint-direct]": {
+          "cpu": 546173.0,
+          "iqr": 2.0530191250145435e-05,
+          "mean": 0.0005726718743623541,
+          "median": 0.00054792599985376,
+          "minimum": 0.0005163419991731644,
+          "p95": 0.0006612597731873352,
+          "p99": 0.0011845182604156442,
+          "rounds": 1733,
+          "stddev": 0.00017778099248952014,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_endpoint_with_work-depin]": {
+          "cpu": 803048.0,
+          "iqr": 1.6547535778954625e-05,
+          "mean": 0.0008185105656094592,
+          "median": 0.000809966993983835,
+          "minimum": 0.0007772879907861352,
+          "p95": 0.0008615338010713458,
+          "p99": 0.0010477813798934216,
+          "rounds": 1217,
+          "stddev": 4.3658190956979675e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_endpoint_with_work-direct]": {
+          "cpu": 803398.0,
+          "iqr": 1.3700511772185564e-05,
+          "mean": 0.0008148169794042027,
+          "median": 0.0008068949973676354,
+          "minimum": 0.0007740110158920288,
+          "p95": 0.0008335284772329032,
+          "p99": 0.0010600844223517924,
+          "rounds": 1208,
+          "stddev": 4.407126497104868e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_request_scoped_graph-depin]": {
+          "cpu": 590962.0,
+          "iqr": 2.233183477073908e-05,
+          "mean": 0.0006062160120904215,
+          "median": 0.0005931470077484846,
+          "minimum": 0.0005487630260176957,
+          "p95": 0.0006770235951989888,
+          "p99": 0.000844521312974394,
+          "rounds": 1609,
+          "stddev": 9.082245792405202e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_request_scoped_graph-direct]": {
+          "cpu": 589154.0,
+          "iqr": 2.1700034267269075e-05,
+          "mean": 0.0006093890839180216,
+          "median": 0.000593137985561043,
+          "minimum": 0.000563915993552655,
+          "p95": 0.0007177870138548315,
+          "p99": 0.0008932740311138332,
+          "rounds": 1101,
+          "stddev": 7.425137266552274e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_singletons_and_transients-depin]": {
+          "cpu": 632927.0,
+          "iqr": 3.518752055242658e-05,
+          "mean": 0.0005859365422382123,
+          "median": 0.0005716229788959026,
+          "minimum": 0.0004923089873045683,
+          "p95": 0.0006703798193484545,
+          "p99": 0.0008127105608582496,
+          "rounds": 1125,
+          "stddev": 5.070819870642394e-05,
+          "tier": "application"
+        },
+        "test_comparison[fastapi_singletons_and_transients-direct]": {
+          "cpu": 581524.0,
+          "iqr": 3.538199234753847e-05,
+          "mean": 0.0005856023540145459,
+          "median": 0.000572469987673685,
+          "minimum": 0.0004999029915779829,
+          "p95": 0.0006531094841193406,
+          "p99": 0.0008295472018653526,
+          "rounds": 1748,
+          "stddev": 4.8866649352722346e-05,
+          "tier": "application"
+        },
+        "test_comparison[open_a_request_shaped_scope-depin]": {
+          "iqr": 4.0902523323893547e-07,
+          "mean": 2.79170136558048e-05,
+          "median": 2.7147994842380285e-05,
+          "minimum": 2.4763052351772785e-05,
+          "p95": 3.143830108456312e-05,
+          "p99": 4.318143939599395e-05,
+          "rounds": 12667,
+          "stddev": 4.477261702930255e-06,
+          "tier": "component"
+        },
+        "test_comparison[open_a_request_shaped_scope-direct]": {
+          "iqr": 4.3727050069719553e-07,
+          "mean": 2.8897476536744216e-05,
+          "median": 2.7093978133052588e-05,
+          "minimum": 2.4858047254383564e-05,
+          "p95": 3.768098540604115e-05,
+          "p99": 6.339682033285502e-05,
+          "rounds": 15073,
+          "stddev": 2.9044565860499362e-05,
+          "tier": "component"
+        },
+        "test_comparison[open_and_close_a_scope-depin]": {
+          "iqr": 8.848030120134354e-06,
+          "mean": 0.0002044518366456032,
+          "median": 0.00019562049419619143,
+          "minimum": 0.00018697400810196996,
+          "p95": 0.0002515514031983912,
+          "p99": 0.00029574650397989893,
+          "rounds": 1000,
+          "stddev": 2.248960726277228e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[open_and_close_a_scope-direct]": {
+          "iqr": 1.6104517271742225e-05,
+          "mean": 0.0002051157016106594,
+          "median": 0.00019360799342393875,
+          "minimum": 0.0001716130063869059,
+          "p95": 0.0002573980309534818,
+          "p99": 0.00030949147476349036,
+          "rounds": 3632,
+          "stddev": 3.504037913074845e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_10-depin]": {
+          "iqr": 3.864406608045101e-07,
+          "mean": 2.020066698824557e-05,
+          "median": 1.9019003957509995e-05,
+          "minimum": 1.6214034985750914e-05,
+          "p95": 3.329046303406355e-05,
+          "p99": 4.619499668478966e-05,
+          "rounds": 27788,
+          "stddev": 5.3400442700150835e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_10-direct]": {
+          "iqr": 4.2497413232922554e-07,
+          "mean": 2.0654991508457886e-05,
+          "median": 1.9230006728321314e-05,
+          "minimum": 1.6467995010316372e-05,
+          "p95": 3.3079530112445354e-05,
+          "p99": 4.04485734179616e-05,
+          "rounds": 32411,
+          "stddev": 2.2151700407472423e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_100-depin]": {
+          "iqr": 1.5092751709744334e-05,
+          "mean": 0.00014477431076710987,
+          "median": 0.00013840000610798597,
+          "minimum": 0.00011808698764070868,
+          "p95": 0.00017548451432958245,
+          "p99": 0.0001960908295586705,
+          "rounds": 5911,
+          "stddev": 1.7283989632606163e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_collection_of_100-direct]": {
+          "iqr": 1.5027995686978102e-05,
+          "mean": 0.0001444694884261829,
+          "median": 0.00013779898290522397,
+          "minimum": 0.00011799397179856896,
+          "p95": 0.0001758385042194277,
+          "p99": 0.00019795905100181705,
+          "rounds": 6666,
+          "stddev": 3.239055587795953e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_generic_key-depin]": {
+          "iqr": 2.480228431522846e-07,
+          "mean": 6.274880281525326e-06,
+          "median": 5.971989594399929e-06,
+          "minimum": 5.050038453191519e-06,
+          "p95": 6.1810133047401905e-06,
+          "p99": 2.1019019186496735e-05,
+          "rounds": 60969,
+          "stddev": 2.7432291634894655e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_generic_key-direct]": {
+          "iqr": 2.969754859805107e-07,
+          "mean": 6.28037669989703e-06,
+          "median": 5.937996320426464e-06,
+          "minimum": 5.032983608543873e-06,
+          "p95": 6.1909668147563934e-06,
+          "p99": 2.118617878295482e-05,
+          "rounds": 68980,
+          "stddev": 2.7616829266106628e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_sync_resource_with_teardown-depin]": {
+          "iqr": 3.630411811172962e-07,
+          "mean": 1.644148336102565e-05,
+          "median": 1.5722995158284903e-05,
+          "minimum": 1.359300222247839e-05,
+          "p95": 1.9020179752260444e-05,
+          "p99": 3.212372306734323e-05,
+          "rounds": 12645,
+          "stddev": 3.972332535126647e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_sync_resource_with_teardown-direct]": {
+          "iqr": 3.4802360460162163e-07,
+          "mean": 1.6364651164411496e-05,
+          "median": 1.5617493772879243e-05,
+          "minimum": 1.3370008673518896e-05,
+          "p95": 1.8974344129674154e-05,
+          "p99": 3.18241555942223e-05,
+          "rounds": 19352,
+          "stddev": 4.093427837976134e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_transient_chain-depin]": {
+          "iqr": 1.9604340195655823e-07,
+          "mean": 4.926161841886344e-06,
+          "median": 4.564994014799595e-06,
+          "minimum": 3.849971108138561e-06,
+          "p95": 4.7209905460476875e-06,
+          "p99": 1.96120236068964e-05,
+          "rounds": 61350,
+          "stddev": 1.2785285515127488e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_a_transient_chain-direct]": {
+          "iqr": 1.4505349099636078e-07,
+          "mean": 4.839191855272476e-06,
+          "median": 4.60201408714056e-06,
+          "minimum": 3.930996172130108e-06,
+          "p95": 4.731002263724804e-06,
+          "p99": 1.9171560998074705e-05,
+          "rounds": 65574,
+          "stddev": 2.437941636311992e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_an_async_singleton-depin]": {
+          "iqr": 7.130438461899757e-07,
+          "mean": 1.8461933050728675e-05,
+          "median": 1.7132028006017208e-05,
+          "minimum": 1.4592020306736231e-05,
+          "p95": 3.179069026373326e-05,
+          "p99": 4.064751090481851e-05,
+          "rounds": 17984,
+          "stddev": 6.09392973205965e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_an_async_singleton-direct]": {
+          "iqr": 5.859765224158764e-07,
+          "mean": 1.853348264870221e-05,
+          "median": 1.7278012819588184e-05,
+          "minimum": 1.477700425311923e-05,
+          "p95": 3.1776225659996266e-05,
+          "p99": 4.109441186301408e-05,
+          "rounds": 25819,
+          "stddev": 6.307901097134224e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton-depin]": {
+          "iqr": 6.298068910837173e-08,
+          "mean": 1.9924405146947165e-06,
+          "median": 1.8569990061223507e-06,
+          "minimum": 1.5560071915388107e-06,
+          "p95": 1.9220169633626938e-06,
+          "p99": 2.329004928469658e-06,
+          "rounds": 122835,
+          "stddev": 7.233636946063119e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton-direct]": {
+          "iqr": 8.603092283010483e-08,
+          "mean": 2.0147006766833983e-06,
+          "median": 1.8700375221669674e-06,
+          "minimum": 1.5730038285255432e-06,
+          "p95": 1.941982191056013e-06,
+          "p99": 3.1974771991372213e-06,
+          "rounds": 123093,
+          "stddev": 3.475767847116784e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton_through_an_alias-depin]": {
+          "iqr": 1.3597309589385986e-07,
+          "mean": 4.098447181620783e-06,
+          "median": 3.825989551842213e-06,
+          "minimum": 3.2479874789714813e-06,
+          "p95": 3.944034688174725e-06,
+          "p99": 1.8049613572657203e-05,
+          "rounds": 66641,
+          "stddev": 1.053223863759586e-05,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_cached_singleton_through_an_alias-direct]": {
+          "iqr": 2.069864422082901e-07,
+          "mean": 4.153640883921149e-06,
+          "median": 3.8869911804795265e-06,
+          "minimum": 3.2850075513124466e-06,
+          "p95": 4.043977241963148e-06,
+          "p99": 1.8769002053886652e-05,
+          "rounds": 78598,
+          "stddev": 2.513186284046989e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-depin]": {
+          "iqr": 6.996560841798782e-08,
+          "mean": 1.9640281202203464e-06,
+          "median": 1.86101533472538e-06,
+          "minimum": 1.5639816410839558e-06,
+          "p95": 1.9249855540692806e-06,
+          "p99": 2.347297850064931e-06,
+          "rounds": 124970,
+          "stddev": 1.5090289209050299e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_singleton_through_a_two_deep_decoration_chain-direct]": {
+          "iqr": 7.502967491745949e-08,
+          "mean": 2.0059406832207605e-06,
+          "median": 1.869979314506054e-06,
+          "minimum": 1.5690457075834274e-06,
+          "p95": 1.935986801981926e-06,
+          "p99": 3.237256314605465e-06,
+          "rounds": 135245,
+          "stddev": 3.0782736429309812e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_through_an_active_override-depin]": {
+          "iqr": 9.505311027169228e-08,
+          "mean": 4.187655796766778e-06,
+          "median": 3.975001163780689e-06,
+          "minimum": 3.367022145539522e-06,
+          "p95": 4.082045052200556e-06,
+          "p99": 1.82829680852592e-05,
+          "rounds": 88551,
+          "stddev": 2.4080830326807643e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_through_an_active_override-direct]": {
+          "iqr": 9.598443284630775e-08,
+          "mean": 4.207935287785458e-06,
+          "median": 4.004978109151125e-06,
+          "minimum": 3.363005816936493e-06,
+          "p95": 4.118017386645079e-06,
+          "p99": 1.682679867371901e-05,
+          "rounds": 99761,
+          "stddev": 3.6459316234237042e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_with_no_active_override-depin]": {
+          "iqr": 8.003553375601768e-08,
+          "mean": 2.0126274985480845e-06,
+          "median": 1.9000144675374031e-06,
+          "minimum": 1.5870318748056889e-06,
+          "p95": 1.9639846868813038e-06,
+          "p99": 2.5834760162979177e-06,
+          "rounds": 153070,
+          "stddev": 1.518454165450815e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[resolve_with_no_active_override-direct]": {
+          "iqr": 6.600748747587204e-08,
+          "mean": 1.9962694428459603e-06,
+          "median": 1.8869759514927864e-06,
+          "minimum": 1.5910482034087181e-06,
+          "p95": 1.949956640601158e-06,
+          "p99": 2.4150050012394787e-06,
+          "rounds": 162154,
+          "stddev": 1.4829209991415801e-06,
+          "tier": "isolated"
+        },
+        "test_comparison[warmup_a_cold_singleton_graph-depin]": {
+          "iqr": 0.00045562395825982094,
+          "mean": 0.014663359925150872,
+          "median": 0.011464943992905319,
+          "minimum": 0.011033460032194853,
+          "p95": 0.012280306537286376,
+          "p99": 0.09765863730572164,
+          "rounds": 1000,
+          "stddev": 0.016133262618722246,
+          "tier": "component"
+        },
+        "test_comparison[warmup_a_cold_singleton_graph-direct]": {
+          "iqr": 0.00046551303239539266,
+          "mean": 0.014814189570082818,
+          "median": 0.011472269980004057,
+          "minimum": 0.011026607011444867,
+          "p95": 0.012445156916510313,
+          "p99": 0.09866165867890231,
+          "rounds": 1000,
+          "stddev": 0.016655843837337567,
+          "tier": "component"
+        }
+      }
+    }
+  ],
+  "schema_version": 1,
+  "seed": 20260902,
+  "source_revision": "4ea1475bd0110b2b7824431d80672eda10059fba",
+  "targets": {
+    "call_through_an_inject_wrapper": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector wiring does not share depin injection wrapper calling semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka injection does not share depin injection wrapper calling semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup injection does not share depin injection wrapper calling semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no depin injection wrapper calling semantics"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1e-06,
+        "fraction_of_direct": null,
+        "justification": "One injection wrapper dispatch ceiling from the parameter binding formula."
+      }
+    },
+    "call_through_an_inject_wrapper_with_explicit_arguments": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector wiring does not share depin injection wrapper calling semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka injection does not share depin injection wrapper calling semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup injection does not share depin injection wrapper calling semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no depin injection wrapper calling semantics"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1e-06,
+        "fraction_of_direct": null,
+        "justification": "One injection wrapper dispatch ceiling from the explicit argument binding formula."
+      }
+    },
+    "construct_a_singleton_for_the_first_time": {
+      "candidates": [
+        {
+          "classification": "equivalent",
+          "label": "dependency-injector-4.49.1",
+          "reason": "matches the singleton or transient provider lifecycle and construction shape"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka does not expose the depin provider operation this workload measures"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup does not expose the depin provider operation this workload measures"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs does not expose the depin provider operation this workload measures"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 5e-07,
+        "fraction_of_direct": null,
+        "justification": "First singleton construction ceiling from the cold-cache formula."
+      }
+    },
+    "fastapi_application_startup": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 3e-05,
+        "fraction_of_direct": 0.1,
+        "justification": "FastAPI startup ceiling from the direct baseline fraction formula."
+      }
+    },
+    "fastapi_async_resource_teardown": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1.8e-05,
+        "fraction_of_direct": 0.1,
+        "justification": "FastAPI asynchronous teardown ceiling from the direct baseline fraction formula."
+      }
+    },
+    "fastapi_cpu_light_endpoint": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1.2e-05,
+        "fraction_of_direct": 0.1,
+        "justification": "FastAPI light endpoint ceiling from the direct baseline fraction formula."
+      }
+    },
+    "fastapi_endpoint_with_work": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1.2e-05,
+        "fraction_of_direct": 0.1,
+        "justification": "FastAPI representative work ceiling from the direct baseline fraction formula."
+      }
+    },
+    "fastapi_request_scoped_graph": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "provider overrides are substitutions, not nested scope frames with scoped caches"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1.6e-05,
+        "fraction_of_direct": 0.1,
+        "justification": "FastAPI scoped graph ceiling from the direct baseline fraction formula."
+      }
+    },
+    "fastapi_singletons_and_transients": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1.6e-05,
+        "fraction_of_direct": 0.1,
+        "justification": "FastAPI singleton and transient ceiling from the direct baseline fraction formula."
+      }
+    },
+    "open_a_request_shaped_scope": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "provider overrides are substitutions, not nested scope frames with scoped caches"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka does not expose the depin provider operation this workload measures"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup does not expose the depin provider operation this workload measures"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs containers have no nested scope frames with scoped caches"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 3.5e-06,
+        "fraction_of_direct": null,
+        "justification": "Request-shaped scope lifecycle ceiling from the scoped resource formula."
+      }
+    },
+    "open_and_close_a_scope": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "provider overrides are substitutions, not nested scope frames with scoped caches"
+        },
+        {
+          "classification": "equivalent",
+          "label": "dishka-1.10.1",
+          "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+        },
+        {
+          "classification": "equivalent",
+          "label": "wireup-2.12.0",
+          "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs containers have no nested scope frames with scoped caches"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1.2e-05,
+        "fraction_of_direct": null,
+        "justification": "Scope entry and exit ceiling from the frame lifecycle formula."
+      }
+    },
+    "resolve_a_collection_of_10": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector has no depin collection binding and aggregation operation"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka has no depin collection binding and aggregation operation"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup has no depin collection binding and aggregation operation"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no depin collection binding and aggregation operation"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 5e-06,
+        "fraction_of_direct": null,
+        "justification": "Collection assembly ceiling from the fixed per-member lookup formula at ten members."
+      }
+    },
+    "resolve_a_collection_of_100": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector has no depin collection binding and aggregation operation"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka has no depin collection binding and aggregation operation"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup has no depin collection binding and aggregation operation"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no depin collection binding and aggregation operation"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 5e-05,
+        "fraction_of_direct": null,
+        "justification": "Collection assembly ceiling from the fixed per-member lookup formula at one hundred members."
+      }
+    },
+    "resolve_a_generic_key": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector providers are not resolved from depin parameterised generic keys"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka providers are not resolved from depin parameterised generic keys"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup providers are not resolved from depin parameterised generic keys"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs services are not resolved from depin parameterised generic keys"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 5e-07,
+        "fraction_of_direct": null,
+        "justification": "Cached generic-key lookup ceiling from the key resolution formula."
+      }
+    },
+    "resolve_a_sync_resource_with_teardown": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector async and resource providers have different resolution and teardown semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka async and resource providers have different resolution and teardown semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup async and resource providers have different resolution and teardown semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs async factories and cleanup do not share depin resolution and teardown semantics"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 3e-06,
+        "fraction_of_direct": null,
+        "justification": "Synchronous resource construction and teardown ceiling from the lifecycle formula."
+      }
+    },
+    "resolve_a_transient_chain": {
+      "candidates": [
+        {
+          "classification": "equivalent",
+          "label": "dependency-injector-4.49.1",
+          "reason": "matches the singleton or transient provider lifecycle and construction shape"
+        },
+        {
+          "classification": "equivalent",
+          "label": "dishka-1.10.1",
+          "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+        },
+        {
+          "classification": "equivalent",
+          "label": "wireup-2.12.0",
+          "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs does not expose the depin provider operation this workload measures"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1e-05,
+        "fraction_of_direct": null,
+        "justification": "Transient construction ceiling from the per-node construction formula."
+      }
+    },
+    "resolve_an_async_singleton": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector async and resource providers have different resolution and teardown semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka async and resource providers have different resolution and teardown semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup async and resource providers have different resolution and teardown semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs async factories and cleanup do not share depin resolution and teardown semantics"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 5e-07,
+        "fraction_of_direct": null,
+        "justification": "Cached asynchronous lookup ceiling from the coroutine boundary formula."
+      }
+    },
+    "resolve_cached_singleton": {
+      "candidates": [
+        {
+          "classification": "equivalent",
+          "label": "dependency-injector-4.49.1",
+          "reason": "matches the singleton or transient provider lifecycle and construction shape"
+        },
+        {
+          "classification": "equivalent",
+          "label": "dishka-1.10.1",
+          "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+        },
+        {
+          "classification": "equivalent",
+          "label": "wireup-2.12.0",
+          "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+        },
+        {
+          "classification": "partial",
+          "label": "svcs-26.2.0",
+          "reason": "per-container caching has no singleton single-flight guarantee or nested lifetime contract"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 5e-07,
+        "fraction_of_direct": null,
+        "justification": "One cached lookup ceiling from the steady-state resolution formula."
+      }
+    },
+    "resolve_cached_singleton_through_an_alias": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector delegates do not provide depin typed-key alias resolution"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka alias resolution does not demonstrate depin typed-key alias cache semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup alias resolution does not demonstrate depin typed-key alias cache semantics"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no depin typed-key alias resolution"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1e-06,
+        "fraction_of_direct": null,
+        "justification": "Cached lookup plus one alias hop ceiling from the indirection formula."
+      }
+    },
+    "resolve_singleton_through_a_two_deep_decoration_chain": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector provider composition does not model depin decoration chains"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka provider composition does not model depin decoration chains"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup provider composition does not model depin decoration chains"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs registrations do not model depin decoration chains"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1.5e-06,
+        "fraction_of_direct": null,
+        "justification": "Cached lookup plus two decoration hops ceiling from the wrapper formula."
+      }
+    },
+    "resolve_through_an_active_override": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector provider overrides are not depin context-local override frames"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka provider substitution is not a depin context-local override frame"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup provider substitution is not a depin context-local override frame"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no depin context-local override frames"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 1e-06,
+        "fraction_of_direct": null,
+        "justification": "Cached lookup plus one override frame ceiling from the substitution formula."
+      }
+    },
+    "resolve_with_no_active_override": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector provider overrides are not depin context-local override frames"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka provider substitution is not a depin context-local override frame"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup provider substitution is not a depin context-local override frame"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no depin context-local override frames"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 5e-07,
+        "fraction_of_direct": null,
+        "justification": "Cached lookup with an empty override stack ceiling from the baseline formula."
+      }
+    },
+    "warmup_a_cold_singleton_graph": {
+      "candidates": [
+        {
+          "classification": "incomparable",
+          "label": "dependency-injector-4.49.1",
+          "reason": "Dependency Injector has no separate frozen resolution plan or depin graph diagnostics operation"
+        },
+        {
+          "classification": "incomparable",
+          "label": "dishka-1.10.1",
+          "reason": "Dishka has no separate frozen resolution plan or depin graph diagnostics operation"
+        },
+        {
+          "classification": "incomparable",
+          "label": "wireup-2.12.0",
+          "reason": "Wireup has no separate frozen resolution plan or depin graph diagnostics operation"
+        },
+        {
+          "classification": "incomparable",
+          "label": "svcs-26.2.0",
+          "reason": "svcs has no separate frozen resolution plan or depin graph diagnostics operation"
+        }
+      ],
+      "secondary_metrics": [],
+      "target": {
+        "fixed_seconds": 0.0005,
+        "fraction_of_direct": null,
+        "justification": "Graph warmup ceiling from the per-singleton construction formula at one thousand nodes."
+      }
+    }
+  }
+}

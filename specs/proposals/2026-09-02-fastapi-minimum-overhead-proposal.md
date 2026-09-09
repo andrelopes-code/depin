@@ -1,7 +1,7 @@
 # Proposal: minimum-overhead FastAPI integration
 
 Date: 2026-09-02
-Status: proposed; scheduled after compiled-Python and provider-discovery decisions, then recalibrated
+Status: accepted as the single next performance proposal; rebaselined 2026-09-09
 Scope: `depin.ext.fastapi`, request hosting, scope activation, endpoint injection, and application benchmarks
 
 ## Nature of this document
@@ -13,9 +13,12 @@ freeze.
 
 ## Executive summary
 
-The CPU-light FastAPI workload measured `depin` at 726.118 microseconds per
-request against 646.634 microseconds for the direct route, a 79.484-microsecond
-increment.
+The fresh CPU-light FastAPI workload measures `depin` at 525.6 microseconds per
+request at p50 against 464.9 microseconds for the direct route, a
+60.7-microsecond increment. Async resource teardown adds 150.6 microseconds at
+p50, a request-scoped graph adds 134.1 microseconds, and application startup adds
+0.976 milliseconds. p95 and p99 totals are retained; independent percentile
+subtraction is not treated as DI attribution.
 A diagnostic decomposition on the same application shape attributed only about
 8 microseconds to `FrozenContainer.aresolve()`. Approximately 28 microseconds
 came from traversing a FastAPI `Depends` node and approximately 40 microseconds
@@ -179,6 +182,9 @@ lifecycle, core resolution, or teardown.
   semantics remain correct.
 - The optimized path reaches the leadership criterion against equivalent current
   FastAPI integrations.
+- The upper 95% confidence bound of the paired DI-attributable p50 increment is
+  at least 25% below this rebaseline, with 30% as the stretch target; p95 and p99
+  totals do not regress by more than five percent.
 - The compatibility path remains available for a documented transition window
   if a public setup change is accepted.
 - Core remains free of framework imports and runtime dependencies.
@@ -224,8 +230,11 @@ validation, security, and dependency facilities.
 - lifecycle-equivalence and application-performance evidence; and
 - migration documentation if setup behavior changes.
 
-## Decision requested
+## Active decision
 
-Accept endpoint compilation and lazy request scope as the FastAPI performance
-direction, provided the selected integration point preserves framework behavior
-and the current injection call site.
+Execute endpoint compilation and lazy request scope as the single next
+performance proposal. The design must preserve framework behavior and the
+current injection call site, measure total and DI-attributable p50/p95/p99, and
+meet the material leadership gate rather than statistical parity. Provider
+discovery is deferred because it does not address this measured overhead; native
+acceleration remains NO-GO pending the post-FastAPI attribution.

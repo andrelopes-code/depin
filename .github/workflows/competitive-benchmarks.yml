@@ -26,14 +26,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      BASELINE_DIR: ${{ runner.temp }}/depin-comparison-base
       BASELINE_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || inputs['baseline-revision'] }}
-      ARTIFACT_DIR: ${{ runner.temp }}/competitive-benchmark-artifacts
       REPETITIONS: ${{ inputs.repetitions || '5' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+
+      - name: Configure runner paths
+        run: |
+          printf 'BASELINE_DIR=%s/depin-comparison-base\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'ARTIFACT_DIR=%s/competitive-benchmark-artifacts\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
 
       - name: Install uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
@@ -58,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$BASELINE_DIR"
-          git archive "$BASELINE_REVISION" | tar -x -C "$BASELINE_DIR"
+          git archive "$BASELINE_REVISION" | tar --extract --same-permissions --directory "$BASELINE_DIR"
           printf '%s\n' "$BASELINE_REVISION" > "$BASELINE_DIR/.depin-baseline-revision"
 
       - name: Observe adapter equivalence before collection

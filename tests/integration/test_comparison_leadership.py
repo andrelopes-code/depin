@@ -33,6 +33,8 @@ def _leadership_dataset(
             f'test_comparison[resolve-{label}]': {
                 'median': values[index],
                 'mean': values[index],
+                'p95': values[index],
+                'p99': values[index],
                 'rounds': 1000 if qualified else 1,
             }
             for label, values in names.items()
@@ -129,7 +131,7 @@ def _allocation_evidence(budgets: Path, *, head_work: int = 12) -> dict[str, obj
     }
 
 
-def test_leadership_selects_the_fastest_equivalent_and_excludes_partial_candidates() -> None:
+def test_a_ten_percent_win_is_competitive_but_not_material_leadership() -> None:
     dataset = _leadership_dataset(
         competitors={
             'slow-1': ('equivalent', (1.2,) * 5),
@@ -142,7 +144,39 @@ def test_leadership_selects_the_fastest_equivalent_and_excludes_partial_candidat
 
     assert verdict.competitor is not None
     assert verdict.competitor.label == 'fast-1'
+    assert verdict.status is leadership.Status.COMPETITIVE
+
+
+def test_a_material_p50_win_without_the_tail_margin_is_not_leadership() -> None:
+    dataset = _leadership_dataset(depin=(0.7,) * 5)
+    for repetition in require_array(dataset['repetitions'], 'repetitions'):
+        samples = require_object(require_object(repetition, 'repetition')['samples'], 'samples')
+        require_object(samples['test_comparison[resolve-depin]'], 'depin')['p95'] = 0.85
+
+    verdict = leadership.evaluate(dataset, _calibration(dataset), BUDGETS)[0]
+
+    assert verdict.status is leadership.Status.COMPETITIVE
+
+
+def test_material_p50_and_p95_wins_without_the_p99_margin_are_not_leadership() -> None:
+    dataset = _leadership_dataset(depin=(0.7,) * 5)
+    for repetition in require_array(dataset['repetitions'], 'repetitions'):
+        samples = require_object(require_object(repetition, 'repetition')['samples'], 'samples')
+        require_object(samples['test_comparison[resolve-depin]'], 'depin')['p99'] = 0.85
+
+    verdict = leadership.evaluate(dataset, _calibration(dataset), BUDGETS)[0]
+
+    assert verdict.status is leadership.Status.COMPETITIVE
+
+
+def test_a_thirty_percent_win_with_tail_margin_is_material_leadership() -> None:
+    dataset = _leadership_dataset(depin=(0.7,) * 5)
+
+    verdict = leadership.evaluate(dataset, _calibration(dataset), BUDGETS)[0]
+
     assert verdict.status is leadership.Status.LEADER
+    assert verdict.competitor is not None
+    assert verdict.competitor.passed is True
 
 
 def test_leadership_uses_the_confidence_upper_bound_against_the_allowance() -> None:
@@ -347,4 +381,4 @@ def test_evaluation_accepts_seed_shaped_source_and_harness_revisions() -> None:
     seed['source_revision'] = 'seed-source-revision'
     seed['harness_revision'] = 'seed-harness-revision'
 
-    assert leadership.evaluate(seed, calibration, BUDGETS)[0].status is leadership.Status.LEADER
+    assert leadership.evaluate(seed, calibration, BUDGETS)[0].status is leadership.Status.COMPETITIVE
