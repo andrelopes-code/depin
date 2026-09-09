@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from inspect import iscoroutinefunction
-from typing import Annotated, TypeGuard
+from typing import Annotated, Final, TypeGuard
 
 import fastapi
 from fastapi import FastAPI, Request
@@ -19,10 +19,10 @@ from depin import FrozenContainer, Token, optional_hosted_container
 from depin._integration import LazyScopeSeed, _lazy_host, _provide_lazy_seed
 from depin.errors import ContainerNotBoundError, FastAPIIntegrationError
 
-__all__ = []
+__all__: list[str] = []
 
 _PROGRAM_ARGUMENT = '__depin_endpoint_program__'
-_INSTALLATION_MARKER = object()
+_INSTALLATION_MARKER: Final[object] = object()
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,7 +59,7 @@ class Inject:
     """FastAPI parameter annotation that resolves a dependency from depin."""
 
     def __class_getitem__[T](cls, key: type[T] | Token[T]) -> object:
-        return Annotated[key, Depends(dependency=_InjectResolver(key))]
+        return Annotated[object, Depends(dependency=_InjectResolver(key))]
 
 
 @dataclass(frozen=True, slots=True)
