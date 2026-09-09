@@ -615,6 +615,12 @@ def push_frame(owner: ScopeFrame | None = None) -> Generator[ScopeFrame]:
 
 
 def activate_frame(owner: ScopeFrame | None = None) -> FrameActivation:
+    frame = make_frame(owner)
+    token = _active.set(frame)
+    return FrameActivation(frame, token)
+
+
+def make_frame(owner: ScopeFrame | None = None) -> ScopeFrame:
     if owner is None:
         owner = _manualowner
     context_parent = _active.get()
@@ -623,9 +629,7 @@ def activate_frame(owner: ScopeFrame | None = None) -> FrameActivation:
         parent = parent.context_parent
     if parent is not None and not parent.active:
         parent = None
-    frame = ScopeFrame(parent=parent, context_parent=context_parent, owner=owner)
-    token = _active.set(frame)
-    return FrameActivation(frame, token)
+    return ScopeFrame(parent=parent, context_parent=context_parent, owner=owner)
 
 
 def deactivate_frame(activation: FrameActivation) -> None:

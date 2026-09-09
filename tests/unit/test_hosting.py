@@ -15,8 +15,9 @@ from depin._core.hosting import (
     hosted_container,
     optional_hosted_container,
 )
-from depin._core.lazy_scope import LazyScopeSeed
+from depin._core.lazy_scope import LazyScopeSeed, LazyScopeState
 from depin._core.lazy_scope import lazy_host as _lazy_host
+from depin._core.lazy_scope import provide_lazy_seed as _provide_lazy_seed
 from depin._core.scope import ScopeFrame
 from depin.errors import ContainerNotBoundError, OutsideScopeError
 
@@ -154,6 +155,132 @@ async def test_concurrent_lazy_hosts_isolate_seeds_and_restore_enclosing_host() 
         assert hosted_container() is outer
 
     assert {first, second} == {('a', True), ('b', True)}
+
+
+@pytest.mark.asyncio
+async def test_child_first_lazy_activation_drains_from_the_parent_context() -> None:
+    events: list[str] = []
+
+    async def resource() -> AsyncIterator[str]:
+        try:
+            yield 'value'
+        finally:
+            events.append('closed')
+
+    container = Container().bind(resource, scope=Scope.SCOPED).freeze()
+    outer = Container().freeze()
+
+    async def resolve_in_child() -> None:
+        assert await hosted_container().aresolve(str) == 'value'
+
+    with Host(outer).activated():
+        async with _lazy_host(container):
+            await asyncio.create_task(resolve_in_child())
+        assert hosted_container() is outer
+
+    assert events == ['closed']
+    assert container.scope_activity() == (0, 0)
+    assert optional_hosted_container() is None
+
+
+@pytest.mark.asyncio
+async def test_child_first_lazy_activation_preserves_body_and_teardown_failures() -> None:
+    events: list[str] = []
+
+    async def resource() -> AsyncIterator[str]:
+        try:
+            yield 'value'
+        finally:
+            events.append('closed')
+            raise LookupError('close failed')
+
+    container = Container().bind(resource, scope=Scope.SCOPED).freeze()
+
+    async def resolve_in_child() -> None:
+        assert await hosted_container().aresolve(str) == 'value'
+
+    async def fail_after_child_activation() -> None:
+        async with _lazy_host(container):
+            await asyncio.create_task(resolve_in_child())
+            raise ValueError('body failed')
+
+    with pytest.raises(ExceptionGroup) as raised:
+        await fail_after_child_activation()
+
+    assert events == ['closed']
+    assert {type(error) for error in raised.value.exceptions} == {ValueError, LookupError}
+    assert container.scope_activity() == (0, 0)
+
+
+@pytest.mark.asyncio
+async def test_inherited_child_cannot_open_a_drained_lazy_scope() -> None:
+    class Service: ...
+
+    container = Container().bind(Service, scope=Scope.SCOPED).freeze()
+    parent_exited = asyncio.Event()
+
+    async def resolve_after_parent_exit() -> None:
+        await parent_exited.wait()
+        await hosted_container().aresolve(Service)
+
+    async with _lazy_host(container):
+        child = asyncio.create_task(resolve_after_parent_exit())
+
+    parent_exited.set()
+    with pytest.raises(OutsideScopeError):
+        await child
+
+
+@pytest.mark.asyncio
+async def test_providing_a_lazy_seed_registers_it_without_opening_or_building() -> None:
+    request = Token[str]('request')
+    built: list[str] = []
+    opened: list[ScopeFrame] = []
+    container = Container().scope_value(request).freeze()
+
+    def build_request() -> str:
+        built.append('request')
+        return 'request'
+
+    async with _lazy_host(container, on_open=opened.append):
+        _provide_lazy_seed(LazyScopeSeed(request, build_request))
+        assert built == []
+        assert opened == []
+        assert await hosted_container().aresolve(request) == 'request'
+
+    assert built == ['request']
+    assert len(opened) == 1
+
+
+@pytest.mark.asyncio
+async def test_lazy_state_activates_one_frame_across_threads() -> None:
+    class Service: ...
+
+    container = Container().bind(Service, scope=Scope.SCOPED).freeze()
+    state = LazyScopeState(container, (), None)
+    barrier = threading.Barrier(3)
+    frames: list[ScopeFrame] = []
+    lock = threading.Lock()
+
+    def activate() -> None:
+        barrier.wait()
+        frame = state.frame()
+        with lock:
+            frames.append(frame)
+
+    first = threading.Thread(target=activate)
+    second = threading.Thread(target=activate)
+    first.start()
+    second.start()
+    barrier.wait()
+    first.join()
+    second.join()
+
+    await state.aclose(None)
+
+    assert len(frames) == 2
+    assert frames[0] is frames[1]
+    assert container.scope_activity() == (0, 0)
 
 
 def test_the_contract_version_is_one_zero() -> None:

@@ -46,6 +46,7 @@ from depin._core.scope import (
     ScopeFrame,
     activate_frame,
     active_frame,
+    make_frame,
     optional_frame,
     push_frame,
 )
@@ -125,7 +126,7 @@ class _InstructionClaim:
 @dataclass(frozen=True, slots=True)
 class AsyncScopeLease:
     frame: ScopeFrame
-    activation: FrameActivation
+    activation: FrameActivation | None
 
 
 class _InstructionRuntime:
@@ -463,6 +464,15 @@ class FrozenContainer:
         return self._root
 
     def begin_async_scope(self) -> AsyncScopeLease:
+        self._enter_async_scope()
+        activation = activate_frame(self._root)
+        return AsyncScopeLease(activation.frame, activation)
+
+    def begin_lazy_async_scope(self) -> AsyncScopeLease:
+        self._enter_async_scope()
+        return AsyncScopeLease(make_frame(self._root), None)
+
+    def _enter_async_scope(self) -> None:
         lifecycle = self._lifecycle
         with lifecycle.mutex:
             if lifecycle.state is LifecycleState.CLOSED:
@@ -473,8 +483,10 @@ class FrozenContainer:
                 raise ContainerLifecycleError('container shutdown is already in progress; await aclose() to join it')
             lifecycle.active += 1
             lifecycle.active_async += 1
-        activation = activate_frame(self._root)
-        return AsyncScopeLease(activation.frame, activation)
+
+    def scope_activity(self) -> tuple[int, int]:
+        with self._lifecycle.mutex:
+            return self._lifecycle.active, self._lifecycle.active_async
 
     async def end_async_scope(self, lease: AsyncScopeLease, body_error: BaseException | None) -> None:
         lifecycle = self._lifecycle
@@ -489,13 +501,18 @@ class FrozenContainer:
         finally:
             from depin._core.scope import deactivate_frame
 
-            deactivate_frame(lease.activation)
-            with lifecycle.mutex:
-                lifecycle.active -= 1
-                lifecycle.active_async -= 1
-                wake = lifecycle.active == 0 and bool(lifecycle.gate_waiters)
-            if wake:
-                lifecycle.wake_waiters()
+            try:
+                if lease.activation is None:
+                    lease.frame.deactivate()
+                else:
+                    deactivate_frame(lease.activation)
+            finally:
+                with lifecycle.mutex:
+                    lifecycle.active -= 1
+                    lifecycle.active_async -= 1
+                    wake = lifecycle.active == 0 and bool(lifecycle.gate_waiters)
+                if wake:
+                    lifecycle.wake_waiters()
 
     @contextlib.contextmanager
     def scope(self) -> Generator[ScopeFrame]:
