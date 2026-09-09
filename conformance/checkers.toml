@@ -13,7 +13,7 @@ os = "linux"
 mypy = "2.3.1"
 pyright = "1.1.411"
 basedpyright = "1.39.10"
-ty = "0.0.77"
+ty = "0.0.79"
 pyrefly = "1.2.0"
 
 # mypy and basedpyright are also the Layer 1 gates run by `uv run`, so they sit

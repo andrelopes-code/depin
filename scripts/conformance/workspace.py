@@ -4,7 +4,7 @@ import os
 import shutil
 import subprocess
 from collections.abc import Mapping, Sequence
-from pathlib import Path
+from pathlib import Path, PurePath
 from string import Template
 from typing import Final
 
@@ -71,7 +71,13 @@ def run_on_the_checkout(command: Sequence[str], environment: Mapping[str, str]) 
 
 
 def venv_python(venv: Path) -> Path:
-    return venv / ('Scripts' if os.name == 'nt' else 'bin') / 'python'
+    if os.name == 'nt':
+        return venv / 'Scripts' / 'python.exe'
+    return venv / 'bin' / 'python'
+
+
+def configuration_path(path: PurePath) -> str:
+    return path.as_posix()
 
 
 def require_wheel(supplied: Path) -> Path:
@@ -144,10 +150,10 @@ def render_configs(workspace: Workspace, pins: Pins) -> None:
     )
     for mode, venv in workspace.venvs.items():
         substitutions = {
-            'venv': str(venv),
-            'venv_parent': str(venv.parent),
+            'venv': configuration_path(venv),
+            'venv_parent': configuration_path(venv.parent),
             'venv_name': venv.name,
-            'python': str(venv_python(venv)),
+            'python': configuration_path(venv_python(venv)),
             'python_version': pins.python,
         }
         for template in templates:
