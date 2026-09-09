@@ -1,9 +1,9 @@
 """FastAPI endpoint compilation behind the public integration surface."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from inspect import iscoroutinefunction
-from typing import Annotated, Final, TypeGuard
+from typing import Annotated, Final, TypeGuard, override
 
 import fastapi
 from fastapi import FastAPI, Request
@@ -20,7 +20,7 @@ from depin.errors import ContainerNotBoundError, FastAPIIntegrationError
 
 __all__: list[str] = []
 
-_REQUEST_ARGUMENT = '__depin_request__'
+_REQUEST_ARGUMENT_PREFIX = '__depin_request__'
 _INSTALLATION_MARKER: Final[object] = object()
 
 
@@ -45,9 +45,32 @@ class _EndpointProgram:
     container: FrozenContainer
     entries: tuple[tuple[str, type[object] | Token[object]], ...]
 
-    async def resolve(self, request: Request) -> dict[str, object]:
+    async def resolve(self, request: Request[Mapping[str, object]]) -> dict[str, object]:
         _provide_lazy_seed(LazyScopeSeed(Request, lambda: request))
         return {name: await self.container.aresolve(key) for name, key in self.entries}
+
+
+@dataclass(slots=True)
+class FastAPIObservation:
+    frames: int = 0
+    programs: int = 0
+
+    def frame_opened(self, frame: object) -> None:
+        del frame
+        self.frames += 1
+
+    def program_resolved(self) -> None:
+        self.programs += 1
+
+
+@dataclass(frozen=True, slots=True)
+class _ObservedEndpointProgram(_EndpointProgram):
+    observation: FastAPIObservation
+
+    @override
+    async def resolve(self, request: Request[Mapping[str, object]]) -> dict[str, object]:
+        self.observation.program_resolved()
+        return await _EndpointProgram.resolve(self, request)
 
 
 class Inject:
@@ -92,6 +115,24 @@ class _LazyRequestScope:
             await self._app(scope, receive, send)
 
 
+class _ObservedLazyRequestScope(_LazyRequestScope):
+    __slots__ = ('_observation',)
+
+    def __init__(
+        self, app: ASGIApp, container: FrozenContainer, marker: object, observation: FastAPIObservation
+    ) -> None:
+        super().__init__(app, container, marker)
+        self._observation = observation
+
+    @override
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope['type'] not in ('http', 'websocket'):
+            await self._app(scope, receive, send)
+            return
+        async with _lazy_host(self._container, on_open=self._observation.frame_opened):
+            await self._app(scope, receive, send)
+
+
 def install(app: FastAPI, container: FrozenContainer) -> None:
     """Compile direct `Inject` parameters after all application routes are registered.
 
@@ -123,6 +164,14 @@ def install(app: FastAPI, container: FrozenContainer) -> None:
         ...     return service.value
         >>> install(app, Container().bind(Service).freeze())
     """
+    _install(app, container, None)
+
+
+def install_for_observation(app: FastAPI, container: FrozenContainer, observation: FastAPIObservation) -> None:
+    _install(app, container, observation)
+
+
+def _install(app: FastAPI, container: FrozenContainer, observation: FastAPIObservation | None) -> None:
     user_middleware = _require_application_shape(app)
     if app.middleware_stack is not None:
         raise _setup_error('the application middleware stack has already been built; call install before startup')
@@ -137,7 +186,7 @@ def install(app: FastAPI, container: FrozenContainer) -> None:
         plan
         for route in app.routes
         if isinstance(route, APIRoute)
-        if (plan := _plan_route(route, container)) is not None
+        if (plan := _plan_route(route, container, observation)) is not None
     )
     applied: list[_AppliedRoute] = []
     original_middleware = tuple(user_middleware)
@@ -145,7 +194,10 @@ def install(app: FastAPI, container: FrozenContainer) -> None:
         for plan in plans:
             applied.append(_apply_plan(plan))
         if not installed:
-            app.add_middleware(_LazyRequestScope, container, _INSTALLATION_MARKER)
+            if observation is None:
+                app.add_middleware(_LazyRequestScope, container, _INSTALLATION_MARKER)
+            else:
+                app.add_middleware(_ObservedLazyRequestScope, container, _INSTALLATION_MARKER, observation)
     except Exception as error:
         for route in reversed(applied):
             _restore_route(route)
@@ -164,7 +216,9 @@ def compile_route(route: APIRoute, container: FrozenContainer) -> bool:
     return True
 
 
-def _plan_route(route: APIRoute, container: FrozenContainer) -> _RoutePlan | None:
+def _plan_route(
+    route: APIRoute, container: FrozenContainer, observation: FastAPIObservation | None = None
+) -> _RoutePlan | None:
     _require_route_shape(route)
     dependencies = route.dependant.dependencies
     resolvers: list[tuple[str | None, _InjectResolver[object]]] = []
@@ -176,16 +230,26 @@ def _plan_route(route: APIRoute, container: FrozenContainer) -> _RoutePlan | Non
         return None
     if any(not isinstance(name, str) for name, _ in resolvers):
         raise _setup_error(f'route {route.path!r} has a direct Inject dependency with no parameter name')
-    names = tuple(name for name, _ in resolvers)
     entries = tuple((name, resolver.key) for name, resolver in resolvers if isinstance(name, str))
-    program = _EndpointProgram(container, entries)
+    program: _EndpointProgram
+    if observation is None:
+        program = _EndpointProgram(container, entries)
+    else:
+        program = _ObservedEndpointProgram(container, entries, observation)
     replacement = [dependency for dependency in dependencies if not _is_resolver(dependency.call)]
     endpoint = route.dependant.call
     if endpoint is None:
         raise _setup_error(f'route {route.path!r} has no callable endpoint')
     request_argument = route.dependant.request_param_name
     passes_request = request_argument is not None
-    return _RoutePlan(route, program, replacement, endpoint, request_argument or _REQUEST_ARGUMENT, passes_request)
+    return _RoutePlan(
+        route,
+        program,
+        replacement,
+        endpoint,
+        request_argument or _request_argument_name(route.dependant),
+        passes_request,
+    )
 
 
 def _apply_plan(plan: _RoutePlan) -> _AppliedRoute:
@@ -201,7 +265,7 @@ def _apply_plan(plan: _RoutePlan) -> _AppliedRoute:
 
     async def endpoint(**arguments: object) -> object:
         request = arguments[plan.request_argument] if plan.passes_request else arguments.pop(plan.request_argument)
-        if not isinstance(request, Request):
+        if not _is_fastapi_request(request):
             raise _setup_error(f'route {route.path!r} did not provide a FastAPI Request to its compiled call')
         arguments.update(await plan.program.resolve(request))
         if iscoroutinefunction(original):
@@ -270,6 +334,37 @@ def _setup_error(reason: str) -> FastAPIIntegrationError:
 
 def _is_resolver(call: object) -> TypeGuard[_InjectResolver[object]]:
     return isinstance(call, _InjectResolver)
+
+
+def _is_fastapi_request(value: object) -> TypeGuard[Request[Mapping[str, object]]]:
+    return isinstance(value, Request)
+
+
+def _request_argument_name(dependant: Dependant) -> str:
+    reserved = _dependency_value_names(dependant)
+    candidate = _REQUEST_ARGUMENT_PREFIX
+    while candidate in reserved:
+        candidate = f'{candidate}_'
+    return candidate
+
+
+def _dependency_value_names(dependant: Dependant) -> set[str]:
+    names = {
+        name
+        for name in (dependant.name, dependant.request_param_name, dependant.websocket_param_name)
+        if name is not None
+    }
+    for fields in (
+        dependant.path_params,
+        dependant.query_params,
+        dependant.header_params,
+        dependant.cookie_params,
+        dependant.body_params,
+    ):
+        names.update(field.name for field in fields)
+    for dependency in dependant.dependencies:
+        names.update(_dependency_value_names(dependency))
+    return names
 
 
 def _is_installed_middleware(args: tuple[object, ...]) -> bool:

@@ -1,6 +1,6 @@
 import contextlib
 from collections.abc import AsyncGenerator
-from typing import Protocol
+from typing import Annotated, Protocol
 
 import pytest
 from fastapi import Depends, FastAPI
@@ -472,7 +472,7 @@ async def test_install_compiles_singleton_injection_into_the_route_call() -> Non
         request: FastAPIRequest,
         item_id: int,
         singleton: Inject[Singleton],
-        native_request: FastAPIRequest = Depends(native),
+        native_request: Annotated[FastAPIRequest, Depends(native)],
     ) -> dict[str, object]:
         try:
             active_frame()
@@ -482,11 +482,12 @@ async def test_install_compiles_singleton_injection_into_the_route_call() -> Non
             frame_open = True
         return {
             'same_request': request is native_request,
-            'singleton': isinstance(singleton, Singleton),
+            'singleton': singleton is container[Singleton],
             'frame_open': frame_open,
             'item_id': item_id,
         }
 
+    _ = value
     fastapi_ext.install(app, container)
 
     route = _route(app, '/value/{item_id}')
@@ -502,6 +503,52 @@ async def test_install_compiles_singleton_injection_into_the_route_call() -> Non
     assert invalid.status_code == 422
     assert constructed == ['singleton']
     assert 'request' not in app.openapi()['paths']['/value/{item_id}']['get']['parameters']
+
+
+@pytest.mark.asyncio
+async def test_install_keeps_internal_request_argument_distinct_from_fastapi_values() -> None:
+    """The hidden request value cannot overwrite any FastAPI-produced argument."""
+
+    class Singleton:
+        pass
+
+    async def native() -> str:
+        return 'native'
+
+    app = FastAPI()
+
+    @app.get('/query')
+    async def query(singleton: Inject[Singleton], __depin_request__: int) -> dict[str, int]:
+        del singleton
+        return {'value': __depin_request__}
+
+    @app.get('/path/{__depin_request__}')
+    async def path(singleton: Inject[Singleton], __depin_request__: int) -> dict[str, int]:
+        del singleton
+        return {'value': __depin_request__}
+
+    @app.get('/dependency')
+    async def dependency(singleton: Inject[Singleton], __depin_request__: str = Depends(native)) -> dict[str, str]:
+        del singleton
+        return {'value': __depin_request__}
+
+    _ = query, path, dependency
+    fastapi_ext.install(app, Container().bind(Singleton).freeze())
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        query_response = await client.get('/query?__depin_request__=7')
+        path_response = await client.get('/path/8')
+        dependency_response = await client.get('/dependency')
+        invalid_response = await client.get('/query?__depin_request__=not-an-int')
+
+    assert query_response.json() == {'value': 7}
+    assert path_response.json() == {'value': 8}
+    assert dependency_response.json() == {'value': 'native'}
+    assert invalid_response.status_code == 422
+    schema = app.openapi()
+    assert schema['paths']['/query']['get']['parameters'][0]['name'] == '__depin_request__'
+    assert schema['paths']['/path/{__depin_request__}']['get']['parameters'][0]['name'] == '__depin_request__'
 
 
 @pytest.mark.asyncio

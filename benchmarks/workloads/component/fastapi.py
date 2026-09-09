@@ -7,9 +7,10 @@ from dataclasses import dataclass
 from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient, Response
 
-from benchmarks.contracts import Claim, Metric, Observation, Tier, Workload
-from benchmarks.workloads.shell import CONCURRENCY, Session, implementation
-from depin import Container, Scope
+from benchmarks.contracts import Claim, Implementation, Metric, Observation, Prepared, Tier, Workload
+from benchmarks.workloads.shell import CONCURRENCY, Session
+from depin import Container, FrozenContainer, Scope
+from depin.ext._fastapi import FastAPIObservation, install_for_observation
 from depin.ext.fastapi import Inject, install
 
 
@@ -17,10 +18,14 @@ from depin.ext.fastapi import Inject, install
 class _Trace:
     constructed: list[str]
     closed: list[str]
+    frames: int
+    programs: int
 
     def __init__(self) -> None:
         self.constructed = []
         self.closed = []
+        self.frames = 0
+        self.programs = 0
 
 
 class _Singleton:
@@ -63,15 +68,20 @@ def _claim(question: str, work: str, semantics: str) -> Claim:
 def _workload(
     name: str,
     claim: Claim,
-    build: Callable[[_Trace], FastAPI],
+    build: Callable[[_Trace, Callable[[FastAPI, FrozenContainer], None]], FastAPI],
     *,
-    frames: int,
-    programs: int,
     path: str = '/',
 ) -> Workload:
-    def setup() -> Session:
+    def setup(observation: FastAPIObservation | None) -> Session:
         trace = _Trace()
-        app = build(trace)
+
+        def install_route(app: FastAPI, container: FrozenContainer) -> None:
+            if observation is None:
+                install(app, container)
+            else:
+                install_for_observation(app, container, observation)
+
+        app = build(trace, install_route)
         loop = asyncio.new_event_loop()
         client = AsyncClient(transport=ASGITransport(app=app), base_url='http://bench')
 
@@ -80,8 +90,11 @@ def _workload(
 
         def observe() -> Observation:
             response = request()
+            if observation is not None:
+                trace.frames = observation.frames
+                trace.programs = observation.programs
             return Observation(
-                result=f'{response.status_code} {response.text}; frames={frames}; programs={programs}',
+                result=f'{response.status_code} {response.text}; frames={trace.frames}; programs={trace.programs}',
                 constructed=tuple(trace.constructed),
                 closed=tuple(trace.closed),
             )
@@ -92,21 +105,33 @@ def _workload(
 
         return Session(call=request, observe=observe, close=close)
 
-    return Workload(name=name, tier=Tier.COMPONENT, claim=claim, subject=implementation('depin', setup))
+    def prepare() -> Prepared:
+        session = setup(None)
+        return Prepared(call=session.call, close=session.close)
+
+    def observe() -> Observation:
+        session = setup(FastAPIObservation())
+        try:
+            return session.observe()
+        finally:
+            if session.close is not None:
+                session.close()
+
+    return Workload(name=name, tier=Tier.COMPONENT, claim=claim, subject=Implementation('depin', prepare, observe))
 
 
-def _lazy_host_publication(trace: _Trace) -> FastAPI:
+def _lazy_host_publication(trace: _Trace, install_route: Callable[[FastAPI, FrozenContainer], None]) -> FastAPI:
     app = FastAPI()
 
     async def endpoint() -> dict[str, str]:
         return {'value': 'plain'}
 
     app.add_api_route('/', endpoint, methods=['GET'])
-    install(app, Container().freeze())
+    install_route(app, Container().freeze())
     return app
 
 
-def _lazy_frame_activation(trace: _Trace) -> FastAPI:
+def _lazy_frame_activation(trace: _Trace, install_route: Callable[[FastAPI, FrozenContainer], None]) -> FastAPI:
     def provide_scoped_value() -> _ScopedValue:
         return _ScopedValue(trace)
 
@@ -116,11 +141,11 @@ def _lazy_frame_activation(trace: _Trace) -> FastAPI:
         return {'value': value.value}
 
     app.add_api_route('/', endpoint, methods=['GET'])
-    install(app, Container().bind(provide_scoped_value, scope=Scope.SCOPED).freeze())
+    install_route(app, Container().bind(provide_scoped_value, scope=Scope.SCOPED).freeze())
     return app
 
 
-def _one_key_program(trace: _Trace) -> FastAPI:
+def _one_key_program(trace: _Trace, install_route: Callable[[FastAPI, FrozenContainer], None]) -> FastAPI:
     def provide_value() -> _Singleton:
         return _Singleton('singleton')
 
@@ -130,11 +155,11 @@ def _one_key_program(trace: _Trace) -> FastAPI:
         return {'value': value.value}
 
     app.add_api_route('/', endpoint, methods=['GET'])
-    install(app, Container().bind(provide_value).freeze())
+    install_route(app, Container().bind(provide_value).freeze())
     return app
 
 
-def _many_key_program(trace: _Trace) -> FastAPI:
+def _many_key_program(trace: _Trace, install_route: Callable[[FastAPI, FrozenContainer], None]) -> FastAPI:
     class Left(_Singleton):
         pass
 
@@ -153,11 +178,11 @@ def _many_key_program(trace: _Trace) -> FastAPI:
         return {'left': left.value, 'right': right.value}
 
     app.add_api_route('/', endpoint, methods=['GET'])
-    install(app, Container().bind(provide_left).bind(provide_right).freeze())
+    install_route(app, Container().bind(provide_left).bind(provide_right).freeze())
     return app
 
 
-def _request_seed_read(trace: _Trace) -> FastAPI:
+def _request_seed_read(trace: _Trace, install_route: Callable[[FastAPI, FrozenContainer], None]) -> FastAPI:
     app = FastAPI()
 
     async def endpoint(request: Inject[Request]) -> dict[str, str]:
@@ -165,11 +190,11 @@ def _request_seed_read(trace: _Trace) -> FastAPI:
         return {'path': request.url.path}
 
     app.add_api_route('/seed', endpoint, methods=['GET'])
-    install(app, Container().scope_value(Request).freeze())
+    install_route(app, Container().scope_value(Request).freeze())
     return app
 
 
-def _async_resource_close(trace: _Trace) -> FastAPI:
+def _async_resource_close(trace: _Trace, install_route: Callable[[FastAPI, FrozenContainer], None]) -> FastAPI:
     async def provide_resource() -> AsyncGenerator[_AsyncResource]:
         resource = _AsyncResource(trace)
         try:
@@ -183,7 +208,7 @@ def _async_resource_close(trace: _Trace) -> FastAPI:
         return {'value': resource.value}
 
     app.add_api_route('/', endpoint, methods=['GET'])
-    install(app, Container().bind(provide_resource, scope=Scope.SCOPED).freeze())
+    install_route(app, Container().bind(provide_resource, scope=Scope.SCOPED).freeze())
     return app
 
 
@@ -196,8 +221,6 @@ WORKLOADS: tuple[Workload, ...] = (
             'No frame opens.',
         ),
         _lazy_host_publication,
-        frames=0,
-        programs=0,
     ),
     _workload(
         'fastapi_lazy_frame_activation_and_drain',
@@ -207,8 +230,6 @@ WORKLOADS: tuple[Workload, ...] = (
             'One frame opens.',
         ),
         _lazy_frame_activation,
-        frames=1,
-        programs=1,
     ),
     _workload(
         'fastapi_endpoint_program_one_key',
@@ -218,8 +239,6 @@ WORKLOADS: tuple[Workload, ...] = (
             'No frame opens.',
         ),
         _one_key_program,
-        frames=0,
-        programs=1,
     ),
     _workload(
         'fastapi_endpoint_program_many_keys',
@@ -229,8 +248,6 @@ WORKLOADS: tuple[Workload, ...] = (
             'No frame opens.',
         ),
         _many_key_program,
-        frames=0,
-        programs=1,
     ),
     _workload(
         'fastapi_request_seed_read',
@@ -240,8 +257,6 @@ WORKLOADS: tuple[Workload, ...] = (
             'One frame opens.',
         ),
         _request_seed_read,
-        frames=1,
-        programs=1,
         path='/seed',
     ),
     _workload(
@@ -252,7 +267,5 @@ WORKLOADS: tuple[Workload, ...] = (
             'One frame opens and drains.',
         ),
         _async_resource_close,
-        frames=1,
-        programs=1,
     ),
 )
