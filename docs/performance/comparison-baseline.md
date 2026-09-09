@@ -1,5 +1,15 @@
 # Comparative performance evidence
 
+## FastAPI minimum-overhead status
+
+The 2026-09-09 FastAPI optimization diagnostic is not published as accepted
+performance evidence. Its first counterbalanced CPU-light pair measured a
+108.542-microsecond depin-over-direct p50 increment, above the 45.525-microsecond
+maximum required for a 25% reduction from the accepted 60.7-microsecond
+baseline. The incomplete raw pair and diagnosis are retained in
+`benchmarks/results/2026-09-09-fastapi-minimum-overhead/`; no leadership or
+tail-performance claim is made from that partial collection.
+
 ## resolve_cached_singleton
 
 | Measure | Result |

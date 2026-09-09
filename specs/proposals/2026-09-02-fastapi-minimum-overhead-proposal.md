@@ -238,3 +238,9 @@ current injection call site, measure total and DI-attributable p50/p95/p99, and
 meet the material leadership gate rather than statistical parity. Provider
 discovery is deferred because it does not address this measured overhead; native
 acceleration remains NO-GO pending the post-FastAPI attribution.
+
+The 2026-09-09 implementation diagnostic did not meet that gate. Its first
+counterbalanced CPU-light pair measured a 108.542-microsecond head increment,
+above both the 60.7-microsecond accepted baseline and the 45.525-microsecond
+25% target. The proposal remains active; do not mark it implemented or advance
+the roadmap until a fresh five-repetition collection passes.
