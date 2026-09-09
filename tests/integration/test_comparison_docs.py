@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import benchmarks.comparison.report as comparison_report
 from benchmarks.comparison import protocol
+from benchmarks.comparison import report as comparison_report
 from benchmarks.comparison.report import main, render
 from benchmarks.harness import HarnessError, require_array, require_object
 

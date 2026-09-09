@@ -33,11 +33,10 @@ def _spec(shape: ProviderShape, source: object = 42) -> ProviderSpec:
 
 
 def _no_teardown(value: object) -> None:
-    del value
+    pass
 
 
 def _no_frame(spec: ProviderSpec) -> object:
-    del spec
     return None
 
 

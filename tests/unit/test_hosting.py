@@ -77,8 +77,11 @@ def test_activated_publishes_the_container_and_undoes_it_on_exit() -> None:
 def test_activated_undoes_the_publication_when_the_block_raises() -> None:
     di = Container().freeze()
 
-    with pytest.raises(RuntimeError), Host(di).activated():
+    def fail() -> None:
         raise RuntimeError('boom')
+
+    with pytest.raises(RuntimeError), Host(di).activated():
+        fail()
 
     assert optional_hosted_container() is None
 
@@ -182,9 +185,12 @@ async def test_ascope_publishes_seeds_and_resolves() -> None:
 async def test_ascope_undoes_the_publication_when_the_block_raises() -> None:
     di = Container().freeze()
 
+    def fail() -> None:
+        raise RuntimeError('boom')
+
     with pytest.raises(RuntimeError):
         async with Host(di).ascope():
-            raise RuntimeError('boom')
+            fail()
 
     assert optional_hosted_container() is None
 

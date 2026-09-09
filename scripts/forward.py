@@ -84,9 +84,13 @@ def render(checker: str, version: str, legs: Sequence[tuple[str, str]], run_url:
     parts = [
         f'`{checker} {version}` is not green against this repository.',
         '',
-        'This issue is opened by the weekly `typing-forward` workflow and is advisory: the pinned version in '
-        '`conformance/checkers.toml` is unchanged, and advancing it is a pull request that shows the whole suite '
-        'green on the new version.',
+        ' '.join(
+            (
+                'This issue is opened by the weekly `typing-forward` workflow and is advisory:',
+                'the pinned version in `conformance/checkers.toml` is unchanged, and advancing it is a pull request',
+                'that shows the whole suite green on the new version.',
+            )
+        ),
         '',
         f'Run: {run_url}',
         '',

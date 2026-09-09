@@ -672,7 +672,7 @@ def test_a_singleton_reaching_a_scoped_target_through_an_alias_is_captive() -> N
 
     class Service:
         def __init__(self, store: Store) -> None:
-            del store
+            pass
 
     builder = (
         Container().bind(Session, scope=Scope.SCOPED).alias(Store, to=Session).bind(Service, scope=Scope.SINGLETON)
@@ -701,7 +701,7 @@ def test_a_cycle_through_a_collection_is_rejected() -> None:
 
     class Member:
         def __init__(self, handlers: list[Handler]) -> None:
-            del handlers
+            pass
 
     builder = Container().bind(Member).collect(Handler, [Member])
     with pytest.raises(CircularDependencyError, match=r'cycle detected.*list\['):
@@ -715,7 +715,7 @@ def test_a_singleton_over_a_collection_with_a_scoped_member_is_captive() -> None
 
     class Dispatcher:
         def __init__(self, handlers: list[Handler]) -> None:
-            del handlers
+            pass
 
     builder = (
         Container()

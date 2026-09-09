@@ -98,7 +98,7 @@ def test_a_generic_key_is_scoped_like_any_other() -> None:
 def test_a_parameterisation_does_not_satisfy_a_wider_one() -> None:
     class Service:
         def __init__(self, repo: Repo[object]) -> None:
-            del repo
+            pass
 
     with pytest.raises(MissingProviderError, match=r'Repo\[object\]'):
         _ = Container().bind(_user_repo).bind(Service).freeze()

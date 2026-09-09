@@ -5,10 +5,10 @@ from typing import Protocol
 
 import pytest
 
-import benchmarks.comparison.adapters.dependency_injector as dependency_injector_adapter
 import benchmarks.comparison.adapters.dishka as dishka_adapter
 import benchmarks.comparison.adapters.svcs as svcs_adapter
 import benchmarks.comparison.adapters.wireup as wireup_adapter
+from benchmarks.comparison.adapters import dependency_injector as dependency_injector_adapter
 from benchmarks.comparison.adapters.dependency_injector import ADAPTER, warm_chain
 from benchmarks.comparison.contracts import Candidate, Competitor, Equivalence
 from benchmarks.comparison.inventory import build

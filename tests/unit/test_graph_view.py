@@ -136,7 +136,7 @@ def test_an_unbound_optional_edge_reports_why_it_is_unsatisfied() -> None:
 
     class Service:
         def __init__(self, cache: Cache | None) -> None:
-            del cache
+            pass
 
     edge = Container().bind(Service).freeze().graph().node(Service).dependencies[0]
     assert not edge.satisfied
@@ -151,7 +151,7 @@ def test_an_unbound_defaulted_edge_reports_why_it_is_unsatisfied() -> None:
 
     class Service:
         def __init__(self, cache: Cache = fallback) -> None:
-            del cache
+            pass
 
     edge = Container().bind(Service).freeze().graph().node(Service).dependencies[0]
     assert not edge.satisfied

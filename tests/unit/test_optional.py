@@ -27,7 +27,7 @@ def test_a_union_of_two_providers_is_still_rejected() -> None:
 
     class Service:
         def __init__(self, dep: Cache | Logger) -> None:
-            del dep
+            pass
 
     with pytest.raises(InvalidProviderError, match='names no single key'):
         _ = Container().bind(Service).freeze()
@@ -38,7 +38,7 @@ def test_a_union_of_two_providers_and_none_is_still_rejected() -> None:
 
     class Service:
         def __init__(self, dep: Cache | Logger | None) -> None:
-            del dep
+            pass
 
     with pytest.raises(InvalidProviderError, match='names no single key'):
         _ = Container().bind(Service).freeze()
@@ -135,7 +135,7 @@ def test_an_unbound_optional_is_not_reported_beside_a_genuinely_missing_provider
 
     class Service:
         def __init__(self, required: Missing, cache: Absent | None) -> None:
-            del required, cache
+            pass
 
     with pytest.raises(MissingProviderError) as raised:
         _ = Container().bind(Service).freeze()

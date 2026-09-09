@@ -19,21 +19,19 @@ from depin.errors import InvalidProviderError
 
 class _ReadyAsyncRuntime:
     async def begin(self, scope: Scope, ident: Ident, claims: list[object | None]) -> InstructionStart:
-        del scope, ident, claims
         return InstructionReady('cached')
 
     def publish(self, claim: object, value: object) -> None:
-        del claim, value
+        pass
 
     def abort(self, claim: object) -> None:
-        del claim
+        pass
 
     def read_frame(self, ident: Ident) -> object:
-        del ident
         return object()
 
     def register_teardown(self, scope: Scope, record: Teardown) -> None:
-        del scope, record
+        pass
 
 
 @pytest.mark.asyncio
@@ -54,7 +52,7 @@ async def test_async_program_rejects_a_malformed_operation_slot() -> None:
 
 @pytest.mark.asyncio
 async def test_async_program_rejects_a_malformed_dependency_slot_with_its_chain() -> None:
-    operation = Operation(lambda: object(), (1,), (str, None))
+    operation = Operation(object, (1,), (str, None))
     program = AsyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
 
     with pytest.raises(
@@ -89,7 +87,7 @@ async def test_async_program_returns_a_ready_cached_instruction() -> None:
 
 @pytest.mark.asyncio
 async def test_cached_async_instruction_requires_a_runtime() -> None:
-    operation = Operation(lambda: object(), (), (str, None), Scope.SINGLETON)
+    operation = Operation(object, (), (str, None), Scope.SINGLETON)
     program = AsyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
 
     with pytest.raises(InvalidProviderError, match='requires a cache runtime'):
@@ -108,7 +106,7 @@ async def test_async_program_rejects_a_claim_that_completes_without_a_runtime(
         claims.append(object())
 
     monkeypatch.setattr(async_instructions_module, '_start', start_with_claim)
-    operation = Operation(lambda: object(), (), (str, None))
+    operation = Operation(object, (), (str, None))
     program = AsyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
 
     with pytest.raises(InvalidProviderError, match='cached instruction completed without a runtime'):

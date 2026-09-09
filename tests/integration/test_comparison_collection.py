@@ -442,7 +442,7 @@ def test_dirty_collection_is_diagnostic_evidence_when_explicitly_allowed(
     monkeypatch.setattr(comparison, '_clean_tree', lambda: False)
     monkeypatch.setattr(comparison, 'expected_ids', lambda: EXPECTED_IDS)
     monkeypatch.setattr(comparison, '_environment', lambda: {'host': 'synthetic'})
-    monkeypatch.setattr(comparison, 'descriptions', lambda: dict[str, object]())
+    monkeypatch.setattr(comparison, 'descriptions', dict[str, object])
 
     dataset = _collect(repetitions=5, out=tmp_path / 'out', allow_dirty=True, command=(str(child), '{report}'))
 

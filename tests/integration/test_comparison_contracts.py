@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-import benchmarks.comparison as comparison
+from benchmarks import comparison
 from benchmarks.comparison import WORKLOADS as COMPARATIVE_WORKLOADS
 from benchmarks.comparison import inventory
 from benchmarks.comparison.adapters import ADAPTERS

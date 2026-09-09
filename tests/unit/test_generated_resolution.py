@@ -74,7 +74,7 @@ def test_generated_programs_share_one_immutable_provider_namespace(monkeypatch: 
 
     def capture_namespace(_expression: str, sources: tuple[Callable[..., object], ...]) -> Program:
         namespaces.append(sources)
-        return lambda: object()
+        return object
 
     def leaf() -> str:
         return 'value'

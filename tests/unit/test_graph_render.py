@@ -751,7 +751,7 @@ def test_explain_marks_an_unbound_optional() -> None:
 
     class Service:
         def __init__(self, cache: Cache | None) -> None:
-            del cache
+            pass
 
     prefix = 'test_explain_marks_an_unbound_optional.<locals>.'
     tree = Container().bind(Service).freeze().explain(Service).replace(prefix, '')
@@ -767,7 +767,7 @@ def test_an_unbound_optional_with_a_default_still_renders_as_default() -> None:
 
     class Service:
         def __init__(self, cache: Cache | None = default_cache) -> None:
-            del cache
+            pass
 
     prefix = 'test_an_unbound_optional_with_a_default_still_renders_as_default.<locals>.'
     tree = Container().bind(Service).freeze().explain(Service).replace(prefix, '')

@@ -232,7 +232,7 @@ def test_inject_unannotated_parameter_raises_at_decoration() -> None:
     frozen = Container().freeze()
 
     def handler(svc: object = injected) -> None:
-        del svc
+        pass
 
     del handler.__annotations__['svc']
 
@@ -244,7 +244,7 @@ def test_inject_unresolvable_annotation_raises_at_decoration() -> None:
     frozen = Container().freeze()
 
     def handler(svc: object = injected) -> None:
-        del svc
+        pass
 
     handler.__annotations__['svc'] = 'Absent'
 

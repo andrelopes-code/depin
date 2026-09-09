@@ -158,7 +158,6 @@ class _SyncInstructionRuntime(_InstructionRuntime):
             claim: object | None = None
             token: ContextToken[_Constructing | None] | None = None
             leader = False
-            registered = False
             try:
                 cached, claim = frame.claim_cached(ident, ident)
                 if cached is not MISSING:
@@ -182,14 +181,12 @@ class _SyncInstructionRuntime(_InstructionRuntime):
                     raise DepinError(f'cache claim for {fmt_key(ident[0])} completed without a leader')
                 owned = _InstructionClaim(frame, ident, claim, token)
                 claims.append(owned)
-                registered = True
                 return owned
             except BaseException:
-                if not registered:
-                    if leader and claim is not None:
-                        frame.abort(ident, claim, signal=True)
-                    if token is not None:
-                        _constructing.reset(token)
+                if leader and claim is not None:
+                    frame.abort(ident, claim, signal=True)
+                if token is not None:
+                    _constructing.reset(token)
                 raise
 
 
@@ -202,7 +199,6 @@ class _AsyncInstructionRuntime(_InstructionRuntime):
             claim: object | None = None
             token: ContextToken[_Constructing | None] | None = None
             leader = False
-            registered = False
             try:
                 cached, claim = frame.claim_cached(ident, ident, asynchronous=True)
                 if cached is not MISSING:
@@ -226,14 +222,12 @@ class _AsyncInstructionRuntime(_InstructionRuntime):
                     raise DepinError(f'cache claim for {fmt_key(ident[0])} completed without a leader')
                 owned = _InstructionClaim(frame, ident, claim, token)
                 claims.append(owned)
-                registered = True
                 return owned
             except BaseException:
-                if not registered:
-                    if leader and claim is not None:
-                        frame.abort(ident, claim, signal=True)
-                    if token is not None:
-                        _constructing.reset(token)
+                if leader and claim is not None:
+                    frame.abort(ident, claim, signal=True)
+                if token is not None:
+                    _constructing.reset(token)
                 raise
 
 

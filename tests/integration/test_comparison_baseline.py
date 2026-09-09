@@ -93,12 +93,16 @@ def test_baseline_preflight_rejects_a_file_with_the_wrong_mode(tmp_path: Path, m
 
 
 def test_baseline_preflight_accepts_a_real_git_archive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def preserve_mode(member: tarfile.TarInfo, destination: str) -> tarfile.TarInfo:
+        filtered = tarfile.data_filter(member, destination)
+        return filtered.replace(mode=member.mode, deep=False)
+
     revision = subprocess.run(('git', 'rev-parse', 'HEAD'), capture_output=True, text=True, check=True).stdout.strip()
     archive = subprocess.run(('git', 'archive', '--format=tar', revision), capture_output=True, check=True).stdout
     baseline = tmp_path / 'baseline'
     baseline.mkdir()
     with tarfile.open(fileobj=io.BytesIO(archive), mode='r:') as stream:
-        stream.extractall(baseline, filter='fully_trusted')
+        stream.extractall(baseline, filter=preserve_mode)
     (baseline / '.depin-baseline-revision').write_text(f'{revision}\n', encoding='utf-8')
     monkeypatch.setattr(protocol, 'validate_baseline_archive', REAL_BASELINE_VALIDATION)
 

@@ -688,7 +688,7 @@ def test_rejects_a_key_that_has_no_compiled_instruction_root() -> None:
 
 
 def test_rejects_a_malformed_dependency_slot() -> None:
-    operation = Operation(lambda: object(), (1,), (str, None))
+    operation = Operation(object, (1,), (str, None))
     program = SyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
 
     with pytest.raises(
@@ -706,21 +706,19 @@ def test_rejects_a_malformed_operation_slot() -> None:
 
 class _ReadySyncRuntime:
     def begin(self, scope: Scope, ident: Ident, claims: list[object | None]) -> InstructionStart:
-        del scope, ident, claims
         return InstructionReady('cached')
 
     def publish(self, claim: object, value: object) -> None:
-        del claim, value
+        pass
 
     def abort(self, claim: object) -> None:
-        del claim
+        pass
 
     def read_frame(self, ident: Ident) -> object:
-        del ident
         return object()
 
     def register_teardown(self, scope: Scope, record: Teardown) -> None:
-        del scope, record
+        pass
 
 
 def test_returns_a_ready_cached_instruction_without_calling_its_factory() -> None:
@@ -734,7 +732,7 @@ def test_returns_a_ready_cached_instruction_without_calling_its_factory() -> Non
 
 
 def test_cached_instruction_requires_a_runtime() -> None:
-    operation = Operation(lambda: object(), (), (str, None), Scope.SINGLETON)
+    operation = Operation(object, (), (str, None), Scope.SINGLETON)
     program = SyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
 
     with pytest.raises(InvalidProviderError, match='requires a cache runtime'):
@@ -750,7 +748,7 @@ def test_rejects_a_claim_that_completes_without_a_runtime(monkeypatch: pytest.Mo
         claims.append(object())
 
     monkeypatch.setattr(instructions_module, '_start', start_with_claim)
-    operation = Operation(lambda: object(), (), (str, None))
+    operation = Operation(object, (), (str, None))
     program = SyncInstructionProgram((operation,), MappingProxyType({(str, None): 0}))
 
     with pytest.raises(InvalidProviderError, match='cached instruction completed without a runtime'):
@@ -810,8 +808,8 @@ def test_rejects_a_malformed_alias_operation() -> None:
     'operation',
     [
         FrameOperation((), (str, None), Scope.SCOPED),
-        GeneratorOperation(lambda: object(), (), (), (str, None), Scope.SINGLETON),
-        ContextManagerOperation(lambda: object(), (), (), (str, None), Scope.SINGLETON),
+        GeneratorOperation(object, (), (), (str, None), Scope.SINGLETON),
+        ContextManagerOperation(object, (), (), (str, None), Scope.SINGLETON),
     ],
 )
 def test_runtime_owned_structured_operations_require_a_runtime(operation: StructuredOperation) -> None:
