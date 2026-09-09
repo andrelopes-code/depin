@@ -188,7 +188,28 @@ STARTUP_CLAIM = Claim(
     ),
 )
 
+NO_INJECTION_CLAIM = Claim(
+    question='Does installing depin affect a FastAPI route with no injection?',
+    work='Dispatch one plain route that returns a fixed JSON body.',
+    included=REQUEST_INCLUDED,
+    excluded=REQUEST_EXCLUDED,
+    semantics='No provider resolves and no request scope frame opens.',
+    shape='One route, no depin dependencies.',
+    concurrency=REQUEST_CONCURRENCY,
+    metric=Metric.LATENCY,
+    unit='seconds per operation',
+    valid=('The overhead of the installed lazy host when a route does not use depin.',),
+    invalid=(*TIER_THREE_INVALID, 'It is not an injection or resolution measurement.'),
+)
+
 WORKLOADS: tuple[Workload, ...] = (
+    Workload(
+        name='fastapi_no_injection',
+        tier=Tier.APPLICATION,
+        claim=NO_INJECTION_CLAIM,
+        subject=request_implementations('depin', build_depin_sync_deployment, '/plain'),
+        baseline=request_implementations('direct', build_direct_sync_deployment, '/plain'),
+    ),
     Workload(
         name='fastapi_cpu_light_endpoint',
         tier=Tier.APPLICATION,

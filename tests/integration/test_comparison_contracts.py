@@ -220,6 +220,13 @@ def test_every_direct_latency_workload_has_one_absolute_target() -> None:
     assert set(targets) == expected
 
 
+def test_fastapi_no_injection_has_a_calibrated_noise_guard() -> None:
+    target = load(Path('benchmarks/leadership-targets.toml'))['fastapi_no_injection']
+
+    assert target.fixed_seconds == 0.000012
+    assert target.fraction_of_direct == 0.1
+
+
 def test_an_unknown_target_field_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / 'targets.toml'
     path.write_text(
@@ -298,6 +305,7 @@ def test_authored_targets_match_the_versioned_oracle() -> None:
         'resolve_a_sync_resource_with_teardown': 0.000003,
         'warmup_a_cold_singleton_graph': 0.0005,
         'open_a_request_shaped_scope': 0.0000035,
+        'fastapi_no_injection': 0.000012,
         'fastapi_cpu_light_endpoint': 0.000012,
         'fastapi_request_scoped_graph': 0.000016,
         'fastapi_singletons_and_transients': 0.000016,
@@ -308,6 +316,7 @@ def test_authored_targets_match_the_versioned_oracle() -> None:
     targets = load(Path('benchmarks/leadership-targets.toml'))
     assert {name: target.fixed_seconds for name, target in targets.items()} == expected
     assert {name: target.fraction_of_direct for name, target in targets.items() if name.startswith('fastapi_')} == {
+        'fastapi_no_injection': 0.1,
         'fastapi_cpu_light_endpoint': 0.1,
         'fastapi_request_scoped_graph': 0.1,
         'fastapi_singletons_and_transients': 0.1,

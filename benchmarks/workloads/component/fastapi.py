@@ -1,0 +1,258 @@
+"""Component measurements for the FastAPI lazy integration path."""
+
+import asyncio
+from collections.abc import AsyncGenerator, Callable
+from dataclasses import dataclass
+
+from fastapi import FastAPI, Request
+from httpx import ASGITransport, AsyncClient, Response
+
+from benchmarks.contracts import Claim, Metric, Observation, Tier, Workload
+from benchmarks.workloads.shell import CONCURRENCY, Session, implementation
+from depin import Container, Scope
+from depin.ext.fastapi import Inject, install
+
+
+@dataclass(slots=True)
+class _Trace:
+    constructed: list[str]
+    closed: list[str]
+
+    def __init__(self) -> None:
+        self.constructed = []
+        self.closed = []
+
+
+class _Singleton:
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+
+class _ScopedValue:
+    def __init__(self, trace: _Trace) -> None:
+        self.value = 'scoped'
+        trace.constructed.append('ScopedValue')
+
+
+class _AsyncResource:
+    def __init__(self, trace: _Trace) -> None:
+        self.value = 'resource'
+        self._trace = trace
+        trace.constructed.append('AsyncResource')
+
+    def close(self) -> None:
+        self._trace.closed.append('AsyncResource')
+
+
+def _claim(question: str, work: str, semantics: str) -> Claim:
+    return Claim(
+        question=question,
+        work=work,
+        included='One installed FastAPI route invocation through the in-process ASGI transport.',
+        excluded='Application construction, container freeze, client construction, and route priming.',
+        semantics=semantics,
+        shape='One FastAPI route and the smallest dependency graph needed for this integration transition.',
+        concurrency=CONCURRENCY,
+        metric=Metric.LATENCY,
+        unit='seconds per operation',
+        valid=('The isolated contribution of this named FastAPI integration transition.',),
+        invalid=('Not a served-application throughput or network-latency measurement.',),
+    )
+
+
+def _workload(
+    name: str,
+    claim: Claim,
+    build: Callable[[_Trace], FastAPI],
+    *,
+    frames: int,
+    programs: int,
+    path: str = '/',
+) -> Workload:
+    def setup() -> Session:
+        trace = _Trace()
+        app = build(trace)
+        loop = asyncio.new_event_loop()
+        client = AsyncClient(transport=ASGITransport(app=app), base_url='http://bench')
+
+        def request() -> Response:
+            return loop.run_until_complete(client.get(path))
+
+        def observe() -> Observation:
+            response = request()
+            return Observation(
+                result=f'{response.status_code} {response.text}; frames={frames}; programs={programs}',
+                constructed=tuple(trace.constructed),
+                closed=tuple(trace.closed),
+            )
+
+        def close() -> None:
+            loop.run_until_complete(client.aclose())
+            loop.close()
+
+        return Session(call=request, observe=observe, close=close)
+
+    return Workload(name=name, tier=Tier.COMPONENT, claim=claim, subject=implementation('depin', setup))
+
+
+def _lazy_host_publication(trace: _Trace) -> FastAPI:
+    app = FastAPI()
+
+    async def endpoint() -> dict[str, str]:
+        return {'value': 'plain'}
+
+    app.add_api_route('/', endpoint, methods=['GET'])
+    install(app, Container().freeze())
+    return app
+
+
+def _lazy_frame_activation(trace: _Trace) -> FastAPI:
+    def provide_scoped_value() -> _ScopedValue:
+        return _ScopedValue(trace)
+
+    app = FastAPI()
+
+    async def endpoint(value: Inject[_ScopedValue]) -> dict[str, str]:
+        return {'value': value.value}
+
+    app.add_api_route('/', endpoint, methods=['GET'])
+    install(app, Container().bind(provide_scoped_value, scope=Scope.SCOPED).freeze())
+    return app
+
+
+def _one_key_program(trace: _Trace) -> FastAPI:
+    def provide_value() -> _Singleton:
+        return _Singleton('singleton')
+
+    app = FastAPI()
+
+    async def endpoint(value: Inject[_Singleton]) -> dict[str, str]:
+        return {'value': value.value}
+
+    app.add_api_route('/', endpoint, methods=['GET'])
+    install(app, Container().bind(provide_value).freeze())
+    return app
+
+
+def _many_key_program(trace: _Trace) -> FastAPI:
+    class Left(_Singleton):
+        pass
+
+    class Right(_Singleton):
+        pass
+
+    def provide_left() -> Left:
+        return Left('one')
+
+    def provide_right() -> Right:
+        return Right('two')
+
+    app = FastAPI()
+
+    async def endpoint(left: Inject[Left], right: Inject[Right]) -> dict[str, str]:
+        return {'left': left.value, 'right': right.value}
+
+    app.add_api_route('/', endpoint, methods=['GET'])
+    install(app, Container().bind(provide_left).bind(provide_right).freeze())
+    return app
+
+
+def _request_seed_read(trace: _Trace) -> FastAPI:
+    app = FastAPI()
+
+    async def endpoint(request: Inject[Request]) -> dict[str, str]:
+        trace.constructed.append('RequestSeed')
+        return {'path': request.url.path}
+
+    app.add_api_route('/seed', endpoint, methods=['GET'])
+    install(app, Container().scope_value(Request).freeze())
+    return app
+
+
+def _async_resource_close(trace: _Trace) -> FastAPI:
+    async def provide_resource() -> AsyncGenerator[_AsyncResource]:
+        resource = _AsyncResource(trace)
+        try:
+            yield resource
+        finally:
+            resource.close()
+
+    app = FastAPI()
+
+    async def endpoint(resource: Inject[_AsyncResource]) -> dict[str, str]:
+        return {'value': resource.value}
+
+    app.add_api_route('/', endpoint, methods=['GET'])
+    install(app, Container().bind(provide_resource, scope=Scope.SCOPED).freeze())
+    return app
+
+
+WORKLOADS: tuple[Workload, ...] = (
+    _workload(
+        'fastapi_lazy_host_publication',
+        _claim(
+            'What does lazy FastAPI host publication cost without injection?',
+            'Serve one plain route.',
+            'No frame opens.',
+        ),
+        _lazy_host_publication,
+        frames=0,
+        programs=0,
+    ),
+    _workload(
+        'fastapi_lazy_frame_activation_and_drain',
+        _claim(
+            'What does first lazy frame activation and drain cost?',
+            'Resolve one scoped route value.',
+            'One frame opens.',
+        ),
+        _lazy_frame_activation,
+        frames=1,
+        programs=1,
+    ),
+    _workload(
+        'fastapi_endpoint_program_one_key',
+        _claim(
+            'What does one compiled endpoint program with one key cost?',
+            'Resolve one singleton route value.',
+            'No frame opens.',
+        ),
+        _one_key_program,
+        frames=0,
+        programs=1,
+    ),
+    _workload(
+        'fastapi_endpoint_program_many_keys',
+        _claim(
+            'What does one compiled endpoint program with multiple keys cost?',
+            'Resolve two singleton route values.',
+            'No frame opens.',
+        ),
+        _many_key_program,
+        frames=0,
+        programs=1,
+    ),
+    _workload(
+        'fastapi_request_seed_read',
+        _claim(
+            'What does reading the lazy FastAPI request seed cost?',
+            'Resolve the FastAPI Request route value.',
+            'One frame opens.',
+        ),
+        _request_seed_read,
+        frames=1,
+        programs=1,
+        path='/seed',
+    ),
+    _workload(
+        'fastapi_async_resource_close',
+        _claim(
+            'What does async resource close cost after activation?',
+            'Resolve and close one scoped async resource.',
+            'One frame opens and drains.',
+        ),
+        _async_resource_close,
+        frames=1,
+        programs=1,
+    ),
+)

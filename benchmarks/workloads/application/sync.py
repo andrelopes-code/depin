@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 
 from depin import Container, Scope
-from depin.ext.fastapi import Inject, RequestScope
+from depin.ext.fastapi import Inject, install
 
 from .model import (
     Cart,
@@ -61,7 +61,9 @@ def build_depin_sync_deployment(sink: Sink) -> Deployment:
     )
     _ = frozen.warmup()
     app = FastAPI()
-    app.add_middleware(RequestScope, container=frozen)
+
+    async def plain() -> dict[str, str]:
+        return {'value': 'plain'}
 
     async def status(clock: Inject[Clock]) -> dict[str, str]:
         return {'stamp': clock.stamp()}
@@ -72,9 +74,11 @@ def build_depin_sync_deployment(sink: Sink) -> Deployment:
     async def price(service: Inject[PricingService]) -> dict[str, str]:
         return service.quote()
 
+    app.add_api_route('/plain', plain, methods=['GET'])
     app.add_api_route('/status', status, methods=['GET'])
     app.add_api_route('/report', report, methods=['GET'])
     app.add_api_route('/price', price, methods=['GET'])
+    install(app, frozen)
     return Deployment(app=app, warm=already_warm)
 
 
@@ -90,6 +94,9 @@ def build_direct_sync_deployment(sink: Sink) -> Deployment:
     catalog = Catalog(settings, sink)
     app = FastAPI()
 
+    async def plain() -> dict[str, str]:
+        return {'value': 'plain'}
+
     async def status() -> dict[str, str]:
         return {'stamp': clock.stamp()}
 
@@ -102,6 +109,7 @@ def build_direct_sync_deployment(sink: Sink) -> Deployment:
         cart = Cart(settings, sink)
         return PricingService(catalog, cart, sink).quote()
 
+    app.add_api_route('/plain', plain, methods=['GET'])
     app.add_api_route('/status', status, methods=['GET'])
     app.add_api_route('/report', report, methods=['GET'])
     app.add_api_route('/price', price, methods=['GET'])
