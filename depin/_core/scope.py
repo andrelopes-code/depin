@@ -5,6 +5,7 @@ import contextlib
 import threading
 from collections.abc import Generator
 from contextvars import ContextVar
+from contextvars import Token as ContextToken
 from dataclasses import dataclass
 from enum import Enum
 from typing import Final
@@ -138,13 +139,18 @@ def _run_teardowns_sync(records: tuple[Teardown, ...]) -> None:
         raise ExceptionGroup('depin teardown errors', errors)
 
 
-async def _run_teardowns_async(records: tuple[Teardown, ...]) -> None:
+async def _async_teardown_errors(records: tuple[Teardown, ...]) -> tuple[Exception, ...]:
     errors: list[Exception] = []
     for record in records:
         try:
             await teardown.run_async(record)
         except Exception as exc:
             errors.append(exc)
+    return tuple(errors)
+
+
+async def _run_teardowns_async(records: tuple[Teardown, ...]) -> None:
+    errors = await _async_teardown_errors(records)
     if errors:
         raise ExceptionGroup('depin teardown errors', errors)
 
@@ -296,6 +302,10 @@ class ScopeFrame:
             ExceptionGroup: One or more teardowns failed.
         """
         await _run_teardowns_async(self._take_teardowns())
+
+    async def drain_async_errors(self) -> tuple[Exception, ...]:
+        """Drain pending teardowns and return every failure without grouping it."""
+        return await _async_teardown_errors(self._take_teardowns())
 
     def drop_sync(self) -> None:
         """Drain every pending teardown, newest first, and drop the cache, without an event loop.
@@ -558,6 +568,12 @@ _manualowner = ScopeFrame()
 _active: ContextVar[ScopeFrame | None] = ContextVar('depin_active_frame', default=None)
 
 
+@dataclass(frozen=True, slots=True)
+class FrameActivation:
+    frame: ScopeFrame
+    token: ContextToken[ScopeFrame | None]
+
+
 def active_frame(owner: ScopeFrame | None = None) -> ScopeFrame:
     if owner is None:
         owner = _manualowner
@@ -568,6 +584,11 @@ def active_frame(owner: ScopeFrame | None = None) -> ScopeFrame:
                 return frame
             break
         frame = frame.context_parent
+    from depin._core.lazy_scope import active_lazy_scope
+
+    lazy_scope = active_lazy_scope(owner)
+    if lazy_scope is not None:
+        return lazy_scope.frame()
     if frame is not None:
         raise OutsideScopeError('the active scope frame has already exited; open a new scope')
     raise OutsideScopeError('no active scope frame; open one with FrozenContainer.scope() or .ascope()')
@@ -586,6 +607,14 @@ def optional_frame(owner: ScopeFrame | None = None) -> ScopeFrame | None:
 
 @contextlib.contextmanager
 def push_frame(owner: ScopeFrame | None = None) -> Generator[ScopeFrame]:
+    activation = activate_frame(owner)
+    try:
+        yield activation.frame
+    finally:
+        deactivate_frame(activation)
+
+
+def activate_frame(owner: ScopeFrame | None = None) -> FrameActivation:
     if owner is None:
         owner = _manualowner
     context_parent = _active.get()
@@ -596,8 +625,9 @@ def push_frame(owner: ScopeFrame | None = None) -> Generator[ScopeFrame]:
         parent = None
     frame = ScopeFrame(parent=parent, context_parent=context_parent, owner=owner)
     token = _active.set(frame)
-    try:
-        yield frame
-    finally:
-        frame.active = False
-        _active.reset(token)
+    return FrameActivation(frame, token)
+
+
+def deactivate_frame(activation: FrameActivation) -> None:
+    activation.frame.deactivate()
+    _active.reset(activation.token)

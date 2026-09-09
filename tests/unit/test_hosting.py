@@ -3,7 +3,7 @@
 import asyncio
 import dataclasses
 import threading
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, AsyncIterator, Generator
 
 import pytest
 
@@ -15,9 +15,145 @@ from depin._core.hosting import (
     hosted_container,
     optional_hosted_container,
 )
+from depin._core.lazy_scope import LazyScopeSeed
+from depin._core.lazy_scope import lazy_host as _lazy_host
+from depin._core.scope import ScopeFrame
 from depin.errors import ContainerNotBoundError, OutsideScopeError
 
 REQUEST = Token[str]('request')
+
+
+@pytest.mark.asyncio
+async def test_lazy_host_does_not_open_a_frame_for_a_singleton() -> None:
+    class Service: ...
+
+    container = Container().bind(Service, scope=Scope.SINGLETON).freeze()
+    opened: list[ScopeFrame] = []
+
+    async with _lazy_host(container, on_open=opened.append):
+        assert await hosted_container().aresolve(Service) is await container.aresolve(Service)
+
+    assert opened == []
+
+
+@pytest.mark.asyncio
+async def test_lazy_host_opens_one_frame_on_first_scoped_resolution() -> None:
+    class Service: ...
+
+    container = Container().bind(Service, scope=Scope.SCOPED).freeze()
+    opened: list[ScopeFrame] = []
+
+    async with _lazy_host(container, on_open=opened.append):
+        first = await hosted_container().aresolve(Service)
+        second = await hosted_container().aresolve(Service)
+
+    assert first is second
+    assert len(opened) == 1
+
+
+@pytest.mark.asyncio
+async def test_lazy_seed_is_applied_only_when_its_key_is_read() -> None:
+    request = Token[str]('request')
+    built: list[str] = []
+    container = Container().scope_value(request).freeze()
+
+    def build_request() -> str:
+        built.append('r-1')
+        return 'r-1'
+
+    async with _lazy_host(container, seeds=(LazyScopeSeed(request, build_request),)):
+        assert built == []
+        assert await hosted_container().aresolve(request) == 'r-1'
+
+    assert built == ['r-1']
+
+
+@pytest.mark.asyncio
+async def test_lazy_scope_retains_body_and_teardown_failures() -> None:
+    events: list[str] = []
+
+    async def resource() -> AsyncIterator[str]:
+        try:
+            yield 'value'
+        finally:
+            events.append('closed')
+            raise LookupError('close failed')
+
+    container = Container().bind(resource, scope=Scope.SCOPED).freeze()
+
+    async def fail_after_construction() -> None:
+        async with _lazy_host(container):
+            assert await hosted_container().aresolve(str) == 'value'
+            raise ValueError('body failed')
+
+    with pytest.raises(ExceptionGroup) as raised:
+        await fail_after_construction()
+
+    assert events == ['closed']
+    assert {type(error) for error in raised.value.exceptions} == {ValueError, LookupError}
+
+
+@pytest.mark.asyncio
+async def test_lazy_host_cancellation_drains_one_constructed_resource() -> None:
+    events: list[str] = []
+    constructed = asyncio.Event()
+    never = asyncio.Event()
+
+    async def resource() -> AsyncIterator[str]:
+        try:
+            yield 'value'
+        finally:
+            events.append('closed')
+
+    container = Container().bind(resource, scope=Scope.SCOPED).freeze()
+
+    async def resolve_then_wait() -> None:
+        async with _lazy_host(container):
+            assert await hosted_container().aresolve(str) == 'value'
+            constructed.set()
+            await never.wait()
+
+    task = asyncio.create_task(resolve_then_wait())
+    await constructed.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert events == ['closed']
+    assert optional_hosted_container() is None
+
+
+@pytest.mark.asyncio
+async def test_concurrent_lazy_hosts_isolate_seeds_and_restore_enclosing_host() -> None:
+    request = Token[str]('request')
+
+    class Service: ...
+
+    container = Container().scope_value(request).bind(Service, scope=Scope.SCOPED).freeze()
+    outer = Container().freeze()
+    entered_a = asyncio.Event()
+    entered_b = asyncio.Event()
+    release = asyncio.Event()
+
+    async def request_scope(label: str, entered: asyncio.Event) -> tuple[str, bool]:
+        async with _lazy_host(container, seeds=(LazyScopeSeed(request, lambda: label),)):
+            first = await hosted_container().aresolve(Service)
+            value = await hosted_container().aresolve(request)
+            entered.set()
+            await release.wait()
+            second = await hosted_container().aresolve(Service)
+            return value, first is second
+
+    with Host(outer).activated():
+        first_task = asyncio.create_task(request_scope('a', entered_a))
+        second_task = asyncio.create_task(request_scope('b', entered_b))
+        await entered_a.wait()
+        await entered_b.wait()
+        release.set()
+        first, second = await asyncio.gather(first_task, second_task)
+        assert hosted_container() is outer
+
+    assert {first, second} == {('a', True), ('b', True)}
 
 
 def test_the_contract_version_is_one_zero() -> None:

@@ -39,7 +39,16 @@ from depin._core.instructions import (
 from depin._core.lifecycle import LifecycleState, create_lifecycle_gate
 from depin._core.markers import Token
 from depin._core.render import render_tree
-from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, optional_frame, push_frame
+from depin._core.scope import (
+    MISSING,
+    FrameActivation,
+    Scope,
+    ScopeFrame,
+    activate_frame,
+    active_frame,
+    optional_frame,
+    push_frame,
+)
 from depin._core.spec import Ident, ParamSpec, ProviderKey, ProviderSpec, ResolutionPlan, fmt_key
 from depin._core.teardown import Teardown
 from depin._core.typeguards import is_provider_key
@@ -66,6 +75,21 @@ class _Constructing:
 _constructing: ContextVar[_Constructing | None] = ContextVar('depin_constructing', default=None)
 _PENDING = object()
 _RECURSIVE_PLAN_LIMIT = 256
+
+
+def _read_scope_value(frame: ScopeFrame, key: object, tag: str | None) -> object:
+    value = frame.lookup_provided(key, tag)
+    if value is MISSING:
+        from depin._core.lazy_scope import lazy_seed_value
+
+        value = lazy_seed_value(key, tag)
+    if value is MISSING:
+        raise MissingProviderError(
+            f'no value in the active scope for {fmt_key(key)}; '
+            'a key declared with scope_value() must be supplied by whoever opens the scope, '
+            'with frame.provide(key, value)'
+        )
+    return value
 
 
 @dataclass(slots=True)
@@ -96,6 +120,12 @@ class _InstructionClaim:
     @property
     def value(self) -> object:
         return None
+
+
+@dataclass(frozen=True, slots=True)
+class AsyncScopeLease:
+    frame: ScopeFrame
+    activation: FrameActivation
 
 
 class _InstructionRuntime:
@@ -135,14 +165,7 @@ class _InstructionRuntime:
             _constructing.reset(claim.token)
 
     def read_frame(self, ident: Ident) -> object:
-        value = active_frame(self._root).lookup_provided(*ident)
-        if value is MISSING:
-            raise MissingProviderError(
-                f'no value in the active scope for {fmt_key(ident[0])}; '
-                'a key declared with scope_value() must be supplied by whoever opens the scope, '
-                'with frame.provide(key, value)'
-            )
-        return value
+        return _read_scope_value(active_frame(self._root), *ident)
 
     def register_teardown(self, scope: Scope, record: Teardown) -> None:
         frame = self._root if scope is Scope.SINGLETON else active_frame(self._root)
@@ -436,6 +459,44 @@ class FrozenContainer:
         )
         return resolved  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
+    def scope_owner(self) -> ScopeFrame:
+        return self._root
+
+    def begin_async_scope(self) -> AsyncScopeLease:
+        lifecycle = self._lifecycle
+        with lifecycle.mutex:
+            if lifecycle.state is LifecycleState.CLOSED:
+                raise ContainerClosedError(
+                    'container is closed; build a new FrozenContainer before resolving or opening a scope'
+                )
+            if lifecycle.state is not LifecycleState.OPEN:
+                raise ContainerLifecycleError('container shutdown is already in progress; await aclose() to join it')
+            lifecycle.active += 1
+            lifecycle.active_async += 1
+        activation = activate_frame(self._root)
+        return AsyncScopeLease(activation.frame, activation)
+
+    async def end_async_scope(self, lease: AsyncScopeLease, body_error: BaseException | None) -> None:
+        lifecycle = self._lifecycle
+        try:
+            teardown_errors = await lease.frame.drain_async_errors()
+            if teardown_errors:
+                if body_error is not None:
+                    if isinstance(body_error, Exception):
+                        raise ExceptionGroup('depin scope errors', [body_error, *teardown_errors]) from None
+                    raise BaseExceptionGroup('depin scope errors', [body_error, *teardown_errors]) from None
+                raise ExceptionGroup('depin teardown errors', teardown_errors)
+        finally:
+            from depin._core.scope import deactivate_frame
+
+            deactivate_frame(lease.activation)
+            with lifecycle.mutex:
+                lifecycle.active -= 1
+                lifecycle.active_async -= 1
+                wake = lifecycle.active == 0 and bool(lifecycle.gate_waiters)
+            if wake:
+                lifecycle.wake_waiters()
+
     @contextlib.contextmanager
     def scope(self) -> Generator[ScopeFrame]:
         """Open a synchronous scope for scoped providers and their teardown.
@@ -510,29 +571,14 @@ class FrozenContainer:
                 that violates its teardown protocol appears as a `TeardownError`
                 member of the group.
         """
-        lifecycle = self._lifecycle
-        with lifecycle.mutex:
-            if lifecycle.state is LifecycleState.CLOSED:
-                raise ContainerClosedError(
-                    'container is closed; build a new FrozenContainer before resolving or opening a scope'
-                )
-            if lifecycle.state is not LifecycleState.OPEN:
-                raise ContainerLifecycleError('container shutdown is already in progress; await aclose() to join it')
-            lifecycle.active += 1
-            lifecycle.active_async += 1
-        with push_frame(self._root) as frame:
-            try:
-                yield frame
-            finally:
-                try:
-                    await frame.drain_async()
-                finally:
-                    with lifecycle.mutex:
-                        lifecycle.active -= 1
-                        lifecycle.active_async -= 1
-                        wake = lifecycle.active == 0 and bool(lifecycle.gate_waiters)
-                    if wake:
-                        lifecycle.wake_waiters()
+        lease = self.begin_async_scope()
+        try:
+            yield lease.frame
+        except BaseException as error:
+            await self.end_async_scope(lease, error)
+            raise
+        else:
+            await self.end_async_scope(lease, None)
 
     def close(self) -> None:
         """Tear down singleton providers that own lifecycle resources, synchronously.
@@ -1584,11 +1630,4 @@ class FrozenContainer:
         return active_frame(self._root)
 
     def _read_frame(self, spec: ProviderSpec) -> object:
-        value = active_frame(self._root).lookup_provided(spec.key, spec.tag)
-        if value is MISSING:
-            raise MissingProviderError(
-                f'no value in the active scope for {fmt_key(spec.key)}; '
-                'a key declared with scope_value() must be supplied by whoever opens the scope, '
-                'with frame.provide(key, value)'
-            )
-        return value
+        return _read_scope_value(active_frame(self._root), spec.key, spec.tag)
