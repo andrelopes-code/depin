@@ -4,7 +4,9 @@ from collections.abc import AsyncIterator
 import pytest
 from fastapi import FastAPI
 from fastapi import Request as FastAPIRequest
+from fastapi.dependencies.models import Dependant
 from fastapi.responses import StreamingResponse
+from fastapi.routing import APIRoute
 from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel
 from starlette.types import Message, Receive, Send
@@ -12,8 +14,21 @@ from starlette.types import Scope as ASGIScope
 
 from depin import Container, Scope, hosted_container
 from depin._core.scope import active_frame
-from depin.errors import OutsideScopeError
+from depin.errors import FastAPIIntegrationError, OutsideScopeError
+from depin.ext import fastapi as fastapi_ext
 from depin.ext.fastapi import Inject, RequestScope
+
+
+def _route(app: FastAPI, path: str) -> APIRoute:
+    for route in app.routes:
+        if isinstance(route, APIRoute) and route.path == path:
+            return route
+    raise AssertionError(f'no route registered at {path!r}')
+
+
+def _dependency_call_name(dependency: Dependant) -> str:
+    call: object = dependency.call
+    return type(call).__name__
 
 
 def _http_scope(method: str = 'POST', path: str = '/') -> ASGIScope:
@@ -155,6 +170,96 @@ async def test_inject_outside_request_scope_raises_actionable_error() -> None:
     async with AsyncClient(transport=transport, base_url='http://t') as client:
         with pytest.raises(Exception, match='RequestScope'):
             _ = await asyncio.wait_for(client.get('/x'), timeout=5.0)
+
+
+@pytest.mark.asyncio
+async def test_install_recompiles_routes_added_with_the_same_container() -> None:
+    """A stale installation would leave later direct injections unhosted."""
+
+    class Service:
+        value = 3
+
+    container = Container().bind(Service).freeze()
+    app = FastAPI()
+    fastapi_ext.install(app, container)
+
+    @app.get('/value')
+    async def value(service: Inject[Service]) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]
+        return {'value': service.value}
+
+    fastapi_ext.install(app, container)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        response = await client.get('/value')
+    assert response.json() == {'value': 3}
+    assert len(app.user_middleware) == 1
+
+
+@pytest.mark.asyncio
+async def test_install_rejects_a_different_container() -> None:
+    """A second container would make request resolution nondeterministic."""
+    app = FastAPI()
+    fastapi_ext.install(app, Container().freeze())
+
+    with pytest.raises(FastAPIIntegrationError) as caught:
+        fastapi_ext.install(app, Container().freeze())
+
+    message = str(caught.value)
+    assert 'different FrozenContainer' in message
+    assert 'FastAPI' in message
+    assert 'RequestScope' in message
+
+
+@pytest.mark.asyncio
+async def test_install_rejects_an_application_after_its_middleware_stack_is_built() -> None:
+    """A late installation cannot reliably wrap an already running application."""
+    app = FastAPI()
+
+    @app.get('/plain')
+    async def plain() -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        return {'ok': True}
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        assert (await client.get('/plain')).json() == {'ok': True}
+
+    with pytest.raises(FastAPIIntegrationError, match='before startup'):
+        fastapi_ext.install(app, Container().freeze())
+
+
+def test_install_does_not_mutate_earlier_routes_when_a_later_route_is_malformed() -> None:
+    """Missing preflight would leave a partially compiled application behind."""
+
+    class First:
+        pass
+
+    class Second:
+        pass
+
+    container = Container().bind(First).bind(Second).freeze()
+    app = FastAPI()
+
+    @app.get('/first')
+    async def first(service: Inject[First]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        del service
+        return {'ok': True}
+
+    @app.get('/second')
+    async def second(service: Inject[Second]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        del service
+        return {'ok': True}
+
+    first_route = _route(app, '/first')
+    second_route = _route(app, '/second')
+    original_call: object = first_route.dependant.call
+    object.__setattr__(second_route.dependant, 'dependencies', ())
+
+    with pytest.raises(FastAPIIntegrationError, match='mutable list'):
+        fastapi_ext.install(app, container)
+
+    assert first_route.dependant.call is original_call
+    assert _dependency_call_name(first_route.dependant.dependencies[0]) == '_InjectResolver'
 
 
 class _Service:

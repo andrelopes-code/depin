@@ -17,6 +17,7 @@ EXPECTED_EXPORTS = (
     'ContainerLifecycleError',
     'ContractVersion',
     'DependencyGraph',
+    'FastAPIIntegrationError',
     'FrozenContainer',
     'GraphEdge',
     'GraphNode',

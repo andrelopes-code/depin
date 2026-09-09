@@ -1,0 +1,219 @@
+"""FastAPI endpoint compilation behind the public integration surface."""
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from inspect import iscoroutinefunction
+from typing import Annotated, TypeGuard
+
+import fastapi
+from fastapi import FastAPI, Request
+from fastapi.dependencies.models import Dependant
+from fastapi.dependencies.utils import get_dependant
+from fastapi.params import Depends
+from fastapi.routing import APIRoute, request_response
+from starlette.concurrency import run_in_threadpool
+from starlette.types import ASGIApp, Receive, Scope, Send
+
+from depin import FrozenContainer, Token, optional_hosted_container
+from depin._integration import LazyScopeSeed, _lazy_host, _provide_lazy_seed
+from depin.errors import ContainerNotBoundError, FastAPIIntegrationError
+
+__all__ = []
+
+_PROGRAM_ARGUMENT = '__depin_endpoint_program__'
+_INSTALLATION_MARKER = object()
+
+
+@dataclass(frozen=True, slots=True)
+class _InjectResolver[T]:
+    key: type[T] | Token[T]
+
+    async def __call__(self, request: Request) -> T:
+        _provide_lazy_seed(LazyScopeSeed(Request, lambda: request))
+        container = optional_hosted_container()
+        if container is None:
+            raise ContainerNotBoundError(
+                'Inject[...] resolved outside a hosted FastAPI request; call install(app, container) '
+                'after route registration or install RequestScope compatibility middleware.'
+            )
+        return await container.aresolve(self.key)
+
+
+@dataclass(frozen=True, slots=True)
+class _EndpointProgram:
+    container: FrozenContainer
+    entries: tuple[tuple[str, type[object] | Token[object]], ...]
+
+    async def __call__(self, request: Request) -> '_ResolvedArguments':
+        _provide_lazy_seed(LazyScopeSeed(Request, lambda: request))
+        return _ResolvedArguments({name: await self.container.aresolve(key) for name, key in self.entries})
+
+
+@dataclass(frozen=True, slots=True)
+class _ResolvedArguments:
+    values: dict[str, object]
+
+
+class Inject:
+    """FastAPI parameter annotation that resolves a dependency from depin."""
+
+    def __class_getitem__[T](cls, key: type[T] | Token[T]) -> object:
+        return Annotated[key, Depends(dependency=_InjectResolver(key))]
+
+
+@dataclass(frozen=True, slots=True)
+class _RoutePlan:
+    route: APIRoute
+    program: _EndpointProgram
+    dependencies: list[Dependant]
+    endpoint: Callable[..., object]
+
+
+class _LazyRequestScope:
+    __slots__ = ('_app', '_container')
+
+    def __init__(self, app: ASGIApp, container: FrozenContainer, marker: object) -> None:
+        del marker
+        self._app = app
+        self._container = container
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope['type'] not in ('http', 'websocket'):
+            await self._app(scope, receive, send)
+            return
+        seeds = (LazyScopeSeed(Request, lambda: Request(scope)),) if scope['type'] == 'http' else ()
+        async with _lazy_host(self._container, seeds=seeds):
+            await self._app(scope, receive, send)
+
+
+def install(app: FastAPI, container: FrozenContainer) -> None:
+    """Compile direct `Inject` parameters after all application routes are registered.
+
+    The compiled route resolves all direct injections once per request while
+    preserving FastAPI's native dependency graph. Call this before application
+    startup; repeat calls with the same container compile newly added routes.
+
+    Args:
+        app: Application whose existing path operation routes to compile.
+        container: Frozen container hosted for installed HTTP and WebSocket work.
+
+    Raises:
+        FastAPIIntegrationError: The application has already started, was
+            installed with another container, or exposes an unsupported route
+            shape. Upgrade FastAPI or use `RequestScope` compatibility middleware.
+    """
+    if app.middleware_stack is not None:
+        raise _setup_error('the application middleware stack has already been built; call install before startup')
+
+    installed = [middleware for middleware in app.user_middleware if _is_installed_middleware(middleware.args)]
+    if len(installed) > 1:
+        raise _setup_error('the application has multiple depin lazy request middleware entries')
+    if installed and _middleware_container(installed[0].args) is not container:
+        raise _setup_error('the application was already installed with a different FrozenContainer')
+
+    plans = tuple(
+        plan
+        for route in app.routes
+        if isinstance(route, APIRoute)
+        if (plan := _plan_route(route, container)) is not None
+    )
+    for plan in plans:
+        _apply_plan(plan)
+    if not installed:
+        app.add_middleware(_LazyRequestScope, container, _INSTALLATION_MARKER)
+
+
+def compile_route(route: APIRoute, container: FrozenContainer) -> bool:
+    """Compile one compatible route; kept private to the FastAPI boundary."""
+    plan = _plan_route(route, container)
+    if plan is None:
+        return False
+    _apply_plan(plan)
+    return True
+
+
+def _plan_route(route: APIRoute, container: FrozenContainer) -> _RoutePlan | None:
+    _require_route_shape(route)
+    dependencies = route.dependant.dependencies
+    resolvers: list[tuple[str | None, _InjectResolver[object]]] = []
+    for dependency in dependencies:
+        call: object = dependency.call
+        if _is_resolver(call):
+            resolvers.append((dependency.name, call))
+    if not resolvers:
+        return None
+    if any(not isinstance(name, str) for name, _ in resolvers):
+        raise _setup_error(f'route {route.path!r} has a direct Inject dependency with no parameter name')
+    names = tuple(name for name, _ in resolvers)
+    if _PROGRAM_ARGUMENT in names:
+        raise _setup_error(f'route {route.path!r} reserves parameter name {_PROGRAM_ARGUMENT!r}')
+    entries = tuple((name, resolver.key) for name, resolver in resolvers if isinstance(name, str))
+    program = _EndpointProgram(container, entries)
+    program_node = get_dependant(path=route.path_format, call=program, name=_PROGRAM_ARGUMENT)
+    replacement: list[Dependant] = []
+    inserted = False
+    for dependency in dependencies:
+        candidate: object = dependency.call
+        if _is_resolver(candidate):
+            if not inserted:
+                replacement.append(program_node)
+                inserted = True
+            continue
+        replacement.append(dependency)
+    endpoint = route.dependant.call
+    if endpoint is None:
+        raise _setup_error(f'route {route.path!r} has no callable endpoint')
+    return _RoutePlan(route, program, replacement, endpoint)
+
+
+def _apply_plan(plan: _RoutePlan) -> None:
+    route = plan.route
+    original = plan.endpoint
+
+    async def endpoint(**arguments: object) -> object:
+        injected = arguments.pop(_PROGRAM_ARGUMENT)
+        if not isinstance(injected, _ResolvedArguments):
+            raise _setup_error(f'route {route.path!r} produced an invalid depin endpoint program result')
+        arguments.update(injected.values)
+        if iscoroutinefunction(original):
+            return await original(**arguments)
+        return await run_in_threadpool(original, **arguments)
+
+    route.dependant.dependencies = plan.dependencies
+    route.dependant.call = endpoint
+    route.app = request_response(route.get_route_handler())
+
+
+def _require_route_shape(route: APIRoute) -> None:
+    for name in ('dependant', 'path', 'path_format', 'get_route_handler', 'app'):
+        if not hasattr(route, name):
+            raise _setup_error(f'route {route!r} does not provide required attribute {name!r}')
+    dependant = route.dependant
+    for name in ('call', 'dependencies'):
+        if not hasattr(dependant, name):
+            raise _setup_error(f'route {route.path!r} dependant does not provide required attribute {name!r}')
+    if type(dependant.dependencies) is not list:
+        raise _setup_error(f'route {route.path!r} dependant dependencies are not a mutable list')
+    for dependency in dependant.dependencies:
+        for name in ('call', 'name'):
+            if not hasattr(dependency, name):
+                raise _setup_error(f'route {route.path!r} dependency does not provide required attribute {name!r}')
+
+
+def _setup_error(reason: str) -> FastAPIIntegrationError:
+    return FastAPIIntegrationError(
+        f'FastAPI integration setup failed: {reason}. Detected FastAPI {fastapi.__version__}. '
+        'Upgrade to a tested FastAPI version or use RequestScope compatibility middleware.'
+    )
+
+
+def _is_resolver(call: object) -> TypeGuard[_InjectResolver[object]]:
+    return isinstance(call, _InjectResolver)
+
+
+def _is_installed_middleware(args: tuple[object, ...]) -> bool:
+    return len(args) == 2 and args[1] is _INSTALLATION_MARKER
+
+
+def _middleware_container(args: tuple[object, ...]) -> object:
+    return args[0]

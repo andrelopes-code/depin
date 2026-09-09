@@ -5,11 +5,26 @@ from typing import Protocol
 import pytest
 from fastapi import FastAPI
 from fastapi import Request as FastAPIRequest
+from fastapi.dependencies.models import Dependant
+from fastapi.routing import APIRoute
 from httpx import ASGITransport, AsyncClient
 
 from depin import Container, FrozenContainer, Host, Scope
 from depin.errors import ContainerNotBoundError
+from depin.ext import fastapi as fastapi_ext
 from depin.ext.fastapi import Inject, RequestScope
+
+
+def _route(app: FastAPI, path: str) -> APIRoute:
+    for route in app.routes:
+        if isinstance(route, APIRoute) and route.path == path:
+            return route
+    raise AssertionError(f'no route registered at {path!r}')
+
+
+def _dependency_call_name(dependency: Dependant) -> str:
+    call: object = dependency.call
+    return type(call).__name__
 
 
 @pytest.mark.asyncio
@@ -387,6 +402,73 @@ async def test_inject_raises_outside_any_hosted_container() -> None:
             await client.get('/config')
 
     assert str(caught.value) == (
-        'Inject[...] resolved outside a RequestScope; install the middleware with '
-        'app.add_middleware(RequestScope, container=...).'
+        'Inject[...] resolved outside a hosted FastAPI request; call install(app, container) '
+        'after route registration or install RequestScope compatibility middleware.'
     )
+
+
+@pytest.mark.asyncio
+async def test_install_resolves_multiple_injections_through_one_program() -> None:
+    """A compiler regression would construct distinct scoped dependencies."""
+    events: list[str] = []
+
+    class Shared:
+        def __init__(self) -> None:
+            events.append('shared')
+
+    class Left:
+        def __init__(self, shared: Shared) -> None:
+            self.shared = shared
+
+    class Right:
+        def __init__(self, shared: Shared) -> None:
+            self.shared = shared
+
+    container = (
+        Container()
+        .bind(Shared, scope=Scope.SCOPED)
+        .bind(Left, scope=Scope.SCOPED)
+        .bind(Right, scope=Scope.SCOPED)
+        .freeze()
+    )
+    app = FastAPI()
+
+    @app.get('/value')
+    async def value(left: Inject[Left], right: Inject[Right]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        return {'shared': left.shared is right.shared}
+
+    fastapi_ext.install(app, container)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        response = await client.get('/value')
+
+    assert response.json() == {'shared': True}
+    assert events == ['shared']
+    route = _route(app, '/value')
+    assert [_dependency_call_name(node) for node in route.dependant.dependencies].count('_EndpointProgram') == 1
+    assert all(_dependency_call_name(node) != '_InjectResolver' for node in route.dependant.dependencies)
+
+
+@pytest.mark.asyncio
+async def test_install_leaves_a_route_without_injection_unchanged() -> None:
+    """A compiler regression would mutate native FastAPI routes."""
+    app = FastAPI()
+
+    @app.get('/plain')
+    async def plain(value: int) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]
+        return {'value': value}
+
+    route = _route(app, '/plain')
+    original_endpoint: object = route.endpoint
+    original_dependencies = route.dependant.dependencies
+
+    fastapi_ext.install(app, Container().freeze())
+
+    assert route.endpoint is original_endpoint
+    assert route.dependant.dependencies is original_dependencies
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        response = await client.get('/plain?value=4')
+    assert response.json() == {'value': 4}

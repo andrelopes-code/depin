@@ -10,19 +10,17 @@ middleware is what holds the `Host` and opens the per-request scope; this
 module adds `Inject` on top of it.
 """
 
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING
 
-from fastapi.params import Depends
-
-from depin import optional_hosted_container
-from depin.errors import ContainerNotBoundError
+from depin.ext._fastapi import Inject as _RuntimeInject
+from depin.ext._fastapi import install
 
 # `fastapi.Request` is `starlette.requests.Request` — FastAPI re-exports the
 # class rather than subclassing it — so the Starlette middleware seeds exactly
 # the key a FastAPI provider asks for, and one middleware serves both.
 from depin.ext.starlette import RequestScope
 
-__all__ = ['Inject', 'RequestScope']
+__all__ = ['Inject', 'RequestScope', 'install']
 
 
 if TYPE_CHECKING:
@@ -33,33 +31,4 @@ if TYPE_CHECKING:
     # usual dependency-injection plumbing. The two views must stay in sync.
     type Inject[T] = T
 else:
-
-    class Inject:
-        """FastAPI parameter annotation that resolves a dependency from depin.
-
-        Write ``svc: Inject[UserService]`` on a route handler: to the type checker
-        the parameter is plain ``UserService``, while at runtime ``Inject[T]``
-        expands to ``Annotated[T, Depends(...)]`` so FastAPI resolves it through the
-        active `RequestScope`. No default-value markers and no
-        ``# noqa: B008`` waivers at the call site.
-
-        Raises:
-            ContainerNotBoundError: No container is hosted in this context.
-                Usually because the `RequestScope` middleware was never
-                installed with ``app.add_middleware(RequestScope,
-                container=...)``; also raised for a route reached outside any
-                active `Host` — for instance while it is being resolved from
-                an ASGI lifespan hook with no `Host.activated()` in effect.
-        """
-
-        def __class_getitem__(cls, key: object) -> object:
-            async def resolver() -> object:
-                container = optional_hosted_container()
-                if container is None:
-                    raise ContainerNotBoundError(
-                        'Inject[...] resolved outside a RequestScope; install the middleware with '
-                        'app.add_middleware(RequestScope, container=...).'
-                    )
-                return await container.aresolve(key)
-
-            return Annotated[key, Depends(dependency=resolver)]
+    Inject = _RuntimeInject
