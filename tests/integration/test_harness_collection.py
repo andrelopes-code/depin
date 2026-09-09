@@ -1,4 +1,6 @@
 import json
+import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -43,6 +45,39 @@ import json, os, sys
 side = os.path.basename(os.getcwd())
 json.dump({'work': {'probe': 13 if side == 'base' else 14}}, open(sys.argv[1], 'w'))
 """
+
+
+def test_a_revision_prefers_its_own_virtual_environment_interpreter(tmp_path: Path) -> None:
+    executable = tmp_path / '.venv' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+    executable.parent.mkdir(parents=True)
+    executable.touch()
+
+    assert pairs.python_executable(tmp_path) == executable
+
+
+def test_collection_selects_the_interpreter_for_each_revision(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    base, head = tmp_path / 'base', tmp_path / 'head'
+    base.mkdir()
+    head.mkdir()
+    observed: list[Path] = []
+
+    def interpreter(directory: Path) -> Path:
+        observed.append(directory)
+        return Path(sys.executable)
+
+    monkeypatch.setattr(pairs, 'python_executable', interpreter)
+
+    pairs.collect(
+        pairs.Side(pairs.BASE, base),
+        pairs.Side(pairs.HEAD, head),
+        tmp_path / 'data',
+        repetitions=1,
+        seed=SEED,
+        latency_command=('-c', REPORT_WRITER, '{report}'),
+        deterministic_command=('-c', DETERMINISTIC_WRITER, '{report}'),
+    )
+
+    assert observed == [base, head, base, head]
 
 
 def test_a_collection_alternates_the_order_of_the_two_sides(tmp_path: Path) -> None:
