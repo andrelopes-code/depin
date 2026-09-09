@@ -1,0 +1,1978 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Type-first dependency injection for Python">
+      
+      
+      
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/0.19/superpowers/plans/2026-09-08-compiled-sync-transient-closures/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Compiled Sync Transient Closures Experiment Plan - depin</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#compiled-sync-transient-closures-experiment-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="depin" class="md-header__button md-logo" aria-label="depin" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            depin
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Compiled Sync Transient Closures Experiment Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/andrelopes-code/depin" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    andrelopes-code/depin
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="depin" class="md-nav__button md-logo" aria-label="depin" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    depin
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/andrelopes-code/depin" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    andrelopes-code/depin
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/lifetimes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifetimes and scopes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/composition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Composing bindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/resolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resolution semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inspecting the graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing an integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/fastapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastAPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/methodology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methodology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/comparison-baseline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparative baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/reproducing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../support-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stability and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/container/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container & Registry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/frozen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FrozenContainer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/scope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/markers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Graph diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/asgi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ASGI request scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/wsgi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSGI request scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/starlette/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Starlette
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/fastapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastAPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/litestar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Litestar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/flask/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flask
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/click/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Click
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/typer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Typer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/taskiq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Taskiq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/pytest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pytest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#task-1-specify-closure-compilation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 1: Specify closure compilation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-2-route-eligible-resolutions-through-the-compiled-program" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 2: Route eligible resolutions through the compiled program
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-3-prove-the-bounded-experiments-correctness-envelope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 3: Prove the bounded experiment's correctness envelope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-4-verify-the-prototype-before-timing-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 4: Verify the prototype before timing it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-5-measure-and-decide-the-closure-experiment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 5: Measure and decide the closure experiment
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="compiled-sync-transient-closures-experiment-plan">Compiled Sync Transient Closures Experiment Plan<a class="headerlink" href="#compiled-sync-transient-closures-experiment-plan" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
+</blockquote>
+<p><strong>Goal:</strong> Decide, with correctness and performance evidence, whether freeze-time closure composition is a viable execution strategy for synchronous transient provider chains.</p>
+<p><strong>Architecture:</strong> <code>FrozenContainer</code> will precompose immutable zero-argument closures only for shallow, fully synchronous chains made entirely from transient function providers with statically bound dependencies. The normal interpreter remains the oracle and fallback for active overrides, cached or scoped dependencies, resource providers, missing/default/frame-provided parameters, async providers, and plans large enough to require the iterative executor. The prototype is accepted only if the transient-chain workload improves by at least 10% without violating any existing correctness or regression gate.</p>
+<p><strong>Tech Stack:</strong> Python 3.12, PEP 695 typing, pytest, pytest-benchmark, uv, ruff, Basedpyright, mypy, the repository benchmark harness.</p>
+<hr />
+<h3 id="task-1-specify-closure-compilation">Task 1: Specify closure compilation<a class="headerlink" href="#task-1-specify-closure-compilation" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Create: <code>tests/unit/test_compiled_resolution.py</code>
+- Create: <code>depin/_core/compiled.py</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Write the failing compiler tests</strong></li>
+</ul>
+<p>Add tests which build real plans through <code>Container</code> and <code>build_plan</code>, then require:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Scope</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">depin._core.compiled</span><span class="w"> </span><span class="kn">import</span> <span class="n">compile_sync_transients</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">depin._core.graph</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_plan</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_compile_sync_transients_composes_a_function_chain</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">constructed</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Leaf</span><span class="p">:</span> <span class="o">...</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Root</span><span class="p">:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">leaf</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Leaf</span><span class="p">:</span>
+        <span class="n">constructed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'leaf'</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Leaf</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">root</span><span class="p">(</span><span class="n">leaf</span><span class="p">:</span> <span class="n">Leaf</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Root</span><span class="p">:</span>
+        <span class="n">constructed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'root'</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Root</span><span class="p">()</span>
+
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">leaf</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">TRANSIENT</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">TRANSIENT</span><span class="p">)</span>
+    <span class="n">programs</span> <span class="o">=</span> <span class="n">compile_sync_transients</span><span class="p">(</span><span class="n">build_plan</span><span class="p">(</span><span class="n">builder</span><span class="o">.</span><span class="n">records</span><span class="p">()))</span>
+
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">programs</span><span class="p">[(</span><span class="n">Root</span><span class="p">,</span> <span class="kc">None</span><span class="p">)](),</span> <span class="n">Root</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">constructed</span> <span class="o">==</span> <span class="p">[</span><span class="s1">'leaf'</span><span class="p">,</span> <span class="s1">'root'</span><span class="p">]</span>
+
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span><span class="s1">'dependency_scope'</span><span class="p">,</span> <span class="p">[</span><span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">,</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SCOPED</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_compile_sync_transients_rejects_a_cached_dependency</span><span class="p">(</span><span class="n">dependency_scope</span><span class="p">:</span> <span class="n">Scope</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Dependency</span><span class="p">:</span> <span class="o">...</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Root</span><span class="p">:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">dependency</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dependency</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Dependency</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">root</span><span class="p">(</span><span class="n">dependency</span><span class="p">:</span> <span class="n">Dependency</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Root</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Root</span><span class="p">()</span>
+
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">dependency</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">dependency_scope</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">TRANSIENT</span><span class="p">)</span>
+    <span class="n">programs</span> <span class="o">=</span> <span class="n">compile_sync_transients</span><span class="p">(</span><span class="n">build_plan</span><span class="p">(</span><span class="n">builder</span><span class="o">.</span><span class="n">records</span><span class="p">()))</span>
+
+    <span class="k">assert</span> <span class="p">(</span><span class="n">Root</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">programs</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_compile_sync_transients_rejects_non_function_provider_shapes</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Dependency</span><span class="p">:</span> <span class="o">...</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Root</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dependency</span><span class="p">:</span> <span class="n">Dependency</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dependency</span> <span class="o">=</span> <span class="n">dependency</span>
+
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Dependency</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">TRANSIENT</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Root</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">TRANSIENT</span><span class="p">)</span>
+    <span class="n">programs</span> <span class="o">=</span> <span class="n">compile_sync_transients</span><span class="p">(</span><span class="n">build_plan</span><span class="p">(</span><span class="n">builder</span><span class="o">.</span><span class="n">records</span><span class="p">()))</span>
+
+    <span class="k">assert</span> <span class="p">(</span><span class="n">Root</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">programs</span>
+</code></pre></div>
+<p>The completed tests must use real containers and explicit assertions, with no mocks or type suppressions.</p>
+<ul>
+<li>[ ] <strong>Step 2: Verify RED</strong></li>
+</ul>
+<p>Run:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/unit/test_compiled_resolution.py<span class="w"> </span>-q
+</code></pre></div>
+<p>Expected: collection fails because <code>depin._core.compiled</code> does not exist.</p>
+<ul>
+<li>[ ] <strong>Step 3: Implement the minimal compiler</strong></li>
+</ul>
+<p>Create <code>depin/_core/compiled.py</code> with this shape:</p>
+<div class="highlight"><pre><span></span><code><span class="sd">"""Freeze-time composition of specialized provider execution paths."""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MappingProxyType</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">depin._core.scope</span><span class="w"> </span><span class="kn">import</span> <span class="n">Scope</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">depin._core.spec</span><span class="w"> </span><span class="kn">import</span> <span class="n">Ident</span><span class="p">,</span> <span class="n">ProviderShape</span><span class="p">,</span> <span class="n">ProviderSpec</span><span class="p">,</span> <span class="n">ResolutionPlan</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">depin._core.typeguards</span><span class="w"> </span><span class="kn">import</span> <span class="n">as_factory</span>
+
+<span class="nb">type</span> <span class="n">SyncProgram</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">object</span><span class="p">]</span>
+<span class="nb">type</span> <span class="n">_DependencyPrograms</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SyncProgram</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">compile_sync_transients</span><span class="p">(</span><span class="n">plan</span><span class="p">:</span> <span class="n">ResolutionPlan</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="n">Ident</span><span class="p">,</span> <span class="n">SyncProgram</span><span class="p">]:</span>
+    <span class="n">programs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Ident</span><span class="p">,</span> <span class="n">SyncProgram</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">plan</span><span class="o">.</span><span class="n">order</span><span class="p">:</span>
+        <span class="n">dependencies</span> <span class="o">=</span> <span class="n">_dependencies</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">plan</span><span class="p">,</span> <span class="n">programs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dependencies</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">factory</span> <span class="o">=</span> <span class="n">as_factory</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">source</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+        <span class="n">programs</span><span class="p">[(</span><span class="n">spec</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">tag</span><span class="p">)]</span> <span class="o">=</span> <span class="n">_compose</span><span class="p">(</span><span class="n">factory</span><span class="p">,</span> <span class="n">dependencies</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">MappingProxyType</span><span class="p">(</span><span class="n">programs</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_dependencies</span><span class="p">(</span>
+    <span class="n">spec</span><span class="p">:</span> <span class="n">ProviderSpec</span><span class="p">,</span>
+    <span class="n">plan</span><span class="p">:</span> <span class="n">ResolutionPlan</span><span class="p">,</span>
+    <span class="n">programs</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="n">Ident</span><span class="p">,</span> <span class="n">SyncProgram</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_DependencyPrograms</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">scope</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">Scope</span><span class="o">.</span><span class="n">TRANSIENT</span> <span class="ow">or</span> <span class="n">spec</span><span class="o">.</span><span class="n">shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">ProviderShape</span><span class="o">.</span><span class="n">FUNCTION</span> <span class="ow">or</span> <span class="n">spec</span><span class="o">.</span><span class="n">needs_async</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">dependencies</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SyncProgram</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">spec</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+        <span class="n">dependency</span> <span class="o">=</span> <span class="n">plan</span><span class="o">.</span><span class="n">by_key</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">param</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">param</span><span class="o">.</span><span class="n">tag</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">dependency</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">program</span> <span class="o">=</span> <span class="n">programs</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">dependency</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">dependency</span><span class="o">.</span><span class="n">tag</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">program</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">dependencies</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">param</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">program</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">dependencies</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_compose</span><span class="p">(</span><span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">object</span><span class="p">],</span> <span class="n">dependencies</span><span class="p">:</span> <span class="n">_DependencyPrograms</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SyncProgram</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">dependencies</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">factory</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">factory</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">dependency</span><span class="p">()</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">dependency</span> <span class="ow">in</span> <span class="n">dependencies</span><span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">resolve</span>
+</code></pre></div>
+<ul>
+<li>[ ] <strong>Step 4: Verify GREEN</strong></li>
+</ul>
+<p>Run:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/unit/test_compiled_resolution.py<span class="w"> </span>-q
+uv<span class="w"> </span>run<span class="w"> </span>basedpyright<span class="w"> </span>depin/_core/compiled.py<span class="w"> </span>tests/unit/test_compiled_resolution.py
+uv<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>depin/_core/compiled.py<span class="w"> </span>tests/unit/test_compiled_resolution.py
+</code></pre></div>
+<p>Expected: all commands pass with no warnings or suppressions.</p>
+<ul>
+<li>[ ] <strong>Step 5: Commit the compiler contract</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>depin/_core/compiled.py<span class="w"> </span>tests/unit/test_compiled_resolution.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'perf: compose synchronous transient closures'</span>
+</code></pre></div>
+<h3 id="task-2-route-eligible-resolutions-through-the-compiled-program">Task 2: Route eligible resolutions through the compiled program<a class="headerlink" href="#task-2-route-eligible-resolutions-through-the-compiled-program" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>depin/_core/frozen.py:28-53</code>
+- Modify: <code>depin/_core/frozen.py:146-154</code>
+- Modify: <code>depin/_core/frozen.py:202-214</code>
+- Modify: <code>depin/_core/overrides.py:24-43</code>
+- Modify: <code>tests/unit/test_compiled_resolution.py</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Write failing runtime tests</strong></li>
+</ul>
+<p>Add tests that prove:</p>
+<ol>
+<li>The no-override path and the interpreter path produce the same value and construction order. Force the interpreter by activating an override for a registered key outside the tested chain.</li>
+<li>An override of a nested dependency is observed and the original dependency is not constructed.</li>
+<li>A 1,000-provider transient graph still uses the existing iterative executor and resolves without changing the recursion limit.</li>
+<li>Optional/default/frame-provided parameters remain on the interpreter path.</li>
+</ol>
+<p>The tests must resolve through real <code>Container</code> and <code>FrozenContainer</code> instances. They may inspect the private compiled-program mapping only to prove eligibility; they must not mock resolution.</p>
+<ul>
+<li>[ ] <strong>Step 2: Verify RED</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/unit/test_compiled_resolution.py<span class="w"> </span>tests/unit/test_iterative_resolution.py<span class="w"> </span>-q
+</code></pre></div>
+<p>Expected: the assertions about <code>FrozenContainer</code>'s compiled mapping fail.</p>
+<ul>
+<li>[ ] <strong>Step 3: Add a constant-time override-stack predicate</strong></li>
+</ul>
+<p>Add to <code>depin/_core/overrides.py</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">present</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return whether this context carries at least one override frame."""</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">_stack</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+</code></pre></div>
+<ul>
+<li>[ ] <strong>Step 4: Build and use programs in <code>FrozenContainer</code></strong></li>
+</ul>
+<p>Import <code>SyncProgram</code> and <code>compile_sync_transients</code>, add <code>_sync_transients</code> to <code>__slots__</code>, and initialize it only when <code>len(plan.order) &lt; _RECURSIVE_PLAN_LIMIT</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">_sync_transients</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="n">Ident</span><span class="p">,</span> <span class="n">SyncProgram</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">compile_sync_transients</span><span class="p">(</span><span class="n">plan</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">order</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">_RECURSIVE_PLAN_LIMIT</span> <span class="k">else</span> <span class="n">MappingProxyType</span><span class="p">({})</span>
+<span class="p">)</span>
+</code></pre></div>
+<p>After <code>_lookup()</code> and the async rejection in <code>resolve()</code>, select the fast path only when no override frame exists:</p>
+<div class="highlight"><pre><span></span><code><span class="n">program</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">overrides</span><span class="o">.</span><span class="n">present</span><span class="p">()</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sync_transients</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">spec</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">tag</span><span class="p">))</span>
+<span class="k">if</span> <span class="n">program</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">resolved</span> <span class="o">=</span> <span class="n">program</span><span class="p">()</span>
+<span class="k">elif</span> <span class="n">spec</span><span class="o">.</span><span class="n">scope</span> <span class="ow">is</span> <span class="n">Scope</span><span class="o">.</span><span class="n">TRANSIENT</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_plan</span><span class="o">.</span><span class="n">order</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">_RECURSIVE_PLAN_LIMIT</span><span class="p">:</span>
+        <span class="n">resolved</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_sync_iterative</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_params_sync</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span> <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">params</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="n">resolved</span> <span class="o">=</span> <span class="n">construct</span><span class="o">.</span><span class="n">sync</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_teardown_sink</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_frame</span><span class="p">)</span>
+<span class="k">elif</span> <span class="n">spec</span><span class="o">.</span><span class="n">scope</span> <span class="ow">is</span> <span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">:</span>
+    <span class="n">resolved</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_root_cached_sync</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">resolved</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_cached_sync</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">active_frame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_root</span><span class="p">))</span>
+</code></pre></div>
+<p>Do not alter async resolution, cache claims, scopes, teardown, lifecycle gating, diagnostics, or public signatures.</p>
+<ul>
+<li>[ ] <strong>Step 5: Verify runtime parity</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/unit/test_compiled_resolution.py<span class="w"> </span>tests/unit/test_resolution.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>tests/unit/test_iterative_resolution.py<span class="w"> </span>tests/unit/test_overrides.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>tests/unit/test_runtime_correctness.py<span class="w"> </span>-q
+</code></pre></div>
+<p>Expected: all selected tests pass.</p>
+<ul>
+<li>[ ] <strong>Step 6: Commit the runtime routing</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>depin/_core/frozen.py<span class="w"> </span>depin/_core/overrides.py<span class="w"> </span>tests/unit/test_compiled_resolution.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'perf: route transient chains through compiled closures'</span>
+</code></pre></div>
+<h3 id="task-3-prove-the-bounded-experiments-correctness-envelope">Task 3: Prove the bounded experiment's correctness envelope<a class="headerlink" href="#task-3-prove-the-bounded-experiments-correctness-envelope" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>tests/unit/test_compiled_resolution.py</code>
+- Modify if a real contract defect is found: <code>depin/_core/compiled.py</code>
+- Modify if a real routing defect is found: <code>depin/_core/frozen.py</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Add differential cases</strong></li>
+</ul>
+<p>Parameterize equivalent compiled/interpreted executions over zero, one, and multiple dependencies, tagged dependencies, factory exceptions, nested overrides, and repeated resolutions. Compare result type, construction log, raised exception type/message, and ensure every transient is reconstructed.</p>
+<ul>
+<li>[ ] <strong>Step 2: Run the differential and neighboring suites</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/unit/test_compiled_resolution.py<span class="w"> </span>tests/unit/test_resolution.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>tests/unit/test_iterative_resolution.py<span class="w"> </span>tests/unit/test_overrides.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>tests/unit/test_provider_contracts.py<span class="w"> </span>tests/integration/test_workload_equivalence.py<span class="w"> </span>-q
+</code></pre></div>
+<p>Expected: all cases pass.</p>
+<ul>
+<li>[ ] <strong>Step 3: Run coverage for the new module</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/unit/test_compiled_resolution.py<span class="w"> </span>--cov<span class="o">=</span>depin._core.compiled<span class="w"> </span>--cov-report<span class="o">=</span>term-missing
+</code></pre></div>
+<p>Expected: every branch in <code>depin/_core/compiled.py</code> is exercised.</p>
+<ul>
+<li>[ ] <strong>Step 4: Commit the differential proof</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>depin/_core/compiled.py<span class="w"> </span>depin/_core/frozen.py<span class="w"> </span>tests/unit/test_compiled_resolution.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'test: prove compiled transient parity'</span>
+</code></pre></div>
+<h3 id="task-4-verify-the-prototype-before-timing-it">Task 4: Verify the prototype before timing it<a class="headerlink" href="#task-4-verify-the-prototype-before-timing-it" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- No source changes expected.</p>
+<ul>
+<li>[ ] <strong>Step 1: Run the repository gates in order</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format
+uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check
+uv<span class="w"> </span>run<span class="w"> </span>basedpyright
+uv<span class="w"> </span>run<span class="w"> </span>mypy
+uv<span class="w"> </span>run<span class="w"> </span>pytest
+</code></pre></div>
+<p>Expected: all five pass with no warnings or waivers.</p>
+<ul>
+<li>[ ] <strong>Step 2: Check the benchmark contracts</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/integration/test_workload_contracts.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>tests/integration/test_workload_equivalence.py<span class="w"> </span>benchmarks/test_comparison.py<span class="w"> </span>-q
+</code></pre></div>
+<p>Expected: the direct baseline, depin observation, and eligible competitors remain equivalent.</p>
+<h3 id="task-5-measure-and-decide-the-closure-experiment">Task 5: Measure and decide the closure experiment<a class="headerlink" href="#task-5-measure-and-decide-the-closure-experiment" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify after measurement: <code>specs/proposals/2026-09-02-compiled-resolution-runtime-proposal.md</code>
+- Create for retained evidence: <code>benchmarks/results/2026-09-08-compiled-sync-closures/</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Take a quick diagnostic measurement</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>bench<span class="w"> </span>pytest<span class="w"> </span>benchmarks/test_latency.py<span class="w"> </span>-k<span class="w"> </span>resolve_a_transient_chain<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--benchmark-only<span class="w"> </span>--benchmark-disable-gc
+</code></pre></div>
+<p>Compare with the pre-experiment local median recorded at <code>33.857 µs</code> for depin and <code>2.247 µs</code> for direct Python. This comparison is diagnostic only, never accepted evidence.</p>
+<ul>
+<li>[ ] <strong>Step 2: Profile Python calls and allocations</strong></li>
+</ul>
+<p>Run:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>bench<span class="w"> </span>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;'PY'</span>
+<span class="s">import cProfile</span>
+<span class="s">import pstats</span>
+<span class="s">import sys</span>
+
+<span class="s">from benchmarks.graphs import build_chain</span>
+<span class="s">from depin import Scope</span>
+
+<span class="s">container, leaf = build_chain(20, scope=Scope.TRANSIENT)</span>
+<span class="s">frozen = container.freeze()</span>
+<span class="s">profile = cProfile.Profile()</span>
+<span class="s">profile.runcall(lambda: [frozen.resolve(leaf) for _ in range(1_000)])</span>
+<span class="s">pstats.Stats(profile).strip_dirs().sort_stats('tottime').print_stats(30)</span>
+<span class="s">programs = frozen._sync_transients</span>
+<span class="s">print(f'programs={len(programs)} shallow_bytes={sum(sys.getsizeof(program) for program in programs.values())}')</span>
+<span class="s">PY</span>
+</code></pre></div>
+<p>Confirm that per-node <code>_lookup_optional</code>, <code>_resolve_sync</code>, <code>_resolve_params_sync</code>, and <code>construct.sync</code> dispatch are absent from the compiled path. Allocation counts come from the paired harness in the next step; do not infer them from <code>sys.getsizeof</code>.</p>
+<ul>
+<li>[ ] <strong>Step 3: Collect paired before/after evidence</strong></li>
+</ul>
+<p>Create a detached baseline worktree at commit <code>a4a7513</code>, synchronize both benchmark environments with the locked <code>bench</code> group, then run:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">BASE_PARENT</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="w"> </span>-d<span class="k">)</span>
+<span class="nv">BASE_WORKTREE</span><span class="o">=</span><span class="s2">"</span><span class="nv">$BASE_PARENT</span><span class="s2">/base"</span>
+git<span class="w"> </span>worktree<span class="w"> </span>add<span class="w"> </span>--detach<span class="w"> </span><span class="s2">"</span><span class="nv">$BASE_WORKTREE</span><span class="s2">"</span><span class="w"> </span>a4a7513
+uv<span class="w"> </span>sync<span class="w"> </span>--locked<span class="w"> </span>--no-default-groups<span class="w"> </span>--group<span class="w"> </span>bench
+<span class="o">(</span><span class="nb">cd</span><span class="w"> </span><span class="s2">"</span><span class="nv">$BASE_WORKTREE</span><span class="s2">"</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>uv<span class="w"> </span>sync<span class="w"> </span>--locked<span class="w"> </span>--no-default-groups<span class="w"> </span>--group<span class="w"> </span>bench<span class="o">)</span>
+uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>bench<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmarks.harness.pairs<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--base-dir<span class="w"> </span><span class="s2">"</span><span class="nv">$BASE_WORKTREE</span><span class="s2">"</span><span class="w"> </span>--head-dir<span class="w"> </span>.<span class="w"> </span>--repetitions<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--out<span class="w"> </span>/tmp/depin-compiled-sync-closures
+uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>bench<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmarks.harness.gate<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>/tmp/depin-compiled-sync-closures<span class="w"> </span>--budgets<span class="w"> </span>benchmarks/budgets.toml
+uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>bench<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmarks.harness.report<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>/tmp/depin-compiled-sync-closures
+git<span class="w"> </span>worktree<span class="w"> </span>remove<span class="w"> </span><span class="s2">"</span><span class="nv">$BASE_WORKTREE</span><span class="s2">"</span>
+rmdir<span class="w"> </span><span class="s2">"</span><span class="nv">$BASE_PARENT</span><span class="s2">"</span>
+</code></pre></div>
+<p>Retain the raw paired results, environment metadata, deterministic work/allocation data, and report together. A clean worktree is required for accepted evidence.</p>
+<ul>
+<li>[ ] <strong>Step 4: Apply the decision rule</strong></li>
+</ul>
+<p>The experiment is GO only if all of these hold:</p>
+<ul>
+<li><code>resolve_a_transient_chain</code> improves by at least 10% with a decisive interval;</li>
+<li>no required workload exceeds its current regression budget;</li>
+<li>calls and allocations do not regress;</li>
+<li>the 1,000-provider sync and async depth guarantees remain green;</li>
+<li>inactive and active overrides remain within their existing budgets;</li>
+<li>freeze-time and retained-memory changes are bounded and reported.</li>
+</ul>
+<p>Otherwise it is NO-GO and no prototype code or new budget is retained.</p>
+<ul>
+<li>[ ] <strong>Step 5A: Record a GO</strong></li>
+</ul>
+<p>If every criterion passes, copy the complete evidence directory into <code>benchmarks/results/2026-09-08-compiled-sync-closures/</code>, add the measured decision to the proposal, run the documentation renderer/tests, and commit the accepted experiment. Then write the next plan for expanding the winning closure representation across the proposal's full matrix before selecting it as the runtime.</p>
+<ul>
+<li>[ ] <strong>Step 5B: Record a NO-GO</strong></li>
+</ul>
+<p>If any criterion fails, remove the compiler, routing, and their prototype-only tests; retain only the proposal decision with exact measurements and the reason for rejection. Run all five gates again and commit the decision as documentation. Select the next bounded strategy from the proposal rather than weakening a budget or guarantee.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
