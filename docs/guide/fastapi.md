@@ -71,9 +71,11 @@ streaming, background work, and WebSocket lifetime are unchanged.
 ## `Inject[T]`
 
 `Inject[T]` is a type-level shortcut. To the type checker the parameter is
-plain `T`; at runtime `Inject[T]` expands to `Annotated[T, Depends(...)]`, so
-FastAPI resolves it through its normal dependency plumbing. There is no
-default-value marker at the call site, and no `# noqa: B008` waiver.
+plain `T`; at runtime it carries an `Annotated[object, Depends(...)]` marker
+whose resolver retains the depin key. FastAPI therefore resolves it through
+its normal dependency plumbing without changing the handler's static service
+type. There is no default-value marker at the call site, and no `# noqa: B008`
+waiver.
 
 Resolving it raises `ContainerNotBoundError` when no container is hosted in the
 current context. A missing `RequestScope` is the usual cause, not the

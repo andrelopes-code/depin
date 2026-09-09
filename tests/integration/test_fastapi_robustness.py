@@ -1,5 +1,6 @@
 import asyncio
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
+from contextlib import asynccontextmanager
 
 import pytest
 from fastapi import BackgroundTasks, Depends, FastAPI, Security, WebSocket
@@ -13,7 +14,7 @@ from pydantic import BaseModel
 from starlette.types import Message, Receive, Send
 from starlette.types import Scope as ASGIScope
 
-from depin import Container, FrozenContainer, Scope, hosted_container
+from depin import Container, FrozenContainer, Scope, hosted_container, optional_hosted_container
 from depin._core.scope import active_frame
 from depin.errors import FastAPIIntegrationError, OutsideScopeError
 from depin.ext import fastapi as fastapi_ext
@@ -460,7 +461,7 @@ def _mixed_application(setup: _Setup) -> tuple[FastAPI, list[str]]:
     app = FastAPI()
 
     @app.post('/users/{user_id}', dependencies=[Depends(native)])
-    async def user(  # pyright: ignore[reportUnusedFunction]
+    async def user(
         user_id: int,
         active: bool,
         payload: _MixedPayload,
@@ -474,6 +475,7 @@ def _mixed_application(setup: _Setup) -> tuple[FastAPI, list[str]]:
         events.append('handler')
         return {'id': user_id, 'active': active, 'name': payload.name, 'tenant': tenant.name, 'token': token}
 
+    _ = user
     setup(app, container)
     return app, events
 
@@ -530,14 +532,13 @@ async def test_sync_handler_and_background_task_drain_before_scope_closes(setup:
     app = FastAPI()
 
     @app.get('/background')
-    def background(  # pyright: ignore[reportUnusedFunction]
-        tasks: BackgroundTasks, resource_value: Inject[Resource]
-    ) -> dict[str, bool]:
+    def background(tasks: BackgroundTasks, resource_value: Inject[Resource]) -> dict[str, bool]:
         del resource_value
         tasks.add_task(events.append, 'background')
         events.append('handler')
         return {'ok': True}
 
+    _ = background
     setup(app, container)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url='http://t') as client:
@@ -570,17 +571,31 @@ async def test_streaming_response_drains_resource_after_final_body_event(setup: 
     app = FastAPI()
 
     @app.get('/stream')
-    async def stream(resource_value: Inject[Resource]) -> StreamingResponse:  # pyright: ignore[reportUnusedFunction]
+    async def stream(resource_value: Inject[Resource]) -> StreamingResponse:
         del resource_value
         return StreamingResponse(chunks(), media_type='text/plain')
 
+    _ = stream
+    _ = stream
     setup(app, container)
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url='http://t') as client:
-        response = await client.get('/stream')
+    received = False
+    disconnected = asyncio.Event()
 
-    assert response.text == 'first;last;'
-    assert events == ['construct', 'first-body', 'last-body', 'close']
+    async def receive() -> Message:
+        nonlocal received
+        if not received:
+            received = True
+            return {'type': 'http.request', 'body': b'', 'more_body': False}
+        await disconnected.wait()
+        return {'type': 'http.disconnect'}
+
+    async def send(message: Message) -> None:
+        if message['type'] == 'http.response.body' and message.get('more_body') is False:
+            events.append('terminal-body')
+
+    await app(_http_scope('GET', '/stream'), receive, send)
+
+    assert events == ['construct', 'first-body', 'last-body', 'terminal-body', 'close']
 
 
 @pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
@@ -598,7 +613,7 @@ async def test_two_concurrent_scoped_requests_do_not_share_a_frame(setup: _Setup
     app = FastAPI()
 
     @app.get('/concurrent')
-    async def concurrent(scoped: Inject[Scoped]) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]
+    async def concurrent(scoped: Inject[Scoped]) -> dict[str, int]:
         nonlocal arrived
         identifiers.append(id(scoped))
         arrived += 1
@@ -607,6 +622,7 @@ async def test_two_concurrent_scoped_requests_do_not_share_a_frame(setup: _Setup
         await release.wait()
         return {'id': id(scoped)}
 
+    _ = concurrent
     setup(app, container)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url='http://t') as client:
@@ -620,8 +636,9 @@ async def test_two_concurrent_scoped_requests_do_not_share_a_frame(setup: _Setup
     assert first_response.json()['id'] != second_response.json()['id']
 
 
+@pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
 @pytest.mark.asyncio
-async def test_installed_websocket_closes_scoped_resource_after_close_event() -> None:
+async def test_websocket_closes_scoped_resource_after_close_event(setup: _Setup) -> None:
     events: list[str] = []
 
     class Connection:
@@ -635,25 +652,287 @@ async def test_installed_websocket_closes_scoped_resource_after_close_event() ->
     app = FastAPI()
 
     @app.websocket('/ws')
-    async def websocket(socket: WebSocket) -> None:  # pyright: ignore[reportUnusedFunction]
+    async def websocket(socket: WebSocket) -> None:
         _ = await hosted_container().aresolve(Connection)
         await socket.accept()
         await socket.send_text('ready')
         await socket.close()
 
-    fastapi_ext.install(app, Container().bind(connection, scope=Scope.SCOPED).freeze())
-    sent: list[Message] = []
+    _ = websocket
+    _ = websocket
+    setup(app, Container().bind(connection, scope=Scope.SCOPED).freeze())
     receive_events = iter(({'type': 'websocket.connect'},))
 
     async def receive() -> Message:
         return next(receive_events)
 
     async def send(message: Message) -> None:
-        sent.append(message)
+        if message['type'] == 'websocket.close':
+            events.append('terminal-close')
 
     await app(
         {'type': 'websocket', 'path': '/ws', 'raw_path': b'/ws', 'headers': [], 'query_string': b''}, receive, send
     )
 
-    assert [message['type'] for message in sent] == ['websocket.accept', 'websocket.send', 'websocket.close']
-    assert events == ['construct', 'close']
+    assert events == ['construct', 'terminal-close', 'close']
+
+
+@pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
+@pytest.mark.parametrize('failure', ['handler', 'provider'])
+@pytest.mark.asyncio
+async def test_handler_and_provider_failures_preserve_lifecycle(setup: _Setup, failure: str) -> None:
+    events: list[str] = []
+
+    class Resource:
+        pass
+
+    def provider() -> Resource:
+        events.append('provider')
+        raise RuntimeError('provider failure')
+
+    async def resource() -> AsyncIterator[Resource]:
+        events.append('construct')
+        yield Resource()
+        events.append('close')
+
+    container = (
+        Container().bind(provider, provides=Resource, scope=Scope.SCOPED).freeze()
+        if failure == 'provider'
+        else Container().bind(resource, scope=Scope.SCOPED).freeze()
+    )
+    app = FastAPI()
+
+    @app.get('/failure')
+    async def endpoint(value: Inject[Resource]) -> dict[str, bool]:
+        del value
+        events.append('handler')
+        raise RuntimeError('handler failure')
+
+    _ = endpoint
+    setup(app, container)
+    transport = ASGITransport(app=app, raise_app_exceptions=True)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        with pytest.raises(RuntimeError, match=f'{failure} failure'):
+            await client.get('/failure')
+
+    assert events == (['provider'] if failure == 'provider' else ['construct', 'handler', 'close'])
+
+
+@pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
+@pytest.mark.asyncio
+async def test_body_and_teardown_failures_keep_both_errors_in_order(setup: _Setup) -> None:
+    events: list[str] = []
+
+    class Resource:
+        pass
+
+    async def resource() -> AsyncIterator[Resource]:
+        events.append('construct')
+        yield Resource()
+        events.append('teardown')
+        raise RuntimeError('teardown failure')
+
+    app = FastAPI()
+
+    @app.get('/failure')
+    async def endpoint(value: Inject[Resource]) -> dict[str, bool]:
+        del value
+        events.append('handler')
+        raise RuntimeError('handler failure')
+
+    _ = endpoint
+    setup(app, Container().bind(resource, scope=Scope.SCOPED).freeze())
+    transport = ASGITransport(app=app, raise_app_exceptions=True)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        with pytest.raises(ExceptionGroup) as caught:
+            await client.get('/failure')
+
+    assert [str(error) for error in caught.value.exceptions] == ['handler failure', 'teardown failure']
+    assert events == ['construct', 'handler', 'teardown']
+
+
+@pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
+@pytest.mark.asyncio
+async def test_multiple_resources_close_in_reverse_construction_order(setup: _Setup) -> None:
+    events: list[str] = []
+
+    class First:
+        pass
+
+    class Second:
+        pass
+
+    async def first() -> AsyncIterator[First]:
+        events.append('first-open')
+        yield First()
+        events.append('first-close')
+
+    async def second(value: First) -> AsyncIterator[Second]:
+        del value
+        events.append('second-open')
+        yield Second()
+        events.append('second-close')
+
+    app = FastAPI()
+
+    @app.get('/resources')
+    async def endpoint(value: Inject[Second]) -> dict[str, bool]:
+        del value
+        events.append('handler')
+        return {'ok': True}
+
+    _ = endpoint
+    setup(app, Container().bind(first, scope=Scope.SCOPED).bind(second, scope=Scope.SCOPED).freeze())
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        assert (await client.get('/resources')).json() == {'ok': True}
+
+    assert events == ['first-open', 'second-open', 'handler', 'second-close', 'first-close']
+
+
+@pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
+@pytest.mark.asyncio
+async def test_request_override_does_not_escape_its_context(setup: _Setup) -> None:
+    class Service:
+        value = 'real'
+
+    class FakeService(Service):
+        value = 'fake'
+
+    container = Container().bind(Service).freeze()
+    app = FastAPI()
+
+    @app.get('/value')
+    async def endpoint(service: Inject[Service]) -> dict[str, str]:
+        return {'value': service.value}
+
+    _ = endpoint
+    setup(app, container)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        with container.override(Service).using(FakeService()):
+            assert (await client.get('/value')).json() == {'value': 'fake'}
+        assert (await client.get('/value')).json() == {'value': 'real'}
+
+
+@pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
+@pytest.mark.asyncio
+async def test_stream_failure_keeps_resource_cleanup(setup: _Setup) -> None:
+    events: list[str] = []
+
+    class Resource:
+        pass
+
+    async def resource() -> AsyncIterator[Resource]:
+        events.append('construct')
+        yield Resource()
+        events.append('close')
+
+    async def chunks() -> AsyncIterator[bytes]:
+        events.append('first-body')
+        yield b'first'
+        raise RuntimeError('stream failure')
+
+    app = FastAPI()
+
+    @app.get('/stream')
+    async def endpoint(value: Inject[Resource]) -> StreamingResponse:
+        del value
+        return StreamingResponse(chunks())
+
+    _ = endpoint
+    setup(app, Container().bind(resource, scope=Scope.SCOPED).freeze())
+    sent_request = False
+    disconnected = asyncio.Event()
+
+    async def receive() -> Message:
+        nonlocal sent_request
+        if not sent_request:
+            sent_request = True
+            return {'type': 'http.request', 'body': b'', 'more_body': False}
+        await disconnected.wait()
+        return {'type': 'http.disconnect'}
+
+    async def send(message: Message) -> None:
+        return None
+
+    with pytest.raises(RuntimeError, match='stream failure'):
+        await app(_http_scope('GET', '/stream'), receive, send)
+
+    assert events == ['construct', 'first-body', 'close']
+
+
+@pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
+@pytest.mark.asyncio
+async def test_stream_cancellation_drains_resource_without_terminal_body(setup: _Setup) -> None:
+    events: list[str] = []
+    second_body = asyncio.Event()
+
+    class Resource:
+        pass
+
+    async def resource() -> AsyncIterator[Resource]:
+        events.append('construct')
+        yield Resource()
+        events.append('close')
+
+    async def chunks() -> AsyncIterator[bytes]:
+        events.append('first-body')
+        yield b'first'
+        await second_body.wait()
+        events.append('unexpected-second-body')
+        yield b'second'
+
+    app = FastAPI()
+
+    @app.get('/stream')
+    async def endpoint(value: Inject[Resource]) -> StreamingResponse:
+        del value
+        return StreamingResponse(chunks())
+
+    _ = endpoint
+    setup(app, Container().bind(resource, scope=Scope.SCOPED).freeze())
+    sent_request = False
+    disconnect = asyncio.Event()
+
+    async def receive() -> Message:
+        nonlocal sent_request
+        if not sent_request:
+            sent_request = True
+            return {'type': 'http.request', 'body': b'', 'more_body': False}
+        await disconnect.wait()
+        return {'type': 'http.disconnect'}
+
+    async def send(message: Message) -> None:
+        if message['type'] == 'http.response.body' and message.get('more_body') is True:
+            disconnect.set()
+
+    await app(_http_scope('GET', '/stream'), receive, send)
+
+    assert events == ['construct', 'first-body', 'close']
+
+
+@pytest.mark.asyncio
+async def test_installed_lazy_scope_passes_non_http_work_through_unhosted() -> None:
+    observed: list[bool] = []
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+        del app
+        observed.append(optional_hosted_container() is None)
+        try:
+            active_frame()
+        except OutsideScopeError:
+            observed.append(True)
+        yield
+
+    app = FastAPI(lifespan=lifespan)
+    fastapi_ext.install(app, Container().freeze())
+    events = iter(({'type': 'lifespan.startup'}, {'type': 'lifespan.shutdown'}))
+
+    async def receive() -> Message:
+        return next(events)
+
+    await app({'type': 'lifespan'}, receive, _noop_send)
+
+    assert observed == [True, True]
