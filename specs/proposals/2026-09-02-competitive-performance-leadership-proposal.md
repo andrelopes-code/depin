@@ -1,7 +1,7 @@
 # Proposal: competitive performance leadership
 
 Date: 2026-09-02
-Status: accepted, active
+Status: accepted, active; rebaselined 2026-09-09
 Scope: comparative evidence, performance targets, ergonomics guardrails, and sequencing of optimization work
 
 ## Nature of this document
@@ -37,36 +37,41 @@ teardown, override, validation, typing, or concurrency semantics.
 
 ## Current evidence
 
-The accepted Step 7 dataset records these recurring costs on the reference host:
+The accepted 2026-09-09 rebaseline uses five counterbalanced repetitions and the
+current locked releases: Dependency Injector 4.49.1, Dishka 1.10.1, Wireup
+2.12.0, and svcs 26.2.0. The null calibration, raw real samples, contention
+samples, generated report, and exhaustive classification are retained under
+`benchmarks/results/2026-09-09-competitive-rebaseline/`.
 
-- a warm singleton resolution costs 1.759 microseconds against 92.580 nanoseconds
-  for direct access;
-- a 20-provider transient chain costs 34.548 microseconds against 2.179
-  microseconds for direct construction;
-- a scoped cycle that constructs 20 values costs 325.633 microseconds against
-  2.948 microseconds for the direct lifecycle;
-- the CPU-light FastAPI endpoint adds 81.785 microseconds over its direct route.
+| Equivalent workload | depin p50/p95/p99 | Fastest competitor p50/p95/p99 | depin ratio |
+| --- | ---: | ---: | ---: |
+| Warm cached singleton | 1.876/1.933/2.323 us | Dependency Injector 0.149/0.153/0.459 us | 12.553/12.661/5.057 |
+| Transient chain | 4.566/4.685/15.177 us | Dishka 7.130/7.836/22.852 us | 0.640/0.598/0.664 |
+| Cold singleton construction | 5.857/6.188/19.017 us | Dependency Injector 5.698/5.878/18.005 us | 1.028/1.053/1.056 |
+| Enter, construct, and close scoped graph | 193.141/283.507/369.969 us | Wireup 9.663/20.092/135.374 us | 19.988/14.110/2.733 |
 
-A separate exploratory run, deliberately excluded from the accepted dataset,
-used current releases and equivalent empty provider graphs. Its directional
-medians were:
+The compiled runtime converted the transient chain from a large loss into a
+material point-estimate win: it is 36.0% faster at p50, 40.2% at p95, and 33.6%
+at p99 than the fastest equivalent competitor at each percentile. It is not yet
+proven leadership: the p99 95% confidence interval against Dishka reaches only a
+7.45% advantage, short of the required 20% tail margin. Cold singleton
+construction is competitive but does not lead and still fails its absolute
+direct-overhead target. Warm cache and full scope cycle remain large gaps.
+Because pure-Python Wireup is faster in both, those gaps are attackable in Python
+and do not by themselves justify native code.
 
-| Workload | depin | Dependency Injector | Dishka | Wireup |
-| --- | ---: | ---: | ---: | ---: |
-| Warm singleton, 100-provider frozen graph | 2.76 us | 0.22 us, thread-safe | 1.43 us | 0.41 us |
-| Transient chain, 20 providers | 48.15 us | 21.31 us | 6.27 us | 6.21 us |
-| Enter scope, construct 20 scoped values, exit | 135.75 us | incomparable | 9.67 us | 13.95 us |
+FastAPI remains dominated by integration overhead. The fresh CPU-light route is
+525.6/710.5/930.5 microseconds at p50/p95/p99; the direct route p50 is 464.9
+microseconds, leaving 60.7 microseconds attributable to DI at p50. The previous
+decomposition assigned only about 8 microseconds to core resolution and the
+remainder to FastAPI dependency traversal, host publication, and unconditional
+scope lifecycle. Independent tail percentiles are not subtracted for attribution.
 
-These values are motivation, not publishable results. They were collected in one
-interleaved diagnostic process, do not yet have committed competitor adapters,
-and do not establish feature equivalence beyond the stated workload. The first
-deliverable of this proposal is to replace them with accepted evidence.
-
-The architecture behind the result matters. Dependency Injector implements its
-providers as Cython extension types. Dishka and Wireup are pure Python in the
-tested distributions but compile provider-specific execution paths instead of
-interpreting the dependency graph on every node. That makes runtime structure,
-not merely implementation language, the first optimization target.
+The base/head matrix also records unfavorable current-main evidence. Missing-key
+explanation regressed 59.43% and 61.53% at sizes 16 and 20, and failing freeze at
+size 50 regressed 46.37%. All deterministic call-count, allocation, retained-
+memory, and scaling gates pass. These regressions are recorded as Python gaps;
+they are not relabeled as native opportunities.
 
 ## Objective
 
@@ -76,14 +81,16 @@ the ordinary call site at least as ergonomic as it is today.
 
 Leadership has three simultaneous meanings:
 
-1. **Competitive:** the paired median is no slower than the fastest equivalent
-   eligible competitor and the uncertainty remains inside the calibrated noise
-   allowance.
+1. **Competitive:** the upper 95% confidence bound of the paired p50 ratio is at
+   most 0.75 against the fastest equivalent eligible competitor. The central
+   target is therefore at least 25% faster, with 30% as the stretch target, not
+   statistical parity.
 2. **Absolute:** the increment over direct Python remains inside an explicit
    workload budget. A slow field does not become acceptable because every
    competitor is also slow.
 3. **Operational:** improvements reduce CPU or latency in representative
-   applications, not only in isolated microbenchmarks.
+   applications, not only in isolated microbenchmarks, while p95 and p99 remain
+   inside their explicit tail gates.
 
 ## Non-negotiable quality constraints
 
@@ -165,16 +172,32 @@ from repeated noise calibration for that workload, capped at five percent.
 
 A workload reaches the leadership target only when:
 
-- the `depin` median is no greater than the fastest equivalent competitor's
-  median;
-- the upper confidence bound of the paired ratio is within the calibrated
-  allowance;
+- the upper 95% confidence bound of the paired p50 ratio is at most 0.75 against
+  the fastest equivalent competitor;
+- the upper 95% confidence bounds of the paired p95 and p99 ratios are each at
+  most 0.80, so a central win does not hide a tail loss;
 - the absolute direct-Python overhead budget passes; and
 - no secondary metric named by the workload regresses beyond its budget.
 
-Statistical ties for the lowest median count as shared leadership. A clear win is
-reported only when its confidence interval excludes parity. No geometric mean,
-points table, or selected subset may be used to claim the fastest library.
+Ratios from 0.75 through calibrated parity are reported as competitive without
+clear leadership. A statistical tie is not leadership. A p50 upper bound at or
+below 0.70 is reported as a 30%-margin lead, but does not relax the tail,
+absolute, or secondary gates. No geometric mean, points table, or selected subset
+may be used to claim the fastest library.
+
+For representative FastAPI workloads, total request latency and the paired
+DI-attributable increment are both published. Leadership requires at least a 25%
+reduction of that increment from the accepted baseline and the same material
+margin against an equivalent eligible integration when one exists. Percentiles
+from independent distributions are never subtracted as though they were paired
+tail attribution.
+
+Non-target workloads carry a separate no-regression envelope: p50 may not exceed
+the smaller of its calibrated budget or five percent; p95 and p99 may not regress
+more than five percent; deterministic Python calls and allocations may not
+increase; retained memory stays within two percent; and scaling stays within its
+accepted curve budget. Correctness, typing, teardown, concurrency, and
+free-threading gates remain binary requirements.
 
 ## Ergonomics contract
 
@@ -194,16 +217,20 @@ work onto the user.
 
 ## Program sequence
 
-1. Maintain competitor adapters and accepted baseline evidence.
-2. Execute the compiled-runtime proposal against the core gaps.
-3. Recalibrate and execute the FastAPI proposal against the remaining
-   application overhead.
-4. Evaluate the native-accelerator proposal only against the optimized Python
-   implementation.
+1. Maintain the 2026-09-09 competitor baseline and material-leadership gates.
+2. Execute the FastAPI endpoint-compilation and lazy-scope proposal against the
+   60.7-to-150.6-microsecond p50 integration increments.
+3. Rebaseline core and application results after that proposal, including
+   contention tails.
+4. Keep native NO-GO unless the post-FastAPI attribution satisfies its entry
+   threshold; provider discovery remains a product-surface task, not a
+   performance intervention.
 5. Publish the final 1.0 comparison page from fresh accepted data.
 
-The sequence prevents Rust from receiving credit for algorithmic work Python can
-do, and prevents framework overhead from hiding a successful core optimization.
+Compiled resolution is complete. The sequence now prevents provider discovery
+from being presented as a runtime fix, prevents Rust from receiving credit for
+work pure-Python competitors already prove avoidable, and makes framework
+overhead the next measured target.
 
 ## CI and release policy
 
@@ -234,6 +261,11 @@ merely to make a regression or competitor loss pass.
 - The harness distinguishes equivalent, partial, and incomparable results in its
   data model and generated documentation.
 - Relative leadership and absolute overhead are evaluated independently.
+- Leadership requires at least a 25% p50 margin with explicit p95 and p99 gates;
+  calibrated parity is reported only as competitive.
+- Calls, allocations, retained and peak memory, scale to 1,000 providers, scope
+  lifecycle, resources, overrides, and synchronized contention remain visible in
+  the handoff evidence.
 - The public documentation never claims an aggregate winner.
 - The three optimization proposals use these results as their entry and exit
   evidence.
@@ -278,4 +310,8 @@ Rejected. That would replace the product rather than improve it.
 ## Active decision
 
 Performance leadership, semantic equivalence, and unchanged ergonomics remain
-the governing quality contract for the remaining pre-1.0 performance work.
+the governing quality contract for the remaining pre-1.0 performance work. The
+single next performance proposal is minimum-overhead FastAPI integration through
+endpoint compilation and lazy request scope. Compiled resolution is complete,
+provider discovery is deferred outside this performance sequence, and optional
+native acceleration remains NO-GO.

@@ -14,8 +14,8 @@ from benchmarks.harness import HarnessError, require_array, require_object
 FIXTURE = Path(__file__).parents[1] / 'fixtures' / 'comparison'
 BUDGETS = Path('benchmarks/budgets.toml')
 WORKLOAD = 'allocations_of_a_cached_singleton_resolution'
-PUBLISHED_DATASET = Path('benchmarks/results/2026-09-02-competitive-baseline/comparison.json')
-PUBLISHED_CALIBRATION = Path('benchmarks/results/2026-09-02-competitive-baseline/calibration.json')
+PUBLISHED_DATASET = Path('benchmarks/results/2026-09-09-competitive-rebaseline/real/comparison.json')
+PUBLISHED_CALIBRATION = Path('benchmarks/results/2026-09-09-competitive-rebaseline/calibration.json')
 PUBLISHED_PAGE = Path('docs/performance/comparison-baseline.md')
 Mutation = Callable[[dict[str, object]], None]
 
@@ -127,7 +127,13 @@ def test_comparison_report_renders_evidence_without_aggregate_ranking() -> None:
         '1.000 s',
         'allocations: pass',
         'work: pass',
-        'leader',
+        'competitive',
+        'Material p50 margin',
+        '25.0%',
+        'Material p95/p99 margin',
+        '20.0%',
+        'p95 95% CI vs depin',
+        'p99 95% CI vs depin',
         'head-revision',
         'harness-revision',
         'synthetic-system synthetic-machine synthetic-cpu',

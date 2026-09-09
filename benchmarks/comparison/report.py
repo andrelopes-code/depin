@@ -90,6 +90,8 @@ def _candidate_rows(dataset: dict[str, object], workload: str, verdict: leadersh
                     '—',
                     '—',
                     '—',
+                    '—',
+                    '—',
                 ]
             )
             continue
@@ -103,10 +105,20 @@ def _candidate_rows(dataset: dict[str, object], workload: str, verdict: leadersh
                     '—',
                     '—',
                     '—',
+                    '—',
+                    '—',
                 ]
             )
             continue
         paired = stats.paired_ratio(candidate, depin, seed=seed(dataset))
+        candidate_p95, depin_p95 = leadership.paired_values(
+            leadership.repetitions(dataset), workload, label, 'depin', 'p95'
+        )
+        candidate_p99, depin_p99 = leadership.paired_values(
+            leadership.repetitions(dataset), workload, label, 'depin', 'p99'
+        )
+        paired_p95 = stats.paired_ratio(candidate_p95, depin_p95, seed=seed(dataset))
+        paired_p99 = stats.paired_ratio(candidate_p99, depin_p99, seed=seed(dataset))
         rows.append(
             [
                 _text(label, f'dataset.targets.{workload}.candidates.{label}.label'),
@@ -115,6 +127,8 @@ def _candidate_rows(dataset: dict[str, object], workload: str, verdict: leadersh
                 _duration(statistics.median(candidate)),
                 _duration(statistics.median(depin)),
                 f'[{paired.low:+.2%}, {paired.high:+.2%}]',
+                f'[{paired_p95.low:+.2%}, {paired_p95.high:+.2%}]',
+                f'[{paired_p99.low:+.2%}, {paired_p99.high:+.2%}]',
             ]
         )
     return rows
@@ -150,6 +164,8 @@ def _summary_rows(
         ['Claim', claim(dataset, verdict.workload)],
         ['Status', verdict.status.value],
         ['Noise allowance', '—' if allowance is None else f'{allowance:.1%}'],
+        ['Material p50 margin', f'{leadership.MATERIAL_P50_MARGIN:.1%}'],
+        ['Material p95/p99 margin', f'{leadership.MATERIAL_TAIL_MARGIN:.1%}'],
         ['Direct overhead', '—' if verdict.absolute_overhead is None else _signed_duration(verdict.absolute_overhead)],
         ['Absolute target', '—' if verdict.absolute_ceiling is None else _duration(verdict.absolute_ceiling)],
         ['Secondary verdict', _secondary(verdict)],
@@ -193,7 +209,16 @@ def render(dataset: dict[str, object], calibration: dict[str, object], budgets: 
         lines += [f'## {_text(workload, "dataset.targets workload")}', '']
         lines += _table(('Measure', 'Result'), _summary_rows(dataset, verdict, calibration))
         lines += _table(
-            ('Candidate', 'Classification', 'Reason', 'Candidate median', 'depin median', '95% CI vs depin'),
+            (
+                'Candidate',
+                'Classification',
+                'Reason',
+                'Candidate median',
+                'depin median',
+                'p50 95% CI vs depin',
+                'p95 95% CI vs depin',
+                'p99 95% CI vs depin',
+            ),
             _candidate_rows(dataset, workload, verdict),
         )
     lines += ['## Provenance', '']
