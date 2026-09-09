@@ -303,6 +303,49 @@ def test_install_rolls_back_when_a_later_route_cannot_rebuild() -> None:
     assert app.user_middleware == []
 
 
+def test_install_translates_any_later_rebuild_failure_after_rollback() -> None:
+    """A non-whitelisted setup error must not escape a partial installation."""
+
+    class First:
+        pass
+
+    class Second:
+        pass
+
+    app = FastAPI()
+
+    @app.get('/first')
+    async def first(service: Inject[First]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        del service
+        return {'ok': True}
+
+    @app.get('/second')
+    async def second(service: Inject[Second]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+        del service
+        return {'ok': True}
+
+    first_route = _route(app, '/first')
+    second_route = _route(app, '/second')
+
+    def fail_rebuild() -> object:
+        raise ValueError('unexpected rebuild failure')
+
+    object.__setattr__(second_route, 'get_route_handler', fail_rebuild)
+    original_call: object = first_route.dependant.call
+    original_dependencies = first_route.dependant.dependencies
+    original_app: object = first_route.app
+
+    with pytest.raises(FastAPIIntegrationError) as caught:
+        fastapi_ext.install(app, Container().bind(First).bind(Second).freeze())
+
+    assert isinstance(caught.value.__cause__, ValueError)
+    assert str(caught.value.__cause__) == 'unexpected rebuild failure'
+    assert first_route.dependant.call is original_call
+    assert first_route.dependant.dependencies is original_dependencies
+    assert first_route.app is original_app
+    assert app.user_middleware == []
+
+
 def test_install_rejects_an_invalid_application_shape_without_mutating_routes() -> None:
     """Application preflight must translate internal shape failures."""
 

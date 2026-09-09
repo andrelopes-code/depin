@@ -133,7 +133,7 @@ def install(app: FastAPI, container: FrozenContainer) -> None:
             applied.append(_apply_plan(plan))
         if not installed:
             app.add_middleware(_LazyRequestScope, container, _INSTALLATION_MARKER)
-    except (AttributeError, FastAPIIntegrationError, RuntimeError, TypeError) as error:
+    except Exception as error:
         for route in reversed(applied):
             _restore_route(route)
         user_middleware[:] = original_middleware
@@ -203,7 +203,7 @@ def _apply_plan(plan: _RoutePlan) -> _AppliedRoute:
         route.dependant.dependencies = plan.dependencies
         route.dependant.call = endpoint
         route.app = request_response(route.get_route_handler())
-    except (AttributeError, RuntimeError, TypeError) as error:
+    except Exception as error:
         _restore_route(applied)
         raise _setup_error(f'route {route.path!r} could not rebuild: {error}') from error
     return applied
