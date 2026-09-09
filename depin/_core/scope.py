@@ -616,11 +616,21 @@ def optional_frame(owner: ScopeFrame | None = None) -> ScopeFrame | None:
 
 @contextlib.contextmanager
 def push_frame(owner: ScopeFrame | None = None) -> Generator[ScopeFrame]:
-    activation = activate_frame(owner)
+    if owner is None:
+        owner = _manualowner
+    context_parent = _active.get()
+    parent = context_parent
+    while parent is not None and parent.owner is not owner:
+        parent = parent.context_parent
+    if parent is not None and not parent.active:
+        parent = None
+    frame = ScopeFrame(parent=parent, context_parent=context_parent, owner=owner)
+    token = _active.set(frame)
     try:
-        yield activation.frame
+        yield frame
     finally:
-        deactivate_frame(activation)
+        frame.active = False
+        _active.reset(token)
 
 
 def activate_frame(owner: ScopeFrame | None = None) -> FrameActivation:

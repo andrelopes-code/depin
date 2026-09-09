@@ -5,6 +5,7 @@ import threading
 
 import pytest
 
+from depin._core import frozen as frozen_module
 from depin._core.container import Container
 from depin._core.scope import MISSING, Scope, ScopeFrame, active_frame, push_frame
 from depin.errors import DepinError, MissingProviderError, OutsideScopeError
@@ -489,6 +490,21 @@ def test_a_scope_value_resolves_to_whatever_the_scope_provided() -> None:
 
     frozen = Container().scope_value(Marker).freeze()
     sentinel = Marker()
+    with frozen.scope() as frame:
+        frame.provide(Marker, sentinel)
+        assert frozen[Marker] is sentinel
+
+
+def test_an_eager_scope_value_read_does_not_enter_the_lazy_reader(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Marker: ...
+
+    def lazy_reader(*_: object) -> object:
+        raise AssertionError('an eager scope must not enter the lazy scope-value reader')
+
+    frozen = Container().scope_value(Marker).freeze()
+    monkeypatch.setattr(frozen_module, '_read_scope_value', lazy_reader)
+    sentinel = Marker()
+
     with frozen.scope() as frame:
         frame.provide(Marker, sentinel)
         assert frozen[Marker] is sentinel
