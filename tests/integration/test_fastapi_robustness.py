@@ -962,3 +962,23 @@ async def test_installed_lazy_scope_passes_non_http_work_through_unhosted() -> N
     await app({'type': 'lifespan'}, receive, _noop_send)
 
     assert observed == [True, True]
+
+
+@pytest.mark.asyncio
+async def test_installed_no_inject_route_hosts_container_without_opening_a_frame() -> None:
+    container = Container().freeze()
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint() -> dict[str, bool]:
+        try:
+            active_frame()
+        except OutsideScopeError:
+            return {'hosted': hosted_container() is container, 'frame': False}
+        return {'hosted': hosted_container() is container, 'frame': True}
+
+    _ = endpoint
+    fastapi_ext.install(app, container)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        assert (await client.get('/')).json() == {'hosted': True, 'frame': False}

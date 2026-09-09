@@ -4,6 +4,7 @@ import asyncio
 import dataclasses
 import threading
 from collections.abc import AsyncGenerator, AsyncIterator, Generator
+from contextvars import copy_context
 
 import pytest
 
@@ -55,6 +56,85 @@ async def test_imperative_lazy_host_publishes_without_opening_a_frame() -> None:
 
 
 @pytest.mark.asyncio
+async def test_imperative_lazy_host_re_raises_identical_no_frame_failure() -> None:
+    failure = RuntimeError('handler failure')
+    state, publication = _begin_lazy_host(Container().freeze())
+
+    async def fail() -> None:
+        try:
+            raise failure
+        except BaseException as error:
+            await _finish_lazy_host(state, publication, error)
+            raise
+
+    with pytest.raises(RuntimeError) as raised:
+        await fail()
+
+    assert raised.value is failure
+
+
+@pytest.mark.asyncio
+async def test_eager_host_activation_inside_lazy_host_restores_lazy_binding() -> None:
+    lazy = Container().freeze()
+    eager = Container().freeze()
+
+    async with _lazy_host(lazy):
+        assert hosted_container() is lazy
+        with Host(eager).activated():
+            assert hosted_container() is eager
+        assert hosted_container() is lazy
+
+
+@pytest.mark.asyncio
+async def test_copied_thread_contexts_share_one_lazy_frame_activation() -> None:
+    class Service: ...
+
+    container = Container().bind(Service, scope=Scope.SCOPED).freeze()
+    opened: list[ScopeFrame] = []
+    entered = threading.Barrier(3)
+    services: list[Service] = []
+    result_lock = threading.Lock()
+
+    def activate() -> None:
+        entered.wait()
+        service = hosted_container().resolve(Service)
+        with result_lock:
+            services.append(service)
+
+    async with _lazy_host(container, on_open=opened.append):
+        context = copy_context()
+        first = threading.Thread(target=context.copy().run, args=(activate,))
+        second = threading.Thread(target=context.copy().run, args=(activate,))
+        first.start()
+        second.start()
+        entered.wait()
+        first.join()
+        second.join()
+
+    assert len(services) == 2
+    assert services[0] is services[1]
+    assert len(opened) == 1
+
+
+@pytest.mark.asyncio
+async def test_lazy_teardown_reads_hosted_container_before_reset() -> None:
+    seen: list[bool] = []
+
+    async def resource() -> AsyncIterator[str]:
+        try:
+            yield 'value'
+        finally:
+            seen.append(hosted_container() is container)
+
+    container = Container().bind(resource, scope=Scope.SCOPED).freeze()
+
+    async with _lazy_host(container):
+        assert await hosted_container().aresolve(str) == 'value'
+
+    assert seen == [True]
+
+
+@pytest.mark.asyncio
 async def test_lazy_state_defers_seed_mapping_until_a_second_distinct_seed() -> None:
     first = Token[str]('first')
     second = Token[str]('second')
@@ -69,6 +149,58 @@ async def test_lazy_state_defers_seed_mapping_until_a_second_distinct_seed() -> 
 
     assert state.has_seed_mapping()
     await _finish_lazy_host(state, publication, None)
+
+
+@pytest.mark.asyncio
+async def test_lazy_state_keeps_zero_seeds_sparse() -> None:
+    state = LazyScopeState(Container().freeze(), (), None)
+
+    assert not state.has_seed_mapping()
+
+
+@pytest.mark.asyncio
+async def test_lazy_seed_replacement_uses_the_latest_inline_identity_before_materialization() -> None:
+    request = Token[object]('request')
+    first = object()
+    second = object()
+    container = Container().scope_value(request).freeze()
+
+    async with _lazy_host(container):
+        _provide_lazy_seed(LazyScopeSeed(request, lambda: first))
+        _provide_lazy_seed(LazyScopeSeed(request, lambda: second))
+
+        assert await hosted_container().aresolve(request) is second
+
+
+@pytest.mark.asyncio
+async def test_lazy_seed_mapping_replaces_tagged_identity_after_second_seed() -> None:
+    request = Token[object]('request')
+    state, publication = _begin_lazy_host(Container().freeze())
+    original = object()
+    replacement = object()
+
+    _provide_lazy_seed(LazyScopeSeed(request, object, tag='first'))
+    _provide_lazy_seed(LazyScopeSeed(request, lambda: original, tag='second'))
+    _provide_lazy_seed(LazyScopeSeed(request, lambda: replacement, tag='second'))
+
+    assert state.has_seed_mapping()
+    assert state.seed(request, 'second') is replacement
+    await _finish_lazy_host(state, publication, None)
+
+
+@pytest.mark.asyncio
+async def test_lazy_seed_replacement_after_materialization_retains_materialized_identity() -> None:
+    request = Token[object]('request')
+    first = object()
+    second = object()
+    container = Container().scope_value(request).freeze()
+
+    async with _lazy_host(container):
+        _provide_lazy_seed(LazyScopeSeed(request, lambda: first))
+        assert await hosted_container().aresolve(request) is first
+        _provide_lazy_seed(LazyScopeSeed(request, lambda: second))
+
+        assert await hosted_container().aresolve(request) is first
 
 
 @pytest.mark.asyncio
