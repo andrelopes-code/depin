@@ -3,14 +3,15 @@ from collections.abc import AsyncGenerator
 from typing import Protocol
 
 import pytest
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi import Request as FastAPIRequest
 from fastapi.dependencies.models import Dependant
 from fastapi.routing import APIRoute
 from httpx import ASGITransport, AsyncClient
 
 from depin import Container, FrozenContainer, Host, Scope
-from depin.errors import ContainerNotBoundError
+from depin._core.scope import active_frame
+from depin.errors import ContainerNotBoundError, OutsideScopeError
 from depin.ext import fastapi as fastapi_ext
 from depin.ext.fastapi import Inject, RequestScope
 
@@ -446,8 +447,61 @@ async def test_install_resolves_multiple_injections_through_one_program() -> Non
     assert response.json() == {'shared': True}
     assert events == ['shared']
     route = _route(app, '/value')
-    assert [_dependency_call_name(node) for node in route.dependant.dependencies].count('_EndpointProgram') == 1
+    assert all(_dependency_call_name(node) != '_EndpointProgram' for node in route.dependant.dependencies)
     assert all(_dependency_call_name(node) != '_InjectResolver' for node in route.dependant.dependencies)
+
+
+@pytest.mark.asyncio
+async def test_install_compiles_singleton_injection_into_the_route_call() -> None:
+    """The compiled wrapper receives FastAPI's request without a depin dependency node."""
+    constructed: list[str] = []
+
+    class Singleton:
+        def __init__(self) -> None:
+            constructed.append('singleton')
+
+    container = Container().bind(Singleton).freeze()
+    _ = await container.awarmup()
+    app = FastAPI()
+
+    async def native(request: FastAPIRequest) -> FastAPIRequest:
+        return request
+
+    @app.get('/value/{item_id}')
+    async def value(
+        request: FastAPIRequest,
+        item_id: int,
+        singleton: Inject[Singleton],
+        native_request: FastAPIRequest = Depends(native),
+    ) -> dict[str, object]:
+        try:
+            active_frame()
+        except OutsideScopeError:
+            frame_open = False
+        else:
+            frame_open = True
+        return {
+            'same_request': request is native_request,
+            'singleton': isinstance(singleton, Singleton),
+            'frame_open': frame_open,
+            'item_id': item_id,
+        }
+
+    fastapi_ext.install(app, container)
+
+    route = _route(app, '/value/{item_id}')
+    assert all(_dependency_call_name(node) != '_EndpointProgram' for node in route.dependant.dependencies)
+    assert all(_dependency_call_name(node) != '_InjectResolver' for node in route.dependant.dependencies)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        response = await client.get('/value/7')
+        invalid = await client.get('/value/not-an-int')
+
+    assert response.json() == {'same_request': True, 'singleton': True, 'frame_open': False, 'item_id': 7}
+    assert invalid.status_code == 422
+    assert constructed == ['singleton']
+    assert 'request' not in app.openapi()['paths']['/value/{item_id}']['get']['parameters']
 
 
 @pytest.mark.asyncio

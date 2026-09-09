@@ -8,7 +8,6 @@ from typing import Annotated, Final, TypeGuard
 import fastapi
 from fastapi import FastAPI, Request
 from fastapi.dependencies.models import Dependant
-from fastapi.dependencies.utils import get_dependant
 from fastapi.params import Depends
 from fastapi.routing import APIRoute, request_response
 from starlette.concurrency import run_in_threadpool
@@ -21,7 +20,7 @@ from depin.errors import ContainerNotBoundError, FastAPIIntegrationError
 
 __all__: list[str] = []
 
-_PROGRAM_ARGUMENT = '__depin_endpoint_program__'
+_REQUEST_ARGUMENT = '__depin_request__'
 _INSTALLATION_MARKER: Final[object] = object()
 
 
@@ -46,14 +45,9 @@ class _EndpointProgram:
     container: FrozenContainer
     entries: tuple[tuple[str, type[object] | Token[object]], ...]
 
-    async def __call__(self, request: Request) -> '_ResolvedArguments':
+    async def resolve(self, request: Request) -> dict[str, object]:
         _provide_lazy_seed(LazyScopeSeed(Request, lambda: request))
-        return _ResolvedArguments({name: await self.container.aresolve(key) for name, key in self.entries})
-
-
-@dataclass(frozen=True, slots=True)
-class _ResolvedArguments:
-    values: dict[str, object]
+        return {name: await self.container.aresolve(key) for name, key in self.entries}
 
 
 class Inject:
@@ -69,6 +63,8 @@ class _RoutePlan:
     program: _EndpointProgram
     dependencies: list[Dependant]
     endpoint: Callable[..., object]
+    request_argument: str
+    passes_request: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +72,7 @@ class _AppliedRoute:
     route: APIRoute
     call: Callable[..., object] | None
     dependencies: list[Dependant]
+    request_argument: str | None
     app: ASGIApp
 
 
@@ -180,43 +177,40 @@ def _plan_route(route: APIRoute, container: FrozenContainer) -> _RoutePlan | Non
     if any(not isinstance(name, str) for name, _ in resolvers):
         raise _setup_error(f'route {route.path!r} has a direct Inject dependency with no parameter name')
     names = tuple(name for name, _ in resolvers)
-    if _PROGRAM_ARGUMENT in names:
-        raise _setup_error(f'route {route.path!r} reserves parameter name {_PROGRAM_ARGUMENT!r}')
     entries = tuple((name, resolver.key) for name, resolver in resolvers if isinstance(name, str))
     program = _EndpointProgram(container, entries)
-    program_node = get_dependant(path=route.path_format, call=program, name=_PROGRAM_ARGUMENT)
-    replacement: list[Dependant] = []
-    inserted = False
-    for dependency in dependencies:
-        candidate: object = dependency.call
-        if _is_resolver(candidate):
-            if not inserted:
-                replacement.append(program_node)
-                inserted = True
-            continue
-        replacement.append(dependency)
+    replacement = [dependency for dependency in dependencies if not _is_resolver(dependency.call)]
     endpoint = route.dependant.call
     if endpoint is None:
         raise _setup_error(f'route {route.path!r} has no callable endpoint')
-    return _RoutePlan(route, program, replacement, endpoint)
+    request_argument = route.dependant.request_param_name
+    passes_request = request_argument is not None
+    return _RoutePlan(route, program, replacement, endpoint, request_argument or _REQUEST_ARGUMENT, passes_request)
 
 
 def _apply_plan(plan: _RoutePlan) -> _AppliedRoute:
     route = plan.route
     original = plan.endpoint
-    applied = _AppliedRoute(route, route.dependant.call, route.dependant.dependencies, route.app)
+    applied = _AppliedRoute(
+        route,
+        route.dependant.call,
+        route.dependant.dependencies,
+        route.dependant.request_param_name,
+        route.app,
+    )
 
     async def endpoint(**arguments: object) -> object:
-        injected = arguments.pop(_PROGRAM_ARGUMENT)
-        if not isinstance(injected, _ResolvedArguments):
-            raise _setup_error(f'route {route.path!r} produced an invalid depin endpoint program result')
-        arguments.update(injected.values)
+        request = arguments[plan.request_argument] if plan.passes_request else arguments.pop(plan.request_argument)
+        if not isinstance(request, Request):
+            raise _setup_error(f'route {route.path!r} did not provide a FastAPI Request to its compiled call')
+        arguments.update(await plan.program.resolve(request))
         if iscoroutinefunction(original):
             return await original(**arguments)
         return await run_in_threadpool(original, **arguments)
 
     try:
         route.dependant.dependencies = plan.dependencies
+        route.dependant.request_param_name = plan.request_argument
         route.dependant.call = endpoint
         route.app = request_response(route.get_route_handler())
     except Exception as error:
@@ -227,6 +221,7 @@ def _apply_plan(plan: _RoutePlan) -> _AppliedRoute:
 
 def _restore_route(applied: _AppliedRoute) -> None:
     applied.route.dependant.dependencies = applied.dependencies
+    applied.route.dependant.request_param_name = applied.request_argument
     applied.route.dependant.call = applied.call
     applied.route.app = applied.app
 
@@ -236,7 +231,7 @@ def _require_route_shape(route: APIRoute) -> None:
         if not hasattr(route, name):
             raise _setup_error(f'route {route!r} does not provide required attribute {name!r}')
     dependant = route.dependant
-    for name in ('call', 'dependencies'):
+    for name in ('call', 'dependencies', 'request_param_name'):
         if not hasattr(dependant, name):
             raise _setup_error(f'route {route.path!r} dependant does not provide required attribute {name!r}')
     if type(dependant.dependencies) is not list:
