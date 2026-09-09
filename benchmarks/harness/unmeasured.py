@@ -92,20 +92,6 @@ RETIRED: tuple[Retirement, ...] = (
 
 REFUSED: tuple[Refusal, ...] = (
     Refusal(
-        case='Concurrent requests, active scopes, and singleton first-use contention.',
-        reason=(
-            'Timed sleeps are forbidden here, so contention has to be created with explicit '
-            'synchronisation — a barrier, a reduced switch interval — and a benchmark built that way '
-            'measures the synchronisation as much as it measures the lock. The invariants themselves are '
-            'already tested for correctness under free-threading in `tests/unit/test_free_threading.py`, '
-            'where the guarantee rather than the number is what matters.'
-        ),
-        needed=(
-            'A design of its own, alongside the free-threading work that owns what the public surface '
-            'commits to under concurrency. Routed to Step 8.'
-        ),
-    ),
-    Refusal(
         case='Long-running allocation and retention drift.',
         reason=(
             'Retention here is a point-in-time reading. Drift is only visible over a soak, and how much '
