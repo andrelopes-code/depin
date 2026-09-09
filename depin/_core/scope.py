@@ -594,6 +594,15 @@ def active_frame(owner: ScopeFrame | None = None) -> ScopeFrame:
     raise OutsideScopeError('no active scope frame; open one with FrozenContainer.scope() or .ascope()')
 
 
+def active_eager_frame(owner: ScopeFrame) -> ScopeFrame | None:
+    frame = _active.get()
+    while frame is not None:
+        if frame.owner is owner:
+            return frame if frame.active else None
+        frame = frame.context_parent
+    return None
+
+
 def optional_frame(owner: ScopeFrame | None = None) -> ScopeFrame | None:
     if owner is None:
         owner = _manualowner

@@ -16,7 +16,7 @@ from starlette.middleware import Middleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from depin import FrozenContainer, Token, optional_hosted_container
-from depin._integration import LazyScopeSeed, _lazy_host, _provide_lazy_seed
+from depin._integration import LazyScopeSeed, _lazy_host, _provide_active_eager_seed, _provide_lazy_seed
 from depin.errors import ContainerNotBoundError, FastAPIIntegrationError
 
 __all__: list[str] = []
@@ -37,6 +37,7 @@ class _InjectResolver[T]:
                 'Inject[...] resolved outside a hosted FastAPI request; call install(app, container) '
                 'after route registration or install RequestScope compatibility middleware.'
             )
+        _provide_active_eager_seed(container, Request, request)
         return await container.aresolve(self.key)
 
 

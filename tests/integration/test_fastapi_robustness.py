@@ -371,8 +371,15 @@ def test_install_rejects_an_invalid_application_shape_without_mutating_routes() 
     assert route.dependant.call is original_call
 
 
+def _request_identity_compatibility_setup(app: FastAPI, container: FrozenContainer) -> None:
+    app.add_middleware(RequestScope, container=container)
+
+
+@pytest.mark.parametrize('setup', [_request_identity_compatibility_setup, fastapi_ext.install])
 @pytest.mark.asyncio
-async def test_install_uses_the_actual_request_after_an_earlier_native_dependency_reads_its_body() -> None:
+async def test_setup_uses_the_actual_request_after_an_earlier_native_dependency_reads_its_body(
+    setup: Callable[[FastAPI, FrozenContainer], None],
+) -> None:
     """A synthetic middleware request would lose identity and receive semantics."""
     seen: list[FastAPIRequest] = []
 
@@ -387,10 +394,11 @@ async def test_install_uses_the_actual_request_after_an_earlier_native_dependenc
     app = FastAPI()
 
     @app.post('/body', dependencies=[Depends(native)])
-    async def body(probe: Inject[Probe], request: FastAPIRequest) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+    async def body(probe: Inject[Probe], request: FastAPIRequest) -> dict[str, bool]:
         return {'same': probe.request is request and seen == [request]}
 
-    fastapi_ext.install(app, Container().scope_value(FastAPIRequest).bind(Probe, scope=Scope.SCOPED).freeze())
+    _ = body
+    setup(app, Container().scope_value(FastAPIRequest).bind(Probe, scope=Scope.SCOPED).freeze())
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url='http://t') as client:
         response = await client.post('/body', json={'name': 'zoe'})
@@ -734,21 +742,39 @@ async def test_body_and_teardown_failures_keep_both_errors_in_order(setup: _Setu
 
     app = FastAPI()
 
+    async def body() -> AsyncIterator[bytes]:
+        events.append('response-body')
+        yield b'partial'
+        raise RuntimeError('body failure')
+
     @app.get('/failure')
-    async def endpoint(value: Inject[Resource]) -> dict[str, bool]:
+    async def endpoint(value: Inject[Resource]) -> StreamingResponse:
         del value
-        events.append('handler')
-        raise RuntimeError('handler failure')
+        return StreamingResponse(body())
 
     _ = endpoint
     setup(app, Container().bind(resource, scope=Scope.SCOPED).freeze())
-    transport = ASGITransport(app=app, raise_app_exceptions=True)
-    async with AsyncClient(transport=transport, base_url='http://t') as client:
-        with pytest.raises(ExceptionGroup) as caught:
-            await client.get('/failure')
+    request_sent = False
+    disconnected = asyncio.Event()
 
-    assert [str(error) for error in caught.value.exceptions] == ['handler failure', 'teardown failure']
-    assert events == ['construct', 'handler', 'teardown']
+    async def receive() -> Message:
+        nonlocal request_sent
+        if not request_sent:
+            request_sent = True
+            return {'type': 'http.request', 'body': b'', 'more_body': False}
+        await disconnected.wait()
+        return {'type': 'http.disconnect'}
+
+    async def send(message: Message) -> None:
+        if message['type'] == 'http.response.body' and message.get('more_body') is True:
+            events.append('sent-body')
+
+    with pytest.raises(ExceptionGroup) as caught:
+        await app(_http_scope('GET', '/failure'), receive, send)
+
+    assert [type(error) for error in caught.value.exceptions] == [RuntimeError, RuntimeError]
+    assert [str(error) for error in caught.value.exceptions] == ['body failure', 'teardown failure']
+    assert events == ['construct', 'response-body', 'sent-body', 'teardown']
 
 
 @pytest.mark.parametrize('setup', [_compatibility_setup, _optimized_setup])
