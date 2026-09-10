@@ -2,9 +2,11 @@
 
 import argparse
 import math
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Final
 
 from benchmarks.harness import (
     HarnessError,
@@ -18,8 +20,11 @@ from benchmarks.harness import (
     stats,
 )
 from benchmarks.harness.budgets import Outcome
+from benchmarks.harness.pairs import DEFAULT_SEED as PAIRS_DEFAULT_SEED
 
 ATTRIBUTION_WORKLOAD = 'fastapi_cpu_light_endpoint'
+BASELINE_REVISION = '086adf98459773e3175f4723b2b64e3f47306e42'
+DEFAULT_SEED: Final = PAIRS_DEFAULT_SEED
 TAIL_WORKLOADS = (
     'fastapi_cpu_light_endpoint',
     'fastapi_request_scoped_graph',
@@ -41,6 +46,14 @@ REQUIRED_CHECKS = (
     CHECK_ALLOCATION,
     CHECK_STARTUP,
     CHECK_CONTENTION,
+)
+COMPONENT_WORKLOADS = (
+    'fastapi_lazy_host_publication',
+    'fastapi_lazy_frame_activation_and_drain',
+    'fastapi_endpoint_program_one_key',
+    'fastapi_endpoint_program_many_keys',
+    'fastapi_request_seed_read',
+    'fastapi_async_resource_close',
 )
 REPETITIONS = 5
 TAIL_LIMIT = 0.05
@@ -109,6 +122,14 @@ def _side_repetitions(dataset: Path, side: str) -> dict[int, dict[str, reduce.Ag
 def _pairs(dataset: Path) -> tuple[dict[str, tuple[_Pair, ...]], int]:
     metadata = read_json(dataset / 'environment.json')
     seed = require_integer(metadata.get('seed'), f'{dataset / "environment.json"}: seed')
+    if seed != DEFAULT_SEED:
+        raise HarnessError(f'{dataset / "environment.json"}: seed must be the protocol constant {DEFAULT_SEED}')
+    repetitions = require_integer(metadata.get('repetitions'), f'{dataset / "environment.json"}: repetitions')
+    if repetitions != REPETITIONS:
+        raise HarnessError(f'{dataset / "environment.json"}: repetitions must be exactly {REPETITIONS}')
+    environment = require_object(metadata.get('environment'), f'{dataset / "environment.json"}: environment')
+    for field in ('interpreter', 'host', 'distributions'):
+        _ = require_object(environment.get(field), f'{dataset / "environment.json"}: environment.{field}')
     base, head = _side_repetitions(dataset, 'base'), _side_repetitions(dataset, 'head')
     pairs: dict[str, tuple[_Pair, ...]] = {}
     for workload in TAIL_WORKLOADS:
@@ -124,14 +145,28 @@ def _pairs(dataset: Path) -> tuple[dict[str, tuple[_Pair, ...]], int]:
     return pairs, seed
 
 
-def _attribution(path: Path, pairs: Sequence[_Pair], seed: int) -> tuple[Verdict, Verdict]:
+def _attribution(
+    path: Path, pairs: Sequence[_Pair], seed: int, evaluated_head_revision: str
+) -> tuple[Verdict, Verdict]:
     payload = read_json(path)
     version = require_integer(payload.get('schema_version'), f'{path}: schema_version')
     if version != SCHEMA_VERSION:
         raise HarnessError(f'{path}: unsupported schema version {version}; expected {SCHEMA_VERSION}')
+    if _revision(payload.get('baseline_revision'), f'{path}: baseline_revision') != BASELINE_REVISION:
+        raise HarnessError(f'{path}: baseline_revision must be {BASELINE_REVISION}')
+    if _revision(payload.get('head_revision'), f'{path}: head_revision') != evaluated_head_revision:
+        raise HarnessError(f'{path}: head_revision does not match the evaluated head revision')
     workload = require_text(payload.get('workload'), f'{path}: workload')
     if workload != ATTRIBUTION_WORKLOAD:
         raise HarnessError(f'{path}: workload must be {ATTRIBUTION_WORKLOAD!r}, found {workload!r}')
+    if require_text(payload.get('metric'), f'{path}: metric') != 'p50':
+        raise HarnessError(f'{path}: metric must be p50')
+    if require_text(payload.get('unit'), f'{path}: unit') != 'seconds per operation':
+        raise HarnessError(f'{path}: unit must be seconds per operation')
+    if require_text(payload.get('method'), f'{path}: method') != 'direct-request-p50':
+        raise HarnessError(f'{path}: method must be direct-request-p50')
+    if require_text(payload.get('scope'), f'{path}: scope') != 'paired':
+        raise HarnessError(f'{path}: scope must be paired')
     entries = require_array(payload.get('repetitions'), f'{path}: repetitions')
     if len(entries) != REPETITIONS:
         raise HarnessError(f'{path}: requires exactly {REPETITIONS} direct-baseline repetitions')
@@ -170,6 +205,46 @@ def _attribution(path: Path, pairs: Sequence[_Pair], seed: int) -> tuple[Verdict
     )
 
 
+def _revision(value: object, where: str) -> str:
+    revision = require_text(value, where)
+    if re.fullmatch(r'[0-9a-f]{40}', revision) is None:
+        raise HarnessError(f'{where}: expected a full lowercase Git SHA')
+    return revision
+
+
+def _provenance(path: Path, evaluated_head_revision: str) -> None:
+    payload = read_json(path)
+    if require_integer(payload.get('schema_version'), f'{path}: schema_version') != SCHEMA_VERSION:
+        raise HarnessError(f'{path}: unsupported schema version')
+    if _revision(payload.get('baseline_revision'), f'{path}: baseline_revision') != BASELINE_REVISION:
+        raise HarnessError(f'{path}: baseline_revision must be {BASELINE_REVISION}')
+    head = _revision(payload.get('head_revision'), f'{path}: head_revision')
+    if head != _revision(evaluated_head_revision, 'evaluated head revision'):
+        raise HarnessError(f'{path}: head_revision does not match the evaluated head revision')
+    protocol = require_object(payload.get('protocol'), f'{path}: protocol')
+    if require_text(protocol.get('collector'), f'{path}: protocol.collector') != 'benchmarks.harness.pairs':
+        raise HarnessError(f'{path}: protocol.collector must be benchmarks.harness.pairs')
+    if require_integer(protocol.get('repetitions'), f'{path}: protocol.repetitions') != REPETITIONS:
+        raise HarnessError(f'{path}: protocol.repetitions must be exactly {REPETITIONS}')
+    if require_integer(protocol.get('seed'), f'{path}: protocol.seed') != DEFAULT_SEED:
+        raise HarnessError(f'{path}: protocol.seed must be {DEFAULT_SEED}')
+    if protocol.get('locked_environments') is not True:
+        raise HarnessError(f'{path}: protocol.locked_environments must be true')
+    workloads = require_array(protocol.get('workloads'), f'{path}: protocol.workloads')
+    if tuple(require_text(value, f'{path}: protocol.workloads') for value in workloads) != TAIL_WORKLOADS:
+        raise HarnessError(f'{path}: protocol.workloads must exactly match the FastAPI paired inventory')
+    validations = require_array(payload.get('semantic_validation'), f'{path}: semantic_validation')
+    proven: set[str] = set()
+    for index, value in enumerate(validations):
+        validation = require_object(value, f'{path}: semantic_validation[{index}]')
+        workload = require_text(validation.get('workload'), f'{path}: semantic_validation[{index}].workload')
+        if validation.get('response') != 'equivalent' or validation.get('lifecycle') != 'equivalent':
+            raise HarnessError(f'{path}: {workload} lacks equivalent response and lifecycle validation')
+        proven.add(workload)
+    if proven != set(TAIL_WORKLOADS) or len(validations) != len(proven):
+        raise HarnessError(f'{path}: semantic_validation must cover each FastAPI paired workload exactly once')
+
+
 def _tails(pairs: Mapping[str, Sequence[_Pair]]) -> tuple[Verdict, ...]:
     verdicts: list[Verdict] = []
     for workload in TAIL_WORKLOADS:
@@ -183,7 +258,7 @@ def _tails(pairs: Mapping[str, Sequence[_Pair]]) -> tuple[Verdict, ...]:
                     raise HarnessError(f'{workload}: {field} is missing from repetition {pair.repetition}')
                 base.append(_finite_positive(before, f'{workload}: base {field}'))
                 head.append(_finite_positive(after, f'{workload}: head {field}'))
-            paired = stats.paired_ratio(base, head, seed=0)
+            paired = stats.paired_ratio(base, head, seed=DEFAULT_SEED)
             outcome = Outcome.PASS if paired.ratio <= TAIL_LIMIT else Outcome.FAIL
             verdicts.append(
                 Verdict(
@@ -201,63 +276,114 @@ def _change(base: float, head: float, criterion: str) -> float:
     return head / base - 1.0
 
 
-def _sidecars(path: Path) -> tuple[Verdict, ...]:
+def _typed_check(
+    fields: Mapping[str, object], path: Path, criterion: str, expected: tuple[str, str, str, str, str]
+) -> Verdict:
+    for field, value in zip(('workload', 'metric', 'unit', 'method', 'scope'), expected, strict=True):
+        if require_text(fields.get(field), f'{path}: {criterion}.{field}') != value:
+            raise HarnessError(f'{path}: {criterion}.{field} must be {value!r}')
+    limit = require_number(fields.get('limit'), f'{path}: {criterion}.limit')
+    if not math.isfinite(limit) or limit < 0.0:
+        raise HarnessError(f'{path}: {criterion}.limit must be finite and non-negative')
+    before, after = (
+        (
+            require_number(fields.get('direct'), f'{path}: {criterion}.direct'),
+            require_number(fields.get('depin'), f'{path}: {criterion}.depin'),
+        )
+        if criterion == CHECK_NO_INJECTION
+        else (
+            require_number(fields.get('base'), f'{path}: {criterion}.base'),
+            require_number(fields.get('head'), f'{path}: {criterion}.head'),
+        )
+    )
+    change = _change(before, after, criterion)
+    return Verdict(
+        criterion, Outcome.PASS if change <= limit else Outcome.FAIL, f'{change:+.2%} budget {limit:+.2%}', expected[4]
+    )
+
+
+def _sidecars(path: Path, pairs: Mapping[str, Sequence[_Pair]]) -> tuple[Verdict, ...]:
     payload = read_json(path)
     version = require_integer(payload.get('schema_version'), f'{path}: schema_version')
     if version != SCHEMA_VERSION:
         raise HarnessError(f'{path}: unsupported schema version {version}; expected {SCHEMA_VERSION}')
-    entries = require_array(payload.get('checks'), f'{path}: checks')
-    parsed: dict[str, Verdict] = {}
-    head_only: set[str] = set()
-    for position, entry in enumerate(entries):
-        fields = require_object(entry, f'{path}: checks[{position}]')
-        criterion = require_text(fields.get('criterion'), f'{path}: checks[{position}].criterion')
-        if criterion in parsed:
-            raise HarnessError(f'{path}: criterion {criterion!r} appears twice')
-        scope = require_text(fields.get('scope'), f'{path}: checks[{position}].scope')
-        if scope not in {'paired', 'head-only'}:
-            raise HarnessError(f'{path}: {criterion}: scope must be paired or head-only')
-        if scope == 'head-only':
-            head_only.add(criterion)
-        limit = require_number(fields.get('limit'), f'{path}: {criterion}.limit')
-        if not math.isfinite(limit) or limit < 0.0:
-            raise HarnessError(f'{path}: {criterion}.limit must be finite and non-negative')
-        change = _change(
-            require_number(fields.get('base'), f'{path}: {criterion}.base'),
-            require_number(fields.get('head'), f'{path}: {criterion}.head'),
-            criterion,
+    specifications = {
+        CHECK_NO_INJECTION: ('fastapi_no_injection', 'latency', 'seconds per operation', 'direct-null', 'head-only'),
+        CHECK_RETAINED_MEMORY: (ATTRIBUTION_WORKLOAD, 'retained', 'bytes', 'tracemalloc-retained', 'paired'),
+        CHECK_PEAK_MEMORY: (ATTRIBUTION_WORKLOAD, 'peak-memory', 'bytes', 'tracemalloc-peak', 'paired'),
+        CHECK_ALLOCATION: (
+            ATTRIBUTION_WORKLOAD,
+            'allocations',
+            'allocation-count',
+            'tracemalloc-allocation-count',
+            'paired',
+        ),
+        CHECK_CONTENTION: ('request_scopes', 'p99_seconds', 'seconds', 'synchronized-wave', 'paired'),
+    }
+    verdicts = [
+        _typed_check(require_object(payload.get(criterion), f'{path}: {criterion}'), path, criterion, expected)
+        for criterion, expected in specifications.items()
+    ]
+    startup = require_object(payload.get(CHECK_STARTUP), f'{path}: {CHECK_STARTUP}')
+    expected_startup = ('fastapi_application_startup', 'latency', 'seconds per operation', 'paired-total-p50', 'paired')
+    for field, value in zip(('workload', 'metric', 'unit', 'method', 'scope'), expected_startup, strict=True):
+        if require_text(startup.get(field), f'{path}: {CHECK_STARTUP}.{field}') != value:
+            raise HarnessError(f'{path}: {CHECK_STARTUP}.{field} must be {value!r}')
+    limit = require_number(startup.get('limit'), f'{path}: {CHECK_STARTUP}.limit')
+    paired = stats.paired_ratio(
+        [pair.base.median for pair in pairs['fastapi_application_startup']],
+        [pair.head.median for pair in pairs['fastapi_application_startup']],
+        seed=DEFAULT_SEED,
+    )
+    verdicts.append(
+        Verdict(
+            CHECK_STARTUP,
+            Outcome.PASS if paired.ratio <= limit else Outcome.FAIL,
+            f'{paired.ratio:+.2%} budget {limit:+.2%}',
         )
-        parsed[criterion] = Verdict(
-            criterion,
-            Outcome.PASS if change <= limit else Outcome.FAIL,
-            f'{change:+.2%} budget {limit:+.2%}',
-            scope=scope,
-        )
-    for criterion in REQUIRED_CHECKS:
-        if criterion not in parsed:
-            scope = 'head-only' if criterion == CHECK_NO_INJECTION else 'paired'
-            parsed[criterion] = Verdict(
-                criterion, Outcome.NO_VERDICT, 'required sidecar evidence is missing', scope=scope
-            )
-    if not any(criterion.startswith('component:') for criterion in head_only):
-        parsed['components'] = Verdict(
-            'components', Outcome.NO_VERDICT, 'head-only component sidecar evidence is missing', scope='head-only'
-        )
-    return tuple(parsed[criterion] for criterion in sorted(parsed))
+    )
+    entries = require_array(payload.get('components'), f'{path}: components')
+    components: set[str] = set()
+    for index, entry in enumerate(entries):
+        fields = require_object(entry, f'{path}: components[{index}]')
+        workload = require_text(fields.get('workload'), f'{path}: components[{index}].workload')
+        if workload in components:
+            raise HarnessError(f'{path}: component {workload!r} appears twice')
+        for field, value in zip(
+            ('metric', 'unit', 'method', 'scope'),
+            ('latency', 'seconds per operation', 'component-observation', 'head-only'),
+            strict=True,
+        ):
+            if require_text(fields.get(field), f'{path}: components[{index}].{field}') != value:
+                raise HarnessError(f'{path}: component {workload}.{field} must be {value!r}')
+        if fields.get('validated') is not True:
+            raise HarnessError(f'{path}: component {workload} must carry validated true')
+        components.add(workload)
+        verdicts.append(Verdict(f'component:{workload}', Outcome.PASS, 'validated component observation', 'head-only'))
+    if components != set(COMPONENT_WORKLOADS):
+        raise HarnessError(f'{path}: components must exactly match the FastAPI component inventory')
+    return tuple(verdicts)
 
 
-def evaluate(dataset: Path, attribution: Path, sidecars: Path) -> Acceptance:
+def evaluate(
+    dataset: Path, attribution: Path, sidecars: Path, provenance: Path, *, evaluated_head_revision: str
+) -> Acceptance:
     """Evaluate the fixed FastAPI acceptance criteria from collected evidence."""
+    _provenance(provenance, evaluated_head_revision)
     pairs, seed = _pairs(dataset)
-    verdicts = (*_attribution(attribution, pairs[ATTRIBUTION_WORKLOAD], seed), *_tails(pairs), *_sidecars(sidecars))
+    verdicts = (
+        *_attribution(attribution, pairs[ATTRIBUTION_WORKLOAD], seed, evaluated_head_revision),
+        *_tails(pairs),
+        *_sidecars(sidecars, pairs),
+    )
     ordered = tuple(sorted(verdicts, key=lambda verdict: verdict.criterion))
     head_only = tuple(sorted(verdict.criterion for verdict in ordered if verdict.scope == 'head-only'))
     return Acceptance(ordered, head_only)
 
 
-def run(dataset: Path, attribution: Path, sidecars: Path) -> int:
+def run(dataset: Path, attribution: Path, sidecars: Path, provenance: Path, *, evaluated_head_revision: str) -> int:
     """Print the acceptance verdict and return its shell status."""
-    acceptance = evaluate(dataset, attribution, sidecars)
+    acceptance = evaluate(dataset, attribution, sidecars, provenance, evaluated_head_revision=evaluated_head_revision)
     for verdict in acceptance.verdicts:
         marker = 'required' if verdict.required else 'target'
         print(f'{verdict.outcome.value:12} {marker:8} {verdict.scope:9} {verdict.criterion}: {verdict.detail}')
@@ -270,9 +396,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--dataset', type=Path, required=True)
     parser.add_argument('--attribution', type=Path, required=True)
     parser.add_argument('--sidecars', type=Path, required=True)
+    parser.add_argument('--provenance', type=Path, required=True)
+    parser.add_argument('--head-revision', required=True)
     arguments = parser.parse_args(argv)
     try:
-        return run(arguments.dataset, arguments.attribution, arguments.sidecars)
+        return run(
+            arguments.dataset,
+            arguments.attribution,
+            arguments.sidecars,
+            arguments.provenance,
+            evaluated_head_revision=arguments.head_revision,
+        )
     except HarnessError as error:
         print(f'misuse: {error}')
         return 2
