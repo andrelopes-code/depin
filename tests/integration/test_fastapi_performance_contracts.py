@@ -22,6 +22,16 @@ def test_fastapi_application_pairs_have_equal_observations() -> None:
             assert workload.subject.observe() == workload.baseline.observe()
 
 
+def test_fastapi_startup_pair_keeps_the_baseline_three_route_application() -> None:
+    startup = next(workload for workload in APPLICATION_WORKLOADS if workload.name == 'fastapi_application_startup')
+
+    assert startup.subject.observe().result == '/docs /docs/oauth2-redirect /openapi.json /price /redoc /report /status'
+    assert startup.baseline is not None
+    assert (
+        startup.baseline.observe().result == '/docs /docs/oauth2-redirect /openapi.json /price /redoc /report /status'
+    )
+
+
 def test_fastapi_component_inventory_decomposes_lazy_request_costs() -> None:
     assert tuple(workload.name for workload in COMPONENT_WORKLOADS) == (
         'fastapi_lazy_host_publication',

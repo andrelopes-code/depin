@@ -4,7 +4,12 @@ from benchmarks.contracts import Claim, Implementation, Metric, Tier, Workload
 
 from .async_ import build_depin_async_deployment, build_direct_async_deployment
 from .measurement import observe_startup, prepare_startup, request_implementations
-from .sync import build_depin_sync_deployment, build_direct_sync_deployment
+from .sync import (
+    build_depin_sync_deployment,
+    build_depin_sync_no_injection_deployment,
+    build_direct_sync_deployment,
+    build_direct_sync_no_injection_deployment,
+)
 
 REQUEST_INCLUDED = (
     'one httpx request through the in-process ASGI transport: Starlette routing, the RequestScope '
@@ -207,8 +212,8 @@ WORKLOADS: tuple[Workload, ...] = (
         name='fastapi_no_injection',
         tier=Tier.APPLICATION,
         claim=NO_INJECTION_CLAIM,
-        subject=request_implementations('depin', build_depin_sync_deployment, '/plain'),
-        baseline=request_implementations('direct', build_direct_sync_deployment, '/plain'),
+        subject=request_implementations('depin', build_depin_sync_no_injection_deployment, '/plain'),
+        baseline=request_implementations('direct', build_direct_sync_no_injection_deployment, '/plain'),
     ),
     Workload(
         name='fastapi_cpu_light_endpoint',
