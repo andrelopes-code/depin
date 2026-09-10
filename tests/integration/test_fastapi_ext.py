@@ -475,8 +475,8 @@ async def test_install_compiles_singleton_injection_into_the_route_call() -> Non
     async def value(
         request: FastAPIRequest,
         item_id: int,
-        singleton: Inject[Singleton],
         native_request: Annotated[FastAPIRequest, Depends(native)],
+        singleton: Inject[Singleton],
     ) -> dict[str, object]:
         try:
             active_frame()
