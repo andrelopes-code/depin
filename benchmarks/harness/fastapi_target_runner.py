@@ -214,9 +214,7 @@ def _measurement(value: float, unit: str, method: str) -> dict[str, object]:
     return {'value': value, 'unit': unit, 'method': method}
 
 
-def _aggregate_measurement(
-    decoded: DecodedReport, case: str, unit: str, method: str
-) -> dict[str, object]:
+def _aggregate_measurement(decoded: DecodedReport, case: str, unit: str, method: str) -> dict[str, object]:
     aggregate = decoded.head_only.get(case)
     if aggregate is None:
         raise RuntimeError(f'{case}: target benchmark report lacks the required head-only case')
