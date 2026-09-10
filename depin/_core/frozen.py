@@ -170,13 +170,9 @@ class _InstructionRuntime:
         frame = active_eager_frame(self._root)
         if frame is not None:
             value = frame.lookup_provided(*ident)
-            if value is MISSING:
-                raise MissingProviderError(
-                    f'no value in the active scope for {fmt_key(ident[0])}; '
-                    'a key declared with scope_value() must be supplied by whoever opens the scope, '
-                    'with frame.provide(key, value)'
-                )
-            return value
+            if value is not MISSING:
+                return value
+            return _read_scope_value(frame, *ident)
         return _read_scope_value(active_frame(self._root), *ident)
 
     def register_teardown(self, scope: Scope, record: Teardown) -> None:
@@ -1661,11 +1657,7 @@ class FrozenContainer:
         frame = active_eager_frame(self._root)
         if frame is not None:
             value = frame.lookup_provided(spec.key, spec.tag)
-            if value is MISSING:
-                raise MissingProviderError(
-                    f'no value in the active scope for {fmt_key(spec.key)}; '
-                    'a key declared with scope_value() must be supplied by whoever opens the scope, '
-                    'with frame.provide(key, value)'
-                )
-            return value
+            if value is not MISSING:
+                return value
+            return _read_scope_value(frame, spec.key, spec.tag)
         return _read_scope_value(active_frame(self._root), spec.key, spec.tag)

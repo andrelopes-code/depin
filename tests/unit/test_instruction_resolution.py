@@ -9,6 +9,7 @@ import pytest
 from depin._core import frozen as frozen_module
 from depin._core import instructions as instructions_module
 from depin._core.container import Container
+from depin._core.frozen import FrozenContainer
 from depin._core.graph import build_plan
 from depin._core.instructions import (
     AliasOperation,
@@ -28,6 +29,7 @@ from depin._core.instructions import (
     compile_sync_instructions,
     invoke_structured,
 )
+from depin._core.lazy_scope import LazyScopeSeed, lazy_host
 from depin._core.markers import Tag, Token, injected
 from depin._core.overrides import present as override_present
 from depin._core.scope import Scope, ScopeFrame
@@ -372,6 +374,55 @@ def test_deep_instruction_reads_a_scope_value_and_preserves_its_missing_error(
         ),
     ):
         frozen.resolve(Report)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('use_instruction', [False, True])
+@pytest.mark.parametrize('matching_seed', [False, True])
+async def test_an_eager_scope_inside_a_lazy_host_reads_tagged_seeds(
+    monkeypatch: pytest.MonkeyPatch,
+    use_instruction: bool,
+    matching_seed: bool,
+) -> None:
+    class Request: ...
+
+    class Report:
+        def __init__(self, request: Annotated[Request, Tag('chosen')]) -> None:
+            self.request = request
+
+    container = Container()
+    for index in range(254):
+        container.value(Token[int](f'lazy-frame-padding-{index}'), index)
+    frozen = container.scope_value(Request, tag='chosen').bind(Report, scope=Scope.TRANSIENT).freeze()
+    request = Request()
+
+    if use_instruction:
+
+        def unexpected_iterative(_self: object, _spec: ProviderSpec) -> object:
+            raise AssertionError('lazy hosted scope-value root used the interpreted executor')
+
+        monkeypatch.setattr(frozen_module.FrozenContainer, '_resolve_sync_iterative', unexpected_iterative)
+    else:
+
+        def disable_instructions(_container: FrozenContainer, _ident: Ident) -> bool:
+            return False
+
+        monkeypatch.setattr(frozen_module.FrozenContainer, '_can_use_sync_instructions', disable_instructions)
+
+    seed_tag = 'chosen' if matching_seed else 'other'
+    async with lazy_host(frozen, seeds=(LazyScopeSeed(Request, lambda: request, tag=seed_tag),)):
+        if matching_seed:
+            with frozen.scope():
+                assert frozen.resolve(Report).request is request
+        else:
+            with (
+                frozen.scope(),
+                pytest.raises(
+                    MissingProviderError,
+                    match=r'no value in the active scope for .*Request.*a key declared with scope_value\(\)',
+                ),
+            ):
+                frozen.resolve(Report)
 
 
 def test_failed_instruction_claim_is_aborted_and_retried() -> None:

@@ -2,6 +2,7 @@
 
 import asyncio
 import threading
+from typing import Literal
 
 import pytest
 
@@ -183,6 +184,45 @@ def test_push_frame_sets_active() -> None:
     with push_frame() as frame:
         assert isinstance(frame, ScopeFrame)
         assert active_frame() is frame
+
+
+def test_push_frame_exit_waits_for_a_frame_mutation_lock() -> None:
+    class ExitGate:
+        def __init__(self) -> None:
+            self.entered = threading.Event()
+            self.release = threading.Event()
+
+        def __enter__(self) -> None:
+            self.entered.set()
+            assert self.release.wait(1)
+
+        def __exit__(self, exception_type: object, exception: object, traceback: object) -> Literal[False]:
+            return False
+
+    opened = threading.Event()
+    leave = threading.Event()
+    exited = threading.Event()
+    frames: list[ScopeFrame] = []
+
+    def run_scope() -> None:
+        with push_frame() as frame:
+            frames.append(frame)
+            opened.set()
+            assert leave.wait(1)
+        exited.set()
+
+    thread = threading.Thread(target=run_scope)
+    thread.start()
+    assert opened.wait(1)
+    gate = ExitGate()
+    object.__setattr__(frames[0], 'mutex', gate)
+    leave.set()
+
+    assert gate.entered.wait(1)
+    assert not exited.is_set()
+    gate.release.set()
+    thread.join()
+    assert exited.is_set()
 
 
 def test_deactivate_marks_a_frame_inactive_idempotently() -> None:
