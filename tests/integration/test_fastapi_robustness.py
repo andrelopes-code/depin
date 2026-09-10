@@ -1044,10 +1044,12 @@ def test_install_accepts_fastapi_0133_coroutine_detector(monkeypatch: pytest.Mon
         return {'injected': True}
 
     _ = endpoint
-    detector = vars(fastapi_models)['_is_coroutine_callable']
+    detector = vars(fastapi_routing).get('is_async_callable') or vars(fastapi_models).get('_is_coroutine_callable')
+    if not callable(detector):
+        raise AssertionError('the tested FastAPI version has no coroutine detector')
     monkeypatch.setattr(fastapi_routing, 'is_async_callable', detector, raising=False)
-    monkeypatch.delattr(fastapi_utils, '_is_coroutine_callable')
-    monkeypatch.delattr(fastapi_models, '_is_coroutine_callable')
+    monkeypatch.delattr(fastapi_utils, '_is_coroutine_callable', raising=False)
+    monkeypatch.delattr(fastapi_models, '_is_coroutine_callable', raising=False)
 
     fastapi_ext.install(app, Container().bind(Service).freeze())
 
@@ -1064,8 +1066,8 @@ def test_install_rejects_fastapi_without_a_coroutine_detector(monkeypatch: pytes
 
     _ = endpoint
     monkeypatch.delattr(fastapi_routing, 'is_async_callable', raising=False)
-    monkeypatch.delattr(fastapi_utils, '_is_coroutine_callable')
-    monkeypatch.delattr(fastapi_models, '_is_coroutine_callable')
+    monkeypatch.delattr(fastapi_utils, '_is_coroutine_callable', raising=False)
+    monkeypatch.delattr(fastapi_models, '_is_coroutine_callable', raising=False)
 
     with pytest.raises(FastAPIIntegrationError, match='coroutine-shape detector'):
         fastapi_ext.install(app, Container().bind(Service).freeze())

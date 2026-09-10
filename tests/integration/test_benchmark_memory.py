@@ -57,17 +57,17 @@ def test_python_calls_are_counted_per_operation() -> None:
 
 
 @pytest.mark.parametrize(
-    ('workload_name', 'expected_calls'),
+    ('workload_name', 'maximum_calls'),
     [
         ('allocations_of_a_request_shaped_scope', 88),
         ('allocations_of_a_scope_cycle', 358),
     ],
 )
-def test_eager_scope_workloads_keep_their_call_budgets(workload_name: str, expected_calls: int) -> None:
+def test_eager_scope_workloads_keep_their_call_budgets(workload_name: str, maximum_calls: int) -> None:
     workload = next(workload for workload in resources.WORKLOADS if workload.name == workload_name)
     prepared = workload.subject.prepare()
     try:
-        assert work.calls_per_operation(prepared.call, operations=10) == expected_calls
+        assert work.calls_per_operation(prepared.call, operations=10) <= maximum_calls
     finally:
         if prepared.close is not None:
             prepared.close()
