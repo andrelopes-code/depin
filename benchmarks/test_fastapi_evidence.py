@@ -54,7 +54,14 @@ def _raw(side: str, repetition: int, revision: str, interpreter: str) -> dict[st
         'pyvenv_cfg_sha256': hashlib.sha256((Path(interpreter).parent.parent / 'pyvenv.cfg').read_bytes()).hexdigest(),
         'environment': {
             'interpreter': {'implementation': 'CPython', 'version': '3.12', 'compiler': 'GCC'},
-            'host': {'system': 'Linux', 'release': '6', 'machine': 'x86_64', 'available_processors': 2},
+            'host': {
+                'system': 'Linux',
+                'release': '6',
+                'machine': 'x86_64',
+                'cpu_model': 'test',
+                'available_processors': 2,
+                'load_average': [1.0 + repetition / 10 if side == 'base' else 2.0 + repetition / 10],
+            },
             'distributions': {'pydepin': '1', 'pytest': '1', 'pytest-benchmark': '1'},
             'cpu': {'model': 'test'},
             'kernel': '6',
@@ -245,6 +252,48 @@ def test_reduction_accepts_zero_dispersion_but_refuses_empty_resource_teardown(t
         require_object(resource[label], label)['closed'] = []
     write_json(tmp_path / 'raw' / 'head' / 'rep2.json', payload)
     with pytest.raises(HarnessError, match='teardown must close'):
+        reduce(
+            tmp_path / 'raw',
+            BASELINE_REVISION,
+            HEAD_REVISION,
+            {'base': str(tmp_path / 'base-env'), 'head': str(tmp_path / 'head-env')},
+        )
+
+
+@pytest.mark.parametrize(
+    ('path', 'value'),
+    [
+        (('environment', 'host', 'cpu_model'), 'other'),
+        (('environment', 'kernel'), 'other'),
+        (('environment', 'governor'), 'powersave'),
+        (('environment', 'affinity'), [1]),
+    ],
+)
+def test_reduction_refuses_stable_environment_mismatch(tmp_path: Path, path: tuple[str, ...], value: object) -> None:
+    _ = _reduced(tmp_path)
+    payload = read_json(tmp_path / 'raw' / 'head' / 'rep0.json')
+    target: dict[str, object] = payload
+    for field in path[:-1]:
+        target = require_object(target[field], field)
+    target[path[-1]] = value
+    write_json(tmp_path / 'raw' / 'head' / 'rep0.json', payload)
+
+    with pytest.raises(HarnessError, match='environment differs'):
+        reduce(
+            tmp_path / 'raw',
+            BASELINE_REVISION,
+            HEAD_REVISION,
+            {'base': str(tmp_path / 'base-env'), 'head': str(tmp_path / 'head-env')},
+        )
+
+
+def test_reduction_refuses_malformed_dynamic_load_telemetry(tmp_path: Path) -> None:
+    _ = _reduced(tmp_path)
+    payload = read_json(tmp_path / 'raw' / 'head' / 'rep0.json')
+    require_object(require_object(payload['environment'], 'environment')['host'], 'host')['load_average'] = ['bad']
+    write_json(tmp_path / 'raw' / 'head' / 'rep0.json', payload)
+
+    with pytest.raises(HarnessError, match='load_average'):
         reduce(
             tmp_path / 'raw',
             BASELINE_REVISION,

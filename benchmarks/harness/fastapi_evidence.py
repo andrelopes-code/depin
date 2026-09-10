@@ -647,6 +647,22 @@ def _sidecar(values: Sequence[float]) -> float:
     return float(median(values))
 
 
+def _stable_environment(value: object, where: str) -> dict[str, object]:
+    environment = require_object(value, where)
+    host = require_object(environment.get('host'), f'{where}.host')
+    load = host.get('load_average')
+    if load is not None:
+        for index, reading in enumerate(require_array(load, f'{where}.host.load_average')):
+            number = require_number(reading, f'{where}.host.load_average[{index}]')
+            if not math.isfinite(number) or number < 0.0:
+                raise HarnessError(f'{where}.host.load_average[{index}]: expected a finite non-negative load reading')
+    stable = dict(environment)
+    stable_host = dict(host)
+    stable_host.pop('load_average', None)
+    stable['host'] = stable_host
+    return stable
+
+
 def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: Mapping[str, str]) -> dict[str, object]:
     """Validate exact v3 envelopes and project the unchanged evaluator inputs."""
     if baseline_revision != BASELINE_REVISION:
@@ -749,8 +765,9 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
         }
 
     environment_payload = require_object(base_records[0].get('environment'), 'environment')
+    stable_environment = _stable_environment(environment_payload, 'base environment')
     if any(
-        require_object(record.get('environment'), 'environment') != environment_payload
+        _stable_environment(record.get('environment'), 'environment') != stable_environment
         for record in (*base_records, *head_records)
     ):
         raise HarnessError('environment differs between raw envelopes')
