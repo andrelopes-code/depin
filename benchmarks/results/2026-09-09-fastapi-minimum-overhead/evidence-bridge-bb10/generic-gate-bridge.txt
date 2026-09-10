@@ -1,0 +1,6 @@
+inconclusive latency      fastapi_application_startup: +9.19% [+3.80%, +11.16%] budget 6.0% n=5
+pass        latency      fastapi_async_resource_teardown: -3.87% [-8.47%, -3.02%] budget 5.0% n=5
+pass        latency      fastapi_cpu_light_endpoint: -6.87% [-9.72%, -5.67%] budget 5.0% n=5
+pass        latency      fastapi_endpoint_with_work: -4.31% [-7.06%, -3.73%] budget 5.0% n=5
+pass        latency      fastapi_request_scoped_graph: -6.00% [-8.93%, -1.82%] budget 5.0% n=5
+pass        latency      fastapi_singletons_and_transients: -8.47% [-13.81%, -7.31%] budget 8.0% n=5

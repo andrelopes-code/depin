@@ -1,0 +1,26 @@
+pass         required paired    allocations: -2.63% budget +0.00%
+fail         required paired    application_startup: +9.19% budget +6.00%
+pass         required head-only component:fastapi_async_resource_close: validated component observation
+pass         required head-only component:fastapi_endpoint_program_many_keys: validated component observation
+pass         required head-only component:fastapi_endpoint_program_one_key: validated component observation
+pass         required head-only component:fastapi_lazy_frame_activation_and_drain: validated component observation
+pass         required head-only component:fastapi_lazy_host_publication: validated component observation
+pass         required head-only component:fastapi_request_seed_read: validated component observation
+fail         required paired    contention: +6.85% budget +5.00%
+pass         required paired    cpu-light-attributable-p50: -49.84% [-55.56%, -44.11%] n=5 upper bound must be <= -25%
+pass         target   paired    cpu-light-attributable-p50-stretch: -49.84% [-55.56%, -44.11%] n=5 point target is <= -30%
+fail         required paired    fastapi_application_startup:p95-total: +23.31% total-latency change must be <= +5% n=5
+fail         required paired    fastapi_application_startup:p99-total: +15.29% total-latency change must be <= +5% n=5
+pass         required paired    fastapi_async_resource_teardown:p95-total: +0.12% total-latency change must be <= +5% n=5
+pass         required paired    fastapi_async_resource_teardown:p99-total: -1.89% total-latency change must be <= +5% n=5
+pass         required paired    fastapi_cpu_light_endpoint:p95-total: +3.09% total-latency change must be <= +5% n=5
+fail         required paired    fastapi_cpu_light_endpoint:p99-total: +23.65% total-latency change must be <= +5% n=5
+pass         required paired    fastapi_endpoint_with_work:p95-total: -8.23% total-latency change must be <= +5% n=5
+pass         required paired    fastapi_endpoint_with_work:p99-total: -2.56% total-latency change must be <= +5% n=5
+fail         required paired    fastapi_request_scoped_graph:p95-total: +7.98% total-latency change must be <= +5% n=5
+fail         required paired    fastapi_request_scoped_graph:p99-total: +27.00% total-latency change must be <= +5% n=5
+pass         required paired    fastapi_singletons_and_transients:p95-total: -8.74% total-latency change must be <= +5% n=5
+pass         required paired    fastapi_singletons_and_transients:p99-total: -15.28% total-latency change must be <= +5% n=5
+pass         required head-only no_injection: +2.55% budget +5.00%
+pass         required paired    peak_memory: -8.48% budget +5.00%
+pass         required paired    retained_memory: -0.38% budget +2.00%

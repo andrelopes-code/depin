@@ -1,0 +1,5 @@
+Command:
+UV_CACHE_DIR=/tmp/depin-task5-competitor-cache UV_PROJECT_ENVIRONMENT=/tmp/depin-task5-head-env-bb10 /tmp/depin-task5-head-env-bb10/bin/python -m benchmarks.comparison.collection collect --repetitions 5 --out /tmp/depin-task5-competitor-bb10.json --baseline-dir /tmp/depin-task5-base-PXakAP --baseline-revision 086adf98459773e3175f4723b2b64e3f47306e42 --budgets benchmarks/leadership-targets.toml
+
+Result:
+/tmp/depin-task5-base-PXakAP/.depin-baseline-revision: baseline marker is missing or unreadable ([Errno 2] No such file or directory: '/tmp/depin-task5-base-PXakAP/.depin-baseline-revision')

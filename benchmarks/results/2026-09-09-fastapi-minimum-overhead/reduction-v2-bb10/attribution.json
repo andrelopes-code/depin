@@ -1,0 +1,37 @@
+{
+  "baseline_revision": "086adf98459773e3175f4723b2b64e3f47306e42",
+  "head_revision": "bb10ef98d8d46b41563d2b6e42ee903b35d53fba",
+  "method": "direct-request-p50",
+  "metric": "p50",
+  "repetitions": [
+    {
+      "base_direct_p50": 0.0006641739746555686,
+      "head_direct_p50": 0.000644029991235584,
+      "repetition": 0
+    },
+    {
+      "base_direct_p50": 0.0006419019773602486,
+      "head_direct_p50": 0.0006302510155364871,
+      "repetition": 1
+    },
+    {
+      "base_direct_p50": 0.000627046509180218,
+      "head_direct_p50": 0.0006269090226851404,
+      "repetition": 2
+    },
+    {
+      "base_direct_p50": 0.0006132849957793951,
+      "head_direct_p50": 0.0006191240099724382,
+      "repetition": 3
+    },
+    {
+      "base_direct_p50": 0.0006307245348580182,
+      "head_direct_p50": 0.0006217960035428405,
+      "repetition": 4
+    }
+  ],
+  "schema_version": 1,
+  "scope": "paired",
+  "unit": "seconds per operation",
+  "workload": "fastapi_cpu_light_endpoint"
+}

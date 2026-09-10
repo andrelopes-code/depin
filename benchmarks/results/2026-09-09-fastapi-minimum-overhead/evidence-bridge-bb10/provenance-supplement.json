@@ -1,0 +1,68 @@
+{
+  "affinity": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "collection_command_source": "preserved raw/report neutral-runner invocation evidence; orchestrator argv unavailable",
+  "environments": {
+    "base": {
+      "affinity": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "direct_url": "{\"url\":\"file:///tmp/depin-task5-base-PXakAP\",\"dir_info\":{\"editable\":true}}",
+      "executable": "/tmp/depin-task5-base-env-ea93/bin/python",
+      "pins": {
+        "fastapi": "0.141.1",
+        "pydepin": "0.19.0",
+        "pytest": "9.1.1",
+        "pytest-benchmark": "5.3.0",
+        "starlette": "1.6.0"
+      },
+      "prefix": "/tmp/depin-task5-base-env-ea93"
+    },
+    "head": {
+      "affinity": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "direct_url": "{\"url\":\"file:///tmp/depin-task5-head-bb10-cjgz0P\",\"dir_info\":{\"editable\":true}}",
+      "executable": "/tmp/depin-task5-head-env-bb10/bin/python",
+      "pins": {
+        "fastapi": "0.141.1",
+        "pydepin": "0.19.0",
+        "pytest": "9.1.1",
+        "pytest-benchmark": "5.3.0",
+        "starlette": "1.6.0"
+      },
+      "prefix": "/tmp/depin-task5-head-env-bb10"
+    }
+  },
+  "governor": "unavailable",
+  "governor_checked_paths": [
+    "/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
+  ],
+  "governor_observations": [],
+  "locks": {
+    "base": "02230a6fa29ed367a45580aaae6ad6d10cdfecb234ef9fa8c82177084ee6b317",
+    "head": "02230a6fa29ed367a45580aaae6ad6d10cdfecb234ef9fa8c82177084ee6b317"
+  },
+  "measured_head_revision": "bb10ef98d8d46b41563d2b6e42ee903b35d53fba",
+  "post_measurement_commits": [
+    "365d194",
+    "7b9b179"
+  ],
+  "post_measurement_scope": "evidence schema validation/projection only; no depin or measured workload changes",
+  "raw_sources": [
+    "/tmp/depin-task5-final-bb10/base/rep0.json",
+    "/tmp/depin-task5-final-bb10/head/rep0.json"
+  ],
+  "reducer_revision": "0f9e71e",
+  "schema_version": 1
+}

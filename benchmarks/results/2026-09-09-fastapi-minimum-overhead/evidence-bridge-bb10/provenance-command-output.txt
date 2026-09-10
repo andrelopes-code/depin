@@ -1,0 +1,1 @@
+{"affinity": [0, 1, 2, 3], "governor": "unavailable", "locks": {"base": "02230a6fa29ed367a45580aaae6ad6d10cdfecb234ef9fa8c82177084ee6b317", "head": "02230a6fa29ed367a45580aaae6ad6d10cdfecb234ef9fa8c82177084ee6b317"}, "pins": {"fastapi": "0.141.1", "pydepin": "0.19.0", "pytest": "9.1.1", "pytest-benchmark": "5.3.0", "starlette": "1.6.0"}}

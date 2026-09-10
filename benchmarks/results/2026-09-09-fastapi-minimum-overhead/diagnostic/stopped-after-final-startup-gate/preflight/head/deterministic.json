@@ -1,0 +1,128 @@
+{
+  "allocations": {
+    "allocations_of_a_cached_singleton_resolution": {
+      "blocks": 13,
+      "peak": 2056,
+      "size": 1168
+    },
+    "allocations_of_a_request_shaped_scope": {
+      "blocks": 27,
+      "peak": 4504,
+      "size": 2360
+    },
+    "allocations_of_a_scope_cycle": {
+      "blocks": 75,
+      "peak": 14576,
+      "size": 6176
+    },
+    "allocations_of_a_transient_chain": {
+      "blocks": 12,
+      "peak": 2008,
+      "size": 1224
+    },
+    "allocations_of_an_inject_call": {
+      "blocks": 17,
+      "peak": 2064,
+      "size": 1360
+    }
+  },
+  "retained": {
+    "retained_by_a_frozen_container_of_100": 35032,
+    "retained_by_a_frozen_container_of_1000": 326776,
+    "retained_by_a_warm_singleton_cache_of_1000": 397560,
+    "retained_by_an_open_scope_of_20": 10648
+  },
+  "scaling": {
+    "scale_async_teardown": {
+      "costs": [
+        0.00017106076950312854,
+        0.00028108352739764086,
+        0.00046175898432920803
+      ],
+      "sizes": [
+        10,
+        20,
+        40
+      ]
+    },
+    "scale_freeze_graph_size": {
+      "costs": [
+        0.0038440375647041947,
+        0.008435089250269812,
+        0.014238760006264783
+      ],
+      "sizes": [
+        100,
+        200,
+        400
+      ]
+    },
+    "scale_override_nesting": {
+      "costs": [
+        2.4532901310436728e-06,
+        4.091469541833703e-06,
+        1.1780345701595252e-05
+      ],
+      "sizes": [
+        8,
+        32,
+        128
+      ]
+    },
+    "scale_resolve_collection": {
+      "costs": [
+        2.4615189701648887e-05,
+        0.00019374922271708783,
+        0.00039633534379390767
+      ],
+      "sizes": [
+        10,
+        100,
+        200
+      ]
+    },
+    "scale_resolve_fan_out": {
+      "costs": [
+        1.945701586691939e-05,
+        3.743229785868607e-05,
+        8.048698629181672e-05
+      ],
+      "sizes": [
+        10,
+        20,
+        40
+      ]
+    },
+    "scale_resolve_transient_depth": {
+      "costs": [
+        3.7978278832895285e-06,
+        1.1075693599593706e-05,
+        4.6861152355859303e-05
+      ],
+      "sizes": [
+        10,
+        40,
+        160
+      ]
+    },
+    "scale_scope_teardown": {
+      "costs": [
+        0.00010329904876016371,
+        0.00018322274797810678,
+        0.0003722354531419114
+      ],
+      "sizes": [
+        10,
+        20,
+        40
+      ]
+    }
+  },
+  "work": {
+    "allocations_of_a_cached_singleton_resolution": 8,
+    "allocations_of_a_request_shaped_scope": 88,
+    "allocations_of_a_scope_cycle": 358,
+    "allocations_of_a_transient_chain": 28,
+    "allocations_of_an_inject_call": 28
+  }
+}

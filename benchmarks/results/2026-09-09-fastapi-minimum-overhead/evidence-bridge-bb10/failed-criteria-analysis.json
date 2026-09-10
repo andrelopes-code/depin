@@ -1,0 +1,662 @@
+{
+  "contention": {
+    "depin": {
+      "bootstrap_ci": {
+        "lower": -0.3363104989178458,
+        "method": "paired bootstrap median ratio",
+        "resamples": 10000,
+        "seed": 20260902,
+        "upper": 6.641855739444852
+      },
+      "n": 5,
+      "ratio": 0.2247207932291049
+    },
+    "direct": {
+      "bootstrap_ci": {
+        "lower": -0.5206592089525139,
+        "method": "paired bootstrap median ratio",
+        "resamples": 10000,
+        "seed": 20260902,
+        "upper": 0.7858364683600223
+      },
+      "n": 5,
+      "ratio": 0.01385538011712167
+    },
+    "median_absolute_difference_of_differences": 1.0047840000000039e-05,
+    "repetitions": [
+      {
+        "base": {
+          "config": {
+            "samples": 5,
+            "workers": 2
+          },
+          "depin": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00040581904000000003
+          },
+          "direct": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.0005630680400000001
+          }
+        },
+        "head": {
+          "config": {
+            "samples": 5,
+            "workers": 2
+          },
+          "depin": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00310121056
+          },
+          "direct": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.0010055474399999998
+          }
+        },
+        "repetition": 0,
+        "selector": "profile.request_scopes.{direct,depin}.p99_seconds; reducer uses median(base.depin) versus median(head.depin)"
+      },
+      {
+        "base": {
+          "config": {
+            "samples": 5,
+            "workers": 2
+          },
+          "depin": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00050684852
+          },
+          "direct": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00022562760000000001
+          }
+        },
+        "head": {
+          "config": {
+            "samples": 5,
+            "workers": 2
+          },
+          "depin": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00041958703999999997
+          },
+          "direct": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00018023243999999998
+          }
+        },
+        "repetition": 1,
+        "selector": "profile.request_scopes.{direct,depin}.p99_seconds; reducer uses median(base.depin) versus median(head.depin)"
+      },
+      {
+        "base": {
+          "config": {
+            "samples": 5,
+            "workers": 2
+          },
+          "depin": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.0004040642
+          },
+          "direct": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00018723124000000001
+          }
+        },
+        "head": {
+          "config": {
+            "samples": 5,
+            "workers": 2
+          },
+          "depin": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.0005374332
+          },
+          "direct": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00018982540000000002
+          }
+        },
+        "repetition": 2,
+        "selector": "profile.request_scopes.{direct,depin}.p99_seconds; reducer uses median(base.depin) versus median(head.depin)"
+      },
+      {
+        "base": {
+          "config": {
+            "samples": 5,
+            "workers": 2
+          },
+          "depin": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.0003540566
+          },
+          "direct": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00015246816000000002
+          }
+        },
+        "head": {
+          "config": {
+            "samples": 5,
+            "workers": 2
+          },
+          "depin": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00043362048
+          },
+          "direct": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00026463896
+          }
+        },
+        "repetition": 3,
+        "selector": "profile.request_scopes.{direct,depin}.p99_seconds; reducer uses median(base.depin) versus median(head.depin)"
+      },
+      {
+        "base": {
+          "config": {
+            "samples": 5,
+            "workers": 2
+          },
+          "depin": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.0005785682
+          },
+          "direct": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00039301408
+          }
+        },
+        "head": {
+          "config": {
+            "samples": 5,
+            "workers": 2
+          },
+          "depin": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00038398964
+          },
+          "direct": {
+            "method": "synchronized-wave",
+            "unit": "seconds",
+            "value": 0.00018838768
+          }
+        },
+        "repetition": 4,
+        "selector": "profile.request_scopes.{direct,depin}.p99_seconds; reducer uses median(base.depin) versus median(head.depin)"
+      }
+    ]
+  },
+  "criteria": [
+    {
+      "criterion": "startup-p50",
+      "depin": {
+        "bootstrap_ci": {
+          "lower": 0.03795644059390324,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 0.11163749951022428
+        },
+        "n": 5,
+        "ratio": 0.0919155674510165
+      },
+      "direct": {
+        "bootstrap_ci": {
+          "lower": -0.02498687457402915,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 0.03537786524591535
+        },
+        "n": 5,
+        "ratio": 0.018204705269872605
+      },
+      "field": "median",
+      "median_absolute_difference_of_differences": 0.00022131152218207717,
+      "repetitions": [
+        {
+          "absolute_difference_of_differences": 0.0001773535623215139,
+          "base_depin": 0.0026074369670823216,
+          "base_direct": 0.0017612845113035291,
+          "depin_ratio": 0.09191556745101614,
+          "direct_ratio": 0.03537786524591535,
+          "head_depin": 0.0028471010155044496,
+          "head_direct": 0.0018235949974041432
+        },
+        {
+          "absolute_difference_of_differences": 0.0002313645090907812,
+          "base_depin": 0.002539386972784996,
+          "base_direct": 0.0017034334887284786,
+          "depin_ratio": 0.07434905833027106,
+          "direct_ratio": -0.02498687457402915,
+          "head_depin": 0.002728188002947718,
+          "head_direct": 0.0016608700098004192
+        },
+        {
+          "absolute_difference_of_differences": 0.00022131152218207717,
+          "base_depin": 0.0024516150006093085,
+          "base_direct": 0.001606716017704457,
+          "depin_ratio": 0.10625444802363804,
+          "direct_ratio": 0.024387306806163744,
+          "head_depin": 0.0027121099992655218,
+          "head_direct": 0.0016458994941785932
+        },
+        {
+          "absolute_difference_of_differences": 0.00024321250384673476,
+          "base_depin": 0.002437818970065564,
+          "base_direct": 0.001589671999681741,
+          "depin_ratio": 0.11163749951022428,
+          "direct_ratio": 0.018204705269872612,
+          "head_depin": 0.0027099709841422737,
+          "head_direct": 0.001618611509911716
+        },
+        {
+          "absolute_difference_of_differences": 0.00010894390288740396,
+          "base_depin": 0.002537934051360935,
+          "base_direct": 0.001640949456486851,
+          "depin_ratio": 0.03795644059390324,
+          "direct_ratio": -0.007686379239663976,
+          "head_depin": 0.0026342649944126606,
+          "head_direct": 0.0016283364966511726
+        }
+      ],
+      "workload": "fastapi_application_startup"
+    },
+    {
+      "criterion": "startup-p95",
+      "depin": {
+        "bootstrap_ci": {
+          "lower": -0.16466675386629948,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 0.46935070093829423
+        },
+        "n": 5,
+        "ratio": 0.23305210690865322
+      },
+      "direct": {
+        "bootstrap_ci": {
+          "lower": -0.2974064562621267,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 0.32315049457152
+        },
+        "n": 5,
+        "ratio": 0.03583322782563689
+      },
+      "field": "p95",
+      "median_absolute_difference_of_differences": 0.0011205857823370022,
+      "repetitions": [
+        {
+          "absolute_difference_of_differences": -0.0011511437856825076,
+          "base_depin": 0.005674474616535008,
+          "base_direct": 0.003390012955060229,
+          "depin_ratio": -0.009808735858778395,
+          "direct_ratio": 0.32315049457152,
+          "head_depin": 0.005618815193884073,
+          "head_direct": 0.004485497318091802
+        },
+        {
+          "absolute_difference_of_differences": 0.0019088954577455323,
+          "base_depin": 0.003161652607377617,
+          "base_direct": 0.003940955657162703,
+          "depin_ratio": 0.23305210690865374,
+          "direct_ratio": -0.2974064562621267,
+          "head_depin": 0.003898482408840209,
+          "head_direct": 0.002768890000879763
+        },
+        {
+          "absolute_difference_of_differences": 0.0011205857823370022,
+          "base_depin": 0.002772234985604882,
+          "base_direct": 0.0019434406596701593,
+          "depin_ratio": 0.41763746799626866,
+          "direct_ratio": 0.01914306853495984,
+          "head_depin": 0.003930024185683578,
+          "head_direct": 0.0019806440774118527
+        },
+        {
+          "absolute_difference_of_differences": 0.0013515286380425106,
+          "base_depin": 0.0030301257735118265,
+          "base_direct": 0.0019719969975994893,
+          "depin_ratio": 0.46935070093829423,
+          "direct_ratio": 0.03583322782563769,
+          "head_depin": 0.004452317429240793,
+          "head_direct": 0.002042660015285945
+        },
+        {
+          "absolute_difference_of_differences": -0.000682088563917202,
+          "base_depin": 0.003591623599641024,
+          "base_direct": 0.002015709190163761,
+          "depin_ratio": -0.16466675386629948,
+          "direct_ratio": 0.044980478879175445,
+          "head_depin": 0.003000202600378543,
+          "head_direct": 0.002106376754818482
+        }
+      ],
+      "workload": "fastapi_application_startup"
+    },
+    {
+      "criterion": "startup-p99",
+      "depin": {
+        "bootstrap_ci": {
+          "lower": -0.016519103157785375,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 0.9316902682924588
+        },
+        "n": 5,
+        "ratio": 0.15292321896414643
+      },
+      "direct": {
+        "bootstrap_ci": {
+          "lower": -0.45054638114634704,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 0.5233267913302235
+        },
+        "n": 5,
+        "ratio": 0.1052557602890637
+      },
+      "field": "p99",
+      "median_absolute_difference_of_differences": 0.0011985072644893082,
+      "repetitions": [
+        {
+          "absolute_difference_of_differences": -0.0010148677870165518,
+          "base_depin": 0.008255539822857826,
+          "base_direct": 0.005462727850535884,
+          "depin_ratio": 0.12371595531208013,
+          "direct_ratio": 0.37274596841184016,
+          "head_depin": 0.009276881818659603,
+          "head_direct": 0.007498937633354212
+        },
+        {
+          "absolute_difference_of_differences": 0.004003327655955218,
+          "base_depin": 0.0041001196415163576,
+          "base_direct": 0.007493843705160543,
+          "depin_ratio": 0.1529232189641463,
+          "direct_ratio": -0.45054638114634704,
+          "head_depin": 0.0047271231352351605,
+          "head_direct": 0.004117519542924128
+        },
+        {
+          "absolute_difference_of_differences": 0.0011985072644893082,
+          "base_depin": 0.0038628342724405227,
+          "base_direct": 0.0031468994566239412,
+          "depin_ratio": 0.30237999466265153,
+          "direct_ratio": -0.009680467465178477,
+          "head_depin": 0.005030878079123795,
+          "head_direct": 0.0031164359988179054
+        },
+        {
+          "absolute_difference_of_differences": 0.003235376112861555,
+          "base_depin": 0.003804406034760177,
+          "base_direct": 0.0029371500952402128,
+          "depin_ratio": 0.9316902682924588,
+          "direct_ratio": 0.10525576028906358,
+          "head_depin": 0.007348934113979336,
+          "head_direct": 0.0032463020615978166
+        },
+        {
+          "absolute_difference_of_differences": -0.0016596738464431837,
+          "base_depin": 0.004138171751983464,
+          "base_direct": 0.0030407672352157533,
+          "depin_ratio": -0.016519103157785375,
+          "direct_ratio": 0.5233267913302235,
+          "head_depin": 0.0040698128659278155,
+          "head_direct": 0.004632082195603289
+        }
+      ],
+      "workload": "fastapi_application_startup"
+    },
+    {
+      "criterion": "cpu-light-p99",
+      "depin": {
+        "bootstrap_ci": {
+          "lower": -0.4480269490137453,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 2.2162632755915483
+        },
+        "n": 5,
+        "ratio": 0.2365432065452273
+      },
+      "direct": {
+        "bootstrap_ci": {
+          "lower": -0.5955863468080151,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 0.12757346706207584
+        },
+        "n": 5,
+        "ratio": 0.03213747492199866
+      },
+      "field": "p99",
+      "median_absolute_difference_of_differences": 0.0006201510975370126,
+      "repetitions": [
+        {
+          "absolute_difference_of_differences": 0.002148461328470157,
+          "base_depin": 0.0067690106853842726,
+          "base_direct": 0.008699260084540587,
+          "depin_ratio": -0.4480269490137453,
+          "direct_ratio": -0.5955863468080151,
+          "head_depin": 0.003736311480170116,
+          "head_direct": 0.003518099550856273
+        },
+        {
+          "absolute_difference_of_differences": 0.004106351872906081,
+          "base_depin": 0.0019589319848455486,
+          "base_direct": 0.0029107573034707454,
+          "depin_ratio": 2.2162632755915483,
+          "direct_ratio": 0.08078899062054057,
+          "head_depin": 0.0063004410022403975,
+          "head_direct": 0.0031459144479595133
+        },
+        {
+          "absolute_difference_of_differences": -9.562100749462997e-05,
+          "base_depin": 0.000972049526753837,
+          "base_direct": 0.000874596913927235,
+          "depin_ratio": -0.09505719494851672,
+          "direct_ratio": 0.003682503424251804,
+          "head_depin": 0.0008796492253895841,
+          "head_direct": 0.0008778176200576122
+        },
+        {
+          "absolute_difference_of_differences": 0.0006201510975370126,
+          "base_depin": 0.0010467376653105014,
+          "base_direct": 0.0009688889747485517,
+          "depin_ratio": 0.6222081847718726,
+          "direct_ratio": 0.03213747492199848,
+          "head_depin": 0.0016980264079756965,
+          "head_direct": 0.0010000266198767341
+        },
+        {
+          "absolute_difference_of_differences": 0.00023024675378110343,
+          "base_depin": 0.0014330340502783652,
+          "base_direct": 0.0008522753050783648,
+          "depin_ratio": 0.2365432065452273,
+          "direct_ratio": 0.12757346706207584,
+          "head_depin": 0.001772008519619704,
+          "head_direct": 0.0009610030206386003
+        }
+      ],
+      "workload": "fastapi_cpu_light_endpoint"
+    },
+    {
+      "criterion": "request-scoped-p95",
+      "depin": {
+        "bootstrap_ci": {
+          "lower": -0.6549795600188217,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 2.736141245237233
+        },
+        "n": 5,
+        "ratio": 0.07980659836333787
+      },
+      "direct": {
+        "bootstrap_ci": {
+          "lower": -0.5657203085801441,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 0.8975268179370319
+        },
+        "n": 5,
+        "ratio": -0.09297793536053732
+      },
+      "field": "p95",
+      "median_absolute_difference_of_differences": -1.3612519251182936e-05,
+      "repetitions": [
+        {
+          "absolute_difference_of_differences": -0.0004497997200815008,
+          "base_depin": 0.0030248105875216426,
+          "base_direct": 0.0027069726231275125,
+          "depin_ratio": -0.6549795600188217,
+          "direct_ratio": -0.5657203085801441,
+          "head_depin": 0.0010436214797664434,
+          "head_direct": 0.001175583235453814
+        },
+        {
+          "absolute_difference_of_differences": -1.3612519251182936e-05,
+          "base_depin": 0.0010121522500412539,
+          "base_direct": 0.0009110873157624153,
+          "depin_ratio": -0.0971430304086549,
+          "direct_ratio": -0.09297793536053711,
+          "head_depin": 0.0009138287132373079,
+          "head_direct": 0.0008263762982096523
+        },
+        {
+          "absolute_difference_of_differences": 0.0027130214497447015,
+          "base_depin": 0.001002840424189344,
+          "base_direct": 0.0007227009278722108,
+          "depin_ratio": 2.736141245237233,
+          "direct_ratio": 0.0427446486915648,
+          "head_depin": 0.003746753471205011,
+          "head_direct": 0.0007535925251431763
+        },
+        {
+          "absolute_difference_of_differences": 0.001066669964347966,
+          "base_depin": 0.0009303324914071709,
+          "base_direct": 0.001478360276087187,
+          "depin_ratio": 0.4983614862312533,
+          "direct_ratio": -0.40790333114003385,
+          "head_depin": 0.0013939743745140733,
+          "head_direct": 0.0008753321948461233
+        },
+        {
+          "absolute_difference_of_differences": -0.0005823201703606171,
+          "base_depin": 0.0008476727380184457,
+          "base_direct": 0.000724178971722722,
+          "depin_ratio": 0.07980659836333825,
+          "direct_ratio": 0.8975268179370319,
+          "head_depin": 0.0009153226157650351,
+          "head_direct": 0.0013741490198299286
+        }
+      ],
+      "workload": "fastapi_request_scoped_graph"
+    },
+    {
+      "criterion": "request-scoped-p99",
+      "depin": {
+        "bootstrap_ci": {
+          "lower": -0.5681288532050386,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 1.5839436920394863
+        },
+        "n": 5,
+        "ratio": 0.27002832015760764
+      },
+      "direct": {
+        "bootstrap_ci": {
+          "lower": -0.6091344531770473,
+          "method": "paired bootstrap median ratio",
+          "resamples": 10000,
+          "seed": 20260902,
+          "upper": 2.1773553160774872
+        },
+        "n": 5,
+        "ratio": -0.12668613992128094
+      },
+      "field": "p99",
+      "median_absolute_difference_of_differences": -0.00010477663483471236,
+      "repetitions": [
+        {
+          "absolute_difference_of_differences": -0.0016668099811067614,
+          "base_depin": 0.004826889494434,
+          "base_direct": 0.0038022825034568068,
+          "depin_ratio": -0.5681288532050386,
+          "direct_ratio": -0.2828525263274648,
+          "head_depin": 0.0020845943014137632,
+          "head_direct": 0.0027267972915433316
+        },
+        {
+          "absolute_difference_of_differences": -0.00010477663483471236,
+          "base_depin": 0.0015544202731689438,
+          "base_direct": 0.0014343346271198233,
+          "depin_ratio": -0.18430469355363044,
+          "direct_ratio": -0.12668613992128108,
+          "head_depin": 0.001267933321068991,
+          "head_direct": 0.0012526243098545829
+        },
+        {
+          "absolute_difference_of_differences": 0.00287085999851117,
+          "base_depin": 0.0018524113541934415,
+          "base_direct": 0.0008838514483068137,
+          "depin_ratio": 1.5496669392449274,
+          "direct_ratio": -0.00027082043722026494,
+          "head_depin": 0.004723031987668943,
+          "head_direct": 0.0008836120832711455
+        },
+        {
+          "absolute_difference_of_differences": 0.004531248646089806,
+          "base_depin": 0.001452080579474572,
+          "base_direct": 0.0036629594012629234,
+          "depin_ratio": 1.5839436920394863,
+          "direct_ratio": -0.6091344531770473,
+          "head_depin": 0.0037520944536663624,
+          "head_direct": 0.0014317246293649077
+        },
+        {
+          "absolute_difference_of_differences": -0.0016488263645442177,
+          "base_depin": 0.000991204971796833,
+          "base_direct": 0.0008801869698800149,
+          "depin_ratio": 0.2700283201576079,
+          "direct_ratio": 2.1773553160774872,
+          "head_depin": 0.0012588583852630008,
+          "head_direct": 0.0027966667478904004
+        }
+      ],
+      "workload": "fastapi_request_scoped_graph"
+    }
+  ],
+  "seed": 20260902
+}

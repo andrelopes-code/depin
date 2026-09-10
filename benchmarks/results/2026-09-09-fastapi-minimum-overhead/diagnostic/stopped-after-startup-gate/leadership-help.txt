@@ -1,0 +1,8 @@
+usage: python -m benchmarks.comparison.leadership [-h]
+                                                  {calibrate,evaluate} ...
+
+positional arguments:
+  {calibrate,evaluate}
+
+options:
+  -h, --help            show this help message and exit
