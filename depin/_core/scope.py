@@ -178,7 +178,6 @@ class ScopeFrame:
         '_teardowns',
         'active',
         'context_parent',
-        'mutex',
         'owner',
         'parent',
     )
@@ -196,7 +195,6 @@ class ScopeFrame:
         self._teardowns: list[Teardown] = []
         self._lifecycle = lifecycle
         self._mutex = lifecycle.mutex if lifecycle is not None else threading.Lock()
-        self.mutex = self._mutex
         self.active = True
         self.context_parent = context_parent
         self.owner = owner
@@ -631,7 +629,7 @@ def push_frame(owner: ScopeFrame | None = None) -> Generator[ScopeFrame]:
     try:
         yield frame
     finally:
-        with frame.mutex:
+        with frame._mutex:  # pyright: ignore[reportPrivateUsage]  # `push_frame` owns this module's frame lifecycle.
             frame.active = False
         _active.reset(token)
 

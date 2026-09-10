@@ -2,7 +2,7 @@
 
 import asyncio
 import threading
-from typing import Literal
+from typing import override
 
 import pytest
 
@@ -187,20 +187,22 @@ def test_push_frame_sets_active() -> None:
 
 
 def test_push_frame_exit_waits_for_a_frame_mutation_lock() -> None:
-    class ExitGate:
+    class BlockingCache(dict[object, object]):
         def __init__(self) -> None:
-            self.entered = threading.Event()
+            super().__init__()
+            self.mutation_started = threading.Event()
             self.release = threading.Event()
 
-        def __enter__(self) -> None:
-            self.entered.set()
-            assert self.release.wait(1)
+        @override
+        def __setitem__(self, key: object, value: object) -> None:
+            self.mutation_started.set()
+            self.release.wait()
+            super().__setitem__(key, value)
 
-        def __exit__(self, exception_type: object, exception: object, traceback: object) -> Literal[False]:
-            return False
-
+    assert not hasattr(ScopeFrame(), 'mutex')
     opened = threading.Event()
     leave = threading.Event()
+    exiting = threading.Event()
     exited = threading.Event()
     frames: list[ScopeFrame] = []
 
@@ -209,19 +211,30 @@ def test_push_frame_exit_waits_for_a_frame_mutation_lock() -> None:
             frames.append(frame)
             opened.set()
             assert leave.wait(1)
+            exiting.set()
         exited.set()
 
     thread = threading.Thread(target=run_scope)
     thread.start()
     assert opened.wait(1)
-    gate = ExitGate()
-    object.__setattr__(frames[0], 'mutex', gate)
-    leave.set()
+    frame = frames[0]
+    cache = BlockingCache()
+    object.__setattr__(frame, '_cache', cache)
 
-    assert gate.entered.wait(1)
-    assert not exited.is_set()
-    gate.release.set()
-    thread.join()
+    def mutate() -> None:
+        frame.provide('key', 'value')
+
+    mutator = threading.Thread(target=mutate)
+    mutator.start()
+    try:
+        assert cache.mutation_started.wait(1)
+        leave.set()
+        assert exiting.wait(1)
+        assert not exited.wait(1)
+    finally:
+        cache.release.set()
+        mutator.join()
+        thread.join()
     assert exited.is_set()
 
 
