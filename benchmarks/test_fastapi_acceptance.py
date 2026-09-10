@@ -37,13 +37,20 @@ def _aggregate(median: float, *, p95: float = 120.0, p99: float = 130.0) -> dict
     }
 
 
-def _dataset(tmp_path: Path, *, head_median: float = 70.0, head_p95: float = 120.0, head_p99: float = 130.0) -> Path:
+def _dataset(
+    tmp_path: Path,
+    *,
+    head_median: float = 70.0,
+    head_p95: float = 120.0,
+    head_p99: float = 130.0,
+    repetitions: int = 5,
+) -> Path:
     dataset = tmp_path / 'dataset'
     write_json(
         dataset / 'environment.json',
         {
             'seed': DEFAULT_SEED,
-            'repetitions': 5,
+            'repetitions': repetitions,
             'environment': {
                 'interpreter': {'implementation': 'CPython', 'version': '3.12.0', 'compiler': 'test compiler'},
                 'host': {'system': 'Linux', 'release': 'test-kernel', 'machine': 'x86_64', 'available_processors': 1},
@@ -51,7 +58,7 @@ def _dataset(tmp_path: Path, *, head_median: float = 70.0, head_p95: float = 120
             },
         },
     )
-    for repetition in range(5):
+    for repetition in range(repetitions):
         write_json(
             dataset / 'base' / f'rep{repetition}.json',
             {
@@ -71,7 +78,7 @@ def _dataset(tmp_path: Path, *, head_median: float = 70.0, head_p95: float = 120
     return dataset
 
 
-def _attribution(tmp_path: Path, *, head_direct: float = 55.0) -> Path:
+def _attribution(tmp_path: Path, *, head_direct: float = 55.0, repetitions: int = 5) -> Path:
     path = tmp_path / 'attribution.json'
     write_json(
         path,
@@ -86,14 +93,14 @@ def _attribution(tmp_path: Path, *, head_direct: float = 55.0) -> Path:
             'scope': 'paired',
             'repetitions': [
                 {'repetition': repetition, 'base_direct_p50': 50.0, 'head_direct_p50': head_direct}
-                for repetition in range(5)
+                for repetition in range(repetitions)
             ],
         },
     )
     return path
 
 
-def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None = None) -> Path:
+def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None = None, repetitions: int = 5) -> Path:
     path = tmp_path / 'sidecars.json'
     default_checks: dict[str, object] = {
         'no_injection': {
@@ -102,8 +109,8 @@ def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None =
             'unit': 'seconds per operation',
             'method': 'direct-null',
             'scope': 'head-only',
-            'direct': [100.0] * 5,
-            'depin': [101.0] * 5,
+            'direct': [100.0] * repetitions,
+            'depin': [101.0] * repetitions,
             'limit': 0.05,
         },
         'retained_memory': {
@@ -112,8 +119,8 @@ def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None =
             'unit': 'bytes',
             'method': 'tracemalloc-retained',
             'scope': 'paired',
-            'base': [100.0] * 5,
-            'head': [100.0] * 5,
+            'base': [100.0] * repetitions,
+            'head': [100.0] * repetitions,
             'limit': 0.02,
         },
         'peak_memory': {
@@ -122,8 +129,8 @@ def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None =
             'unit': 'bytes',
             'method': 'tracemalloc-peak',
             'scope': 'paired',
-            'base': [100.0] * 5,
-            'head': [100.0] * 5,
+            'base': [100.0] * repetitions,
+            'head': [100.0] * repetitions,
             'limit': 0.05,
         },
         'allocations': {
@@ -132,8 +139,8 @@ def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None =
             'unit': 'allocation-count',
             'method': 'tracemalloc-allocation-count',
             'scope': 'paired',
-            'base': [100.0] * 5,
-            'head': [100.0] * 5,
+            'base': [100.0] * repetitions,
+            'head': [100.0] * repetitions,
             'limit': 0.0,
         },
         'application_startup': {
@@ -150,8 +157,8 @@ def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None =
             'unit': 'seconds',
             'method': 'synchronized-wave',
             'scope': 'paired',
-            'base': [100.0] * 5,
-            'head': [100.0] * 5,
+            'base': [100.0] * repetitions,
+            'head': [100.0] * repetitions,
             'limit': 0.05,
         },
         'components': [
@@ -172,7 +179,7 @@ def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None =
     return path
 
 
-def _provenance(tmp_path: Path) -> Path:
+def _provenance(tmp_path: Path, *, repetitions: int = 5) -> Path:
     path = tmp_path / 'provenance.json'
     write_json(
         path,
@@ -182,7 +189,7 @@ def _provenance(tmp_path: Path) -> Path:
             'head_revision': HEAD_REVISION,
             'protocol': {
                 'collector': 'benchmarks.harness.pairs',
-                'repetitions': 5,
+                'repetitions': repetitions,
                 'seed': DEFAULT_SEED,
                 'locked_environments': True,
                 'workloads': list(TAIL_WORKLOADS),
@@ -200,7 +207,7 @@ def _provenance(tmp_path: Path) -> Path:
                     'deterministic': 'passed',
                 }
                 for workload in TAIL_WORKLOADS
-                for repetition in range(5)
+                for repetition in range(repetitions)
             ],
             'environment': {
                 'interpreter': {'implementation': 'CPython', 'version': '3.12.0'},
@@ -230,6 +237,20 @@ def _evaluate(dataset: Path, attribution: Path, sidecars: Path) -> Acceptance:
 
 def _outcomes(result: Acceptance) -> dict[str, str]:
     return {verdict.criterion: verdict.outcome.value for verdict in result.verdicts}
+
+
+def test_acceptance_evaluates_a_doubled_repetition_set(tmp_path: Path) -> None:
+    repetitions = 10
+
+    result = evaluate(
+        _dataset(tmp_path, repetitions=repetitions),
+        _attribution(tmp_path, repetitions=repetitions),
+        _sidecars(tmp_path, repetitions=repetitions),
+        _provenance(tmp_path, repetitions=repetitions),
+        evaluated_head_revision=HEAD_REVISION,
+    )
+
+    assert result.passed
 
 
 def test_total_latency_improvement_does_not_prove_attributable_overhead_improvement(tmp_path: Path) -> None:

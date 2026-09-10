@@ -55,7 +55,7 @@ COMPONENT_WORKLOADS = (
     'fastapi_request_seed_read',
     'fastapi_async_resource_close',
 )
-REPETITIONS = 5
+MINIMUM_REPETITIONS = 5
 TAIL_LIMIT = 0.05
 ATTRIBUTION_LIMIT = -0.25
 ATTRIBUTION_TARGET = -0.30
@@ -102,7 +102,7 @@ def _finite_positive(value: float, where: str) -> float:
     return value
 
 
-def _side_repetitions(dataset: Path, side: str) -> dict[int, dict[str, reduce.Aggregate]]:
+def _side_repetitions(dataset: Path, side: str, repetitions: int) -> dict[int, dict[str, reduce.Aggregate]]:
     directory = dataset / side
     paths = sorted(directory.glob('rep*.json'))
     found: dict[int, dict[str, reduce.Aggregate]] = {}
@@ -117,20 +117,22 @@ def _side_repetitions(dataset: Path, side: str) -> dict[int, dict[str, reduce.Ag
             raise HarnessError(f'{path}: repetition {repetition} must run {expected} first, found {first!r}')
         aggregates = require_object(payload.get('aggregates'), f'{path}: aggregates')
         found[repetition] = reduce.decode_all(aggregates, str(path))
-    expected_indexes = set(range(REPETITIONS))
+    expected_indexes = set(range(repetitions))
     if set(found) != expected_indexes:
-        raise HarnessError(f'{directory}: requires exactly {REPETITIONS} repetitions numbered 0 through 4')
+        raise HarnessError(
+            f'{directory}: requires exactly {repetitions} repetitions numbered 0 through {repetitions - 1}'
+        )
     return found
 
 
-def _pairs(dataset: Path) -> tuple[dict[str, tuple[_Pair, ...]], int]:
+def _pairs(dataset: Path) -> tuple[dict[str, tuple[_Pair, ...]], int, int]:
     metadata = read_json(dataset / 'environment.json')
     seed = require_integer(metadata.get('seed'), f'{dataset / "environment.json"}: seed')
     if seed != DEFAULT_SEED:
         raise HarnessError(f'{dataset / "environment.json"}: seed must be the protocol constant {DEFAULT_SEED}')
     repetitions = require_integer(metadata.get('repetitions'), f'{dataset / "environment.json"}: repetitions')
-    if repetitions != REPETITIONS:
-        raise HarnessError(f'{dataset / "environment.json"}: repetitions must be exactly {REPETITIONS}')
+    if repetitions < MINIMUM_REPETITIONS:
+        raise HarnessError(f'{dataset / "environment.json"}: repetitions must be at least {MINIMUM_REPETITIONS}')
     environment = require_object(metadata.get('environment'), f'{dataset / "environment.json"}: environment')
     interpreter = require_object(
         environment.get('interpreter'), f'{dataset / "environment.json"}: environment.interpreter'
@@ -154,11 +156,11 @@ def _pairs(dataset: Path) -> tuple[dict[str, tuple[_Pair, ...]], int]:
         _ = require_text(
             distributions.get(package), f'{dataset / "environment.json"}: environment.distributions.{package}'
         )
-    base, head = _side_repetitions(dataset, 'base'), _side_repetitions(dataset, 'head')
+    base, head = _side_repetitions(dataset, 'base', repetitions), _side_repetitions(dataset, 'head', repetitions)
     pairs: dict[str, tuple[_Pair, ...]] = {}
     for workload in TAIL_WORKLOADS:
         collected: list[_Pair] = []
-        for repetition in range(REPETITIONS):
+        for repetition in range(repetitions):
             before, after = base[repetition].get(workload), head[repetition].get(workload)
             if before is None or after is None:
                 raise HarnessError(f'{workload}: missing from repetition {repetition} on base or head')
@@ -166,11 +168,11 @@ def _pairs(dataset: Path) -> tuple[dict[str, tuple[_Pair, ...]], int]:
                 raise HarnessError(f'{workload}: repetition {repetition} does not meet the sample-quality minimum')
             collected.append(_Pair(repetition, before, after))
         pairs[workload] = tuple(collected)
-    return pairs, seed
+    return pairs, seed, repetitions
 
 
 def _attribution(
-    path: Path, pairs: Sequence[_Pair], seed: int, evaluated_head_revision: str
+    path: Path, pairs: Sequence[_Pair], seed: int, evaluated_head_revision: str, repetitions: int
 ) -> tuple[Verdict, Verdict]:
     payload = read_json(path)
     version = require_integer(payload.get('schema_version'), f'{path}: schema_version')
@@ -192,8 +194,8 @@ def _attribution(
     if require_text(payload.get('scope'), f'{path}: scope') != 'paired':
         raise HarnessError(f'{path}: scope must be paired')
     entries = require_array(payload.get('repetitions'), f'{path}: repetitions')
-    if len(entries) != REPETITIONS:
-        raise HarnessError(f'{path}: requires exactly {REPETITIONS} direct-baseline repetitions')
+    if len(entries) != repetitions:
+        raise HarnessError(f'{path}: requires exactly {repetitions} direct-baseline repetitions')
     direct: dict[int, tuple[float, float]] = {}
     for position, entry in enumerate(entries):
         fields = require_object(entry, f'{path}: repetitions[{position}]')
@@ -204,8 +206,8 @@ def _attribution(
             _finite_positive(require_number(fields.get('base_direct_p50'), f'{path}: base_direct_p50'), str(path)),
             _finite_positive(require_number(fields.get('head_direct_p50'), f'{path}: head_direct_p50'), str(path)),
         )
-    if set(direct) != set(range(REPETITIONS)):
-        raise HarnessError(f'{path}: direct-baseline repetitions must be numbered 0 through 4')
+    if set(direct) != set(range(repetitions)):
+        raise HarnessError(f'{path}: direct-baseline repetitions must be numbered 0 through {repetitions - 1}')
     base_overhead: list[float] = []
     head_overhead: list[float] = []
     for pair in pairs:
@@ -240,7 +242,7 @@ def _verdict_criterion(verdict: Verdict) -> str:
     return verdict.criterion
 
 
-def _provenance(path: Path, evaluated_head_revision: str) -> None:
+def _provenance(path: Path, evaluated_head_revision: str, repetitions: int) -> None:
     payload = read_json(path)
     if require_integer(payload.get('schema_version'), f'{path}: schema_version') != SCHEMA_VERSION:
         raise HarnessError(f'{path}: unsupported schema version')
@@ -252,8 +254,8 @@ def _provenance(path: Path, evaluated_head_revision: str) -> None:
     protocol = require_object(payload.get('protocol'), f'{path}: protocol')
     if require_text(protocol.get('collector'), f'{path}: protocol.collector') != 'benchmarks.harness.pairs':
         raise HarnessError(f'{path}: protocol.collector must be benchmarks.harness.pairs')
-    if require_integer(protocol.get('repetitions'), f'{path}: protocol.repetitions') != REPETITIONS:
-        raise HarnessError(f'{path}: protocol.repetitions must be exactly {REPETITIONS}')
+    if require_integer(protocol.get('repetitions'), f'{path}: protocol.repetitions') != repetitions:
+        raise HarnessError(f'{path}: protocol.repetitions must match the dataset ({repetitions})')
     if require_integer(protocol.get('seed'), f'{path}: protocol.seed') != DEFAULT_SEED:
         raise HarnessError(f'{path}: protocol.seed must be {DEFAULT_SEED}')
     if protocol.get('locked_environments') is not True:
@@ -318,7 +320,7 @@ def _provenance(path: Path, evaluated_head_revision: str) -> None:
         if key in proven:
             raise HarnessError(f'{path}: semantic_validation repeats {workload} repetition {repetition}')
         proven.add(key)
-    expected = {(workload, repetition) for workload in TAIL_WORKLOADS for repetition in range(REPETITIONS)}
+    expected = {(workload, repetition) for workload in TAIL_WORKLOADS for repetition in range(repetitions)}
     if proven != expected or len(validations) != len(expected):
         raise HarnessError(f'{path}: semantic_validation must cover every FastAPI workload and repetition exactly once')
 
@@ -346,10 +348,10 @@ def _change(base: float, head: float, criterion: str) -> float:
     return head / base - 1.0
 
 
-def _series(value: object, where: str) -> list[float]:
+def _series(value: object, where: str, repetitions: int) -> list[float]:
     readings = require_array(value, where)
-    if len(readings) != REPETITIONS:
-        raise HarnessError(f'{where}: requires exactly {REPETITIONS} paired observations')
+    if len(readings) != repetitions:
+        raise HarnessError(f'{where}: requires exactly {repetitions} paired observations')
     return [
         _finite_positive(require_number(reading, f'{where}[{index}]'), where) for index, reading in enumerate(readings)
     ]
@@ -374,7 +376,11 @@ def _regression_verdict(
 
 
 def _typed_check(
-    fields: Mapping[str, object], path: Path, criterion: str, expected: tuple[str, str, str, str, str]
+    fields: Mapping[str, object],
+    path: Path,
+    criterion: str,
+    expected: tuple[str, str, str, str, str],
+    repetitions: int,
 ) -> Verdict:
     for field, value in zip(('workload', 'metric', 'unit', 'method', 'scope'), expected, strict=True):
         if require_text(fields.get(field), f'{path}: {criterion}.{field}') != value:
@@ -384,13 +390,13 @@ def _typed_check(
         raise HarnessError(f'{path}: {criterion}.limit must be finite and non-negative')
     before, after = (
         (
-            _series(fields.get('direct'), f'{path}: {criterion}.direct'),
-            _series(fields.get('depin'), f'{path}: {criterion}.depin'),
+            _series(fields.get('direct'), f'{path}: {criterion}.direct', repetitions),
+            _series(fields.get('depin'), f'{path}: {criterion}.depin', repetitions),
         )
         if criterion == CHECK_NO_INJECTION
         else (
-            _series(fields.get('base'), f'{path}: {criterion}.base'),
-            _series(fields.get('head'), f'{path}: {criterion}.head'),
+            _series(fields.get('base'), f'{path}: {criterion}.base', repetitions),
+            _series(fields.get('head'), f'{path}: {criterion}.head', repetitions),
         )
     )
     if criterion == CHECK_ALLOCATION:
@@ -405,7 +411,7 @@ def _typed_check(
     return _regression_verdict(criterion, before, after, limit, expected[4])
 
 
-def _sidecars(path: Path, pairs: Mapping[str, Sequence[_Pair]]) -> tuple[Verdict, ...]:
+def _sidecars(path: Path, pairs: Mapping[str, Sequence[_Pair]], repetitions: int) -> tuple[Verdict, ...]:
     payload = read_json(path)
     version = require_integer(payload.get('schema_version'), f'{path}: schema_version')
     if version != SCHEMA_VERSION:
@@ -424,7 +430,13 @@ def _sidecars(path: Path, pairs: Mapping[str, Sequence[_Pair]]) -> tuple[Verdict
         CHECK_CONTENTION: ('request_scopes', 'p99_seconds', 'seconds', 'synchronized-wave', 'paired'),
     }
     verdicts = [
-        _typed_check(require_object(payload.get(criterion), f'{path}: {criterion}'), path, criterion, expected)
+        _typed_check(
+            require_object(payload.get(criterion), f'{path}: {criterion}'),
+            path,
+            criterion,
+            expected,
+            repetitions,
+        )
         for criterion, expected in specifications.items()
     ]
     startup = require_object(payload.get(CHECK_STARTUP), f'{path}: {CHECK_STARTUP}')
@@ -468,12 +480,12 @@ def evaluate(
     dataset: Path, attribution: Path, sidecars: Path, provenance: Path, *, evaluated_head_revision: str
 ) -> Acceptance:
     """Evaluate the fixed FastAPI acceptance criteria from collected evidence."""
-    _provenance(provenance, evaluated_head_revision)
-    pairs, seed = _pairs(dataset)
+    pairs, seed, repetitions = _pairs(dataset)
+    _provenance(provenance, evaluated_head_revision, repetitions)
     verdicts = (
-        *_attribution(attribution, pairs[ATTRIBUTION_WORKLOAD], seed, evaluated_head_revision),
+        *_attribution(attribution, pairs[ATTRIBUTION_WORKLOAD], seed, evaluated_head_revision, repetitions),
         *_tails(pairs),
-        *_sidecars(sidecars, pairs),
+        *_sidecars(sidecars, pairs, repetitions),
     )
     ordered = tuple(sorted(verdicts, key=_verdict_criterion))
     head_only = tuple(sorted(verdict.criterion for verdict in ordered if verdict.scope == 'head-only'))

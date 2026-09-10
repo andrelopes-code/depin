@@ -73,8 +73,11 @@ def collect(
     head: Path,
     interpreters: Mapping[str, Path],
     cache: Path,
+    repetitions: int = REPETITIONS,
 ) -> None:
     """Run semantic probes from an external bundle against two locked checkouts."""
+    if repetitions < REPETITIONS:
+        raise HarnessError(f'{repetitions}: FastAPI evidence requires at least {REPETITIONS} repetitions')
     if out.exists():
         raise HarnessError(f'{out}: collection destination already exists')
     runner = Path(__file__).with_name('fastapi_target_runner.py')
@@ -95,7 +98,7 @@ def collect(
             'revision': _target_revision(root),
             'lock_sha256': _sha256(root / 'uv.lock'),
         }
-    for repetition in range(REPETITIONS):
+    for repetition in range(repetitions):
         order = ('base', 'head') if repetition % 2 == 0 else ('head', 'base')
         for side in order:
             root = targets[side]
@@ -645,6 +648,8 @@ def _envelope(path: Path, side: str, repetition: int, revision: str, environment
 def _stable_environment(value: object, where: str) -> dict[str, object]:
     environment = require_object(value, where)
     host = require_object(environment.get('host'), f'{where}.host')
+    distributions = require_object(environment.get('distributions'), f'{where}.distributions')
+    _ = require_text(distributions.get('pydepin'), f'{where}.distributions.pydepin')
     load = host.get('load_average')
     if load is not None:
         for index, reading in enumerate(require_array(load, f'{where}.host.load_average')):
@@ -655,7 +660,50 @@ def _stable_environment(value: object, where: str) -> dict[str, object]:
     stable_host = dict(host)
     stable_host.pop('load_average', None)
     stable['host'] = stable_host
+    stable_distributions = dict(distributions)
+    stable_distributions.pop('pydepin')
+    stable['distributions'] = stable_distributions
+    packages = environment.get('packages')
+    if packages is not None:
+        stable_packages = dict(require_object(packages, f'{where}.packages'))
+        _ = require_text(stable_packages.pop('pydepin', None), f'{where}.packages.pydepin')
+        stable['packages'] = stable_packages
     return stable
+
+
+def _repetition_count(raw: Path) -> int:
+    found_by_side: dict[str, set[str]] = {}
+    for side in ('base', 'head'):
+        directory = raw / side
+        try:
+            found = {path.name for path in directory.iterdir() if path.is_file()}
+        except OSError as error:
+            raise HarnessError(f'{directory}: cannot inspect raw layout ({error})') from error
+        if len(found) < REPETITIONS:
+            raise HarnessError(f'{directory}: requires at least {REPETITIONS} repetitions')
+        expected = {f'rep{index}.json' for index in range(len(found))}
+        if found != expected:
+            raise HarnessError(f'{directory}: repetitions must be contiguous from rep0.json')
+        found_by_side[side] = found
+    if found_by_side['base'] != found_by_side['head']:
+        raise HarnessError('base and head repetition sets differ')
+    return len(found_by_side['base'])
+
+
+def _subject_version(records: Sequence[Mapping[str, object]], side: str) -> str:
+    versions = {
+        require_text(
+            require_object(
+                require_object(record.get('environment'), f'{side} environment').get('distributions'),
+                f'{side} environment distributions',
+            ).get('pydepin'),
+            f'{side} environment distributions.pydepin',
+        )
+        for record in records
+    }
+    if len(versions) != 1:
+        raise HarnessError(f'{side}: pydepin distribution version differs between repetitions')
+    return versions.pop()
 
 
 def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: Mapping[str, str]) -> dict[str, object]:
@@ -663,22 +711,14 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
     if baseline_revision != BASELINE_REVISION:
         raise HarnessError('baseline revision is not the accepted FastAPI baseline')
     locations = {side: Path(require_text(environments.get(side), f'{side} environment')) for side in ('base', 'head')}
-    for side in ('base', 'head'):
-        directory = raw / side
-        expected = {f'rep{index}.json' for index in range(REPETITIONS)}
-        try:
-            found = {path.name for path in directory.iterdir() if path.is_file()}
-        except OSError as error:
-            raise HarnessError(f'{directory}: cannot inspect raw layout ({error})') from error
-        if found != expected:
-            raise HarnessError(f'{directory}: requires exactly rep0.json through rep4.json')
+    repetitions = _repetition_count(raw)
     base_records = [
         _envelope(raw / 'base' / f'rep{i}.json', 'base', i, baseline_revision, locations['base'])
-        for i in range(REPETITIONS)
+        for i in range(repetitions)
     ]
     head_records = [
         _envelope(raw / 'head' / f'rep{i}.json', 'head', i, head_revision, locations['head'])
-        for i in range(REPETITIONS)
+        for i in range(repetitions)
     ]
     semantic: list[dict[str, object]] = []
     for repetition, (base, head) in enumerate(zip(base_records, head_records, strict=True)):
@@ -759,13 +799,28 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
             },
         }
 
-    environment_payload = require_object(base_records[0].get('environment'), 'environment')
-    stable_environment = _stable_environment(environment_payload, 'base environment')
+    base_environment = require_object(base_records[0].get('environment'), 'environment')
+    stable_environment = _stable_environment(base_environment, 'base environment')
     if any(
         _stable_environment(record.get('environment'), 'environment') != stable_environment
         for record in (*base_records, *head_records)
     ):
         raise HarnessError('environment differs between raw envelopes')
+    environment_payload = dict(base_environment)
+    environment_payload['subject_versions'] = {
+        'base': _subject_version(base_records, 'base'),
+        'head': _subject_version(head_records, 'head'),
+    }
+    environment_payload['harness_revision'] = _target_revision(Path(__file__).parents[2])
+    environment_payload['collection_command'] = [
+        'python',
+        '-m',
+        'benchmarks.harness.fastapi_evidence',
+        'collect',
+    ]
+    environment_payload['locked_environment'] = {
+        side: f'sha256:{_sha256(location / "pyvenv.cfg")}' for side, location in locations.items()
+    }
     base_retained, head_retained = (
         measured(base_records, 'retained', 'bytes', 'tracemalloc-retained'),
         measured(head_records, 'retained', 'bytes', 'tracemalloc-retained'),
@@ -796,7 +851,7 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
     }
     return {
         'dataset': {
-            'environment.json': {'seed': 20260902, 'repetitions': REPETITIONS, 'environment': environment_payload},
+            'environment.json': {'seed': 20260902, 'repetitions': repetitions, 'environment': environment_payload},
             'base': {
                 'repetitions': [
                     {'record': aggregate_record(record, index)} for index, record in enumerate(base_records)
@@ -911,7 +966,7 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
             'head_revision': head_revision,
             'protocol': {
                 'collector': 'benchmarks.harness.pairs',
-                'repetitions': REPETITIONS,
+                'repetitions': repetitions,
                 'seed': 20260902,
                 'locked_environments': True,
                 'workloads': list(TAIL_WORKLOADS),
@@ -936,6 +991,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     collect_parser.add_argument('--base-python', type=Path, required=True)
     collect_parser.add_argument('--head-python', type=Path, required=True)
     collect_parser.add_argument('--cache-root', type=Path, required=True)
+    collect_parser.add_argument('--repetitions', type=int, default=REPETITIONS)
     reduce_parser = commands.add_parser('reduce')
     reduce_parser.add_argument('--raw', type=Path, required=True)
     reduce_parser.add_argument('--out', type=Path, required=True)
@@ -954,6 +1010,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 head=arguments.head_dir,
                 interpreters={'base': arguments.base_python, 'head': arguments.head_python},
                 cache=arguments.cache_root,
+                repetitions=arguments.repetitions,
             )
         else:
             output = reduce(
