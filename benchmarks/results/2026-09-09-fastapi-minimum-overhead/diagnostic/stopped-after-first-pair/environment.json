@@ -1,0 +1,30 @@
+{
+  "baseline_revision": "086adf98459773e3175f4723b2b64e3f47306e42",
+  "collection_command": "uv run --group bench python -m benchmarks.harness.pairs --base-dir /tmp/depin-fastapi-baseline-086adf9 --head-dir . --repetitions 2 --seed 20260902 --out benchmarks/results/2026-09-09-fastapi-minimum-overhead/diagnostic",
+  "collection_status": "stopped_after_first_counterbalanced_pair",
+  "environment": {
+    "affinity": "0-3",
+    "cpu_governor": "unavailable",
+    "cpu_model": "Intel(R) Xeon(R) CPU E5-2683 v4 @ 2.10GHz",
+    "kernel": "6.8.0-138-generic",
+    "package_pins": {
+      "pydepin": "0.19.0",
+      "pytest": "9.1.1",
+      "pytest-benchmark": "5.3.0"
+    },
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.39",
+    "python": "CPython 3.12.13 (Clang 22.1.3)",
+    "processors": 4
+  },
+  "head_revision": "179bf686eed1838e86429e82ffe479116cacdbce",
+  "harness_revision": "179bf686eed1838e86429e82ffe479116cacdbce",
+  "lockfile_sha256": {
+    "base": "02230a6fa29ed367a45580aaae6ad6d10cdfecb234ef9fa8c82177084ee6b317",
+    "head": "02230a6fa29ed367a45580aaae6ad6d10cdfecb234ef9fa8c82177084ee6b317"
+  },
+  "protocol": {
+    "completed_pairs": 1,
+    "requested_repetitions": 2,
+    "seed": 20260902
+  }
+}

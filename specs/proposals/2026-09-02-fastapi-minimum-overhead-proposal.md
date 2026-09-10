@@ -1,15 +1,15 @@
 # Proposal: minimum-overhead FastAPI integration
 
 Date: 2026-09-02
-Status: accepted as the single next performance proposal; rebaselined 2026-09-09
+Status: accepted and formalized by `../2026-09-09-fastapi-minimum-overhead-design.md`; rebaselined 2026-09-09
 Scope: `depin.ext.fastapi`, request hosting, scope activation, endpoint injection, and application benchmarks
 
 ## Nature of this document
 
-This proposal defines an application-level performance outcome. It does not yet
-choose a new public setup function, route class, or compatibility mechanism. Any
-surface change must be designed and accepted before the exact `1.0.0` API
-freeze.
+This proposal defines the application-level performance outcome. The formal
+specification linked above selects the public setup function, endpoint compiler,
+lazy request state, compatibility boundary, and verification protocol before the
+exact `1.0.0` API freeze.
 
 ## Executive summary
 
@@ -238,3 +238,9 @@ current injection call site, measure total and DI-attributable p50/p95/p99, and
 meet the material leadership gate rather than statistical parity. Provider
 discovery is deferred because it does not address this measured overhead; native
 acceleration remains NO-GO pending the post-FastAPI attribution.
+
+The 2026-09-09 implementation diagnostic did not meet that gate. Its first
+counterbalanced CPU-light pair measured a 108.542-microsecond head increment,
+above both the 60.7-microsecond accepted baseline and the 45.525-microsecond
+25% target. The proposal remains active; do not mark it implemented or advance
+the roadmap until a fresh five-repetition collection passes.

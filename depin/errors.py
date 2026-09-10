@@ -137,3 +137,16 @@ class ContainerNotBoundError(DepinError, RuntimeError):
     Inherits ``RuntimeError``, so existing ``except RuntimeError`` handlers keep
     working.
     """
+
+
+class FastAPIIntegrationError(DepinError, RuntimeError):
+    """FastAPI installation could not compile routes safely.
+
+    Raised by `depin.ext.fastapi.install()` when the application was started,
+    was already installed with another container, or exposes an unsupported
+    route shape. Upgrade FastAPI to a tested release or use the compatible
+    `RequestScope` middleware instead.
+
+    Inherits ``RuntimeError``, so existing ``except RuntimeError`` handlers keep
+    working.
+    """

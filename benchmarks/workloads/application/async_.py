@@ -5,7 +5,7 @@ from collections.abc import AsyncGenerator
 from fastapi import FastAPI
 
 from depin import Container, Scope
-from depin.ext.fastapi import Inject, RequestScope
+from depin.ext.fastapi import Inject, install
 
 from .model import (
     AuditTrail,
@@ -62,7 +62,6 @@ def build_depin_async_deployment(sink: Sink) -> Deployment:
         .freeze()
     )
     app = FastAPI()
-    app.add_middleware(RequestScope, container=frozen)
 
     async def ledger(trail: Inject[AuditTrail]) -> dict[str, str]:
         return ledger_payload(trail)
@@ -72,6 +71,7 @@ def build_depin_async_deployment(sink: Sink) -> Deployment:
 
     app.add_api_route('/ledger', ledger, methods=['GET'])
     app.add_api_route('/order', order, methods=['GET'])
+    install(app, frozen)
 
     async def warm() -> None:
         _ = await frozen.awarmup()

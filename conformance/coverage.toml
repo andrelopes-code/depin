@@ -23,6 +23,9 @@ fixtures = ["corpus/core/c09_hosting.py"]
 [AsyncInSyncContextError]
 fixtures = ["corpus/core/c09_hosting.py"]
 
+[FastAPIIntegrationError]
+fixtures = ["corpus/ext_extras/x01_fastapi.py"]
+
 [Bindings]
 fixtures = ["corpus/core/c07_registration.py"]
 
@@ -170,6 +173,9 @@ fixtures = ["corpus/core/c09_hosting.py"]
 ["depin.errors.ContainerNotBoundError"]
 fixtures = ["corpus/core/c09_hosting.py"]
 
+["depin.errors.FastAPIIntegrationError"]
+fixtures = ["corpus/ext_extras/x01_fastapi.py"]
+
 # `depin/ext/`. The four modules that import no third-party package are checked
 # in both install modes from `corpus/ext_core/`; the eight that require an extra
 # are checked in all-extras mode from `corpus/ext_extras/`.
@@ -214,6 +220,9 @@ fixtures = ["corpus/ext_core/e03_cli.py"]
 fixtures = ["corpus/ext_extras/x01_fastapi.py", "negative/n06_inject_marker.py"]
 
 ["depin.ext.fastapi.RequestScope"]
+fixtures = ["corpus/ext_extras/x01_fastapi.py"]
+
+["depin.ext.fastapi.install"]
 fixtures = ["corpus/ext_extras/x01_fastapi.py"]
 
 ["depin.ext.starlette.RequestScope"]

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from benchmarks.harness import HarnessError, is_object, memory, work
+from benchmarks.workloads import resources
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -53,6 +54,23 @@ def _probe(source: str, *, hash_seed: str) -> dict[str, object]:
 
 def test_python_calls_are_counted_per_operation() -> None:
     assert work.calls_per_operation(_outer, operations=100) == 3
+
+
+@pytest.mark.parametrize(
+    ('workload_name', 'maximum_calls'),
+    [
+        ('allocations_of_a_request_shaped_scope', 88),
+        ('allocations_of_a_scope_cycle', 358),
+    ],
+)
+def test_eager_scope_workloads_keep_their_call_budgets(workload_name: str, maximum_calls: int) -> None:
+    workload = next(workload for workload in resources.WORKLOADS if workload.name == workload_name)
+    prepared = workload.subject.prepare()
+    try:
+        assert work.calls_per_operation(prepared.call, operations=10) <= maximum_calls
+    finally:
+        if prepared.close is not None:
+            prepared.close()
 
 
 def test_a_workload_whose_call_count_varies_is_reported_rather_than_averaged() -> None:

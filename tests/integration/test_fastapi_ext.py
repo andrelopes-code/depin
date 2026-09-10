@@ -1,15 +1,33 @@
 import contextlib
 from collections.abc import AsyncGenerator
-from typing import Protocol
+from typing import Annotated, Protocol
 
 import pytest
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, Depends, FastAPI, Response
 from fastapi import Request as FastAPIRequest
+from fastapi.dependencies.models import Dependant
+from fastapi.routing import APIRoute
+from fastapi.security import SecurityScopes
 from httpx import ASGITransport, AsyncClient
+from starlette.requests import HTTPConnection
 
 from depin import Container, FrozenContainer, Host, Scope
-from depin.errors import ContainerNotBoundError
+from depin._core.scope import active_frame
+from depin.errors import ContainerNotBoundError, OutsideScopeError
+from depin.ext import fastapi as fastapi_ext
 from depin.ext.fastapi import Inject, RequestScope
+
+
+def _route(app: FastAPI, path: str) -> APIRoute:
+    for route in app.routes:
+        if isinstance(route, APIRoute) and route.path == path:
+            return route
+    raise AssertionError(f'no route registered at {path!r}')
+
+
+def _dependency_call_name(dependency: Dependant) -> str:
+    call: object = dependency.call
+    return type(call).__name__
 
 
 @pytest.mark.asyncio
@@ -387,6 +405,272 @@ async def test_inject_raises_outside_any_hosted_container() -> None:
             await client.get('/config')
 
     assert str(caught.value) == (
-        'Inject[...] resolved outside a RequestScope; install the middleware with '
-        'app.add_middleware(RequestScope, container=...).'
+        'Inject[...] resolved outside a hosted FastAPI request; call install(app, container) '
+        'after route registration or install RequestScope compatibility middleware.'
     )
+
+
+@pytest.mark.asyncio
+async def test_install_resolves_multiple_injections_through_one_program() -> None:
+    """A compiler regression would construct distinct scoped dependencies."""
+    events: list[str] = []
+
+    class Shared:
+        def __init__(self) -> None:
+            events.append('shared')
+
+    class Left:
+        def __init__(self, shared: Shared) -> None:
+            self.shared = shared
+
+    class Right:
+        def __init__(self, shared: Shared) -> None:
+            self.shared = shared
+
+    container = (
+        Container()
+        .bind(Shared, scope=Scope.SCOPED)
+        .bind(Left, scope=Scope.SCOPED)
+        .bind(Right, scope=Scope.SCOPED)
+        .freeze()
+    )
+    app = FastAPI()
+
+    @app.get('/value')
+    async def value(left: Inject[Left], right: Inject[Right]) -> dict[str, bool]:
+        return {'shared': left.shared is right.shared}
+
+    _ = value
+
+    fastapi_ext.install(app, container)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        response = await client.get('/value')
+
+    assert response.json() == {'shared': True}
+    assert events == ['shared']
+    route = _route(app, '/value')
+    assert all(_dependency_call_name(node) != '_EndpointProgram' for node in route.dependant.dependencies)
+    assert all(_dependency_call_name(node) != '_InjectResolver' for node in route.dependant.dependencies)
+
+
+@pytest.mark.asyncio
+async def test_install_compiles_singleton_injection_into_the_route_call() -> None:
+    """The compiled wrapper receives FastAPI's request without a depin dependency node."""
+    constructed: list[str] = []
+
+    class Singleton:
+        def __init__(self) -> None:
+            constructed.append('singleton')
+
+    container = Container().bind(Singleton).freeze()
+    _ = await container.awarmup()
+    app = FastAPI()
+
+    async def native(request: FastAPIRequest) -> FastAPIRequest:
+        return request
+
+    @app.get('/value/{item_id}')
+    async def value(
+        request: FastAPIRequest,
+        item_id: int,
+        native_request: Annotated[FastAPIRequest, Depends(native)],
+        singleton: Inject[Singleton],
+    ) -> dict[str, object]:
+        try:
+            active_frame()
+        except OutsideScopeError:
+            frame_open = False
+        else:
+            frame_open = True
+        return {
+            'same_request': request is native_request,
+            'singleton': singleton is container[Singleton],
+            'frame_open': frame_open,
+            'item_id': item_id,
+        }
+
+    _ = value
+    fastapi_ext.install(app, container)
+
+    route = _route(app, '/value/{item_id}')
+    assert all(_dependency_call_name(node) != '_EndpointProgram' for node in route.dependant.dependencies)
+    assert all(_dependency_call_name(node) != '_InjectResolver' for node in route.dependant.dependencies)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        response = await client.get('/value/7')
+        invalid = await client.get('/value/not-an-int')
+
+    assert response.json() == {'same_request': True, 'singleton': True, 'frame_open': False, 'item_id': 7}
+    assert invalid.status_code == 422
+    assert constructed == ['singleton']
+    assert 'request' not in app.openapi()['paths']['/value/{item_id}']['get']['parameters']
+
+
+@pytest.mark.asyncio
+async def test_install_keeps_internal_request_argument_distinct_from_fastapi_values() -> None:
+    """The hidden request value cannot overwrite any FastAPI-produced argument."""
+
+    class Singleton:
+        pass
+
+    async def native() -> str:
+        return 'native'
+
+    app = FastAPI()
+
+    @app.get('/query')
+    async def query(singleton: Inject[Singleton], __depin_request__: int) -> dict[str, int]:
+        del singleton
+        return {'value': __depin_request__}
+
+    @app.get('/path/{__depin_request__}')
+    async def path(singleton: Inject[Singleton], __depin_request__: int) -> dict[str, int]:
+        del singleton
+        return {'value': __depin_request__}
+
+    @app.get('/dependency')
+    async def dependency(singleton: Inject[Singleton], __depin_request__: str = Depends(native)) -> dict[str, str]:
+        del singleton
+        return {'value': __depin_request__}
+
+    _ = query, path, dependency
+    fastapi_ext.install(app, Container().bind(Singleton).freeze())
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        query_response = await client.get('/query?__depin_request__=7')
+        path_response = await client.get('/path/8')
+        dependency_response = await client.get('/dependency')
+        invalid_response = await client.get('/query?__depin_request__=not-an-int')
+
+    assert query_response.json() == {'value': 7}
+    assert path_response.json() == {'value': 8}
+    assert dependency_response.json() == {'value': 'native'}
+    assert invalid_response.status_code == 422
+    schema = app.openapi()
+    assert schema['paths']['/query']['get']['parameters'][0]['name'] == '__depin_request__'
+    assert schema['paths']['/path/{__depin_request__}']['get']['parameters'][0]['name'] == '__depin_request__'
+
+
+@pytest.mark.asyncio
+async def test_install_reserves_fastapi_special_value_names_in_direct_and_nested_dependants() -> None:
+    """The synthetic request argument cannot shadow FastAPI's special values."""
+
+    class Singleton:
+        pass
+
+    async def nested_connection(__depin_request__: HTTPConnection) -> str:
+        return __depin_request__.url.path
+
+    async def nested_response_dependency(__depin_request__: Response) -> str:
+        __depin_request__.headers['x-nested-response'] = 'yes'
+        return 'response'
+
+    async def nested_background(__depin_request__: BackgroundTasks) -> str:
+        __depin_request__.add_task(lambda: None)
+        return 'background'
+
+    async def nested_security(__depin_request__: SecurityScopes) -> str:
+        return ','.join(__depin_request__.scopes)
+
+    app = FastAPI()
+
+    @app.get('/connection')
+    async def connection(singleton: Inject[Singleton], __depin_request__: HTTPConnection) -> dict[str, str]:
+        del singleton
+        return {'value': __depin_request__.url.path}
+
+    @app.get('/response')
+    async def response(singleton: Inject[Singleton], __depin_request__: Response) -> dict[str, str]:
+        del singleton
+        __depin_request__.headers['x-response'] = 'yes'
+        return {'value': 'response'}
+
+    @app.get('/background')
+    async def background(singleton: Inject[Singleton], __depin_request__: BackgroundTasks) -> dict[str, str]:
+        del singleton
+        __depin_request__.add_task(lambda: None)
+        return {'value': 'background'}
+
+    @app.get('/security')
+    async def security(singleton: Inject[Singleton], __depin_request__: SecurityScopes) -> dict[str, str]:
+        del singleton
+        return {'value': ','.join(__depin_request__.scopes)}
+
+    @app.get('/nested')
+    async def nested(
+        singleton: Inject[Singleton],
+        connection_value: str = Depends(nested_connection),
+        response_value: str = Depends(nested_response_dependency),
+        background_value: str = Depends(nested_background),
+        security_value: str = Depends(nested_security),
+    ) -> dict[str, str]:
+        del singleton
+        return {
+            'connection': connection_value,
+            'response': response_value,
+            'background': background_value,
+            'security': security_value,
+        }
+
+    _ = connection, response, background, security, nested
+    fastapi_ext.install(app, Container().bind(Singleton).freeze())
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        connection_response = await client.get('/connection')
+        response_response = await client.get('/response')
+        background_response = await client.get('/background')
+        security_response = await client.get('/security')
+        nested_http_response = await client.get('/nested')
+
+    assert connection_response.json() == {'value': '/connection'}
+    assert response_response.json() == {'value': 'response'}
+    assert response_response.headers['x-response'] == 'yes'
+    assert background_response.json() == {'value': 'background'}
+    assert security_response.json() == {'value': ''}
+    assert nested_http_response.json() == {
+        'connection': '/nested',
+        'response': 'response',
+        'background': 'background',
+        'security': '',
+    }
+    assert nested_http_response.headers['x-nested-response'] == 'yes'
+    schema = app.openapi()
+    assert all(
+        parameter['name'] != '__depin_request__'
+        for parameter in schema['paths']['/connection']['get'].get('parameters', [])
+    )
+    assert all(
+        parameter['name'] != '__depin_request__'
+        for parameter in schema['paths']['/nested']['get'].get('parameters', [])
+    )
+
+
+@pytest.mark.asyncio
+async def test_install_leaves_a_route_without_injection_unchanged() -> None:
+    """A compiler regression would mutate native FastAPI routes."""
+    app = FastAPI()
+
+    @app.get('/plain')
+    async def plain(value: int) -> dict[str, int]:
+        return {'value': value}
+
+    _ = plain
+
+    route = _route(app, '/plain')
+    original_endpoint: object = route.endpoint
+    original_dependencies = route.dependant.dependencies
+
+    fastapi_ext.install(app, Container().freeze())
+
+    assert route.endpoint is original_endpoint
+    assert route.dependant.dependencies is original_dependencies
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://t') as client:
+        response = await client.get('/plain?value=4')
+    assert response.json() == {'value': 4}

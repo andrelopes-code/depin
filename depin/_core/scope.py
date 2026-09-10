@@ -5,6 +5,7 @@ import contextlib
 import threading
 from collections.abc import Generator
 from contextvars import ContextVar
+from contextvars import Token as ContextToken
 from dataclasses import dataclass
 from enum import Enum
 from typing import Final
@@ -138,13 +139,18 @@ def _run_teardowns_sync(records: tuple[Teardown, ...]) -> None:
         raise ExceptionGroup('depin teardown errors', errors)
 
 
-async def _run_teardowns_async(records: tuple[Teardown, ...]) -> None:
+async def _async_teardown_errors(records: tuple[Teardown, ...]) -> tuple[Exception, ...]:
     errors: list[Exception] = []
     for record in records:
         try:
             await teardown.run_async(record)
         except Exception as exc:
             errors.append(exc)
+    return tuple(errors)
+
+
+async def _run_teardowns_async(records: tuple[Teardown, ...]) -> None:
+    errors = await _async_teardown_errors(records)
     if errors:
         raise ExceptionGroup('depin teardown errors', errors)
 
@@ -168,10 +174,10 @@ class ScopeFrame:
         '_cache',
         '_flights',
         '_lifecycle',
-        '_mutex',
         '_teardowns',
         'active',
         'context_parent',
+        'mutex',
         'owner',
         'parent',
     )
@@ -188,7 +194,7 @@ class ScopeFrame:
         self._flights: dict[object, _Flight | _Leader] = {}
         self._teardowns: list[Teardown] = []
         self._lifecycle = lifecycle
-        self._mutex = lifecycle.mutex if lifecycle is not None else threading.Lock()
+        self.mutex = lifecycle.mutex if lifecycle is not None else threading.Lock()
         self.active = True
         self.context_parent = context_parent
         self.owner = owner
@@ -219,7 +225,7 @@ class ScopeFrame:
 
             ```
         """
-        with self._mutex:
+        with self.mutex:
             identity = key if tag is None else (MISSING, key, tag)
             self._cache[identity] = value
 
@@ -227,7 +233,7 @@ class ScopeFrame:
         frame: ScopeFrame | None = self
         identity = key if tag is None else (MISSING, key, tag)
         while frame is not None:
-            with frame._mutex:
+            with frame.mutex:
                 value = frame._cache.get(identity, MISSING)
             if value is not MISSING:
                 return value
@@ -235,11 +241,11 @@ class ScopeFrame:
         return MISSING
 
     def deactivate(self) -> None:
-        with self._mutex:
+        with self.mutex:
             self.active = False
 
     def is_active(self) -> bool:
-        with self._mutex:
+        with self.mutex:
             return self.active
 
     def get(self, key: object) -> object:
@@ -261,7 +267,7 @@ class ScopeFrame:
         """
         frame: ScopeFrame | None = self
         while frame is not None:
-            with frame._mutex:
+            with frame.mutex:
                 if key in frame._cache:
                     return frame._cache[key]
             frame = frame.parent
@@ -271,11 +277,11 @@ class ScopeFrame:
         return not isinstance(self.lookup(key), _Missing)
 
     def add_teardown(self, record: Teardown) -> None:
-        with self._mutex:
+        with self.mutex:
             self._teardowns.append(record)
 
     def has_async_teardown(self) -> bool:
-        with self._mutex:
+        with self.mutex:
             return any(isinstance(record, AsyncGenTeardown | AsyncCMTeardown) for record in self._teardowns)
 
     def drain_sync(self) -> None:
@@ -296,6 +302,10 @@ class ScopeFrame:
             ExceptionGroup: One or more teardowns failed.
         """
         await _run_teardowns_async(self._take_teardowns())
+
+    async def drain_async_errors(self) -> tuple[Exception, ...]:
+        """Drain pending teardowns and return every failure without grouping it."""
+        return await _async_teardown_errors(self._take_teardowns())
 
     def drop_sync(self) -> None:
         """Drain every pending teardown, newest first, and drop the cache, without an event loop.
@@ -334,7 +344,7 @@ class ScopeFrame:
         await _run_teardowns_async(self._take_all())
 
     def _take_teardowns(self) -> tuple[Teardown, ...]:
-        with self._mutex:
+        with self.mutex:
             records = tuple(reversed(self._teardowns))
             self._teardowns.clear()
         return records
@@ -350,7 +360,7 @@ class ScopeFrame:
         just-published value from the cache regardless. The result is a cache
         with no trace of the value and a teardown nothing is about to run.
 
-        This property is guarded by construction — one `with self._mutex:`
+        This property is guarded by construction — one `with self.mutex:`
         below, not two — rather than by a test: no test can distinguish one
         lock region from two without instrumenting the gap between them, which
         is not available through the public API. A test that tried to catch a
@@ -359,7 +369,7 @@ class ScopeFrame:
         `[tool.mutmut]` gate's two-second-per-test budget. The deterministic
         fault-injection seam keeps the concurrency invariant testable instead.
         """
-        with self._mutex:
+        with self.mutex:
             records = tuple(reversed(self._teardowns))
             self._teardowns.clear()
             self._cache.clear()
@@ -374,7 +384,7 @@ class ScopeFrame:
     ) -> tuple[object, _Flight | _Leader | None]:
         """Atomically return a cached value or claim/join its construction flight."""
         if self.parent is None:
-            with self._mutex:
+            with self.mutex:
                 cache_key: object = key
                 value = self._cache.get(cache_key, MISSING)
                 if value is not MISSING:
@@ -409,7 +419,7 @@ class ScopeFrame:
             identity = (MISSING, *provided_identity)
         provided_frame: ScopeFrame | None = self
         while provided_frame is not None:
-            with provided_frame._mutex:
+            with provided_frame.mutex:
                 provided = provided_frame._cache.get(identity, MISSING)
             if provided is not MISSING:
                 return provided, None
@@ -417,7 +427,7 @@ class ScopeFrame:
         frames = self._visible_frames()
         with contextlib.ExitStack() as locks:
             for frame in frames:
-                locks.enter_context(frame._mutex)
+                locks.enter_context(frame.mutex)
             for frame in reversed(frames):
                 value = frame._cache.get(cache_key, MISSING)
                 if value is not MISSING:
@@ -436,7 +446,7 @@ class ScopeFrame:
             return MISSING, leader
 
     def claim_root_cached(self, key: object, *, asynchronous: bool = False) -> tuple[object, _Flight | _Leader | None]:
-        with self._mutex:
+        with self.mutex:
             value = self._cache.get(key, MISSING)
             if value is not MISSING:
                 return value, None
@@ -478,7 +488,7 @@ class ScopeFrame:
     def publish(self, key: object, leader: object, value: object, *, signal: bool = False) -> _Flight | None:
         """Cache a leader's value and return any followers after unlocking."""
         follower: _Flight | None = None
-        with self._mutex:
+        with self.mutex:
             active = self._flights.get(key)
             if active is leader:
                 self._cache[key] = value
@@ -496,7 +506,7 @@ class ScopeFrame:
     def abort(self, key: object, leader: object, *, signal: bool = False) -> _Flight | None:
         """Remove a failed leader's flight and return any followers after unlocking."""
         follower: _Flight | None = None
-        with self._mutex:
+        with self.mutex:
             active = self._flights.get(key)
             if active is leader:
                 del self._flights[key]
@@ -517,7 +527,7 @@ class ScopeFrame:
 
     async def wait_until_idle(self) -> None:
         while True:
-            with self._mutex:
+            with self.mutex:
                 pending: list[_Flight] = []
                 for key, active in self._flights.items():
                     if isinstance(active, _Leader):
@@ -558,6 +568,12 @@ _manualowner = ScopeFrame()
 _active: ContextVar[ScopeFrame | None] = ContextVar('depin_active_frame', default=None)
 
 
+@dataclass(frozen=True, slots=True)
+class FrameActivation:
+    frame: ScopeFrame
+    token: ContextToken[ScopeFrame | None]
+
+
 def active_frame(owner: ScopeFrame | None = None) -> ScopeFrame:
     if owner is None:
         owner = _manualowner
@@ -568,9 +584,23 @@ def active_frame(owner: ScopeFrame | None = None) -> ScopeFrame:
                 return frame
             break
         frame = frame.context_parent
+    from depin._core.lazy_scope import active_lazy_scope
+
+    lazy_scope = active_lazy_scope(owner)
+    if lazy_scope is not None:
+        return lazy_scope.frame()
     if frame is not None:
         raise OutsideScopeError('the active scope frame has already exited; open a new scope')
     raise OutsideScopeError('no active scope frame; open one with FrozenContainer.scope() or .ascope()')
+
+
+def active_eager_frame(owner: ScopeFrame) -> ScopeFrame | None:
+    frame = _active.get()
+    while frame is not None:
+        if frame.owner is owner:
+            return frame if frame.active else None
+        frame = frame.context_parent
+    return None
 
 
 def optional_frame(owner: ScopeFrame | None = None) -> ScopeFrame | None:
@@ -599,5 +629,29 @@ def push_frame(owner: ScopeFrame | None = None) -> Generator[ScopeFrame]:
     try:
         yield frame
     finally:
-        frame.active = False
+        with frame.mutex:
+            frame.active = False
         _active.reset(token)
+
+
+def activate_frame(owner: ScopeFrame | None = None) -> FrameActivation:
+    frame = make_frame(owner)
+    token = _active.set(frame)
+    return FrameActivation(frame, token)
+
+
+def make_frame(owner: ScopeFrame | None = None) -> ScopeFrame:
+    if owner is None:
+        owner = _manualowner
+    context_parent = _active.get()
+    parent = context_parent
+    while parent is not None and parent.owner is not owner:
+        parent = parent.context_parent
+    if parent is not None and not parent.active:
+        parent = None
+    return ScopeFrame(parent=parent, context_parent=context_parent, owner=owner)
+
+
+def deactivate_frame(activation: FrameActivation) -> None:
+    activation.frame.deactivate()
+    _active.reset(activation.token)

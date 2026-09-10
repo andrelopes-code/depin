@@ -7,13 +7,26 @@ import pytest
 
 import benchmarks.comparison.collection as comparison
 from benchmarks.comparison import protocol
-from benchmarks.harness import HarnessError
+from benchmarks.harness import HarnessError, unmeasured
+from benchmarks.workloads import WORKLOADS
 
 EXPECTED_IDS = {'resolve-depin', 'resolve-wireup-2.12.0'}
 BUDGETS = Path('benchmarks/budgets.toml')
 BASELINE_REVISION = 'a' * 40
 REAL_DETERMINISTIC = comparison.collect_deterministic
 REAL_BASELINE_VALIDATION = protocol.validate_baseline_archive
+FASTAPI_EVIDENCE = Path('benchmarks/results/2026-09-09-fastapi-minimum-overhead/raw-v4-bb10')
+
+
+def test_fastapi_no_injection_is_a_reported_head_only_diagnostic() -> None:
+    baseline_record = (FASTAPI_EVIDENCE / 'base/rep0.json').read_text(encoding='utf-8')
+    head_record = (FASTAPI_EVIDENCE / 'head/rep0.json').read_text(encoding='utf-8')
+    head_names = {workload.name for workload in WORKLOADS}
+
+    assert '"head_only"' not in baseline_record
+    assert 'fastapi_no_injection-direct' in head_record
+    assert 'fastapi_no_injection' in head_names
+    assert any(refusal.case == 'fastapi_no_injection' for refusal in unmeasured.REFUSED)
 
 
 def _expected_file(revision: str) -> dict[str, tuple[str, int, bytes]]:

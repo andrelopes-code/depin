@@ -88,11 +88,11 @@ def test_null_collection_expects_only_direct_and_depin_report_ids() -> None:
     assert comparison.expected_ids(null=True) < comparison.expected_ids()
 
 
-def test_collector_limits_comparative_evidence_to_the_twenty_three_authored_targets() -> None:
+def test_collector_limits_comparative_evidence_to_the_twenty_four_authored_targets() -> None:
     targeted = tuple(comparative for comparative in COMPARATIVE_WORKLOADS if comparative.target is not None)
 
-    assert len(targeted) == 23
-    assert len(comparison.expected_ids(null=True)) == 46
+    assert len(targeted) == 24
+    assert len(comparison.expected_ids(null=True)) == 48
     assert set(comparison.descriptions()) == {comparative.workload.name for comparative in targeted}
 
 

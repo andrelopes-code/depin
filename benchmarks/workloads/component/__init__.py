@@ -9,6 +9,7 @@ from benchmarks.workloads.component.diagnostics import (
     export_a_large_graph_as_dot,
 )
 from benchmarks.workloads.component.errors import explain_an_unbound_key, freeze_a_chain_missing_a_provider
+from benchmarks.workloads.component.fastapi import WORKLOADS as FASTAPI_WORKLOADS
 from benchmarks.workloads.component.primitives import (
     FAILING_FREEZE_SIZES,
     UNBOUND_EXPLAIN_SIZES,
@@ -25,6 +26,7 @@ from benchmarks.workloads.component.resolution import (
 from benchmarks.workloads.component.scope import open_a_request_shaped_scope
 
 WORKLOADS: tuple[Workload, ...] = (
+    *FASTAPI_WORKLOADS,
     *(freeze_a_chain(size) for size in (10, 100, LARGE_GRAPH)),
     *(freeze_a_generic_key_chain(size) for size in (10, 100, LARGE_GRAPH)),
     *(freeze_a_decorated_chain(size) for size in (10, 100, LARGE_GRAPH)),

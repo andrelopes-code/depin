@@ -82,21 +82,31 @@ class Side:
 
     name: str
     directory: Path
+    python: Path | None = None
 
 
-def python_executable(directory: Path) -> Path:
+def python_executable(directory: Path, declared: Path | None = None) -> Path:
+    if declared is not None:
+        candidate = declared.resolve()
+        if not candidate.is_file():
+            raise HarnessError(f'{directory}: declared interpreter {candidate} is not a file')
+        return candidate
     relative = Path('Scripts/python.exe') if os.name == 'nt' else Path('bin/python')
     isolated = directory / '.venv' / relative
     return isolated if isolated.is_file() else Path(sys.executable)
 
 
-def _run(side: Side, template: Sequence[str], report: Path) -> None:
+def _run(side: Side, template: Sequence[str], report: Path, resolved: dict[str, str] | None = None) -> None:
     # `str.replace`, not `str.format`: an argument can be a whole program, and a
     # program is full of braces `format` would read as fields of its own.
     argv = [
-        str(python_executable(side.directory)),
+        str(
+            python_executable(side.directory) if side.python is None else python_executable(side.directory, side.python)
+        ),
         *(part.replace(REPORT_PLACEHOLDER, str(report)) for part in template),
     ]
+    if resolved is not None:
+        resolved[side.name] = argv[0]
     child = os.environ | {'PYTHONHASHSEED': memory.HASH_SEED, 'PYTHONPATH': str(side.directory)}
     completed = subprocess.run(argv, cwd=side.directory, env=child, capture_output=True, text=True, check=False)
     if completed.returncode != 0:
@@ -105,17 +115,21 @@ def _run(side: Side, template: Sequence[str], report: Path) -> None:
         )
 
 
-def _measure_latency(side: Side, template: Sequence[str]) -> dict[str, reduce.Aggregate]:
+def _measure_latency(
+    side: Side, template: Sequence[str], resolved: dict[str, str] | None = None
+) -> dict[str, reduce.Aggregate]:
     with tempfile.TemporaryDirectory() as scratch:
         report = Path(scratch) / 'report.json'
-        _run(side, template, report)
+        _run(side, template, report, resolved)
         return reduce.load(report)
 
 
-def _measure_deterministic(side: Side, template: Sequence[str]) -> dict[str, object]:
+def _measure_deterministic(
+    side: Side, template: Sequence[str], resolved: dict[str, str] | None = None
+) -> dict[str, object]:
     with tempfile.TemporaryDirectory() as scratch:
         report = Path(scratch) / DETERMINISTIC_FILE
-        _run(side, template, report)
+        _run(side, template, report, resolved)
         return read_json(report)
 
 
@@ -207,10 +221,11 @@ def collect(
         if not side.directory.is_dir():
             raise HarnessError(f'{side.name}: {side.directory} is not a directory')
 
+    resolved: dict[str, str] = {}
     for index in range(repetitions):
         order = (base, head) if index % 2 == 0 else (head, base)
         for side in order:
-            aggregates = _measure_latency(side, latency_command)
+            aggregates = _measure_latency(side, latency_command, resolved)
             write_json(
                 out / side.name / f'rep{index}.json',
                 {
@@ -221,11 +236,16 @@ def collect(
             )
 
     for side in (base, head):
-        write_json(out / side.name / DETERMINISTIC_FILE, _measure_deterministic(side, deterministic_command))
+        write_json(out / side.name / DETERMINISTIC_FILE, _measure_deterministic(side, deterministic_command, resolved))
 
     write_json(
         out / ENVIRONMENT_FILE,
-        {'environment': environment_module.capture(), 'repetitions': repetitions, 'seed': seed},
+        {
+            'environment': environment_module.capture(),
+            'repetitions': repetitions,
+            'seed': seed,
+            'interpreters': resolved,
+        },
     )
 
 
@@ -239,6 +259,8 @@ def _arguments(argv: Sequence[str] | None) -> dict[str, object]:
     parser = argparse.ArgumentParser(prog='python -m benchmarks.harness.pairs', description=USAGE)
     parser.add_argument('--base-dir', help='the revision the head is compared against')
     parser.add_argument('--head-dir', help='the revision under test')
+    parser.add_argument('--base-python', help='optional locked interpreter for the baseline revision')
+    parser.add_argument('--head-python', help='optional locked interpreter for the head revision')
     parser.add_argument('--out', help='the directory the dataset is written to')
     parser.add_argument('--repetitions', type=int, default=DEFAULT_REPETITIONS)
     parser.add_argument('--seed', type=int, default=DEFAULT_SEED)
@@ -255,12 +277,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         base_dir = _optional_path(chosen['base_dir'], '--base-dir')
         head_dir = _optional_path(chosen['head_dir'], '--head-dir')
+        base_python = _optional_path(chosen['base_python'], '--base-python')
+        head_python = _optional_path(chosen['head_python'], '--head-python')
         out = _optional_path(chosen['out'], '--out')
         if base_dir is None or head_dir is None or out is None:
             raise HarnessError(f'--base-dir, --head-dir and --out are all required\n{USAGE}')
         collect(
-            Side(BASE, base_dir),
-            Side(HEAD, head_dir),
+            Side(BASE, base_dir, base_python),
+            Side(HEAD, head_dir, head_python),
             out,
             repetitions=require_integer(chosen['repetitions'], '--repetitions'),
             seed=require_integer(chosen['seed'], '--seed'),

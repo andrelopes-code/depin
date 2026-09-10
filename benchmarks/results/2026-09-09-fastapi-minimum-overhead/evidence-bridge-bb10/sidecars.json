@@ -1,0 +1,111 @@
+{
+  "allocations": {
+    "base": 152.0,
+    "head": 148.0,
+    "limit": 0.0,
+    "method": "tracemalloc-allocation-count",
+    "metric": "allocations",
+    "scope": "paired",
+    "unit": "allocation-count",
+    "workload": "fastapi_cpu_light_endpoint"
+  },
+  "application_startup": {
+    "limit": 0.06,
+    "method": "paired-total-p50",
+    "metric": "latency",
+    "scope": "paired",
+    "unit": "seconds per operation",
+    "workload": "fastapi_application_startup"
+  },
+  "components": [
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_lazy_host_publication"
+    },
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_lazy_frame_activation_and_drain"
+    },
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_endpoint_program_one_key"
+    },
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_endpoint_program_many_keys"
+    },
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_request_seed_read"
+    },
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_async_resource_close"
+    }
+  ],
+  "contention": {
+    "base": 0.00040581904000000003,
+    "head": 0.00043362048,
+    "limit": 0.05,
+    "method": "synchronized-wave",
+    "metric": "p99_seconds",
+    "scope": "paired",
+    "unit": "seconds",
+    "workload": "request_scopes"
+  },
+  "no_injection": {
+    "depin": 0.0006495390261989087,
+    "direct": 0.0006333860219456255,
+    "limit": 0.05,
+    "method": "direct-null",
+    "metric": "latency",
+    "scope": "head-only",
+    "unit": "seconds per operation",
+    "workload": "fastapi_no_injection"
+  },
+  "peak_memory": {
+    "base": 29424.0,
+    "head": 26928.0,
+    "limit": 0.05,
+    "method": "tracemalloc-peak",
+    "metric": "peak-memory",
+    "scope": "paired",
+    "unit": "bytes",
+    "workload": "fastapi_cpu_light_endpoint"
+  },
+  "retained_memory": {
+    "base": 1039.0,
+    "head": 1035.0,
+    "limit": 0.02,
+    "method": "tracemalloc-retained",
+    "metric": "retained",
+    "scope": "paired",
+    "unit": "bytes",
+    "workload": "fastapi_cpu_light_endpoint"
+  },
+  "schema_version": 1
+}

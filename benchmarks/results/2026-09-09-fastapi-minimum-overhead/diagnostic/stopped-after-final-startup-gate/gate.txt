@@ -1,0 +1,71 @@
+new         fastapi_async_resource_close: no base measurement, not gated
+new         fastapi_endpoint_program_many_keys: no base measurement, not gated
+new         fastapi_endpoint_program_one_key: no base measurement, not gated
+new         fastapi_lazy_frame_activation_and_drain: no base measurement, not gated
+new         fastapi_lazy_host_publication: no base measurement, not gated
+new         fastapi_no_injection: no base measurement, not gated
+new         fastapi_request_seed_read: no base measurement, not gated
+pass        allocations  allocations_of_a_cached_singleton_resolution: blocks 13 -> 13 (+0.00%) budget 0.0%
+pass        allocations  allocations_of_a_request_shaped_scope: blocks 27 -> 27 (+0.00%) budget 0.0%
+pass        allocations  allocations_of_a_scope_cycle: blocks 75 -> 75 (+0.00%) budget 0.0%
+pass        allocations  allocations_of_a_transient_chain: blocks 12 -> 12 (+0.00%) budget 0.0%
+pass        allocations  allocations_of_an_inject_call: blocks 17 -> 17 (+0.00%) budget 0.0%
+pass        latency      build_the_graph_view: -1.20% [-3.48%, +1.94%] budget 5.0% n=5
+pass        latency      call_through_an_inject_wrapper: -0.84% [-5.67%, +0.48%] budget 5.0% n=5
+pass        latency      call_through_an_inject_wrapper_with_explicit_arguments: -3.34% [-4.31%, +1.26%] budget 5.0% n=5
+pass        latency      construct_a_singleton_for_the_first_time: +0.32% [-2.43%, +4.48%] budget 5.0% n=5
+pass        latency      explain_a_deep_chain: +0.19% [-0.76%, +4.41%] budget 11.0% n=5
+pass        latency      explain_a_deep_chain_with_every_node_decorated: -1.78% [-6.08%, +3.11%] budget 8.0% n=5
+pass        latency      explain_a_layered_dag: +0.71% [-2.81%, +2.64%] budget 5.0% n=5
+pass        latency      explain_an_unbound_key_of_16: +4.87% [+4.65%, +10.80%] budget 31.0% n=5
+pass        latency      explain_an_unbound_key_of_20: +6.46% [+0.07%, +11.06%] budget 25.0% n=5
+pass        latency      export_a_large_graph_as_dot: -1.68% [-11.88%, +1.66%] budget 5.0% n=5
+fail        latency      fastapi_application_startup: +22.90% [+20.87%, +32.02%] budget 6.0% n=5
+pass        latency      fastapi_async_resource_teardown: -3.85% [-11.06%, -0.39%] budget 5.0% n=5
+pass        latency      fastapi_cpu_light_endpoint: -6.14% [-6.83%, -4.32%] budget 5.0% n=5
+pass        latency      fastapi_endpoint_with_work: -2.78% [-3.51%, +0.00%] budget 5.0% n=5
+pass        latency      fastapi_request_scoped_graph: -2.61% [-6.54%, -0.48%] budget 5.0% n=5
+pass        latency      fastapi_singletons_and_transients: -4.68% [-7.84%, -2.51%] budget 8.0% n=5
+pass        latency      freeze_a_chain_missing_a_provider_of_100: +4.35% [+0.41%, +7.12%] budget 38.0% n=5
+pass        latency      freeze_a_chain_missing_a_provider_of_50: +1.72% [-9.49%, +7.60%] budget 32.0% n=5
+pass        latency      freeze_a_chain_of_10: +0.17% [-3.80%, +1.89%] budget 8.0% n=5
+pass        latency      freeze_a_chain_of_100: +0.24% [-6.13%, +0.45%] budget 5.0% n=5
+pass        latency      freeze_a_chain_of_1000: -0.98% [-9.76%, +2.62%] budget 8.0% n=5
+pass        latency      freeze_a_decorated_chain_of_10: -0.16% [-0.44%, +5.45%] budget 6.0% n=5
+pass        latency      freeze_a_decorated_chain_of_100: +0.90% [-1.75%, +1.45%] budget 6.0% n=5
+pass        latency      freeze_a_decorated_chain_of_1000: -0.98% [-4.33%, +1.47%] budget 5.0% n=5
+pass        latency      freeze_a_generic_key_chain_of_10: +1.45% [-1.45%, +2.72%] budget 5.0% n=5
+pass        latency      freeze_a_generic_key_chain_of_100: +0.64% [-1.25%, +3.53%] budget 5.0% n=5
+pass        latency      freeze_a_generic_key_chain_of_1000: -0.25% [-3.16%, +5.93%] budget 8.0% n=5
+pass        latency      open_a_request_shaped_scope: +3.38% [-0.73%, +5.09%] budget 6.0% n=5
+pass        latency      open_and_close_a_scope: +6.99% [-5.71%, +9.64%] budget 8.0% n=5
+pass        latency      resolve_a_collection_of_10: -0.60% [-2.05%, +0.97%] budget 5.0% n=5
+pass        latency      resolve_a_collection_of_100: -2.80% [-7.35%, -0.28%] budget 5.0% n=5
+pass        latency      resolve_a_generic_key: -1.41% [-3.99%, +0.50%] budget 5.0% n=5
+pass        latency      resolve_a_sync_resource_with_teardown: +2.86% [-2.15%, +5.43%] budget 16.0% n=5
+pass        latency      resolve_a_transient_chain: -1.16% [-2.96%, +1.25%] budget 5.0% n=5
+pass        latency      resolve_an_async_singleton: -0.18% [-2.17%, +2.39%] budget 5.0% n=5
+pass        latency      resolve_cached_singleton: -1.01% [-2.23%, -0.48%] budget 5.0% n=5
+pass        latency      resolve_cached_singleton_through_an_alias: -0.29% [-3.39%, +8.85%] budget 5.0% n=5
+pass        latency      resolve_singleton_through_a_two_deep_decoration_chain: -1.81% [-1.96%, +0.32%] budget 5.0% n=5
+pass        latency      resolve_through_an_active_override: -1.48% [-1.84%, +2.84%] budget 5.0% n=5
+pass        latency      resolve_with_no_active_override: -0.96% [-2.96%, +1.35%] budget 5.0% n=5
+pass        latency      warmup_a_cold_singleton_graph: +1.59% [-0.14%, +4.17%] budget 5.0% n=5
+pass        retained     retained_by_a_frozen_container_of_100: 35032 -> 35032 (+0.00%) budget 2.0%
+pass        retained     retained_by_a_frozen_container_of_1000: 326776 -> 326776 (+0.00%) budget 2.0%
+pass        retained     retained_by_a_warm_singleton_cache_of_1000: 397560 -> 397560 (+0.00%) budget 2.0%
+pass        retained     retained_by_an_open_scope_of_20: 10624 -> 10648 (+0.23%) budget 2.0%
+pass        scaling      scale_async_teardown: worst size-to-size growth +2.86% budget 15.0%
+pass        scaling      scale_freeze_graph_size: worst size-to-size growth +1.98% budget 15.0%
+pass        scaling      scale_override_nesting: worst size-to-size growth -0.48% budget 15.0%
+pass        scaling      scale_resolve_collection: worst size-to-size growth +5.79% budget 15.0%
+pass        scaling      scale_resolve_fan_out: worst size-to-size growth +3.67% budget 15.0%
+pass        scaling      scale_resolve_transient_depth: worst size-to-size growth +1.02% budget 15.0%
+pass        scaling      scale_scope_teardown: worst size-to-size growth -0.30% budget 15.0%
+pass        work         allocations_of_a_cached_singleton_resolution: 8 -> 8 (+0.00%) budget 0.0%
+pass        work         allocations_of_a_request_shaped_scope: 88 -> 88 (+0.00%) budget 0.0%
+pass        work         allocations_of_a_scope_cycle: 358 -> 358 (+0.00%) budget 0.0%
+pass        work         allocations_of_a_transient_chain: 28 -> 28 (+0.00%) budget 0.0%
+pass        work         allocations_of_an_inject_call: 28 -> 28 (+0.00%) budget 0.0%
+
+GATE_EXIT=1

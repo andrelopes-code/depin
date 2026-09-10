@@ -66,6 +66,11 @@ justification = 'Graph warmup ceiling from the per-singleton construction formul
 fixed_seconds = 0.0000035
 justification = 'Request-shaped scope lifecycle ceiling from the scoped resource formula.'
 
+[fastapi_no_injection]
+fixed_seconds = 0.000012
+fraction_of_direct = 0.1
+justification = 'FastAPI no-injection ceiling from the direct baseline fraction formula.'
+
 [fastapi_cpu_light_endpoint]
 fixed_seconds = 0.000012
 fraction_of_direct = 0.1

@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 
 from depin import Container, Scope
-from depin.ext.fastapi import Inject, RequestScope
+from depin.ext.fastapi import Inject, install
 
 from .model import (
     Cart,
@@ -61,7 +61,6 @@ def build_depin_sync_deployment(sink: Sink) -> Deployment:
     )
     _ = frozen.warmup()
     app = FastAPI()
-    app.add_middleware(RequestScope, container=frozen)
 
     async def status(clock: Inject[Clock]) -> dict[str, str]:
         return {'stamp': clock.stamp()}
@@ -75,6 +74,7 @@ def build_depin_sync_deployment(sink: Sink) -> Deployment:
     app.add_api_route('/status', status, methods=['GET'])
     app.add_api_route('/report', report, methods=['GET'])
     app.add_api_route('/price', price, methods=['GET'])
+    install(app, frozen)
     return Deployment(app=app, warm=already_warm)
 
 
@@ -106,3 +106,25 @@ def build_direct_sync_deployment(sink: Sink) -> Deployment:
     app.add_api_route('/report', report, methods=['GET'])
     app.add_api_route('/price', price, methods=['GET'])
     return Deployment(app=app, warm=already_warm)
+
+
+def build_depin_sync_no_injection_deployment(sink: Sink) -> Deployment:
+    """The head-only null-route diagnostic over the common depin application."""
+    deployment = build_depin_sync_deployment(sink)
+
+    async def plain() -> dict[str, str]:
+        return {'value': 'plain'}
+
+    deployment.app.add_api_route('/plain', plain, methods=['GET'])
+    return deployment
+
+
+def build_direct_sync_no_injection_deployment(sink: Sink) -> Deployment:
+    """The head-only null-route diagnostic over the common direct application."""
+    deployment = build_direct_sync_deployment(sink)
+
+    async def plain() -> dict[str, str]:
+        return {'value': 'plain'}
+
+    deployment.app.add_api_route('/plain', plain, methods=['GET'])
+    return deployment

@@ -42,9 +42,10 @@ def declared_all(body: list[ast.stmt]) -> tuple[str, ...] | None:
     `Inject` findable: the module has no top-level `Inject` at all.
     """
     for node in body:
-        if not isinstance(node, ast.Assign):
+        if not isinstance(node, ast.Assign | ast.AnnAssign):
             continue
-        if not any(isinstance(target, ast.Name) and target.id == '__all__' for target in node.targets):
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        if not any(isinstance(target, ast.Name) and target.id == '__all__' for target in targets):
             continue
         value = node.value
         if isinstance(value, ast.List | ast.Tuple):
@@ -215,6 +216,12 @@ def test_the_scanner_does_not_treat_a_plain_import_as_a_symbol() -> None:
 
 def test_the_scanner_honours_a_declared_all_over_the_module_body() -> None:
     source = "__all__ = ['Kept']\nclass Kept: ...\nclass Dropped: ...\n"
+
+    assert module_symbols(source) == ('Kept',)
+
+
+def test_the_scanner_honours_a_typed_declared_all_over_the_module_body() -> None:
+    source = "__all__: list[str] = ['Kept']\nclass Kept: ...\nclass Dropped: ...\n"
 
     assert module_symbols(source) == ('Kept',)
 

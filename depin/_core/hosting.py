@@ -2,11 +2,11 @@
 
 import contextlib
 from collections.abc import AsyncGenerator, Generator
-from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Final, final, override
 
 from depin._core.frozen import FrozenContainer
+from depin._core.host_context import get_hosted_binding, reset_hosted_binding, set_hosted_binding
 from depin._core.scope import ScopeFrame
 from depin.errors import ContainerNotBoundError
 
@@ -46,8 +46,6 @@ class ContractVersion:
 
 CONTRACT_VERSION: Final = ContractVersion(1, 0)
 """The contract version this release of depin implements."""
-
-_hosted: ContextVar[FrozenContainer | None] = ContextVar('depin_hosted_container', default=None)
 
 
 @final
@@ -113,11 +111,11 @@ class Host:
 
             ```
         """
-        token = _hosted.set(self._container)
+        token = set_hosted_binding(self)
         try:
             yield
         finally:
-            _hosted.reset(token)
+            reset_hosted_binding(token)
 
     @contextlib.contextmanager
     def scope(self) -> Generator[ScopeFrame]:
@@ -199,13 +197,13 @@ def hosted_container() -> FrozenContainer:
 
         ```
     """
-    container = _hosted.get()
-    if container is None:
+    binding = get_hosted_binding()
+    if binding is None:
         raise ContainerNotBoundError(
             'no container is hosted in this context; open a scope with Host.scope() or Host.ascope(), '
             'or publish one with Host.activated()'
         )
-    return container
+    return binding.container
 
 
 def optional_hosted_container() -> FrozenContainer | None:
@@ -224,4 +222,5 @@ def optional_hosted_container() -> FrozenContainer | None:
 
         ```
     """
-    return _hosted.get()
+    binding = get_hosted_binding()
+    return None if binding is None else binding.container

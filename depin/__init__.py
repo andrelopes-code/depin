@@ -41,7 +41,7 @@ from depin._core.scope import Scope, ScopeFrame
 from depin._core.seeds import ScopeSeed, ScopeSeeder
 from depin._core.spec import Bindings, Condition, ProviderKey, ProviderShape, Underlying, render_key
 from depin._core.warmup import WarmupReport
-from depin.errors import AsyncInSyncContextError, ContainerClosedError, ContainerLifecycleError
+from depin.errors import AsyncInSyncContextError, ContainerClosedError, ContainerLifecycleError, FastAPIIntegrationError
 
 try:
     __version__ = version('pydepin')
@@ -60,6 +60,7 @@ __all__ = (
     'ContainerLifecycleError',
     'ContractVersion',
     'DependencyGraph',
+    'FastAPIIntegrationError',
     'FrozenContainer',
     'GraphEdge',
     'GraphNode',

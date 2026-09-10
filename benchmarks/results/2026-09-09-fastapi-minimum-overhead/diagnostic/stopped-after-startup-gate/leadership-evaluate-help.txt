@@ -1,0 +1,12 @@
+usage: python -m benchmarks.comparison.leadership evaluate [-h] --calibration
+                                                           CALIBRATION
+                                                           --budgets BUDGETS
+                                                           dataset
+
+positional arguments:
+  dataset
+
+options:
+  -h, --help            show this help message and exit
+  --calibration CALIBRATION
+  --budgets BUDGETS

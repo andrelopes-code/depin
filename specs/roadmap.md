@@ -30,7 +30,11 @@ at least a 25% p50 margin with explicit p95 and p99 gates, not calibrated parity
    [competitive-performance leadership proposal](proposals/2026-09-02-competitive-performance-leadership-proposal.md).
 2. Execute endpoint compilation and lazy request scope under the
    [FastAPI minimum-overhead proposal](proposals/2026-09-02-fastapi-minimum-overhead-proposal.md),
-   the single next performance proposal.
+   the single next performance proposal. Its 2026-09-09 diagnostic stopped
+   before full collection: the CPU-light increment was 108.542 microseconds,
+   above the 45.525-microsecond 25% target. Reduce the owning endpoint
+   program/host-publication cost and collect fresh paired evidence before
+   advancing this item.
 3. Investigate
    [declarative provider discovery](proposals/2026-09-05-declarative-provider-discovery-proposal.md),
    keeping explicit package discovery as a hypothesis rather than an accepted
