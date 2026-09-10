@@ -2,7 +2,7 @@
 
 import asyncio
 import threading
-from typing import override
+from typing import Literal, Protocol, override
 
 import pytest
 
@@ -187,6 +187,26 @@ def test_push_frame_sets_active() -> None:
 
 
 def test_push_frame_exit_waits_for_a_frame_mutation_lock() -> None:
+    class Lock(Protocol):
+        def acquire(self) -> bool: ...
+
+        def release(self) -> None: ...
+
+    class ObservedLock:
+        def __init__(self, lock: Lock, exit_thread: int, exit_attempt: threading.Event) -> None:
+            self.lock = lock
+            self.exit_thread = exit_thread
+            self.exit_attempt = exit_attempt
+
+        def __enter__(self) -> None:
+            if threading.get_ident() == self.exit_thread:
+                self.exit_attempt.set()
+            self.lock.acquire()
+
+        def __exit__(self, exception_type: object, exception: object, traceback: object) -> Literal[False]:
+            self.lock.release()
+            return False
+
     class BlockingCache(dict[object, object]):
         def __init__(self) -> None:
             super().__init__()
@@ -199,25 +219,28 @@ def test_push_frame_exit_waits_for_a_frame_mutation_lock() -> None:
             self.release.wait()
             super().__setitem__(key, value)
 
-    assert not hasattr(ScopeFrame(), 'mutex')
+    assert hasattr(ScopeFrame(), 'mutex')
     opened = threading.Event()
     leave = threading.Event()
-    exiting = threading.Event()
+    exit_attempt = threading.Event()
     exited = threading.Event()
     frames: list[ScopeFrame] = []
+    exit_threads: list[int] = []
 
     def run_scope() -> None:
         with push_frame() as frame:
             frames.append(frame)
+            exit_threads.append(threading.get_ident())
             opened.set()
             assert leave.wait(1)
-            exiting.set()
         exited.set()
 
     thread = threading.Thread(target=run_scope)
     thread.start()
     assert opened.wait(1)
     frame = frames[0]
+    lock = ObservedLock(frame.mutex, exit_threads[0], exit_attempt)
+    object.__setattr__(frame, 'mutex', lock)
     cache = BlockingCache()
     object.__setattr__(frame, '_cache', cache)
 
@@ -229,8 +252,8 @@ def test_push_frame_exit_waits_for_a_frame_mutation_lock() -> None:
     try:
         assert cache.mutation_started.wait(1)
         leave.set()
-        assert exiting.wait(1)
-        assert not exited.wait(1)
+        assert exit_attempt.wait(1)
+        assert not exited.is_set()
     finally:
         cache.release.set()
         mutator.join()
