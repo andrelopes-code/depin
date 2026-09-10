@@ -338,6 +338,33 @@ def distinct(root: Path, *external: Path) -> None:
             raise RuntimeError(f'{candidate} aliases target root {target}')
 
 
+def _venv_binding(launcher: Path, environment: Path) -> dict[str, str]:
+    lexical_launcher = launcher.absolute()
+    lexical_environment = environment.absolute()
+    if not lexical_launcher.is_file():
+        raise RuntimeError(f'{lexical_launcher}: locked environment launcher does not exist')
+    try:
+        _ = lexical_launcher.relative_to(lexical_environment)
+    except ValueError as error:
+        raise RuntimeError(
+            f'{lexical_launcher}: launcher is outside declared environment {lexical_environment}'
+        ) from error
+    if lexical_launcher.resolve() != Path(sys.executable).resolve():
+        raise RuntimeError('locked environment launcher target does not match the executing interpreter')
+    if Path(sys.prefix).resolve() != lexical_environment.resolve():
+        raise RuntimeError('executing interpreter prefix does not match declared locked environment')
+    cfg = lexical_environment / 'pyvenv.cfg'
+    if not cfg.is_file():
+        raise RuntimeError(f'{cfg}: locked environment configuration is missing')
+    return {
+        'interpreter': str(lexical_launcher),
+        'launcher_target': str(lexical_launcher.resolve()),
+        'prefix': str(Path(sys.prefix).absolute()),
+        'base_prefix': str(Path(sys.base_prefix).absolute()),
+        'pyvenv_cfg_sha256': digest(cfg),
+    }
+
+
 def _source_argument(arguments: list[str]) -> Path | None:
     if '--source-root' in arguments:
         index = arguments.index('--source-root')
@@ -415,8 +442,10 @@ def capture(
     repetition: int,
     first: str,
     benchmark_report: Path,
+    launcher: Path,
 ) -> None:
     distinct(root, out, bundle, environment, cache)
+    binding = _venv_binding(launcher, environment)
     clean_target(root, expected)
     if digest(root / 'uv.lock') != expected_lock:
         raise RuntimeError('target lock SHA256 differs from --expected-lock-sha256')
@@ -470,11 +499,11 @@ def capture(
     decoded = benchmark(root, benchmark_report, side, repetition, first)
     clean_target(root, expected)
     payload = {
-        'schema_version': 3,
+        'schema_version': 4,
         'side': side,
         'repetition': repetition,
         'revision': expected,
-        'interpreter': str(Path(sys.executable).resolve()),
+        **binding,
         'environment': harness_environment.capture()
         | {
             'bootstrap': {
@@ -565,6 +594,7 @@ def main() -> int:
     parser.add_argument('--repetition', type=int, required=True)
     parser.add_argument('--first', choices=('base', 'head'), required=True)
     parser.add_argument('--benchmark-report', type=Path, required=True)
+    parser.add_argument('--launcher', type=Path, required=True)
     arguments = parser.parse_args()
     try:
         capture(
@@ -579,6 +609,7 @@ def main() -> int:
             arguments.repetition,
             arguments.first,
             arguments.benchmark_report,
+            arguments.launcher,
         )
     except RuntimeError as error:
         _ = sys.stderr.write(f'{error}\n')

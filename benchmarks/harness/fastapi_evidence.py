@@ -40,7 +40,7 @@ from benchmarks.harness.work import calls_per_operation
 from benchmarks.workloads import WORKLOADS
 
 BASELINE_REVISION = '086adf98459773e3175f4723b2b64e3f47306e42'
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 REPETITIONS = 5
 
 
@@ -107,7 +107,7 @@ def collect(
             record = out / side / f'rep{repetition}.json'
             report = bundle / 'reports' / side / f'rep{repetition}.json'
             argv = (
-                str(interpreter.resolve()),
+                str(interpreter.absolute()),
                 '-I',
                 str(copied),
                 '--source-root',
@@ -121,7 +121,9 @@ def collect(
                 '--bundle-root',
                 str(bundle.resolve()),
                 '--environment-root',
-                str(interpreter.resolve().parent.parent),
+                str(interpreter.absolute().parent.parent),
+                '--launcher',
+                str(interpreter.absolute()),
                 '--cache-root',
                 str(cache.resolve()),
                 '--side',
@@ -452,6 +454,10 @@ def _envelope(path: Path, side: str, repetition: int, revision: str, environment
         'repetition',
         'revision',
         'interpreter',
+        'launcher_target',
+        'prefix',
+        'base_prefix',
+        'pyvenv_cfg_sha256',
         'environment',
         'first',
         'benchmark_report',
@@ -472,14 +478,24 @@ def _envelope(path: Path, side: str, repetition: int, revision: str, environment
         raise HarnessError(f'{path}: side/repetition identity mismatch')
     if require_text(payload.get('revision'), f'{path}: revision') != revision:
         raise HarnessError(f'{path}: revision mismatch')
+    launcher = Path(require_text(payload.get('interpreter'), f'{path}: interpreter'))
+    prefix = Path(require_text(payload.get('prefix'), f'{path}: prefix'))
+    environment_root = environment.absolute()
+    if not launcher.is_absolute() or not launcher.is_file() or not prefix.is_absolute():
+        raise HarnessError(f'{path}: locked environment launcher and prefix must be absolute existing paths')
     try:
-        _ = (
-            Path(require_text(payload.get('interpreter'), f'{path}: interpreter'))
-            .resolve()
-            .relative_to(environment.resolve())
-        )
+        _ = launcher.relative_to(environment_root)
     except ValueError as error:
         raise HarnessError(f'{path}: interpreter does not belong to declared locked environment') from error
+    if prefix.resolve() != environment.resolve():
+        raise HarnessError(f'{path}: interpreter prefix does not match declared locked environment')
+    if Path(require_text(payload.get('launcher_target'), f'{path}: launcher target')).resolve() != launcher.resolve():
+        raise HarnessError(f'{path}: launcher target does not match the lexical environment launcher')
+    if Path(require_text(payload.get('base_prefix'), f'{path}: base prefix')).resolve() == environment.resolve():
+        raise HarnessError(f'{path}: locked interpreter base prefix must differ from its virtual environment prefix')
+    cfg = environment / 'pyvenv.cfg'
+    if not cfg.is_file() or _sha256(cfg) != require_text(payload.get('pyvenv_cfg_sha256'), f'{path}: pyvenv digest'):
+        raise HarnessError(f'{path}: pyvenv configuration digest mismatch')
     first = 'base' if repetition % 2 == 0 else 'head'
     if require_text(payload.get('first'), f'{path}: first') != first:
         raise HarnessError(f'{path}: first-side parity mismatch')

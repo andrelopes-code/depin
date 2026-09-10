@@ -133,3 +133,30 @@ def test_isolated_bootstrap_reexecs_with_deterministic_hashing_and_target_only_i
     assert probe['hash_randomization'] == 0
     assert Path(probe['memory_module']).is_relative_to(Path.cwd())
     assert probe['allocation_peak'] > 0
+
+
+def test_venv_launcher_binding_accepts_uv_symlink_and_rejects_wrong_prefix_or_target(tmp_path: Path) -> None:
+    environment = tmp_path / 'environment'
+    subprocess.run(
+        ('uv', 'venv', '--python', sys.executable, str(environment)), check=True, capture_output=True, text=True
+    )
+    launcher = environment / 'bin' / 'python'
+    wrong_target = environment / 'bin' / 'wrong-python'
+    wrong_target.symlink_to('/bin/sh')
+    program = (
+        'import sys; from pathlib import Path; '
+        f'sys.path.insert(0, {str(Path.cwd())!r}); '
+        'from benchmarks.harness.fastapi_target_runner import _venv_binding; '
+        f'launcher = Path({str(launcher)!r}); environment = Path({str(environment)!r}); '
+        '_venv_binding(launcher, environment); '
+        'assert launcher.is_symlink()\n'
+        'try: _venv_binding(launcher, environment.parent)\n'
+        'except RuntimeError: pass\n'
+        'else: raise AssertionError("prefix")\n'
+        f'try: _venv_binding(Path({str(wrong_target)!r}), environment)\n'
+        'except RuntimeError: pass\n'
+        'else: raise AssertionError("target")\n'
+    )
+    completed = subprocess.run((str(launcher), '-c', program), capture_output=True, text=True, check=False)
+
+    assert completed.returncode == 0, completed.stderr

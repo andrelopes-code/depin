@@ -1,5 +1,7 @@
 """Fail-closed coverage for FastAPI evidence reduction."""
 
+import hashlib
+import sys
 from pathlib import Path
 
 import pytest
@@ -41,11 +43,15 @@ def _raw(side: str, repetition: int, revision: str, interpreter: str) -> dict[st
         for label in ('depin', 'direct')
     }
     payload: dict[str, object] = {
-        'schema_version': 3,
+        'schema_version': 4,
         'side': side,
         'repetition': repetition,
         'revision': revision,
         'interpreter': interpreter,
+        'launcher_target': str(Path(interpreter).resolve()),
+        'prefix': str(Path(interpreter).parent.parent),
+        'base_prefix': str(Path(sys.base_prefix).resolve()),
+        'pyvenv_cfg_sha256': hashlib.sha256((Path(interpreter).parent.parent / 'pyvenv.cfg').read_bytes()).hexdigest(),
         'environment': {
             'interpreter': {'implementation': 'CPython', 'version': '3.12', 'compiler': 'GCC'},
             'host': {'system': 'Linux', 'release': '6', 'machine': 'x86_64', 'available_processors': 2},
@@ -120,13 +126,22 @@ def _raw(side: str, repetition: int, revision: str, interpreter: str) -> dict[st
 
 
 def _reduced(root: Path) -> dict[str, object]:
+    environments: dict[str, Path] = {}
+    for side in ('base', 'head'):
+        environment = root / f'{side}-env'
+        (environment / 'bin').mkdir(parents=True)
+        (environment / 'bin' / 'python').symlink_to(Path(sys.executable))
+        (environment / 'pyvenv.cfg').write_text('home = test\n', encoding='utf-8')
+        environments[side] = environment
     for repetition in range(5):
         for side, revision, interpreter in (
-            ('base', BASELINE_REVISION, '/tmp/base-env/bin/python'),
-            ('head', HEAD_REVISION, '/tmp/head-env/bin/python'),
+            ('base', BASELINE_REVISION, str(environments['base'] / 'bin' / 'python')),
+            ('head', HEAD_REVISION, str(environments['head'] / 'bin' / 'python')),
         ):
             write_json(root / 'raw' / side / f'rep{repetition}.json', _raw(side, repetition, revision, interpreter))
-    return reduce(root / 'raw', BASELINE_REVISION, HEAD_REVISION, {'base': '/tmp/base-env', 'head': '/tmp/head-env'})
+    return reduce(
+        root / 'raw', BASELINE_REVISION, HEAD_REVISION, {side: str(path) for side, path in environments.items()}
+    )
 
 
 def test_reduction_preserves_repetitions_and_projects_evaluator_inputs(tmp_path: Path) -> None:
@@ -181,14 +196,24 @@ def test_reduction_refuses_invalid_envelope(tmp_path: Path, path: tuple[str, ...
     target[path[-1]] = value
     write_json(tmp_path / 'raw' / 'head' / 'rep2.json', payload)
     with pytest.raises(HarnessError, match=message):
-        reduce(tmp_path / 'raw', BASELINE_REVISION, HEAD_REVISION, {'base': '/tmp/base-env', 'head': '/tmp/head-env'})
+        reduce(
+            tmp_path / 'raw',
+            BASELINE_REVISION,
+            HEAD_REVISION,
+            {'base': str(tmp_path / 'base-env'), 'head': str(tmp_path / 'head-env')},
+        )
 
 
 def test_reduction_refuses_duplicate_json_key(tmp_path: Path) -> None:
     _ = _reduced(tmp_path)
     (tmp_path / 'raw' / 'base' / 'rep0.json').write_text('{"schema_version":3,"schema_version":3}', encoding='utf-8')
     with pytest.raises(HarnessError, match='duplicate JSON key'):
-        reduce(tmp_path / 'raw', BASELINE_REVISION, HEAD_REVISION, {'base': '/tmp/base-env', 'head': '/tmp/head-env'})
+        reduce(
+            tmp_path / 'raw',
+            BASELINE_REVISION,
+            HEAD_REVISION,
+            {'base': str(tmp_path / 'base-env'), 'head': str(tmp_path / 'head-env')},
+        )
 
 
 def test_reduction_accepts_zero_dispersion_but_refuses_empty_resource_teardown(tmp_path: Path) -> None:
@@ -214,4 +239,9 @@ def test_reduction_accepts_zero_dispersion_but_refuses_empty_resource_teardown(t
         require_object(resource[label], label)['closed'] = []
     write_json(tmp_path / 'raw' / 'head' / 'rep2.json', payload)
     with pytest.raises(HarnessError, match='teardown must close'):
-        reduce(tmp_path / 'raw', BASELINE_REVISION, HEAD_REVISION, {'base': '/tmp/base-env', 'head': '/tmp/head-env'})
+        reduce(
+            tmp_path / 'raw',
+            BASELINE_REVISION,
+            HEAD_REVISION,
+            {'base': str(tmp_path / 'base-env'), 'head': str(tmp_path / 'head-env')},
+        )
