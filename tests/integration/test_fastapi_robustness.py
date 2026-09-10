@@ -264,8 +264,8 @@ def test_install_does_not_mutate_earlier_routes_when_a_later_route_is_malformed(
     assert _dependency_call_name(first_route.dependant.dependencies[0]) == '_InjectResolver'
 
 
-def test_install_rolls_back_when_a_later_route_cannot_rebuild() -> None:
-    """A failed route rebuild must not leave earlier routes compiled."""
+def test_install_does_not_rebuild_when_a_later_route_handler_is_unavailable() -> None:
+    """Installed routes keep FastAPI's original route applications."""
 
     class First:
         pass
@@ -292,21 +292,17 @@ def test_install_rolls_back_when_a_later_route_cannot_rebuild() -> None:
         raise RuntimeError('rebuild failed')
 
     object.__setattr__(second_route, 'get_route_handler', fail_rebuild)
-    original_call: object = first_route.dependant.call
-    original_dependencies = first_route.dependant.dependencies
     original_app: object = first_route.app
+    second_app: object = second_route.app
 
-    with pytest.raises(FastAPIIntegrationError, match='rebuild'):
-        fastapi_ext.install(app, Container().bind(First).bind(Second).freeze())
+    fastapi_ext.install(app, Container().bind(First).bind(Second).freeze())
 
-    assert first_route.dependant.call is original_call
-    assert first_route.dependant.dependencies is original_dependencies
     assert first_route.app is original_app
-    assert app.user_middleware == []
+    assert second_route.app is second_app
 
 
-def test_install_translates_any_later_rebuild_failure_after_rollback() -> None:
-    """A non-whitelisted setup error must not escape a partial installation."""
+def test_install_does_not_call_a_route_handler_rebuild_with_an_arbitrary_failure() -> None:
+    """A stale rebuild seam does not affect installation."""
 
     class First:
         pass
@@ -333,19 +329,11 @@ def test_install_translates_any_later_rebuild_failure_after_rollback() -> None:
         raise ValueError('unexpected rebuild failure')
 
     object.__setattr__(second_route, 'get_route_handler', fail_rebuild)
-    original_call: object = first_route.dependant.call
-    original_dependencies = first_route.dependant.dependencies
     original_app: object = first_route.app
 
-    with pytest.raises(FastAPIIntegrationError) as caught:
-        fastapi_ext.install(app, Container().bind(First).bind(Second).freeze())
+    fastapi_ext.install(app, Container().bind(First).bind(Second).freeze())
 
-    assert isinstance(caught.value.__cause__, ValueError)
-    assert str(caught.value.__cause__) == 'unexpected rebuild failure'
-    assert first_route.dependant.call is original_call
-    assert first_route.dependant.dependencies is original_dependencies
     assert first_route.app is original_app
-    assert app.user_middleware == []
 
 
 def test_install_rejects_an_invalid_application_shape_without_mutating_routes() -> None:
