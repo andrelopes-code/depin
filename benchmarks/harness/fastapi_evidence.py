@@ -41,6 +41,15 @@ from benchmarks.workloads import WORKLOADS
 BASELINE_REVISION = '086adf98459773e3175f4723b2b64e3f47306e42'
 SCHEMA_VERSION = 4
 REPETITIONS = 5
+COLLECTION_OPTIONS = (
+    '--out',
+    '--base-dir',
+    '--head-dir',
+    '--base-python',
+    '--head-python',
+    '--cache-root',
+    '--repetitions',
+)
 
 
 def _revision() -> str:
@@ -64,6 +73,36 @@ def _sha256(path: Path) -> str:
         return hashlib.sha256(path.read_bytes()).hexdigest()
     except OSError as error:
         raise HarnessError(f'{path}: cannot hash ({error})') from error
+
+
+def _collection_command(
+    out: Path,
+    base: Path,
+    head: Path,
+    interpreters: Mapping[str, Path],
+    cache: Path,
+    repetitions: int,
+) -> list[str]:
+    return [
+        'python',
+        '-m',
+        'benchmarks.harness.fastapi_evidence',
+        'collect',
+        '--out',
+        str(out.absolute()),
+        '--base-dir',
+        str(base.resolve()),
+        '--head-dir',
+        str(head.resolve()),
+        '--base-python',
+        str(interpreters['base'].absolute()),
+        '--head-python',
+        str(interpreters['head'].absolute()),
+        '--cache-root',
+        str(cache.resolve()),
+        '--repetitions',
+        str(repetitions),
+    ]
 
 
 def collect(
@@ -107,7 +146,7 @@ def collect(
             revision = require_text(manifest.get('revision'), f'{side} manifest revision')
             lock = require_text(manifest.get('lock_sha256'), f'{side} manifest lock SHA256')
             record = out / side / f'rep{repetition}.json'
-            report = bundle / 'reports' / side / f'rep{repetition}.json'
+            report = out / 'reports' / side / f'rep{repetition}.json'
             argv = (
                 str(interpreter.absolute()),
                 '-I',
@@ -148,7 +187,14 @@ def collect(
                 raise HarnessError(
                     f'{side} rep{repetition}: neutral runner failed\n{completed.stdout}{completed.stderr}'
                 )
-    write_json(out / 'source-manifest.json', {'runner_sha256': _sha256(copied), 'targets': manifests})
+    write_json(
+        out / 'source-manifest.json',
+        {
+            'runner_sha256': _sha256(copied),
+            'targets': manifests,
+            'collection_command': _collection_command(out, base, head, interpreters, cache, repetitions),
+        },
+    )
 
 
 def _median(call: Callable[[], object], *, samples: int = 101) -> float:
@@ -506,6 +552,11 @@ def _envelope(path: Path, side: str, repetition: int, revision: str, environment
     digest = require_text(report.get('sha256'), f'{path}: benchmark report.sha256')
     if len(digest) != 64 or any(character not in '0123456789abcdef' for character in digest):
         raise HarnessError(f'{path}: benchmark report digest is invalid')
+    retained_report = path.parent.parent / 'reports' / side / path.name
+    if not retained_report.is_file():
+        raise HarnessError(f'{path}: retained benchmark report {retained_report} is missing')
+    if _sha256(retained_report) != digest:
+        raise HarnessError(f'{path}: retained benchmark report digest mismatch')
     aggregates = require_object(report.get('aggregates'), f'{path}: benchmark aggregates')
     expected_cases = {
         f'test_latency[{workload}-{label}]' for workload in TAIL_WORKLOADS for label in ('direct', 'depin')
@@ -666,7 +717,9 @@ def _stable_environment(value: object, where: str) -> dict[str, object]:
     packages = environment.get('packages')
     if packages is not None:
         stable_packages = dict(require_object(packages, f'{where}.packages'))
-        _ = require_text(stable_packages.pop('pydepin', None), f'{where}.packages.pydepin')
+        package_version = require_text(stable_packages.pop('pydepin', None), f'{where}.packages.pydepin')
+        if package_version != require_text(distributions.get('pydepin'), f'{where}.distributions.pydepin'):
+            raise HarnessError(f'{where}: package and distribution pydepin versions disagree')
         stable['packages'] = stable_packages
     return stable
 
@@ -706,12 +759,59 @@ def _subject_version(records: Sequence[Mapping[str, object]], side: str) -> str:
     return versions.pop()
 
 
+def _source_manifest(raw: Path, baseline_revision: str, head_revision: str, repetitions: int) -> list[str]:
+    path = raw / 'source-manifest.json'
+    payload = _strict_json(path)
+    _keys(payload, {'runner_sha256', 'targets', 'collection_command'}, str(path))
+    runner_sha256 = require_text(payload.get('runner_sha256'), f'{path}: runner_sha256')
+    if len(runner_sha256) != 64 or any(character not in '0123456789abcdef' for character in runner_sha256):
+        raise HarnessError(f'{path}: runner_sha256 must be a SHA-256 digest')
+    targets = require_object(payload.get('targets'), f'{path}: targets')
+    if set(targets) != {'base', 'head'}:
+        raise HarnessError(f'{path}: targets must exactly contain base and head')
+    roots: dict[str, str] = {}
+    for side, revision in (('base', baseline_revision), ('head', head_revision)):
+        target = require_object(targets.get(side), f'{path}: targets.{side}')
+        _keys(target, {'root', 'revision', 'lock_sha256'}, f'{path}: targets.{side}')
+        roots[side] = require_text(target.get('root'), f'{path}: targets.{side}.root')
+        if require_text(target.get('revision'), f'{path}: targets.{side}.revision') != revision:
+            raise HarnessError(f'{path}: targets.{side}.revision does not match the reduced revision')
+        lock_sha256 = require_text(target.get('lock_sha256'), f'{path}: targets.{side}.lock_sha256')
+        if len(lock_sha256) != 64 or any(character not in '0123456789abcdef' for character in lock_sha256):
+            raise HarnessError(f'{path}: targets.{side}.lock_sha256 must be a SHA-256 digest')
+    values = require_array(payload.get('collection_command'), f'{path}: collection command')
+    command = [require_text(value, f'{path}: collection command') for value in values]
+    if command[:4] != ['python', '-m', 'benchmarks.harness.fastapi_evidence', 'collect']:
+        raise HarnessError(f'{path}: collection command has the wrong entry point')
+    arguments = command[4:]
+    if len(arguments) != len(COLLECTION_OPTIONS) * 2:
+        raise HarnessError(f'{path}: collection command must carry every required option exactly once')
+    options: dict[str, str] = {}
+    for index in range(0, len(arguments), 2):
+        option, value = arguments[index : index + 2]
+        if option not in COLLECTION_OPTIONS or option in options:
+            raise HarnessError(f'{path}: collection command has an unknown or duplicate option {option!r}')
+        options[option] = value
+    if tuple(options) != COLLECTION_OPTIONS:
+        raise HarnessError(f'{path}: collection command options are incomplete or out of order')
+    if options['--base-dir'] != roots['base'] or options['--head-dir'] != roots['head']:
+        raise HarnessError(f'{path}: collection command target directories do not match the manifest')
+    try:
+        recorded_repetitions = int(options['--repetitions'])
+    except ValueError as error:
+        raise HarnessError(f'{path}: collection command repetitions must be an integer') from error
+    if recorded_repetitions != repetitions:
+        raise HarnessError(f'{path}: collection command repetitions do not match the raw envelopes')
+    return command
+
+
 def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: Mapping[str, str]) -> dict[str, object]:
     """Validate exact v3 envelopes and project the unchanged evaluator inputs."""
     if baseline_revision != BASELINE_REVISION:
         raise HarnessError('baseline revision is not the accepted FastAPI baseline')
     locations = {side: Path(require_text(environments.get(side), f'{side} environment')) for side in ('base', 'head')}
     repetitions = _repetition_count(raw)
+    collection_command = _source_manifest(raw, baseline_revision, head_revision, repetitions)
     base_records = [
         _envelope(raw / 'base' / f'rep{i}.json', 'base', i, baseline_revision, locations['base'])
         for i in range(repetitions)
@@ -812,12 +912,7 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
         'head': _subject_version(head_records, 'head'),
     }
     environment_payload['harness_revision'] = _target_revision(Path(__file__).parents[2])
-    environment_payload['collection_command'] = [
-        'python',
-        '-m',
-        'benchmarks.harness.fastapi_evidence',
-        'collect',
-    ]
+    environment_payload['collection_command'] = collection_command
     environment_payload['locked_environment'] = {
         side: f'sha256:{_sha256(location / "pyvenv.cfg")}' for side, location in locations.items()
     }
