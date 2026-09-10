@@ -71,7 +71,6 @@ def _observation(observation: Observation) -> dict[str, object]:
         'response': observation.result,
         'constructed': list(observation.constructed),
         'closed': list(observation.closed),
-        'teardown': tuple(observation.constructed) == tuple(observation.closed),
     }
 
 
@@ -82,10 +81,20 @@ def _by_name() -> dict[str, Workload]:
 def _guard(workload: Workload) -> dict[str, object]:
     if workload.baseline is None:
         raise HarnessError(f'{workload.name}: FastAPI evidence requires a direct baseline')
+    subject = _observation(workload.subject.observe())
+    direct = _observation(workload.baseline.observe())
+    response = subject['response'] == direct['response']
+    lifecycle = subject['constructed'] == direct['constructed'] and subject['closed'] == direct['closed']
+    teardown = subject['closed'] == direct['closed']
+    if workload.name == 'fastapi_async_resource_teardown':
+        teardown = teardown and bool(subject['closed']) and bool(direct['closed'])
     return {
         'workload': workload.name,
-        'subject': _observation(workload.subject.observe()),
-        'direct': _observation(workload.baseline.observe()),
+        'subject': subject,
+        'direct': direct,
+        'response_equivalent': response,
+        'lifecycle_equivalent': lifecycle,
+        'teardown_equivalent': teardown,
     }
 
 
@@ -190,8 +199,21 @@ def _guards(payload: Mapping[str, object], path: Path) -> dict[str, Mapping[str,
             _ = require_text(observed.get('response'), f'{path}: {name}.{implementation}.response')
             _ = require_array(observed.get('constructed'), f'{path}: {name}.{implementation}.constructed')
             _ = require_array(observed.get('closed'), f'{path}: {name}.{implementation}.closed')
-            if observed.get('teardown') is not True:
-                raise HarnessError(f'{path}: {name}.{implementation} teardown guard failed')
+        subject = require_object(guard.get('subject'), f'{path}: {name}.subject')
+        direct = require_object(guard.get('direct'), f'{path}: {name}.direct')
+        response = subject.get('response') == direct.get('response')
+        lifecycle = subject.get('constructed') == direct.get('constructed') and subject.get('closed') == direct.get(
+            'closed'
+        )
+        teardown = subject.get('closed') == direct.get('closed')
+        if name == 'fastapi_async_resource_teardown':
+            teardown = teardown and bool(subject.get('closed')) and bool(direct.get('closed'))
+        if guard.get('response_equivalent') is not True or not response:
+            raise HarnessError(f'{path}: {name} response equivalence failed')
+        if guard.get('lifecycle_equivalent') is not True or not lifecycle:
+            raise HarnessError(f'{path}: {name} lifecycle equivalence failed')
+        if guard.get('teardown_equivalent') is not True or not teardown:
+            raise HarnessError(f'{path}: {name} teardown equivalence failed')
         found[name] = guard
     if set(found) != set(TAIL_WORKLOADS):
         raise HarnessError(f'{path}: guards must exactly cover FastAPI acceptance workloads')
