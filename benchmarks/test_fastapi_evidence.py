@@ -17,7 +17,29 @@ def _raw(side: str, repetition: int, revision: str, interpreter: str) -> dict[st
         'repetition': repetition,
         'revision': revision,
         'interpreter': interpreter,
-        'direct_p50': 10.0,
+        'benchmark_report': {
+            'aggregates': {
+                f'test_latency[{name}-{label}]': {
+                    'rounds': 1000,
+                    'minimum': 0.001,
+                    'median': 0.010 if label == 'depin' else 0.005,
+                    'mean': 0.010 if label == 'depin' else 0.005,
+                    'stddev': 0.0001,
+                    'iqr': 0.0001,
+                    'p95': 0.011 if label == 'depin' else 0.006,
+                    'p99': 0.012 if label == 'depin' else 0.007,
+                }
+                for name in (
+                    'fastapi_cpu_light_endpoint',
+                    'fastapi_request_scoped_graph',
+                    'fastapi_singletons_and_transients',
+                    'fastapi_async_resource_teardown',
+                    'fastapi_endpoint_with_work',
+                    'fastapi_application_startup',
+                )
+                for label in ('depin', 'direct')
+            }
+        },
         'guards': [
             {
                 'workload': name,
@@ -63,14 +85,14 @@ def _write_pair(root: Path, repetition: int) -> None:
         write_json(root / 'raw' / side / f'rep{repetition}.json', _raw(side, repetition, revision, interpreter))
 
 
-def test_reduction_refuses_missing_direct_control(tmp_path: Path) -> None:
+def test_reduction_refuses_missing_benchmark_report(tmp_path: Path) -> None:
     for repetition in range(5):
         _write_pair(tmp_path, repetition)
     payload = read_json(tmp_path / 'raw' / 'head' / 'rep2.json')
-    _ = payload.pop('direct_p50')
+    _ = payload.pop('benchmark_report')
     write_json(tmp_path / 'raw' / 'head' / 'rep2.json', payload)
 
-    with pytest.raises(HarnessError, match='direct_p50'):
+    with pytest.raises(HarnessError, match='benchmark report'):
         reduce(tmp_path / 'raw', BASELINE_REVISION, HEAD_REVISION, {'base': '/tmp/base-env', 'head': '/tmp/head-env'})
 
 

@@ -10,6 +10,7 @@ the immutable raw files::
 """
 
 import argparse
+import json
 import math
 import subprocess
 import sys
@@ -22,7 +23,6 @@ from benchmarks.experiments import contention
 from benchmarks.harness import (
     HarnessError,
     memory,
-    read_json,
     require_array,
     require_integer,
     require_number,
@@ -30,6 +30,7 @@ from benchmarks.harness import (
     require_text,
     write_json,
 )
+from benchmarks.harness import reduce as benchmark_reduce
 from benchmarks.harness.fastapi_acceptance import ATTRIBUTION_WORKLOAD, COMPONENT_WORKLOADS, TAIL_WORKLOADS
 from benchmarks.harness.work import calls_per_operation
 from benchmarks.workloads import WORKLOADS
@@ -167,8 +168,52 @@ def _positive(value: object, where: str) -> float:
     return result
 
 
+def _strict_json(path: Path) -> dict[str, object]:
+    """Decode an evidence record without JSON's duplicate-key or NaN leniency."""
+
+    def pairs(values: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in values:
+            if key in result:
+                raise HarnessError(f'{path}: duplicate JSON key {key!r}')
+            result[key] = value
+        return result
+
+    def invalid(constant: str) -> object:
+        raise HarnessError(f'{path}: invalid JSON constant {constant!r}')
+
+    try:
+        decoded = json.loads(path.read_text(encoding='utf-8'), object_pairs_hook=pairs, parse_constant=invalid)
+    except OSError as error:
+        raise HarnessError(f'{path}: cannot be read ({error})') from error
+    except json.JSONDecodeError as error:
+        raise HarnessError(f'{path}: is not JSON ({error.msg} at line {error.lineno})') from error
+    return require_object(decoded, str(path))
+
+
+def _report_aggregate(
+    payload: Mapping[str, object], path: Path, workload: str, label: str
+) -> benchmark_reduce.Aggregate:
+    """Read one implementation's aggregate from the target's pytest-benchmark report.
+
+    The report is deliberately retained with each raw target record.  A direct
+    control measured by another timer is not comparable to the `depin` case, so
+    it is never an input to the attribution calculation.
+    """
+    report = require_object(payload.get('benchmark_report'), f'{path}: benchmark report')
+    aggregates = require_object(report.get('aggregates'), f'{path}: benchmark report.aggregates')
+    case = f'test_latency[{workload}-{label}]'
+    aggregate = benchmark_reduce.decode(case, aggregates.get(case), f'{path}: benchmark report')
+    if not benchmark_reduce.qualifies(aggregate):
+        raise HarnessError(f'{path}: {case} does not meet the benchmark sample-quality minimum')
+    for field, value in (('median', aggregate.median), ('p95', aggregate.p95), ('p99', aggregate.p99)):
+        if value is None or not math.isfinite(value) or value <= 0.0:
+            raise HarnessError(f'{path}: {case}.{field} must be finite and positive')
+    return aggregate
+
+
 def _raw(path: Path, side: str, repetition: int, revision: str, environment: Path) -> Mapping[str, object]:
-    payload = read_json(path)
+    payload = _strict_json(path)
     if require_integer(payload.get('schema_version'), f'{path}: schema_version') != SCHEMA_VERSION:
         raise HarnessError(f'{path}: unsupported schema version')
     if require_text(payload.get('side'), f'{path}: side') != side:
@@ -182,7 +227,9 @@ def _raw(path: Path, side: str, repetition: int, revision: str, environment: Pat
         _ = interpreter.relative_to(environment.resolve())
     except ValueError as error:
         raise HarnessError(f'{path}: interpreter does not belong to declared locked environment') from error
-    _ = _positive(payload.get('direct_p50'), f'{path}: direct_p50')
+    for workload in TAIL_WORKLOADS:
+        _ = _report_aggregate(payload, path, workload, 'depin')
+        _ = _report_aggregate(payload, path, workload, 'direct')
     return payload
 
 
@@ -225,6 +272,15 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
     if baseline_revision != BASELINE_REVISION:
         raise HarnessError('baseline revision is not the accepted FastAPI baseline')
     locations = {side: Path(require_text(environments.get(side), f'{side} environment')) for side in ('base', 'head')}
+    for side in ('base', 'head'):
+        directory = raw / side
+        expected = {f'rep{index}.json' for index in range(REPETITIONS)}
+        try:
+            found = {path.name for path in directory.iterdir() if path.is_file()}
+        except OSError as error:
+            raise HarnessError(f'{directory}: cannot inspect raw layout ({error})') from error
+        if found != expected:
+            raise HarnessError(f'{directory}: requires exactly rep0.json through rep4.json')
     base_records = [
         _raw(raw / 'base' / f'rep{i}.json', 'base', i, baseline_revision, locations['base']) for i in range(REPETITIONS)
     ]
@@ -278,8 +334,12 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
             'repetitions': [
                 {
                     'repetition': i,
-                    'base_direct_p50': _positive(base['direct_p50'], 'base direct'),
-                    'head_direct_p50': _positive(head['direct_p50'], 'head direct'),
+                    'base_direct_p50': _report_aggregate(
+                        base, raw / 'base' / f'rep{i}.json', ATTRIBUTION_WORKLOAD, 'direct'
+                    ).median,
+                    'head_direct_p50': _report_aggregate(
+                        head, raw / 'head' / f'rep{i}.json', ATTRIBUTION_WORKLOAD, 'direct'
+                    ).median,
                 }
                 for i, (base, head) in enumerate(zip(base_records, head_records, strict=True))
             ],
