@@ -19,6 +19,7 @@ import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
+from statistics import median
 
 from benchmarks.contracts import Implementation, Observation, Workload
 from benchmarks.experiments import contention
@@ -38,7 +39,7 @@ from benchmarks.harness.work import calls_per_operation
 from benchmarks.workloads import WORKLOADS
 
 BASELINE_REVISION = '086adf98459773e3175f4723b2b64e3f47306e42'
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 3
 REPETITIONS = 5
 
 
@@ -391,8 +392,197 @@ def _guards(payload: Mapping[str, object], path: Path) -> dict[str, Mapping[str,
     return found
 
 
+_LEGACY_V2_VALIDATORS = (_raw, _guards)
+
+
+def _keys(payload: Mapping[str, object], expected: set[str], where: str) -> None:
+    if set(payload) != expected:
+        raise HarnessError(f'{where}: fields must exactly match the v3 envelope schema')
+
+
+def _measurement(value: object, where: str, unit: str, method: str) -> float:
+    fields = require_object(value, where)
+    _keys(fields, {'value', 'unit', 'method'}, where)
+    if require_text(fields.get('unit'), f'{where}.unit') != unit:
+        raise HarnessError(f'{where}: unit mismatch')
+    if require_text(fields.get('method'), f'{where}.method') != method:
+        raise HarnessError(f'{where}: method mismatch')
+    return _positive(fields.get('value'), f'{where}.value')
+
+
+def _observation_v3(value: object, where: str) -> Mapping[str, object]:
+    fields = require_object(value, where)
+    _keys(fields, {'result', 'constructed', 'closed', 'error'}, where)
+    if fields.get('error') is not None or not isinstance(fields.get('result'), str):
+        raise HarnessError(f'{where}: literal observation required')
+    for field in ('constructed', 'closed'):
+        entries = require_array(fields.get(field), f'{where}.{field}')
+        for index, entry in enumerate(entries):
+            _ = require_text(entry, f'{where}.{field}[{index}]')
+    return fields
+
+
+def _aggregate_v3(value: object, where: str) -> benchmark_reduce.Aggregate:
+    aggregate = benchmark_reduce.decode(where, value, where)
+    if aggregate.rounds <= 0:
+        raise HarnessError(f'{where}: rounds must be positive')
+    for field in ('minimum', 'median', 'mean', 'stddev', 'iqr', 'p95', 'p99'):
+        number = getattr(aggregate, field)
+        if number is None or not math.isfinite(number) or number <= 0.0:
+            raise HarnessError(f'{where}.{field}: expected a finite positive measurement')
+    return aggregate
+
+
+def _envelope(path: Path, side: str, repetition: int, revision: str, environment: Path) -> Mapping[str, object]:
+    payload = _strict_json(path)
+    expected = {
+        'schema_version',
+        'side',
+        'repetition',
+        'revision',
+        'interpreter',
+        'environment',
+        'first',
+        'benchmark_report',
+        'benchmark_metrics',
+        'observations',
+        'memory',
+        'contention',
+    }
+    if side == 'head':
+        expected.add('head_only')
+    _keys(payload, expected, str(path))
+    if require_integer(payload.get('schema_version'), f'{path}: schema_version') != SCHEMA_VERSION:
+        raise HarnessError(f'{path}: unsupported schema version')
+    if (
+        require_text(payload.get('side'), f'{path}: side') != side
+        or require_integer(payload.get('repetition'), f'{path}: repetition') != repetition
+    ):
+        raise HarnessError(f'{path}: side/repetition identity mismatch')
+    if require_text(payload.get('revision'), f'{path}: revision') != revision:
+        raise HarnessError(f'{path}: revision mismatch')
+    try:
+        _ = (
+            Path(require_text(payload.get('interpreter'), f'{path}: interpreter'))
+            .resolve()
+            .relative_to(environment.resolve())
+        )
+    except ValueError as error:
+        raise HarnessError(f'{path}: interpreter does not belong to declared locked environment') from error
+    first = 'base' if repetition % 2 == 0 else 'head'
+    if require_text(payload.get('first'), f'{path}: first') != first:
+        raise HarnessError(f'{path}: first-side parity mismatch')
+    report = require_object(payload.get('benchmark_report'), f'{path}: benchmark report')
+    _keys(report, {'sha256', 'aggregates'}, f'{path}: benchmark report')
+    digest = require_text(report.get('sha256'), f'{path}: benchmark report.sha256')
+    if len(digest) != 64 or any(character not in '0123456789abcdef' for character in digest):
+        raise HarnessError(f'{path}: benchmark report digest is invalid')
+    aggregates = require_object(report.get('aggregates'), f'{path}: benchmark aggregates')
+    expected_cases = {
+        f'test_latency[{workload}-{label}]' for workload in TAIL_WORKLOADS for label in ('direct', 'depin')
+    }
+    if set(aggregates) != expected_cases:
+        raise HarnessError(f'{path}: benchmark aggregates must exactly cover the common FastAPI inventory')
+    metrics = require_object(payload.get('benchmark_metrics'), f'{path}: benchmark metrics')
+    if set(metrics) != expected_cases:
+        raise HarnessError(f'{path}: benchmark metrics must exactly cover the common FastAPI inventory')
+    for case in expected_cases:
+        aggregate = _aggregate_v3(aggregates.get(case), f'{path}: benchmark aggregate {case}')
+        metric = require_object(metrics.get(case), f'{path}: benchmark metric {case}')
+        for field, value in (
+            ('case_id', case),
+            ('unit', 'seconds per operation'),
+            ('method', 'pytest-benchmark'),
+            ('side', side),
+            ('first', first),
+            ('report_sha256', digest),
+        ):
+            if require_text(metric.get(field), f'{path}: benchmark metric {case}.{field}') != value:
+                raise HarnessError(f'{path}: benchmark metric {field} mismatch')
+        if require_integer(metric.get('repetition'), f'{path}: benchmark metric repetition') != repetition:
+            raise HarnessError(f'{path}: benchmark metric repetition mismatch')
+        if require_integer(metric.get('order'), f'{path}: benchmark metric order') != (0 if side == first else 1):
+            raise HarnessError(f'{path}: benchmark metric order mismatch')
+        compared = _aggregate_v3(metric, f'{path}: benchmark metric {case}')
+        if benchmark_reduce.encode(compared) != benchmark_reduce.encode(aggregate):
+            raise HarnessError(f'{path}: benchmark metric aggregate mismatch')
+    observations = require_array(payload.get('observations'), f'{path}: observations')
+    found: dict[str, tuple[Mapping[str, object], Mapping[str, object]]] = {}
+    for index, entry in enumerate(observations):
+        record = require_object(entry, f'{path}: observations[{index}]')
+        _keys(record, {'workload', 'depin', 'direct'}, f'{path}: observations[{index}]')
+        name = require_text(record.get('workload'), f'{path}: observations[{index}].workload')
+        if name in found:
+            raise HarnessError(f'{path}: duplicate semantic workload')
+        depin, direct = (
+            _observation_v3(record.get('depin'), f'{path}: {name}.depin'),
+            _observation_v3(record.get('direct'), f'{path}: {name}.direct'),
+        )
+        if depin != direct:
+            raise HarnessError(f'{path}: {name}: semantic observation mismatch')
+        found[name] = (depin, direct)
+    if set(found) != set(TAIL_WORKLOADS):
+        raise HarnessError(f'{path}: observations must exactly cover FastAPI acceptance workloads')
+    memory_values = require_object(payload.get('memory'), f'{path}: memory')
+    _keys(memory_values, {'retained', 'allocations', 'peak', 'work'}, f'{path}: memory')
+    _ = _measurement(memory_values.get('retained'), f'{path}: retained', 'bytes', 'tracemalloc-retained')
+    _ = _measurement(
+        memory_values.get('allocations'), f'{path}: allocations', 'allocation-count', 'tracemalloc-allocation-count'
+    )
+    _ = _measurement(memory_values.get('peak'), f'{path}: peak', 'bytes', 'tracemalloc-peak')
+    work = require_object(memory_values.get('work'), f'{path}: work')
+    _keys(work, {'value', 'unit', 'method', 'operations', 'sample_count', 'config'}, f'{path}: work')
+    _ = _positive(work.get('value'), f'{path}: work.value')
+    if (
+        require_text(work.get('unit'), f'{path}: work.unit') != 'calls per operation'
+        or require_text(work.get('method'), f'{path}: work.method') != 'calls-per-operation'
+    ):
+        raise HarnessError(f'{path}: work unit/method mismatch')
+    if (
+        require_integer(work.get('operations'), f'{path}: work.operations') < 1
+        or require_integer(work.get('sample_count'), f'{path}: work.sample_count') < 1
+    ):
+        raise HarnessError(f'{path}: work counts must be positive')
+    _ = require_object(work.get('config'), f'{path}: work.config')
+    contention_values = require_object(payload.get('contention'), f'{path}: contention')
+    _keys(contention_values, {'config', 'direct', 'depin'}, f'{path}: contention')
+    _ = require_object(contention_values.get('config'), f'{path}: contention.config')
+    _ = _measurement(contention_values.get('direct'), f'{path}: contention.direct', 'seconds', 'synchronized-wave')
+    _ = _measurement(contention_values.get('depin'), f'{path}: contention.depin', 'seconds', 'synchronized-wave')
+    if side == 'head':
+        head_only = require_object(payload.get('head_only'), f'{path}: head-only')
+        _keys(head_only, {'no_injection', 'components'}, f'{path}: head-only')
+        no_injection = require_object(head_only.get('no_injection'), f'{path}: no-injection')
+        _keys(no_injection, {'direct', 'depin'}, f'{path}: no-injection')
+        for label in ('direct', 'depin'):
+            _ = _measurement(
+                no_injection.get(label), f'{path}: no-injection.{label}', 'seconds per operation', 'direct-null'
+            )
+        components = require_object(head_only.get('components'), f'{path}: components')
+        if set(components) != set(COMPONENT_WORKLOADS):
+            raise HarnessError(f'{path}: component inventory is incomplete')
+        for name in COMPONENT_WORKLOADS:
+            component = require_object(components.get(name), f'{path}: component {name}')
+            _keys(component, {'control', 'depin', 'config'}, f'{path}: component {name}')
+            _ = _measurement(
+                component.get('control'), f'{path}: component {name}.control', 'seconds per operation', 'median-control'
+            )
+            _ = _measurement(
+                component.get('depin'),
+                f'{path}: component {name}.depin',
+                'seconds per operation',
+                'component-observation',
+            )
+            _ = require_object(component.get('config'), f'{path}: component {name}.config')
+    return payload
+
+
+def _sidecar(values: Sequence[float]) -> float:
+    return float(median(values))
+
+
 def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: Mapping[str, str]) -> dict[str, object]:
-    """Validate raw target records and derive evaluator inputs without re-measuring."""
+    """Validate exact v3 envelopes and project the unchanged evaluator inputs."""
     if baseline_revision != BASELINE_REVISION:
         raise HarnessError('baseline revision is not the accepted FastAPI baseline')
     locations = {side: Path(require_text(environments.get(side), f'{side} environment')) for side in ('base', 'head')}
@@ -406,48 +596,145 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
         if found != expected:
             raise HarnessError(f'{directory}: requires exactly rep0.json through rep4.json')
     base_records = [
-        _raw(raw / 'base' / f'rep{i}.json', 'base', i, baseline_revision, locations['base']) for i in range(REPETITIONS)
+        _envelope(raw / 'base' / f'rep{i}.json', 'base', i, baseline_revision, locations['base'])
+        for i in range(REPETITIONS)
     ]
     head_records = [
-        _raw(raw / 'head' / f'rep{i}.json', 'head', i, head_revision, locations['head']) for i in range(REPETITIONS)
+        _envelope(raw / 'head' / f'rep{i}.json', 'head', i, head_revision, locations['head'])
+        for i in range(REPETITIONS)
     ]
     semantic: list[dict[str, object]] = []
     for repetition, (base, head) in enumerate(zip(base_records, head_records, strict=True)):
-        base_guards = _guards(base, raw / 'base' / f'rep{repetition}.json')
-        head_guards = _guards(head, raw / 'head' / f'rep{repetition}.json')
+        if require_object(base.get('contention'), 'base contention').get('config') != require_object(
+            head.get('contention'), 'head contention'
+        ).get('config'):
+            raise HarnessError('contention configuration differs between base and head')
+        base_observations = {
+            require_text(require_object(item, 'base observation').get('workload'), 'base workload'): require_object(
+                item, 'base observation'
+            )
+            for item in require_array(base.get('observations'), 'base observations')
+        }
+        head_observations = {
+            require_text(require_object(item, 'head observation').get('workload'), 'head workload'): require_object(
+                item, 'head observation'
+            )
+            for item in require_array(head.get('observations'), 'head observations')
+        }
         for workload in TAIL_WORKLOADS:
-            base_subject = require_object(base_guards[workload].get('subject'), 'base subject')
-            head_subject = require_object(head_guards[workload].get('subject'), 'head subject')
-            response = base_subject.get('response') == head_subject.get('response')
-            lifecycle = base_subject.get('constructed') == head_subject.get('constructed') and base_subject.get(
-                'closed'
-            ) == head_subject.get('closed')
+            before = require_object(base_observations[workload].get('depin'), 'base depin observation')
+            after = require_object(head_observations[workload].get('depin'), 'head depin observation')
+            if before != after:
+                raise HarnessError(f'{workload}: cross-revision semantic observation mismatch')
+            events = len(require_array(before.get('constructed'), 'constructed')) + len(
+                require_array(before.get('closed'), 'closed')
+            )
             semantic.append(
                 {
                     'workload': workload,
                     'repetition': repetition,
                     'base_revision': baseline_revision,
                     'head_revision': head_revision,
-                    'response': 'equivalent' if response else 'different',
-                    'lifecycle': 'equivalent' if lifecycle else 'different',
-                    'event_counts': {
-                        'base': len(require_array(base_subject.get('constructed'), 'base constructed'))
-                        + len(require_array(base_subject.get('closed'), 'base closed')),
-                        'head': len(require_array(head_subject.get('constructed'), 'head constructed'))
-                        + len(require_array(head_subject.get('closed'), 'head closed')),
-                    },
+                    'response': 'equivalent',
+                    'lifecycle': 'equivalent',
+                    'event_counts': {'base': events, 'head': events},
                     'teardown': 'equivalent',
                     'deterministic': 'passed',
                 }
             )
-    head_only = require_object(head_records[-1].get('head_only'), 'head-only evidence')
+
+    def measured(records: Sequence[Mapping[str, object]], key: str, unit: str, method: str) -> list[float]:
+        return [
+            _measurement(require_object(record.get('memory'), 'memory').get(key), key, unit, method)
+            for record in records
+        ]
+
+    def head_measurements(key: str) -> list[float]:
+        return [
+            _measurement(
+                require_object(
+                    require_object(record.get('head_only'), 'head only').get('no_injection'), 'no injection'
+                ).get(key),
+                key,
+                'seconds per operation',
+                'direct-null',
+            )
+            for record in head_records
+        ]
+
+    def contention(records: Sequence[Mapping[str, object]], key: str) -> list[float]:
+        return [
+            _measurement(
+                require_object(record.get('contention'), 'contention').get(key), key, 'seconds', 'synchronized-wave'
+            )
+            for record in records
+        ]
+
+    def aggregate_record(record: Mapping[str, object], repetition: int) -> dict[str, object]:
+        report = require_object(record.get('benchmark_report'), 'report')
+        aggregates = require_object(report.get('aggregates'), 'aggregates')
+        return {
+            'repetition': repetition,
+            'first': record['first'],
+            'aggregates': {
+                name: benchmark_reduce.encode(_aggregate_v3(aggregates.get(f'test_latency[{name}-depin]'), name))
+                for name in TAIL_WORKLOADS
+            },
+        }
+
+    environment_payload = require_object(base_records[0].get('environment'), 'environment')
+    if any(
+        require_object(record.get('environment'), 'environment') != environment_payload
+        for record in (*base_records, *head_records)
+    ):
+        raise HarnessError('environment differs between raw envelopes')
+    base_retained, head_retained = (
+        measured(base_records, 'retained', 'bytes', 'tracemalloc-retained'),
+        measured(head_records, 'retained', 'bytes', 'tracemalloc-retained'),
+    )
+    base_peak, head_peak = (
+        measured(base_records, 'peak', 'bytes', 'tracemalloc-peak'),
+        measured(head_records, 'peak', 'bytes', 'tracemalloc-peak'),
+    )
+    base_allocations, head_allocations = (
+        measured(base_records, 'allocations', 'allocation-count', 'tracemalloc-allocation-count'),
+        measured(head_records, 'allocations', 'allocation-count', 'tracemalloc-allocation-count'),
+    )
+    head_only = {
+        'no_injection': {'direct': _sidecar(head_measurements('direct')), 'depin': _sidecar(head_measurements('depin'))}
+    }
     no_injection = require_object(head_only.get('no_injection'), 'no-injection evidence')
-    contention_values = require_object(head_only.get('contention'), 'contention evidence')
-    base_memory = require_object(base_records[-1].get('memory'), 'base memory')
-    head_memory = require_object(head_records[-1].get('memory'), 'head memory')
+    contention_values = {
+        'direct': _sidecar(contention(base_records, 'direct')),
+        'depin': _sidecar(contention(head_records, 'depin')),
+    }
+    base_memory = {
+        'retained': _sidecar(base_retained),
+        'peak': _sidecar(base_peak),
+        'allocations': _sidecar(base_allocations),
+    }
+    head_memory = {
+        'retained': _sidecar(head_retained),
+        'peak': _sidecar(head_peak),
+        'allocations': _sidecar(head_allocations),
+    }
     return {
+        'dataset': {
+            'environment.json': {'seed': 20260902, 'repetitions': REPETITIONS, 'environment': environment_payload},
+            'base': {
+                'repetitions': [
+                    {'record': aggregate_record(record, index)} for index, record in enumerate(base_records)
+                ]
+            },
+            'head': {
+                'repetitions': [
+                    {'record': aggregate_record(record, index)} for index, record in enumerate(head_records)
+                ]
+            },
+        },
+        'envelopes': {'base': list(base_records), 'head': list(head_records)},
         'attribution': {
-            'schema_version': SCHEMA_VERSION,
+            'schema_version': 1,
             'workload': ATTRIBUTION_WORKLOAD,
             'baseline_revision': baseline_revision,
             'head_revision': head_revision,
@@ -469,7 +756,7 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
             ],
         },
         'sidecars': {
-            'schema_version': SCHEMA_VERSION,
+            'schema_version': 1,
             'no_injection': {
                 'workload': 'fastapi_no_injection',
                 'metric': 'latency',
@@ -541,7 +828,7 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
             ],
         },
         'provenance': {
-            'schema_version': SCHEMA_VERSION,
+            'schema_version': 1,
             'baseline_revision': baseline_revision,
             'head_revision': head_revision,
             'protocol': {
@@ -551,6 +838,7 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
                 'locked_environments': True,
                 'workloads': list(TAIL_WORKLOADS),
             },
+            'environment': environment_payload,
             'semantic_validation': semantic,
         },
     }
@@ -596,9 +884,38 @@ def main(argv: Sequence[str] | None = None) -> int:
                 arguments.head_revision,
                 {'base': arguments.base_environment, 'head': arguments.head_environment},
             )
+            dataset = require_object(output['dataset'], 'dataset output')
+            write_json(
+                arguments.out / 'dataset' / 'environment.json',
+                require_object(dataset['environment.json'], 'environment'),
+            )
+            for side in ('base', 'head'):
+                records = require_array(
+                    require_object(dataset[side], f'{side} dataset').get('repetitions'), f'{side} repetitions'
+                )
+                for entry in records:
+                    record = require_object(require_object(entry, 'dataset entry').get('record'), 'dataset record')
+                    write_json(
+                        arguments.out
+                        / 'dataset'
+                        / side
+                        / f'rep{require_integer(record.get("repetition"), "dataset repetition")}.json',
+                        record,
+                    )
             write_json(arguments.out / 'attribution.json', require_object(output['attribution'], 'attribution output'))
             write_json(arguments.out / 'sidecars.json', require_object(output['sidecars'], 'sidecars output'))
             write_json(arguments.out / 'provenance.json', require_object(output['provenance'], 'provenance output'))
+            envelopes = require_object(output['envelopes'], 'envelopes output')
+            for side in ('base', 'head'):
+                for raw_value in require_array(envelopes.get(side), f'{side} envelopes'):
+                    raw_envelope = require_object(raw_value, 'raw envelope')
+                    write_json(
+                        arguments.out
+                        / 'raw'
+                        / side
+                        / f'rep{require_integer(raw_envelope.get("repetition"), "raw repetition")}.json',
+                        raw_envelope,
+                    )
     except HarnessError as error:
         _ = sys.stderr.write(f'{error}\n')
         return 2
