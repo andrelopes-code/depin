@@ -1,6 +1,9 @@
 """Focused report-bridge coverage for the neutral FastAPI target runner."""
 
 import json
+import os
+import subprocess
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -113,3 +116,20 @@ def test_benchmark_runs_the_current_checkout_latency_target_in_isolated_python(t
     assert set(decoded.aggregates) == {
         f'test_latency[{workload}-{label}]' for workload in REQUIRED_WORKLOADS for label in ('direct', 'depin')
     }
+
+
+def test_isolated_bootstrap_reexecs_with_deterministic_hashing_and_target_only_imports() -> None:
+    runner = Path('benchmarks/harness/fastapi_target_runner.py').resolve()
+    completed = subprocess.run(
+        (sys.executable, '-I', str(runner), '--bootstrap-probe', str(Path.cwd())),
+        capture_output=True,
+        text=True,
+        env=os.environ | {'PYTHONPATH': '/poisoned-parent-path'},
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    probe = json.loads(completed.stdout)
+    assert probe['hash_randomization'] == 0
+    assert Path(probe['memory_module']).is_relative_to(Path.cwd())
+    assert probe['allocation_peak'] > 0

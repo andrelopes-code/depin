@@ -14,6 +14,7 @@ import hashlib
 import importlib.metadata
 import json
 import math
+import os
 import subprocess
 import sys
 import tempfile
@@ -38,6 +39,8 @@ OPTIONAL_WORKLOADS = (
     'fastapi_request_seed_read',
     'fastapi_async_resource_close',
 )
+_BOOTSTRAP_ARGUMENT = '--depin-fastapi-inner-bootstrap'
+_BOOTSTRAP_ENVIRONMENT = 'DEPIN_FASTAPI_INNER_BOOTSTRAP'
 
 
 class ReportError(RuntimeError):
@@ -335,6 +338,71 @@ def distinct(root: Path, *external: Path) -> None:
             raise RuntimeError(f'{candidate} aliases target root {target}')
 
 
+def _source_argument(arguments: list[str]) -> Path | None:
+    if '--source-root' in arguments:
+        index = arguments.index('--source-root')
+        if index + 1 == len(arguments):
+            raise RuntimeError('--source-root requires a path')
+        return Path(arguments[index + 1])
+    if '--bootstrap-probe' in arguments:
+        index = arguments.index('--bootstrap-probe')
+        if index + 1 == len(arguments):
+            raise RuntimeError('--bootstrap-probe requires a source root')
+        return Path(arguments[index + 1])
+    return None
+
+
+def _bootstrap() -> Path | None:
+    arguments = sys.argv[1:]
+    count = arguments.count(_BOOTSTRAP_ARGUMENT)
+    if count > 1:
+        raise RuntimeError('duplicate deterministic bootstrap marker')
+    if count == 0:
+        if _BOOTSTRAP_ENVIRONMENT in os.environ:
+            raise RuntimeError('deterministic bootstrap marker is present without an inner-stage argument')
+        environment = os.environ.copy()
+        for name in ('PYTHONPATH', 'PYTHONHOME', 'PYTHONSTARTUP'):
+            environment.pop(name, None)
+        environment.update(
+            {
+                _BOOTSTRAP_ENVIRONMENT: '1',
+                'PYTHONHASHSEED': '0',
+                'PYTHONNOUSERSITE': '1',
+                'PYTHONDONTWRITEBYTECODE': '1',
+            }
+        )
+        os.execve(
+            sys.executable,
+            [sys.executable, str(Path(__file__).resolve()), _BOOTSTRAP_ARGUMENT, *arguments],
+            environment,
+        )
+    if os.environ.get(_BOOTSTRAP_ENVIRONMENT) != '1':
+        raise RuntimeError('missing deterministic bootstrap marker')
+    arguments.remove(_BOOTSTRAP_ARGUMENT)
+    sys.argv[:] = [sys.argv[0], *arguments]
+    root = _source_argument(arguments)
+    if root is not None:
+        resolved = root.resolve()
+        sys.path[:] = [entry for entry in sys.path if entry and Path(entry).resolve() != resolved]
+    return root
+
+
+def _bootstrap_probe(root: Path) -> None:
+    sys.path.insert(0, str(root.resolve()))
+    from benchmarks.harness import memory
+
+    allocation = memory.allocations_per_operation(lambda: object(), operations=1)
+    print(
+        json.dumps(
+            {
+                'hash_randomization': sys.flags.hash_randomization,
+                'memory_module': str(Path(memory.__file__).resolve()),
+                'allocation_peak': allocation.peak,
+            }
+        )
+    )
+
+
 def capture(
     root: Path,
     expected: str,
@@ -407,7 +475,18 @@ def capture(
         'repetition': repetition,
         'revision': expected,
         'interpreter': str(Path(sys.executable).resolve()),
-        'environment': harness_environment.capture(),
+        'environment': harness_environment.capture()
+        | {
+            'bootstrap': {
+                'outer': 'isolated-python-I',
+                'inner': {
+                    'hash_seed': '0',
+                    'pythonpath': 'removed',
+                    'user_site': 'disabled',
+                    'bytecode': 'disabled',
+                },
+            }
+        },
         'observations': records,
         'first': first,
         'benchmark_report': {
@@ -468,6 +547,12 @@ def capture(
 
 
 def main() -> int:
+    root = _bootstrap()
+    if sys.argv[1:2] == ['--bootstrap-probe']:
+        if root is None:
+            raise RuntimeError('--bootstrap-probe requires a source root')
+        _bootstrap_probe(root)
+        return 0
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-root', type=Path, required=True)
     parser.add_argument('--expected-revision', required=True)
