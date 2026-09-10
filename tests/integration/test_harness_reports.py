@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from benchmarks.contracts import Tier
-from benchmarks.harness import HarnessError, reduce, report, require_object
+from benchmarks.harness import HarnessError, read_json, reduce, report, require_object
 
 from .test_harness_gate import flat, make_dataset
 
@@ -116,6 +116,21 @@ def test_the_report_renders_the_same_markdown_from_the_same_data(tmp_path: Path)
     assert '## Scaling' in rendered
     assert '2.000 µs' in rendered
     assert str(tmp_path) not in rendered
+
+
+def test_the_report_renders_scalar_and_array_environment_properties(tmp_path: Path) -> None:
+    dataset = make_dataset(tmp_path / 'data', base=flat('probe', 1e-6), head=flat('probe', 2e-6))
+    environment_path = dataset / 'environment.json'
+    metadata = read_json(environment_path)
+    environment = require_object(metadata.get('environment'), 'environment')
+    environment['affinity'] = [0, 1]
+    environment['governor'] = 'performance'
+    write(environment_path, metadata)
+
+    rendered = report.render(dataset)
+
+    assert '| affinity | 0, 1 |' in rendered
+    assert '| governor | performance |' in rendered
 
 
 def test_the_report_refuses_a_dataset_it_cannot_read(tmp_path: Path) -> None:

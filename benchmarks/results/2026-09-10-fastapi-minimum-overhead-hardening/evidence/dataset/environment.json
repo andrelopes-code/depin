@@ -1,0 +1,75 @@
+{
+  "environment": {
+    "affinity": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "bootstrap": {
+      "inner": {
+        "bytecode": "disabled",
+        "hash_seed": "0",
+        "pythonpath": "removed",
+        "user_site": "disabled"
+      },
+      "outer": "isolated-python-I"
+    },
+    "collection_command": [
+      "python",
+      "-m",
+      "benchmarks.harness.fastapi_evidence",
+      "collect"
+    ],
+    "cpu": {
+      "model": "Intel(R) Xeon(R) CPU E5-2683 v4 @ 2.10GHz"
+    },
+    "distributions": {
+      "pydepin": "0.19.0",
+      "pytest": "9.1.1",
+      "pytest-benchmark": "5.3.0"
+    },
+    "governor": "unavailable",
+    "harness_revision": "22b93a3db32d184da9c5e1c13bb5a8f2d53b0417",
+    "host": {
+      "available_processors": 4,
+      "cpu_model": "Intel(R) Xeon(R) CPU E5-2683 v4 @ 2.10GHz",
+      "load_average": [
+        14.42,
+        10.62,
+        9.38
+      ],
+      "machine": "x86_64",
+      "processor": "x86_64",
+      "processors": 4,
+      "release": "6.8.0-138-generic",
+      "system": "Linux"
+    },
+    "interpreter": {
+      "compiler": "Clang 22.1.3 ",
+      "free_threading": false,
+      "hash_randomization": false,
+      "implementation": "CPython",
+      "recursion_limit": 1000,
+      "version": "3.12.13"
+    },
+    "kernel": "6.8.0-138-generic",
+    "locked_environment": {
+      "base": "sha256:7e9538965db9307ff1a72aa66f2be06dda3365dd23ea724b33142c121ed34062",
+      "head": "sha256:7e9538965db9307ff1a72aa66f2be06dda3365dd23ea724b33142c121ed34062"
+    },
+    "packages": {
+      "fastapi": "0.141.1",
+      "pydepin": "0.19.0",
+      "pytest": "9.1.1",
+      "pytest-benchmark": "5.3.0",
+      "starlette": "1.6.0"
+    },
+    "subject_versions": {
+      "base": "0.19.0",
+      "head": "0.20.0"
+    }
+  },
+  "repetitions": 10,
+  "seed": 20260902
+}

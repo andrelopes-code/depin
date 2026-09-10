@@ -215,7 +215,26 @@ def _attribution(
         before = pair.base.median - base_direct
         after = pair.head.median - head_direct
         base_overhead.append(_finite_positive(before, f'{path}: repetition {pair.repetition} base attributable p50'))
-        head_overhead.append(_finite_positive(after, f'{path}: repetition {pair.repetition} head attributable p50'))
+        if not math.isfinite(after):
+            raise HarnessError(
+                f'{path}: repetition {pair.repetition} head attributable p50 must be finite, found {after!r}'
+            )
+        head_overhead.append(after)
+    non_positive = sum(value <= 0.0 for value in head_overhead)
+    if non_positive:
+        detail = (
+            f'{non_positive}/{len(head_overhead)} head repetitions have non-positive attributable p50; '
+            'the paired log-ratio is undefined'
+        )
+        return (
+            Verdict('cpu-light-attributable-p50', Outcome.INCONCLUSIVE, detail),
+            Verdict(
+                'cpu-light-attributable-p50-stretch',
+                Outcome.INCONCLUSIVE,
+                detail,
+                required=False,
+            ),
+        )
     paired = stats.paired_ratio(base_overhead, head_overhead, seed=seed)
     detail = f'{paired.ratio:+.2%} [{paired.low:+.2%}, {paired.high:+.2%}] n={paired.n}'
     acceptance = Outcome.PASS if paired.high <= ATTRIBUTION_LIMIT else Outcome.FAIL

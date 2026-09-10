@@ -268,6 +268,21 @@ def test_attributable_upper_confidence_bound_must_clear_twenty_five_percent(tmp_
     assert _outcomes(result)['cpu-light-attributable-p50'] == 'fail'
 
 
+def test_non_positive_attributable_observation_is_inconclusive(tmp_path: Path) -> None:
+    attribution = _attribution(tmp_path)
+    payload = read_json(attribution)
+    repetitions = require_array(payload.get('repetitions'), 'repetitions')
+    first = require_object(repetitions[0], 'first repetition')
+    first['head_direct_p50'] = 71.0
+    write_json(attribution, payload)
+
+    result = _evaluate(_dataset(tmp_path), attribution, _sidecars(tmp_path))
+
+    outcomes = _outcomes(result)
+    assert outcomes['cpu-light-attributable-p50'] == 'inconclusive'
+    assert outcomes['cpu-light-attributable-p50-stretch'] == 'inconclusive'
+
+
 def test_total_latency_tails_fail_when_they_regress_more_than_five_percent(tmp_path: Path) -> None:
     result = _evaluate(_dataset(tmp_path, head_p95=128.0, head_p99=138.0), _attribution(tmp_path), _sidecars(tmp_path))
 
