@@ -5,6 +5,60 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0](https://github.com/andrelopes-code/depin/compare/v0.19.0...v0.20.0) (2026-09-10)
+
+
+### Features
+
+* add lazy hosted request scopes ([b8b4410](https://github.com/andrelopes-code/depin/commit/b8b441026fa1ded52fdf4bc37f205557eed6b13f))
+* capture FastAPI benchmark evidence externally ([106ac5d](https://github.com/andrelopes-code/depin/commit/106ac5dbee02a04820bd5b4140dff4240bd3ae16))
+* collect FastAPI probes externally ([5063fb9](https://github.com/andrelopes-code/depin/commit/5063fb9bf34a1af0ebdc8801762887ab7aa5b589))
+
+
+### Bug Fixes
+
+* align FastAPI component control provenance ([365d194](https://github.com/andrelopes-code/depin/commit/365d194c8ac7de6cf1f17e4d7476f50c7fe1b10f))
+* bind FastAPI capture to venv launcher ([bb10ef9](https://github.com/andrelopes-code/depin/commit/bb10ef98d8d46b41563d2b6e42ee903b35d53fba))
+* bootstrap deterministic FastAPI capture ([020d481](https://github.com/andrelopes-code/depin/commit/020d481684cb07d9948d32bfc64c0682be7d3b32))
+* capture FastAPI evidence v3 envelopes ([ea93d06](https://github.com/andrelopes-code/depin/commit/ea93d06d430494ef47342c5a6aa926593243d29d))
+* detect async calls on minimum FastAPI ([5446321](https://github.com/andrelopes-code/depin/commit/5446321abc127d1fb7b132a90de7d24c7473116e))
+* document head-only FastAPI diagnostics ([179bf68](https://github.com/andrelopes-code/depin/commit/179bf686eed1838e86429e82ffe479116cacdbce))
+* harden FastAPI evidence report bridge ([c7f81a6](https://github.com/andrelopes-code/depin/commit/c7f81a62e9f0320ae2ca08e25ddd33e268061fb4))
+* harden lazy scope lifecycle ([92c21e1](https://github.com/andrelopes-code/depin/commit/92c21e17764ccb1857629b390e9ad1b062140dcb))
+* keep FastAPI startup workload comparable ([a6234b6](https://github.com/andrelopes-code/depin/commit/a6234b6f5dadbfe0fab09829201cce120699d28f))
+* make FastAPI installation atomic ([8e9fe2b](https://github.com/andrelopes-code/depin/commit/8e9fe2b4d9d7b6336a535077731d148f9d8d260d))
+* preserve FastAPI compiled request values ([2c2708d](https://github.com/andrelopes-code/depin/commit/2c2708db727e7486ff7e036e75d1c07d7b641002))
+* preserve FastAPI direct dependency order ([80a0dde](https://github.com/andrelopes-code/depin/commit/80a0ddeba4ce78e5d57a5946bcb1ed743cb734d8))
+* preserve FastAPI request identity ([483aba2](https://github.com/andrelopes-code/depin/commit/483aba23b4964b2a91f238df60725323be7b9e35))
+* preserve FastAPI route applications during install ([07039d8](https://github.com/andrelopes-code/depin/commit/07039d83aa06b87a16bd67bbb09ec7c2bac06906))
+* preserve lazy seeds in eager scopes ([38c0ff1](https://github.com/andrelopes-code/depin/commit/38c0ff11966a1abd45a8a00ad5f2851a7ac48d93))
+* project FastAPI generic gate layout ([0f9e71e](https://github.com/andrelopes-code/depin/commit/0f9e71e300747cd76553b77b99279e71113ad891))
+* reserve FastAPI special dependency names ([9bbb90a](https://github.com/andrelopes-code/depin/commit/9bbb90ac0944a5aea27d38f99fd82f3070204fed))
+* resolve sync FastAPI injections on request task ([5d09f44](https://github.com/andrelopes-code/depin/commit/5d09f44dbb8cda3fe1c5553ec61ae9ca90989283))
+* restore eager scope fast paths ([5baebc3](https://github.com/andrelopes-code/depin/commit/5baebc3443b2269ca6bd65305559041754400e8c))
+* retain dynamic FastAPI host telemetry ([7b9b179](https://github.com/andrelopes-code/depin/commit/7b9b1790a1c92a50476668144d1e8393da9808fd))
+* satisfy FastAPI source typing ([e4fe474](https://github.com/andrelopes-code/depin/commit/e4fe47429d21b3389b7bb0055d5882619b3a0883))
+* satisfy Pyrefly FastAPI harness checks ([dc9c1ac](https://github.com/andrelopes-code/depin/commit/dc9c1acc10cc96c4a24eb5367c84831284900dce))
+* support minimum FastAPI in compiled routes ([bba13f7](https://github.com/andrelopes-code/depin/commit/bba13f7e091bb7e5114ac2c8a6fc3bd1d3f30bef))
+* synchronize eager frame teardown ([e839d3c](https://github.com/andrelopes-code/depin/commit/e839d3ca2c8321404861bcce46a4f6494a77a33d))
+* translate FastAPI setup failures ([35d1dce](https://github.com/andrelopes-code/depin/commit/35d1dce7312a70e98f3592225a25beabd86aa03f))
+* unify scope frame locking ([c60a53b](https://github.com/andrelopes-code/depin/commit/c60a53b528875c9460d0d1f3c6bea3b49972a9ce))
+* validate FastAPI lifecycle evidence ([188d8e8](https://github.com/andrelopes-code/depin/commit/188d8e8d7970ad91ec85a43b51988eaa8e5d7245))
+
+
+### Performance Improvements
+
+* add FastAPI acceptance gate ([b4ee3b8](https://github.com/andrelopes-code/depin/commit/b4ee3b821589894cfa28876ec16912ff7d8cd4d8))
+* avoid duplicate FastAPI route traversal ([b297890](https://github.com/andrelopes-code/depin/commit/b297890fdbb479445f1482c5d363272265c494df))
+* bypass FastAPI endpoint program dependency ([6b0c2f8](https://github.com/andrelopes-code/depin/commit/6b0c2f8340c09153e83e6b2f02e7e24504ad0973))
+* compile FastAPI endpoint injection ([82c4ccd](https://github.com/andrelopes-code/depin/commit/82c4ccd11550e543722e3a018c22cdbfb00f22d8))
+* harden FastAPI acceptance evidence ([bb135a1](https://github.com/andrelopes-code/depin/commit/bb135a15a72a443cdc679b9fe424d1ba1f57e0a0))
+* measure optimized FastAPI integration ([a05b242](https://github.com/andrelopes-code/depin/commit/a05b242e1462dcfe4c3f0275555bc16cb6ee0bea))
+* pair FastAPI acceptance regressions ([5c1a00d](https://github.com/andrelopes-code/depin/commit/5c1a00d0e7e1dbf8928e00054b486a72b58c83a0))
+* recover lazy FastAPI host publication ([4e97d8e](https://github.com/andrelopes-code/depin/commit/4e97d8e8dd28e9b74904601e1bb9151d445ec927))
+* reduce FastAPI dependency overhead ([2f57f2f](https://github.com/andrelopes-code/depin/commit/2f57f2f75686984a8eec3c601037b703dcbbc979))
+* validate FastAPI evidence provenance ([4a657c2](https://github.com/andrelopes-code/depin/commit/4a657c2513acfd298e19f0069831626fbc414960))
+
 ## [0.19.0](https://github.com/andrelopes-code/depin/compare/v0.18.0...v0.19.0) (2026-09-09)
 
 
