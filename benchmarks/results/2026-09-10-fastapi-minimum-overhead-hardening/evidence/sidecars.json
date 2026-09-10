@@ -1,0 +1,221 @@
+{
+  "allocations": {
+    "base": [
+      152.0,
+      152.0,
+      151.0,
+      151.0,
+      151.0,
+      151.0,
+      151.0,
+      152.0,
+      152.0,
+      152.0
+    ],
+    "head": [
+      147.0,
+      148.0,
+      148.0,
+      148.0,
+      148.0,
+      148.0,
+      148.0,
+      148.0,
+      145.0,
+      148.0
+    ],
+    "limit": 0.0,
+    "method": "tracemalloc-allocation-count",
+    "metric": "allocations",
+    "scope": "paired",
+    "unit": "allocation-count",
+    "workload": "fastapi_cpu_light_endpoint"
+  },
+  "application_startup": {
+    "limit": 0.06,
+    "method": "paired-total-p50",
+    "metric": "latency",
+    "scope": "paired",
+    "unit": "seconds per operation",
+    "workload": "fastapi_application_startup"
+  },
+  "components": [
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_lazy_host_publication"
+    },
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_lazy_frame_activation_and_drain"
+    },
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_endpoint_program_one_key"
+    },
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_endpoint_program_many_keys"
+    },
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_request_seed_read"
+    },
+    {
+      "method": "component-observation",
+      "metric": "latency",
+      "scope": "head-only",
+      "unit": "seconds per operation",
+      "validated": true,
+      "workload": "fastapi_async_resource_close"
+    }
+  ],
+  "contention": {
+    "base": [
+      0.0004100674,
+      0.00275085944,
+      0.00066457484,
+      0.00042645644,
+      0.00237236996,
+      0.00048710344,
+      0.0005962316400000001,
+      0.00057756048,
+      0.0004340816,
+      0.00122668016
+    ],
+    "head": [
+      0.00048605391999999997,
+      0.0004981010799999999,
+      0.00157579288,
+      0.00055832984,
+      0.00035176984,
+      0.00036876908,
+      0.00044212912000000004,
+      0.0004445984,
+      0.00112157104,
+      0.00035617760000000004
+    ],
+    "limit": 0.05,
+    "method": "synchronized-wave",
+    "metric": "p99_seconds",
+    "scope": "paired",
+    "unit": "seconds",
+    "workload": "request_scopes"
+  },
+  "no_injection": {
+    "depin": [
+      0.0006689729925710708,
+      0.0006480030133388937,
+      0.0006604134978260845,
+      0.0006435609539039433,
+      0.0006470429652836174,
+      0.000639548001345247,
+      0.0006470460211858153,
+      0.0006372680072672665,
+      0.0006890330114401877,
+      0.0006481360178440809
+    ],
+    "direct": [
+      0.0006518835143651813,
+      0.0006320749525912106,
+      0.000629735499387607,
+      0.0006914910045452416,
+      0.0006360169500112534,
+      0.0006251824961509556,
+      0.0006304059643298388,
+      0.0006233220046851784,
+      0.0006629109848290682,
+      0.000628377019893378
+    ],
+    "limit": 0.05,
+    "method": "direct-null",
+    "metric": "latency",
+    "scope": "head-only",
+    "unit": "seconds per operation",
+    "workload": "fastapi_no_injection"
+  },
+  "peak_memory": {
+    "base": [
+      29424.0,
+      29424.0,
+      29377.0,
+      29168.0,
+      29168.0,
+      29168.0,
+      29168.0,
+      29424.0,
+      29424.0,
+      29424.0
+    ],
+    "head": [
+      26928.0,
+      26928.0,
+      26928.0,
+      26928.0,
+      26928.0,
+      26928.0,
+      26928.0,
+      26928.0,
+      26787.0,
+      26928.0
+    ],
+    "limit": 0.05,
+    "method": "tracemalloc-peak",
+    "metric": "peak-memory",
+    "scope": "paired",
+    "unit": "bytes",
+    "workload": "fastapi_cpu_light_endpoint"
+  },
+  "retained_memory": {
+    "base": [
+      1035.0,
+      1035.0,
+      1035.0,
+      1035.0,
+      1035.0,
+      1035.0,
+      988.0,
+      1035.0,
+      1035.0,
+      1035.0
+    ],
+    "head": [
+      1035.0,
+      941.0,
+      988.0,
+      988.0,
+      1035.0,
+      941.0,
+      941.0,
+      988.0,
+      1035.0,
+      941.0
+    ],
+    "limit": 0.02,
+    "method": "tracemalloc-retained",
+    "metric": "retained",
+    "scope": "paired",
+    "unit": "bytes",
+    "workload": "fastapi_cpu_light_endpoint"
+  },
+  "schema_version": 1
+}

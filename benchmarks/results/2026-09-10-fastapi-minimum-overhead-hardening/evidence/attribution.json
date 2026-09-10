@@ -1,0 +1,62 @@
+{
+  "baseline_revision": "086adf98459773e3175f4723b2b64e3f47306e42",
+  "head_revision": "57bdea536936a482a358b4d87cff93ccb75272ba",
+  "method": "direct-request-p50",
+  "metric": "p50",
+  "repetitions": [
+    {
+      "base_direct_p50": 0.0006219430069904774,
+      "head_direct_p50": 0.0006227054982446134,
+      "repetition": 0
+    },
+    {
+      "base_direct_p50": 0.0006321955006569624,
+      "head_direct_p50": 0.0006347044836729765,
+      "repetition": 1
+    },
+    {
+      "base_direct_p50": 0.0006284009723458439,
+      "head_direct_p50": 0.000625382992438972,
+      "repetition": 2
+    },
+    {
+      "base_direct_p50": 0.0006258250214159489,
+      "head_direct_p50": 0.0006289510056376457,
+      "repetition": 3
+    },
+    {
+      "base_direct_p50": 0.0006291259778663516,
+      "head_direct_p50": 0.0006594349979422987,
+      "repetition": 4
+    },
+    {
+      "base_direct_p50": 0.000627028988674283,
+      "head_direct_p50": 0.0006246450357139111,
+      "repetition": 5
+    },
+    {
+      "base_direct_p50": 0.0006221089861355722,
+      "head_direct_p50": 0.0006299900123849511,
+      "repetition": 6
+    },
+    {
+      "base_direct_p50": 0.0006541525071952492,
+      "head_direct_p50": 0.0006203724769875407,
+      "repetition": 7
+    },
+    {
+      "base_direct_p50": 0.0006186449900269508,
+      "head_direct_p50": 0.000651968497550115,
+      "repetition": 8
+    },
+    {
+      "base_direct_p50": 0.0006464030011557043,
+      "head_direct_p50": 0.000626994005870074,
+      "repetition": 9
+    }
+  ],
+  "schema_version": 1,
+  "scope": "paired",
+  "unit": "seconds per operation",
+  "workload": "fastapi_cpu_light_endpoint"
+}

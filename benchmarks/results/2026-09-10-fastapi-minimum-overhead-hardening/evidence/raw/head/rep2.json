@@ -1,0 +1,692 @@
+{
+  "base_prefix": "/home/dreco/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu",
+  "benchmark_metrics": {
+    "test_latency[fastapi_application_startup-depin]": {
+      "case_id": "test_latency[fastapi_application_startup-depin]",
+      "first": "base",
+      "iqr": 0.0005457215011119843,
+      "mean": 0.0033076298417383746,
+      "median": 0.0027642310014925897,
+      "method": "pytest-benchmark",
+      "minimum": 0.002447439997922629,
+      "order": 1,
+      "p95": 0.005565994814969598,
+      "p99": 0.008701186038088053,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 813,
+      "side": "head",
+      "stddev": 0.0027108852966458577,
+      "unit": "seconds per operation"
+    },
+    "test_latency[fastapi_application_startup-direct]": {
+      "case_id": "test_latency[fastapi_application_startup-direct]",
+      "first": "base",
+      "iqr": 0.0009480159787926823,
+      "mean": 0.002455543399497401,
+      "median": 0.001832301524700597,
+      "method": "pytest-benchmark",
+      "minimum": 0.0014881539973430336,
+      "order": 1,
+      "p95": 0.004410827756510116,
+      "p99": 0.0058635040163062474,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 1000,
+      "side": "head",
+      "stddev": 0.004509654188961083,
+      "unit": "seconds per operation"
+    },
+    "test_latency[fastapi_async_resource_teardown-depin]": {
+      "case_id": "test_latency[fastapi_async_resource_teardown-depin]",
+      "first": "base",
+      "iqr": 0.00016947652329690754,
+      "mean": 0.0009296464764186417,
+      "median": 0.0007728119671810418,
+      "method": "pytest-benchmark",
+      "minimum": 0.000673169968649745,
+      "order": 1,
+      "p95": 0.0017471588420448823,
+      "p99": 0.0032128048554295567,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 1340,
+      "side": "head",
+      "stddev": 0.0004850516260130535,
+      "unit": "seconds per operation"
+    },
+    "test_latency[fastapi_async_resource_teardown-direct]": {
+      "case_id": "test_latency[fastapi_async_resource_teardown-direct]",
+      "first": "base",
+      "iqr": 7.142400136217475e-05,
+      "mean": 0.000721227004664558,
+      "median": 0.0006290419842116535,
+      "method": "pytest-benchmark",
+      "minimum": 0.0005774219753220677,
+      "order": 1,
+      "p95": 0.0010570665181148797,
+      "p99": 0.0023952568561071475,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 1596,
+      "side": "head",
+      "stddev": 0.0003681666261582413,
+      "unit": "seconds per operation"
+    },
+    "test_latency[fastapi_cpu_light_endpoint-depin]": {
+      "case_id": "test_latency[fastapi_cpu_light_endpoint-depin]",
+      "first": "base",
+      "iqr": 7.648448809050024e-05,
+      "mean": 0.0008081164163921944,
+      "median": 0.0006833125080447644,
+      "method": "pytest-benchmark",
+      "minimum": 0.0006060340092517436,
+      "order": 1,
+      "p95": 0.0016419784777099262,
+      "p99": 0.002907441311981528,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 1448,
+      "side": "head",
+      "stddev": 0.0004296470048033472,
+      "unit": "seconds per operation"
+    },
+    "test_latency[fastapi_cpu_light_endpoint-direct]": {
+      "case_id": "test_latency[fastapi_cpu_light_endpoint-direct]",
+      "first": "base",
+      "iqr": 6.853802187833935e-05,
+      "mean": 0.0006964838923179875,
+      "median": 0.000625382992438972,
+      "method": "pytest-benchmark",
+      "minimum": 0.000587349000852555,
+      "order": 1,
+      "p95": 0.0009534889832139017,
+      "p99": 0.0019113479112274944,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 1417,
+      "side": "head",
+      "stddev": 0.0002797829777761922,
+      "unit": "seconds per operation"
+    },
+    "test_latency[fastapi_endpoint_with_work-depin]": {
+      "case_id": "test_latency[fastapi_endpoint_with_work-depin]",
+      "first": "base",
+      "iqr": 0.00019987302948720753,
+      "mean": 0.0011855110815959051,
+      "median": 0.0009998304885812104,
+      "method": "pytest-benchmark",
+      "minimum": 0.0008699950412847102,
+      "order": 1,
+      "p95": 0.002249281885451636,
+      "p99": 0.0036663057585246857,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 1000,
+      "side": "head",
+      "stddev": 0.0005470436026466853,
+      "unit": "seconds per operation"
+    },
+    "test_latency[fastapi_endpoint_with_work-direct]": {
+      "case_id": "test_latency[fastapi_endpoint_with_work-direct]",
+      "first": "base",
+      "iqr": 0.0001745010376907885,
+      "mean": 0.0010939690889790654,
+      "median": 0.0009187280084006488,
+      "method": "pytest-benchmark",
+      "minimum": 0.0007908400148153305,
+      "order": 1,
+      "p95": 0.002060246534529141,
+      "p99": 0.003739914894686079,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 1000,
+      "side": "head",
+      "stddev": 0.0005346037465922248,
+      "unit": "seconds per operation"
+    },
+    "test_latency[fastapi_request_scoped_graph-depin]": {
+      "case_id": "test_latency[fastapi_request_scoped_graph-depin]",
+      "first": "base",
+      "iqr": 0.00016782298916950822,
+      "mean": 0.0009885780547758275,
+      "median": 0.0008041269902605563,
+      "method": "pytest-benchmark",
+      "minimum": 0.0006797329988330603,
+      "order": 1,
+      "p95": 0.002055765443947166,
+      "p99": 0.003237798592308536,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 1388,
+      "side": "head",
+      "stddev": 0.0005614105593793643,
+      "unit": "seconds per operation"
+    },
+    "test_latency[fastapi_request_scoped_graph-direct]": {
+      "case_id": "test_latency[fastapi_request_scoped_graph-direct]",
+      "first": "base",
+      "iqr": 9.884647442959249e-05,
+      "mean": 0.0008421124382554595,
+      "median": 0.0006279310036916286,
+      "method": "pytest-benchmark",
+      "minimum": 0.000575501995626837,
+      "order": 1,
+      "p95": 0.002269224904011933,
+      "p99": 0.003701454414986074,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 1348,
+      "side": "head",
+      "stddev": 0.0006463493099434538,
+      "unit": "seconds per operation"
+    },
+    "test_latency[fastapi_singletons_and_transients-depin]": {
+      "case_id": "test_latency[fastapi_singletons_and_transients-depin]",
+      "first": "base",
+      "iqr": 0.00017769599799066782,
+      "mean": 0.0009746954036527313,
+      "median": 0.0007372675172518939,
+      "method": "pytest-benchmark",
+      "minimum": 0.0006316030048765242,
+      "order": 1,
+      "p95": 0.002154331252677364,
+      "p99": 0.004351273560314439,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 1000,
+      "side": "head",
+      "stddev": 0.000704014358513693,
+      "unit": "seconds per operation"
+    },
+    "test_latency[fastapi_singletons_and_transients-direct]": {
+      "case_id": "test_latency[fastapi_singletons_and_transients-direct]",
+      "first": "base",
+      "iqr": 3.1709991162642837e-05,
+      "mean": 0.0006606548151393501,
+      "median": 0.000621291488641873,
+      "method": "pytest-benchmark",
+      "minimum": 0.000576430989895016,
+      "order": 1,
+      "p95": 0.0008499687886796888,
+      "p99": 0.0012217475648503757,
+      "repetition": 2,
+      "report_sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72",
+      "rounds": 1584,
+      "side": "head",
+      "stddev": 0.0001547417497067363,
+      "unit": "seconds per operation"
+    }
+  },
+  "benchmark_report": {
+    "aggregates": {
+      "test_latency[fastapi_application_startup-depin]": {
+        "iqr": 0.0005457215011119843,
+        "mean": 0.0033076298417383746,
+        "median": 0.0027642310014925897,
+        "minimum": 0.002447439997922629,
+        "p95": 0.005565994814969598,
+        "p99": 0.008701186038088053,
+        "rounds": 813,
+        "stddev": 0.0027108852966458577
+      },
+      "test_latency[fastapi_application_startup-direct]": {
+        "iqr": 0.0009480159787926823,
+        "mean": 0.002455543399497401,
+        "median": 0.001832301524700597,
+        "minimum": 0.0014881539973430336,
+        "p95": 0.004410827756510116,
+        "p99": 0.0058635040163062474,
+        "rounds": 1000,
+        "stddev": 0.004509654188961083
+      },
+      "test_latency[fastapi_async_resource_teardown-depin]": {
+        "iqr": 0.00016947652329690754,
+        "mean": 0.0009296464764186417,
+        "median": 0.0007728119671810418,
+        "minimum": 0.000673169968649745,
+        "p95": 0.0017471588420448823,
+        "p99": 0.0032128048554295567,
+        "rounds": 1340,
+        "stddev": 0.0004850516260130535
+      },
+      "test_latency[fastapi_async_resource_teardown-direct]": {
+        "iqr": 7.142400136217475e-05,
+        "mean": 0.000721227004664558,
+        "median": 0.0006290419842116535,
+        "minimum": 0.0005774219753220677,
+        "p95": 0.0010570665181148797,
+        "p99": 0.0023952568561071475,
+        "rounds": 1596,
+        "stddev": 0.0003681666261582413
+      },
+      "test_latency[fastapi_cpu_light_endpoint-depin]": {
+        "iqr": 7.648448809050024e-05,
+        "mean": 0.0008081164163921944,
+        "median": 0.0006833125080447644,
+        "minimum": 0.0006060340092517436,
+        "p95": 0.0016419784777099262,
+        "p99": 0.002907441311981528,
+        "rounds": 1448,
+        "stddev": 0.0004296470048033472
+      },
+      "test_latency[fastapi_cpu_light_endpoint-direct]": {
+        "iqr": 6.853802187833935e-05,
+        "mean": 0.0006964838923179875,
+        "median": 0.000625382992438972,
+        "minimum": 0.000587349000852555,
+        "p95": 0.0009534889832139017,
+        "p99": 0.0019113479112274944,
+        "rounds": 1417,
+        "stddev": 0.0002797829777761922
+      },
+      "test_latency[fastapi_endpoint_with_work-depin]": {
+        "iqr": 0.00019987302948720753,
+        "mean": 0.0011855110815959051,
+        "median": 0.0009998304885812104,
+        "minimum": 0.0008699950412847102,
+        "p95": 0.002249281885451636,
+        "p99": 0.0036663057585246857,
+        "rounds": 1000,
+        "stddev": 0.0005470436026466853
+      },
+      "test_latency[fastapi_endpoint_with_work-direct]": {
+        "iqr": 0.0001745010376907885,
+        "mean": 0.0010939690889790654,
+        "median": 0.0009187280084006488,
+        "minimum": 0.0007908400148153305,
+        "p95": 0.002060246534529141,
+        "p99": 0.003739914894686079,
+        "rounds": 1000,
+        "stddev": 0.0005346037465922248
+      },
+      "test_latency[fastapi_request_scoped_graph-depin]": {
+        "iqr": 0.00016782298916950822,
+        "mean": 0.0009885780547758275,
+        "median": 0.0008041269902605563,
+        "minimum": 0.0006797329988330603,
+        "p95": 0.002055765443947166,
+        "p99": 0.003237798592308536,
+        "rounds": 1388,
+        "stddev": 0.0005614105593793643
+      },
+      "test_latency[fastapi_request_scoped_graph-direct]": {
+        "iqr": 9.884647442959249e-05,
+        "mean": 0.0008421124382554595,
+        "median": 0.0006279310036916286,
+        "minimum": 0.000575501995626837,
+        "p95": 0.002269224904011933,
+        "p99": 0.003701454414986074,
+        "rounds": 1348,
+        "stddev": 0.0006463493099434538
+      },
+      "test_latency[fastapi_singletons_and_transients-depin]": {
+        "iqr": 0.00017769599799066782,
+        "mean": 0.0009746954036527313,
+        "median": 0.0007372675172518939,
+        "minimum": 0.0006316030048765242,
+        "p95": 0.002154331252677364,
+        "p99": 0.004351273560314439,
+        "rounds": 1000,
+        "stddev": 0.000704014358513693
+      },
+      "test_latency[fastapi_singletons_and_transients-direct]": {
+        "iqr": 3.1709991162642837e-05,
+        "mean": 0.0006606548151393501,
+        "median": 0.000621291488641873,
+        "minimum": 0.000576430989895016,
+        "p95": 0.0008499687886796888,
+        "p99": 0.0012217475648503757,
+        "rounds": 1584,
+        "stddev": 0.0001547417497067363
+      }
+    },
+    "sha256": "2751874582248aaab1f3e0068e2e764f334344d80b049ae73b57eb59ae37dc72"
+  },
+  "contention": {
+    "config": {
+      "samples": 5,
+      "workers": 2
+    },
+    "depin": {
+      "method": "synchronized-wave",
+      "unit": "seconds",
+      "value": 0.00157579288
+    },
+    "direct": {
+      "method": "synchronized-wave",
+      "unit": "seconds",
+      "value": 0.00121906504
+    }
+  },
+  "environment": {
+    "affinity": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "bootstrap": {
+      "inner": {
+        "bytecode": "disabled",
+        "hash_seed": "0",
+        "pythonpath": "removed",
+        "user_site": "disabled"
+      },
+      "outer": "isolated-python-I"
+    },
+    "cpu": {
+      "model": "Intel(R) Xeon(R) CPU E5-2683 v4 @ 2.10GHz"
+    },
+    "distributions": {
+      "pydepin": "0.20.0",
+      "pytest": "9.1.1",
+      "pytest-benchmark": "5.3.0"
+    },
+    "governor": "unavailable",
+    "host": {
+      "available_processors": 4,
+      "cpu_model": "Intel(R) Xeon(R) CPU E5-2683 v4 @ 2.10GHz",
+      "load_average": [
+        6.81,
+        5.19,
+        5.45
+      ],
+      "machine": "x86_64",
+      "processor": "x86_64",
+      "processors": 4,
+      "release": "6.8.0-138-generic",
+      "system": "Linux"
+    },
+    "interpreter": {
+      "compiler": "Clang 22.1.3 ",
+      "free_threading": false,
+      "hash_randomization": false,
+      "implementation": "CPython",
+      "recursion_limit": 1000,
+      "version": "3.12.13"
+    },
+    "kernel": "6.8.0-138-generic",
+    "packages": {
+      "fastapi": "0.141.1",
+      "pydepin": "0.20.0",
+      "pytest": "9.1.1",
+      "pytest-benchmark": "5.3.0",
+      "starlette": "1.6.0"
+    }
+  },
+  "first": "base",
+  "head_only": {
+    "components": {
+      "fastapi_async_resource_close": {
+        "config": {
+          "control_case": "test_latency[fastapi_no_injection-direct]"
+        },
+        "control": {
+          "method": "direct-null",
+          "unit": "seconds per operation",
+          "value": 0.000629735499387607
+        },
+        "depin": {
+          "method": "component-observation",
+          "unit": "seconds per operation",
+          "value": 0.0007072820153553039
+        }
+      },
+      "fastapi_endpoint_program_many_keys": {
+        "config": {
+          "control_case": "test_latency[fastapi_no_injection-direct]"
+        },
+        "control": {
+          "method": "direct-null",
+          "unit": "seconds per operation",
+          "value": 0.000629735499387607
+        },
+        "depin": {
+          "method": "component-observation",
+          "unit": "seconds per operation",
+          "value": 0.0006864844763185829
+        }
+      },
+      "fastapi_endpoint_program_one_key": {
+        "config": {
+          "control_case": "test_latency[fastapi_no_injection-direct]"
+        },
+        "control": {
+          "method": "direct-null",
+          "unit": "seconds per operation",
+          "value": 0.000629735499387607
+        },
+        "depin": {
+          "method": "component-observation",
+          "unit": "seconds per operation",
+          "value": 0.0007378480222541839
+        }
+      },
+      "fastapi_lazy_frame_activation_and_drain": {
+        "config": {
+          "control_case": "test_latency[fastapi_no_injection-direct]"
+        },
+        "control": {
+          "method": "direct-null",
+          "unit": "seconds per operation",
+          "value": 0.000629735499387607
+        },
+        "depin": {
+          "method": "component-observation",
+          "unit": "seconds per operation",
+          "value": 0.0007629975152667612
+        }
+      },
+      "fastapi_lazy_host_publication": {
+        "config": {
+          "control_case": "test_latency[fastapi_no_injection-direct]"
+        },
+        "control": {
+          "method": "direct-null",
+          "unit": "seconds per operation",
+          "value": 0.000629735499387607
+        },
+        "depin": {
+          "method": "component-observation",
+          "unit": "seconds per operation",
+          "value": 0.0006775560032110661
+        }
+      },
+      "fastapi_request_seed_read": {
+        "config": {
+          "control_case": "test_latency[fastapi_no_injection-direct]"
+        },
+        "control": {
+          "method": "direct-null",
+          "unit": "seconds per operation",
+          "value": 0.000629735499387607
+        },
+        "depin": {
+          "method": "component-observation",
+          "unit": "seconds per operation",
+          "value": 0.0007332174864131957
+        }
+      }
+    },
+    "no_injection": {
+      "depin": {
+        "method": "direct-null",
+        "unit": "seconds per operation",
+        "value": 0.0006604134978260845
+      },
+      "direct": {
+        "method": "direct-null",
+        "unit": "seconds per operation",
+        "value": 0.000629735499387607
+      }
+    }
+  },
+  "interpreter": "/tmp/depin-fastapi-hardening.O7uX5D/env-head/bin/python",
+  "launcher_target": "/home/dreco/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/bin/python3.12",
+  "memory": {
+    "allocations": {
+      "method": "tracemalloc-allocation-count",
+      "unit": "allocation-count",
+      "value": 148.0
+    },
+    "peak": {
+      "method": "tracemalloc-peak",
+      "unit": "bytes",
+      "value": 26928.0
+    },
+    "retained": {
+      "method": "tracemalloc-retained",
+      "unit": "bytes",
+      "value": 988.0
+    },
+    "work": {
+      "config": {
+        "operations": 1
+      },
+      "method": "calls-per-operation",
+      "operations": 1,
+      "sample_count": 1,
+      "unit": "calls per operation",
+      "value": 605.0
+    }
+  },
+  "observations": [
+    {
+      "depin": {
+        "closed": [],
+        "constructed": [],
+        "error": null,
+        "result": "200 {\"stamp\":\"2026-09-02T00:00:00Z\"}"
+      },
+      "direct": {
+        "closed": [],
+        "constructed": [],
+        "error": null,
+        "result": "200 {\"stamp\":\"2026-09-02T00:00:00Z\"}"
+      },
+      "workload": "fastapi_cpu_light_endpoint"
+    },
+    {
+      "depin": {
+        "closed": [],
+        "constructed": [
+          "RequestId",
+          "SessionStore",
+          "ReportService"
+        ],
+        "error": null,
+        "result": "200 {\"session\":\"session:2026-09-02T00:00:00Z\",\"total\":\"121\"}"
+      },
+      "direct": {
+        "closed": [],
+        "constructed": [
+          "RequestId",
+          "SessionStore",
+          "ReportService"
+        ],
+        "error": null,
+        "result": "200 {\"session\":\"session:2026-09-02T00:00:00Z\",\"total\":\"121\"}"
+      },
+      "workload": "fastapi_request_scoped_graph"
+    },
+    {
+      "depin": {
+        "closed": [],
+        "constructed": [
+          "Cart",
+          "PricingService"
+        ],
+        "error": null,
+        "result": "200 {\"currency\":\"EUR\",\"amount\":\"109\"}"
+      },
+      "direct": {
+        "closed": [],
+        "constructed": [
+          "Cart",
+          "PricingService"
+        ],
+        "error": null,
+        "result": "200 {\"currency\":\"EUR\",\"amount\":\"109\"}"
+      },
+      "workload": "fastapi_singletons_and_transients"
+    },
+    {
+      "depin": {
+        "closed": [
+          "AuditTrail",
+          "Ledger"
+        ],
+        "constructed": [
+          "Ledger",
+          "AuditTrail"
+        ],
+        "error": null,
+        "result": "200 {\"entries\":\"8\"}"
+      },
+      "direct": {
+        "closed": [
+          "AuditTrail",
+          "Ledger"
+        ],
+        "constructed": [
+          "Ledger",
+          "AuditTrail"
+        ],
+        "error": null,
+        "result": "200 {\"entries\":\"8\"}"
+      },
+      "workload": "fastapi_async_resource_teardown"
+    },
+    {
+      "depin": {
+        "closed": [],
+        "constructed": [
+          "Repository",
+          "OrderService"
+        ],
+        "error": null,
+        "result": "200 {\"digest\":\"492461\",\"price\":\"133\",\"handled\":\"558437\"}"
+      },
+      "direct": {
+        "closed": [],
+        "constructed": [
+          "Repository",
+          "OrderService"
+        ],
+        "error": null,
+        "result": "200 {\"digest\":\"492461\",\"price\":\"133\",\"handled\":\"558437\"}"
+      },
+      "workload": "fastapi_endpoint_with_work"
+    },
+    {
+      "depin": {
+        "closed": [],
+        "constructed": [
+          "Settings",
+          "Clock",
+          "Catalog"
+        ],
+        "error": null,
+        "result": "/docs /docs/oauth2-redirect /openapi.json /price /redoc /report /status"
+      },
+      "direct": {
+        "closed": [],
+        "constructed": [
+          "Settings",
+          "Clock",
+          "Catalog"
+        ],
+        "error": null,
+        "result": "/docs /docs/oauth2-redirect /openapi.json /price /redoc /report /status"
+      },
+      "workload": "fastapi_application_startup"
+    }
+  ],
+  "prefix": "/tmp/depin-fastapi-hardening.O7uX5D/env-head",
+  "pyvenv_cfg_sha256": "7e9538965db9307ff1a72aa66f2be06dda3365dd23ea724b33142c121ed34062",
+  "repetition": 2,
+  "revision": "57bdea536936a482a358b4d87cff93ccb75272ba",
+  "schema_version": 4,
+  "side": "head"
+}

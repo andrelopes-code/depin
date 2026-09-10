@@ -24,6 +24,7 @@ from benchmarks.contracts import Metric
 from benchmarks.harness import (
     HarnessError,
     is_array,
+    is_object,
     read_json,
     reduce,
     require_array,
@@ -86,8 +87,11 @@ def _table(header: Sequence[str], rows: Sequence[Sequence[str]]) -> list[str]:
 def _environment_rows(payload: Mapping[str, object], where: str) -> list[list[str]]:
     rows: list[list[str]] = []
     for section in sorted(payload):
-        fields = require_object(payload[section], f'{where}: {section}')
-        rows += [[f'{section}.{name}', _cell(fields[name])] for name in sorted(fields)]
+        value = payload[section]
+        if is_object(value):
+            rows += [[f'{section}.{name}', _cell(value[name])] for name in sorted(value)]
+        else:
+            rows.append([section, _cell(value)])
     return rows
 
 

@@ -1,0 +1,35 @@
+{
+  "collection_command": [
+    "python",
+    "-m",
+    "benchmarks.harness.fastapi_evidence",
+    "collect",
+    "--out",
+    "/tmp/depin-fastapi-hardening.O7uX5D/accepted-raw10",
+    "--base-dir",
+    "/tmp/depin-fastapi-hardening.O7uX5D/base",
+    "--head-dir",
+    "/tmp/depin-fastapi-hardening.O7uX5D/head",
+    "--base-python",
+    "/tmp/depin-fastapi-hardening.O7uX5D/env-base/bin/python",
+    "--head-python",
+    "/tmp/depin-fastapi-hardening.O7uX5D/env-head/bin/python",
+    "--cache-root",
+    "/tmp/depin-fastapi-hardening.O7uX5D/cache",
+    "--repetitions",
+    "10"
+  ],
+  "runner_sha256": "a314ade8f32898461f360b296772bd7be0818b48612a416b4221cb37723cf4d3",
+  "targets": {
+    "base": {
+      "lock_sha256": "02230a6fa29ed367a45580aaae6ad6d10cdfecb234ef9fa8c82177084ee6b317",
+      "revision": "086adf98459773e3175f4723b2b64e3f47306e42",
+      "root": "/tmp/depin-fastapi-hardening.O7uX5D/base"
+    },
+    "head": {
+      "lock_sha256": "d7fb6788b5aeef908f2b3d12d180ad73ef08a0f86e73a8447b8269c1a54b7756",
+      "revision": "57bdea536936a482a358b4d87cff93ccb75272ba",
+      "root": "/tmp/depin-fastapi-hardening.O7uX5D/head"
+    }
+  }
+}

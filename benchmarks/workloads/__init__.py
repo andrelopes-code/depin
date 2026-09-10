@@ -25,6 +25,14 @@ WORKLOADS: tuple[Workload, ...] = (
     *scale.WORKLOADS,
 )
 
+PAIRED_WORKLOADS: tuple[Workload, ...] = (
+    *micro.WORKLOADS,
+    *component.PAIRED_WORKLOADS,
+    *application.PAIRED_WORKLOADS,
+    *resources.WORKLOADS,
+    *scale.WORKLOADS,
+)
+
 _names = [workload.name for workload in WORKLOADS]
 if len(_names) != len(set(_names)):
     duplicates = sorted({name for name in _names if _names.count(name) > 1})

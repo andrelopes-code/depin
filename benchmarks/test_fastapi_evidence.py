@@ -6,9 +6,18 @@ from pathlib import Path
 
 import pytest
 
-from benchmarks.harness import HarnessError, gate, read_json, require_array, require_integer, require_object, write_json
+from benchmarks.harness import (
+    HarnessError,
+    gate,
+    read_json,
+    require_array,
+    require_integer,
+    require_object,
+    require_text,
+    write_json,
+)
 from benchmarks.harness.fastapi_acceptance import COMPONENT_WORKLOADS, TAIL_WORKLOADS, evaluate
-from benchmarks.harness.fastapi_evidence import BASELINE_REVISION, reduce
+from benchmarks.harness.fastapi_evidence import BASELINE_REVISION, collect, reduce
 
 HEAD_REVISION = 'f' * 40
 
@@ -26,12 +35,32 @@ def _aggregate(value: float) -> dict[str, object]:
     }
 
 
+def test_collection_requires_the_formal_minimum_repetitions(tmp_path: Path) -> None:
+    with pytest.raises(HarnessError, match='at least 5'):
+        collect(
+            tmp_path / 'raw',
+            base=tmp_path / 'base',
+            head=tmp_path / 'head',
+            interpreters={},
+            cache=tmp_path / 'cache',
+            repetitions=4,
+        )
+
+
 def _observation(name: str) -> dict[str, object]:
     events: list[str] = ['resource'] if name == 'fastapi_async_resource_teardown' else []
     return {'result': '200 {}', 'constructed': events, 'closed': events, 'error': None}
 
 
-def _raw(side: str, repetition: int, revision: str, interpreter: str) -> dict[str, object]:
+def _raw(
+    side: str,
+    repetition: int,
+    revision: str,
+    interpreter: str,
+    *,
+    subject_version: str = '1',
+    report_sha256: str = 'a' * 64,
+) -> dict[str, object]:
     first = 'base' if repetition % 2 == 0 else 'head'
     aggregates = {
         f'test_latency[{name}-{label}]': _aggregate(
@@ -62,18 +91,24 @@ def _raw(side: str, repetition: int, revision: str, interpreter: str) -> dict[st
                 'available_processors': 2,
                 'load_average': [1.0 + repetition / 10 if side == 'base' else 2.0 + repetition / 10],
             },
-            'distributions': {'pydepin': '1', 'pytest': '1', 'pytest-benchmark': '1'},
+            'distributions': {'pydepin': subject_version, 'pytest': '1', 'pytest-benchmark': '1'},
             'cpu': {'model': 'test'},
             'kernel': '6',
             'governor': 'performance',
             'affinity': [0],
-            'packages': {'pydepin': '1', 'pytest': '1', 'pytest-benchmark': '1', 'fastapi': '1', 'starlette': '1'},
+            'packages': {
+                'pydepin': subject_version,
+                'pytest': '1',
+                'pytest-benchmark': '1',
+                'fastapi': '1',
+                'starlette': '1',
+            },
             'harness_revision': 'e' * 40,
             'collection_command': ['python'],
             'locked_environment': {'base': '/tmp/base-env', 'head': '/tmp/head-env'},
         },
         'first': first,
-        'benchmark_report': {'sha256': 'a' * 64, 'aggregates': aggregates},
+        'benchmark_report': {'sha256': report_sha256, 'aggregates': aggregates},
         'benchmark_metrics': {
             case: {
                 'case_id': case,
@@ -84,7 +119,7 @@ def _raw(side: str, repetition: int, revision: str, interpreter: str) -> dict[st
                 'repetition': repetition,
                 'first': first,
                 'order': 0 if side == first else 1,
-                'report_sha256': 'a' * 64,
+                'report_sha256': report_sha256,
             }
             for case, aggregate in aggregates.items()
         },
@@ -132,7 +167,9 @@ def _raw(side: str, repetition: int, revision: str, interpreter: str) -> dict[st
     return payload
 
 
-def _reduced(root: Path) -> dict[str, object]:
+def _reduced(
+    root: Path, *, repetitions: int = 5, head_version: str = '1', captured_collection_provenance: bool = True
+) -> dict[str, object]:
     environments: dict[str, Path] = {}
     for side in ('base', 'head'):
         environment = root / f'{side}-env'
@@ -140,15 +177,94 @@ def _reduced(root: Path) -> dict[str, object]:
         (environment / 'bin' / 'python').symlink_to(Path(sys.executable))
         (environment / 'pyvenv.cfg').write_text('home = test\n', encoding='utf-8')
         environments[side] = environment
-    for repetition in range(5):
+    for repetition in range(repetitions):
         for side, revision, interpreter in (
             ('base', BASELINE_REVISION, str(environments['base'] / 'bin' / 'python')),
             ('head', HEAD_REVISION, str(environments['head'] / 'bin' / 'python')),
         ):
-            write_json(root / 'raw' / side / f'rep{repetition}.json', _raw(side, repetition, revision, interpreter))
+            report_path = root / 'raw' / 'reports' / side / f'rep{repetition}.json'
+            write_json(report_path, {'side': side, 'repetition': repetition})
+            payload = _raw(
+                side,
+                repetition,
+                revision,
+                interpreter,
+                subject_version=head_version if side == 'head' else '1',
+                report_sha256=hashlib.sha256(report_path.read_bytes()).hexdigest(),
+            )
+            if not captured_collection_provenance:
+                raw_environment = require_object(payload['environment'], 'environment')
+                for field in ('harness_revision', 'collection_command', 'locked_environment'):
+                    _ = raw_environment.pop(field)
+            write_json(root / 'raw' / side / f'rep{repetition}.json', payload)
+    write_json(
+        root / 'raw' / 'source-manifest.json',
+        {
+            'runner_sha256': 'd' * 64,
+            'targets': {
+                'base': {'root': str(root / 'base'), 'revision': BASELINE_REVISION, 'lock_sha256': 'b' * 64},
+                'head': {'root': str(root / 'head'), 'revision': HEAD_REVISION, 'lock_sha256': 'c' * 64},
+            },
+            'collection_command': [
+                'python',
+                '-m',
+                'benchmarks.harness.fastapi_evidence',
+                'collect',
+                '--out',
+                str(root / 'raw'),
+                '--base-dir',
+                str(root / 'base'),
+                '--head-dir',
+                str(root / 'head'),
+                '--base-python',
+                str(environments['base'] / 'bin' / 'python'),
+                '--head-python',
+                str(environments['head'] / 'bin' / 'python'),
+                '--cache-root',
+                str(root / 'cache'),
+                '--repetitions',
+                str(repetitions),
+            ],
+        },
+    )
     return reduce(
         root / 'raw', BASELINE_REVISION, HEAD_REVISION, {side: str(path) for side, path in environments.items()}
     )
+
+
+def test_reduction_accepts_the_published_subject_version_change(tmp_path: Path) -> None:
+    output = _reduced(tmp_path, head_version='2')
+
+    provenance = require_object(output['provenance'], 'provenance')
+    environment = require_object(provenance['environment'], 'environment')
+    assert environment['subject_versions'] == {'base': '1', 'head': '2'}
+
+
+def test_reduction_preserves_a_doubled_repetition_set(tmp_path: Path) -> None:
+    output = _reduced(tmp_path, repetitions=10)
+
+    dataset = require_object(output['dataset'], 'dataset')
+    metadata = require_object(dataset['environment.json'], 'environment.json')
+    assert metadata['repetitions'] == 10
+    assert len(require_array(require_object(dataset['base'], 'base')['repetitions'], 'base repetitions')) == 10
+    provenance = require_object(output['provenance'], 'provenance')
+    assert require_object(provenance['protocol'], 'protocol')['repetitions'] == 10
+    assert len(require_array(provenance['semantic_validation'], 'semantic validation')) == 60
+
+
+def test_reduction_projects_collection_provenance(tmp_path: Path) -> None:
+    output = _reduced(tmp_path, captured_collection_provenance=False)
+
+    provenance = require_object(output['provenance'], 'provenance')
+    environment = require_object(provenance['environment'], 'environment')
+    harness_revision = environment['harness_revision']
+    assert isinstance(harness_revision, str)
+    assert len(harness_revision) == 40
+    command = require_array(environment['collection_command'], 'collection command')
+    assert command[:4] == ['python', '-m', 'benchmarks.harness.fastapi_evidence', 'collect']
+    assert command[-2:] == ['--repetitions', '5']
+    locked = require_object(environment['locked_environment'], 'locked environment')
+    assert all(require_text(locked[side], side).startswith('sha256:') for side in ('base', 'head'))
 
 
 def test_reduction_preserves_repetitions_and_projects_evaluator_inputs(tmp_path: Path) -> None:
@@ -253,6 +369,64 @@ def test_reduction_refuses_duplicate_json_key(tmp_path: Path) -> None:
     _ = _reduced(tmp_path)
     (tmp_path / 'raw' / 'base' / 'rep0.json').write_text('{"schema_version":3,"schema_version":3}', encoding='utf-8')
     with pytest.raises(HarnessError, match='duplicate JSON key'):
+        reduce(
+            tmp_path / 'raw',
+            BASELINE_REVISION,
+            HEAD_REVISION,
+            {'base': str(tmp_path / 'base-env'), 'head': str(tmp_path / 'head-env')},
+        )
+
+
+@pytest.mark.parametrize('mutation', ['missing', 'corrupt'])
+def test_reduction_verifies_retained_benchmark_reports(tmp_path: Path, mutation: str) -> None:
+    _ = _reduced(tmp_path)
+    report = tmp_path / 'raw' / 'reports' / 'head' / 'rep2.json'
+    if mutation == 'missing':
+        report.unlink()
+    else:
+        report.write_text('{}\n', encoding='utf-8')
+
+    with pytest.raises(HarnessError, match='benchmark report'):
+        reduce(
+            tmp_path / 'raw',
+            BASELINE_REVISION,
+            HEAD_REVISION,
+            {'base': str(tmp_path / 'base-env'), 'head': str(tmp_path / 'head-env')},
+        )
+
+
+@pytest.mark.parametrize(('option', 'replacement'), [('--head-python', None), ('--repetitions', '9')])
+def test_reduction_verifies_the_collection_command(tmp_path: Path, option: str, replacement: str | None) -> None:
+    _ = _reduced(tmp_path)
+    manifest_path = tmp_path / 'raw' / 'source-manifest.json'
+    manifest = read_json(manifest_path)
+    command = require_array(manifest.get('collection_command'), 'collection command')
+    index = command.index(option)
+    if replacement is None:
+        del command[index : index + 2]
+    else:
+        command[index + 1] = replacement
+    write_json(manifest_path, manifest)
+
+    with pytest.raises(HarnessError, match='collection command'):
+        reduce(
+            tmp_path / 'raw',
+            BASELINE_REVISION,
+            HEAD_REVISION,
+            {'base': str(tmp_path / 'base-env'), 'head': str(tmp_path / 'head-env')},
+        )
+
+
+def test_reduction_refuses_conflicting_subject_package_versions(tmp_path: Path) -> None:
+    _ = _reduced(tmp_path, head_version='2')
+    path = tmp_path / 'raw' / 'head' / 'rep2.json'
+    payload = read_json(path)
+    environment = require_object(payload.get('environment'), 'environment')
+    packages = require_object(environment.get('packages'), 'packages')
+    packages['pydepin'] = 'wrong'
+    write_json(path, payload)
+
+    with pytest.raises(HarnessError, match='pydepin versions disagree'):
         reduce(
             tmp_path / 'raw',
             BASELINE_REVISION,

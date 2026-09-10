@@ -1,5 +1,6 @@
 """Contract tests for FastAPI benchmark instrumentation."""
 
+from benchmarks.test_latency import inventory as paired_inventory
 from benchmarks.workloads.application.inventory import WORKLOADS as APPLICATION_WORKLOADS
 from benchmarks.workloads.component.fastapi import WORKLOADS as COMPONENT_WORKLOADS
 
@@ -41,6 +42,13 @@ def test_fastapi_component_inventory_decomposes_lazy_request_costs() -> None:
         'fastapi_request_seed_read',
         'fastapi_async_resource_close',
     )
+
+
+def test_head_only_fastapi_diagnostics_are_not_in_the_paired_inventory() -> None:
+    paired = {workload.name for workload in paired_inventory()}
+    head_only = {'fastapi_no_injection', *(workload.name for workload in COMPONENT_WORKLOADS)}
+
+    assert paired.isdisjoint(head_only)
 
 
 def test_fastapi_component_observations_capture_exact_lifecycle_semantics() -> None:

@@ -16,7 +16,7 @@ import pytest
 
 from benchmarks.contracts import Cost, Implementation, Metric, Workload
 from benchmarks.harness import published, reduce
-from benchmarks.workloads import WORKLOADS
+from benchmarks.workloads import PAIRED_WORKLOADS
 
 
 class Benchmark(Protocol):
@@ -32,14 +32,13 @@ class Benchmark(Protocol):
 
 
 def inventory() -> tuple[Workload, ...]:
-    """Every workload this repository declares, in registration order.
+    """Every workload covered by the generic base/head gate, in registration order.
 
-    `benchmarks.workloads` is the registry each tier registers into, and it is the
-    only source: a workload reachable here but absent from the registry would be
-    measured and never gated, since the gate expects a result for exactly what the
-    registry lists.
+    Head-only diagnostics use dedicated collectors because they do not have a
+    cross-revision budget. Every workload reachable here is measured and gated by
+    the generic paired harness.
     """
-    return WORKLOADS
+    return PAIRED_WORKLOADS
 
 
 def implementations(workload: Workload) -> tuple[Implementation, ...]:

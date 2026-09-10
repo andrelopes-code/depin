@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from benchmarks.harness import require_array, require_object
+from benchmarks.harness import fastapi_target_runner, require_array, require_object
 from benchmarks.harness.fastapi_target_runner import REQUIRED_WORKLOADS, ReportError, benchmark, decode_report
 
 
@@ -42,6 +42,39 @@ def _report(path: Path) -> None:
 
 def _entries(payload: dict[str, object]) -> list[object]:
     return require_array(payload.get('benchmarks'), 'benchmarks')
+
+
+def test_runtime_environment_carries_acceptance_provenance() -> None:
+    captured: dict[str, object] = {
+        'interpreter': {'implementation': 'CPython', 'version': '3.12.0'},
+        'host': {'cpu_model': 'test CPU', 'release': 'test kernel'},
+        'distributions': {'pydepin': '2.0'},
+    }
+
+    result = fastapi_target_runner.runtime_environment(
+        captured,
+        {
+            'pydepin': '2.0',
+            'pytest': '1.0',
+            'pytest-benchmark': '1.0',
+            'fastapi': '1.0',
+            'starlette': '1.0',
+        },
+        affinity=(2, 3),
+        governor='performance',
+    )
+
+    assert result['cpu'] == {'model': 'test CPU'}
+    assert result['kernel'] == 'test kernel'
+    assert result['governor'] == 'performance'
+    assert result['affinity'] == [2, 3]
+    assert result['packages'] == {
+        'pydepin': '2.0',
+        'pytest': '1.0',
+        'pytest-benchmark': '1.0',
+        'fastapi': '1.0',
+        'starlette': '1.0',
+    }
 
 
 def _remove_case(payload: dict[str, object]) -> None:

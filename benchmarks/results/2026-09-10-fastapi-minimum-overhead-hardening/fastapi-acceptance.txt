@@ -1,0 +1,26 @@
+pass         required paired    allocations: worst paired change -1.99% budget +0.00% n=10
+inconclusive required paired    application_startup: +5.97% [+4.33%, +8.89%] budget +6.00% n=10
+pass         required head-only component:fastapi_async_resource_close: validated component observation
+pass         required head-only component:fastapi_endpoint_program_many_keys: validated component observation
+pass         required head-only component:fastapi_endpoint_program_one_key: validated component observation
+pass         required head-only component:fastapi_lazy_frame_activation_and_drain: validated component observation
+pass         required head-only component:fastapi_lazy_host_publication: validated component observation
+pass         required head-only component:fastapi_request_seed_read: validated component observation
+inconclusive required paired    contention: -23.66% [-70.96%, +35.10%] budget +5.00% n=10
+pass         required paired    cpu-light-attributable-p50: -59.47% [-69.81%, -51.20%] n=10 upper bound must be <= -25%
+pass         target   paired    cpu-light-attributable-p50-stretch: -59.47% [-69.81%, -51.20%] n=10 point target is <= -30%
+inconclusive required paired    fastapi_application_startup:p95-total: +2.14% [-19.99%, +20.98%] budget +5.00% n=10
+inconclusive required paired    fastapi_application_startup:p99-total: -0.47% [-20.98%, +72.57%] budget +5.00% n=10
+pass         required paired    fastapi_async_resource_teardown:p95-total: -1.41% [-35.27%, +4.61%] budget +5.00% n=10
+inconclusive required paired    fastapi_async_resource_teardown:p99-total: -1.65% [-33.64%, +41.55%] budget +5.00% n=10
+inconclusive required paired    fastapi_cpu_light_endpoint:p95-total: -6.64% [-56.38%, +17.32%] budget +5.00% n=10
+inconclusive required paired    fastapi_cpu_light_endpoint:p99-total: -12.40% [-40.07%, +41.98%] budget +5.00% n=10
+inconclusive required paired    fastapi_endpoint_with_work:p95-total: +0.61% [-11.81%, +24.35%] budget +5.00% n=10
+inconclusive required paired    fastapi_endpoint_with_work:p99-total: +25.40% [-9.48%, +47.95%] budget +5.00% n=10
+inconclusive required paired    fastapi_request_scoped_graph:p95-total: -1.60% [-9.50%, +17.62%] budget +5.00% n=10
+inconclusive required paired    fastapi_request_scoped_graph:p99-total: -5.49% [-25.81%, +21.84%] budget +5.00% n=10
+inconclusive required paired    fastapi_singletons_and_transients:p95-total: -1.33% [-16.30%, +15.02%] budget +5.00% n=10
+inconclusive required paired    fastapi_singletons_and_transients:p99-total: +13.03% [-23.48%, +33.82%] budget +5.00% n=10
+pass         required head-only no_injection: +2.57% [+2.02%, +3.29%] budget +5.00% n=10
+pass         required paired    peak_memory: -8.41% [-8.48%, -7.68%] budget +5.00% n=10
+pass         required paired    retained_memory: -4.54% [-9.08%, +0.00%] budget +2.00% n=10

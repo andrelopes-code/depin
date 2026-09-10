@@ -85,6 +85,10 @@ def _array(value: object, where: str) -> list[object]:
     return value
 
 
+def _is_plain_object(value: object) -> TypeGuard[dict[str, object]]:
+    return isinstance(value, dict)
+
+
 def _number(value: object, where: str) -> float:
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ReportError(f'{where}: expected a number')
@@ -326,6 +330,58 @@ def installed(name: str, root: Path) -> tuple[str, str]:
     return distribution.version, ''
 
 
+def runtime_environment(
+    captured: dict[str, object],
+    packages: dict[str, str],
+    *,
+    affinity: tuple[int, ...],
+    governor: str,
+) -> dict[str, object]:
+    host = captured.get('host')
+    if not _is_plain_object(host):
+        raise RuntimeError('captured environment host metadata is missing')
+    cpu_model = host.get('cpu_model')
+    kernel = host.get('release')
+    if not isinstance(cpu_model, str) or not cpu_model:
+        raise RuntimeError('captured environment CPU model is missing')
+    if not isinstance(kernel, str) or not kernel:
+        raise RuntimeError('captured environment kernel is missing')
+    if not affinity or any(processor < 0 for processor in affinity):
+        raise RuntimeError('captured environment affinity is invalid')
+    if not governor:
+        raise RuntimeError('captured environment governor is missing')
+    return captured | {
+        'cpu': {'model': cpu_model},
+        'kernel': kernel,
+        'governor': governor,
+        'affinity': list(affinity),
+        'packages': packages,
+    }
+
+
+def _affinity() -> tuple[int, ...]:
+    if hasattr(os, 'sched_getaffinity'):
+        return tuple(sorted(os.sched_getaffinity(0)))
+    return tuple(range(os.cpu_count() or 1))
+
+
+def _governor(affinity: tuple[int, ...]) -> str:
+    values: set[str] = set()
+    for processor in affinity:
+        try:
+            value = Path(f'/sys/devices/system/cpu/cpu{processor}/cpufreq/scaling_governor').read_text(encoding='utf-8')
+        except OSError:
+            continue
+        stripped = value.strip()
+        if stripped:
+            values.add(stripped)
+    if not values:
+        return 'unavailable'
+    if len(values) == 1:
+        return values.pop()
+    return f'mixed:{",".join(sorted(values))}'
+
+
 def distinct(root: Path, *external: Path) -> None:
     target = root.resolve()
     for path in external:
@@ -467,7 +523,9 @@ def capture(
         if not isinstance(location, str):
             raise RuntimeError(f'{module} has no resolved file')
         _ = under(Path(location), root)
-    _ = tuple(installed(name, root) for name in ('pydepin', 'pytest', 'pytest-benchmark', 'fastapi', 'starlette'))
+    packages = {
+        name: installed(name, root)[0] for name in ('pydepin', 'pytest', 'pytest-benchmark', 'fastapi', 'starlette')
+    }
     records: list[dict[str, object]] = []
     for name in REQUIRED_WORKLOADS:
         workload = selected[name]
@@ -494,13 +552,17 @@ def capture(
     profile = contention.collect(samples=5, workers=2)['profiles']['request_scopes']
     decoded = benchmark(root, benchmark_report, side, repetition, first)
     clean_target(root, expected)
+    affinity = _affinity()
+    runtime_metadata = runtime_environment(
+        harness_environment.capture(), packages, affinity=affinity, governor=_governor(affinity)
+    )
     payload = {
         'schema_version': 4,
         'side': side,
         'repetition': repetition,
         'revision': expected,
         **binding,
-        'environment': harness_environment.capture()
+        'environment': runtime_metadata
         | {
             'bootstrap': {
                 'outer': 'isolated-python-I',
