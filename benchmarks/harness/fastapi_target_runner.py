@@ -22,6 +22,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, TypeGuard
 
+from benchmarks.contracts import Implementation
+
 REQUIRED_WORKLOADS = (
     'fastapi_cpu_light_endpoint',
     'fastapi_request_scoped_graph',
@@ -284,10 +286,6 @@ class Observation(Protocol):
     def closed(self) -> tuple[object, ...]: ...
 
 
-class ObservableImplementation(Protocol):
-    def observe(self) -> Observation: ...
-
-
 def observed(value: Observation) -> dict[str, object]:
     result = value.result
     if not isinstance(result, str):
@@ -297,7 +295,7 @@ def observed(value: Observation) -> dict[str, object]:
     return {'result': result, 'constructed': list(constructed), 'closed': list(closed), 'error': None}
 
 
-def attempt(implementation: ObservableImplementation) -> dict[str, object]:
+def attempt(implementation: Implementation) -> dict[str, object]:
     try:
         return observed(implementation.observe())
     except BaseException as error:

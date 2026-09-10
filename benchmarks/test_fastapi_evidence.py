@@ -27,7 +27,7 @@ def _aggregate(value: float) -> dict[str, object]:
 
 
 def _observation(name: str) -> dict[str, object]:
-    events = ['resource'] if name == 'fastapi_async_resource_teardown' else []
+    events: list[str] = ['resource'] if name == 'fastapi_async_resource_teardown' else []
     return {'result': '200 {}', 'constructed': events, 'closed': events, 'error': None}
 
 

@@ -236,6 +236,10 @@ def _revision(value: object, where: str) -> str:
     return revision
 
 
+def _verdict_criterion(verdict: Verdict) -> str:
+    return verdict.criterion
+
+
 def _provenance(path: Path, evaluated_head_revision: str) -> None:
     payload = read_json(path)
     if require_integer(payload.get('schema_version'), f'{path}: schema_version') != SCHEMA_VERSION:
@@ -471,7 +475,7 @@ def evaluate(
         *_tails(pairs),
         *_sidecars(sidecars, pairs),
     )
-    ordered = tuple(sorted(verdicts, key=lambda verdict: verdict.criterion))
+    ordered = tuple(sorted(verdicts, key=_verdict_criterion))
     head_only = tuple(sorted(verdict.criterion for verdict in ordered if verdict.scope == 'head-only'))
     return Acceptance(ordered, head_only)
 

@@ -333,7 +333,8 @@ def test_complete_evidence_passes_and_keeps_head_only_checks_separate(tmp_path: 
 def test_attribution_requires_exactly_five_matched_repetitions(tmp_path: Path) -> None:
     path = _attribution(tmp_path)
     payload = read_json(path)
-    payload['repetitions'] = []
+    empty_repetitions: list[object] = []
+    payload['repetitions'] = empty_repetitions
     write_json(path, payload)
 
     with pytest.raises(HarnessError, match='exactly 5'):
@@ -385,7 +386,8 @@ def test_wrong_protocol_provenance_fails_closed(tmp_path: Path, field: str, valu
 def test_missing_semantic_lifecycle_validation_fails_closed(tmp_path: Path) -> None:
     provenance = _provenance(tmp_path)
     payload = read_json(provenance)
-    payload['semantic_validation'] = []
+    empty_validation: list[object] = []
+    payload['semantic_validation'] = empty_validation
     write_json(provenance, payload)
 
     with pytest.raises(HarnessError, match='semantic_validation'):
