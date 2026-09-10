@@ -656,8 +656,10 @@ async def test_install_leaves_a_route_without_injection_unchanged() -> None:
     app = FastAPI()
 
     @app.get('/plain')
-    async def plain(value: int) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]
+    async def plain(value: int) -> dict[str, int]:
         return {'value': value}
+
+    _ = plain
 
     route = _route(app, '/plain')
     original_endpoint: object = route.endpoint
