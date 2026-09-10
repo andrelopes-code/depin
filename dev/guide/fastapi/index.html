@@ -1687,7 +1687,7 @@ an annotation that resolves a dependency into a route handler.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span><span class="p">,</span> <span class="n">Request</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">FrozenContainer</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">depin.ext.fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Inject</span><span class="p">,</span> <span class="n">RequestScope</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">depin.ext.fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Inject</span><span class="p">,</span> <span class="n">install</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.wiring</span><span class="w"> </span><span class="kn">import</span> <span class="n">infra</span><span class="p">,</span> <span class="n">services</span>
 
@@ -1701,22 +1701,43 @@ an annotation that resolves a dependency into a route handler.</p>
         <span class="k">await</span> <span class="n">di</span><span class="o">.</span><span class="n">aclose</span><span class="p">()</span>
 
     <span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">lifespan</span><span class="o">=</span><span class="n">lifespan</span><span class="p">)</span>
-    <span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">RequestScope</span><span class="p">,</span> <span class="n">container</span><span class="o">=</span><span class="n">di</span><span class="p">)</span>
 
     <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'/users/</span><span class="si">{uid}</span><span class="s1">'</span><span class="p">)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_user</span><span class="p">(</span><span class="n">uid</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">svc</span><span class="p">:</span> <span class="n">Inject</span><span class="p">[</span><span class="n">UserService</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">User</span><span class="p">:</span>
         <span class="k">return</span> <span class="k">await</span> <span class="n">svc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">uid</span><span class="p">)</span>
 
+    <span class="n">install</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">di</span><span class="p">)</span>
+
     <span class="k">return</span> <span class="n">app</span>
 </code></pre></div>
 <p>Taking the container as an argument is what makes the app testable: a test
 passes its own graph instead of patching module state. <code>aclose()</code> in the
-lifespan drains the singletons that own resources.</p>
+lifespan drains the singletons that own resources. Call <code>install</code> after every
+path operation and router has been registered, before startup. A repeated call
+with the same container compiles routes added since the first call; routes
+added after the final call remain correct on the compatibility resolver but do
+not receive the compiled fast path.</p>
+<p><code>install</code> is tested against FastAPI 0.133 with Starlette 1.1 and the latest
+allowed pair. If a future framework shape cannot be compiled, it raises
+<code>FastAPIIntegrationError</code> at setup and tells you to upgrade or use the eager
+compatibility path:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">depin.ext.fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">RequestScope</span>
+
+<span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">RequestScope</span><span class="p">,</span> <span class="n">container</span><span class="o">=</span><span class="n">di</span><span class="p">)</span>
+</code></pre></div>
+<p><code>RequestScope</code> opens one eager depin frame for every HTTP request. <code>install</code>
+hosts the container immediately but opens a frame only when resolution needs a
+scoped value, a request seed, or a request-owned resource. Singleton-only and
+ordinary transient routes therefore avoid an empty request frame. This changes
+only activation cost: construction identity, teardown order, failures,
+streaming, background work, and WebSocket lifetime are unchanged.</p>
 <h2 id="injectt"><code>Inject[T]</code><a class="headerlink" href="#injectt" title="Permanent link">&para;</a></h2>
 <p><code>Inject[T]</code> is a type-level shortcut. To the type checker the parameter is
-plain <code>T</code>; at runtime <code>Inject[T]</code> expands to <code>Annotated[T, Depends(...)]</code>, so
-FastAPI resolves it through its normal dependency plumbing. There is no
-default-value marker at the call site, and no <code># noqa: B008</code> waiver.</p>
+plain <code>T</code>; at runtime it carries an <code>Annotated[object, Depends(...)]</code> marker
+whose resolver retains the depin key. FastAPI therefore resolves it through
+its normal dependency plumbing without changing the handler's static service
+type. There is no default-value marker at the call site, and no <code># noqa: B008</code>
+waiver.</p>
 <p>Resolving it raises <code>ContainerNotBoundError</code> when no container is hosted in the
 current context. A missing <code>RequestScope</code> is the usual cause, not the
 definition: <code>Inject[T]</code> reads whichever container the current context carries,
@@ -1741,7 +1762,8 @@ response finishes:</p>
     <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </code></pre></div>
 <h2 id="reading-the-request">Reading the request<a class="headerlink" href="#reading-the-request" title="Permanent link">&para;</a></h2>
-<p>For HTTP requests the middleware places a <code>Request</code> into the scope frame. A
+<p>For HTTP requests, <code>install</code> records FastAPI's actual <code>Request</code> and places it
+into the scope frame only if a provider reads the matching <code>scope_value</code> key. A
 scoped provider reads it back because the container declares the key with
 <code>scope_value(Request)</code>, as the wiring above does; without that declaration the
 graph fails at <code>freeze()</code>:</p>

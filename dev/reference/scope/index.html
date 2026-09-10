@@ -1133,6 +1133,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.drain_async_errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drain_async_errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.ScopeFrame.drop_sync" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1783,6 +1794,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#depin.ScopeFrame.drain_async_errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drain_async_errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#depin.ScopeFrame.drop_sync" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2227,6 +2249,30 @@ including an async teardown in this synchronous drain, appear as
           </tr>
       </tbody>
     </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="depin.ScopeFrame.drain_async_errors" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">drain_async_errors</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+<a href="#depin.ScopeFrame.drain_async_errors" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">drain_async_errors</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="ne">Exception</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Drain pending teardowns and return every failure without grouping it.</p>
 
 
     </div>

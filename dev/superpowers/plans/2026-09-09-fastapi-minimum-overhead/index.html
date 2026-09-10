@@ -1,0 +1,2079 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Type-first dependency injection for Python">
+      
+      
+      
+        <link rel="canonical" href="https://andrelopes-code.github.io/depin/dev/superpowers/plans/2026-09-09-fastapi-minimum-overhead/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>FastAPI Minimum-Overhead Implementation Plan - depin</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#fastapi-minimum-overhead-implementation-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="depin" class="md-header__button md-logo" aria-label="depin" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            depin
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              FastAPI Minimum-Overhead Implementation Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/andrelopes-code/depin" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    andrelopes-code/depin
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="depin" class="md-nav__button md-logo" aria-label="depin" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    depin
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/andrelopes-code/depin" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    andrelopes-code/depin
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/lifetimes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifetimes and scopes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/composition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Composing bindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/resolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resolution semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inspecting the graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing an integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/fastapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastAPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/methodology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methodology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/comparison-baseline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparative baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance/reproducing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../support-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stability and compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/container/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container & Registry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/frozen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FrozenContainer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/scope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/markers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Graph diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warmup and health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integration contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/asgi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ASGI request scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/wsgi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSGI request scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/starlette/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Starlette
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/fastapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastAPI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/litestar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Litestar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/flask/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Flask
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/click/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Click
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/typer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Typer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/taskiq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Taskiq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/pytest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pytest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#global-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Constraints
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Global Constraints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-1-context-local-lazy-request-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 1: Context-local lazy request scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-2-fastapi-endpoint-compiler-and-installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 2: FastAPI endpoint compiler and installation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-3-lifecycle-equivalence-typing-and-user-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 3: Lifecycle equivalence, typing, and user documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-4-performance-workloads-and-regression-guards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 4: Performance workloads and regression guards
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-5-accepted-beforeafter-evidence-and-closure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 5: Accepted before/after evidence and closure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="fastapi-minimum-overhead-implementation-plan">FastAPI Minimum-Overhead Implementation Plan<a class="headerlink" href="#fastapi-minimum-overhead-implementation-plan" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
+</blockquote>
+<p><strong>Goal:</strong> Compile direct FastAPI <code>Inject[...]</code> parameters into one endpoint program and open request scopes lazily, reducing paired DI-attributable CPU-light p50 overhead by at least 25% against the 2026-09-09 baseline without semantic or secondary-metric regressions.</p>
+<p><strong>Architecture:</strong> <code>install(app, container)</code> compiles existing <code>APIRoute</code> dependency nodes behind a contained FastAPI compatibility adapter and installs a pure-ASGI lazy host. The core lazy state publishes the existing <code>FrozenContainer</code>, activates one real <code>ScopeFrame</code> only when resolution needs it, applies framework seeds only on first read, and delegates cleanup to the same drain path used by <code>ascope()</code>.</p>
+<p><strong>Tech Stack:</strong> Python 3.12 PEP 695 typing, FastAPI 0.133+, Starlette 1.1+, <code>contextvars</code>, <code>pytest</code>, <code>pytest-asyncio</code>, <code>httpx</code>, Ruff, Basedpyright, mypy, MkDocs, and the repository benchmark harness.</p>
+<p><strong>Spec:</strong> <code>specs/2026-09-09-fastapi-minimum-overhead-design.md</code></p>
+<h2 id="global-constraints">Global Constraints<a class="headerlink" href="#global-constraints" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Baseline revision is exactly <code>086adf98459773e3175f4723b2b64e3f47306e42</code>; comparison evidence is rooted at <code>benchmarks/results/2026-09-09-competitive-rebaseline/</code>.</li>
+<li>The upper 95% confidence bound of paired DI-attributable CPU-light p50 change must be at most <code>-25%</code>; the point estimate targets <code>-30%</code> or better.</li>
+<li>FastAPI p95 and p99 total latency may not regress by more than <code>5%</code>.</li>
+<li>No-injection latency, retained memory, peak memory, allocation count, startup, and contention must remain within their calibrated noise allowance or authored budget.</li>
+<li>Preserve lifecycle, reverse-order teardown, grouped failures, cancellation, concurrency isolation, typing, <code>Inject[T]</code> ergonomics, validation errors, and OpenAPI signatures.</li>
+<li>Preserve the eager <code>RequestScope</code> compatibility path; optimized setup is <code>install(app, container)</code> after route registration and before startup.</li>
+<li>Core modules keep zero third-party imports and zero runtime dependencies; FastAPI and Starlette imports stay under <code>depin/ext/</code>.</li>
+<li>Do not implement provider discovery, Rust/native acceleration, replacement FastAPI dependency injection, or unrelated core runtime optimization.</li>
+<li>Do not use <code>Any</code>, <code>typing.cast</code>, blanket or narrow type-ignore comments, swallowed exceptions, assertions for runtime validation, sleeps, or mutable module-level state.</li>
+<li>Every production behavior begins with a focused failing test against real <code>Container</code>/<code>FrozenContainer</code> and follows RED, GREEN, REFACTOR.</li>
+<li>Before every commit run, in order: <code>uv run ruff format</code>, <code>uv run ruff check</code>, <code>uv run basedpyright</code>, <code>uv run mypy</code>, <code>uv run pytest</code>; documentation commits additionally run <code>uv run --group docs mkdocs build --strict</code>.</li>
+</ul>
+<hr />
+<h3 id="task-1-context-local-lazy-request-scope">Task 1: Context-local lazy request scope<a class="headerlink" href="#task-1-context-local-lazy-request-scope" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Create: <code>depin/_core/lazy_scope.py</code>
+- Modify: <code>depin/_core/scope.py</code>
+- Modify: <code>depin/_core/hosting.py</code>
+- Modify: <code>depin/_core/frozen.py</code>
+- Test: <code>tests/unit/test_hosting.py</code>
+- Test: <code>tests/unit/test_scope_frame.py</code>
+- Test: <code>tests/unit/test_frozen_scoped.py</code></p>
+<p><strong>Interfaces:</strong>
+- Consumes: existing <code>Host.activated()</code>, <code>ScopeFrame</code>, <code>push_frame</code>, <code>FrozenContainer.ascope()</code> teardown semantics, <code>ScopeSeed</code>, and <code>active_frame()</code>.
+- Produces: private <code>_lazy_host(container, seed_factory)</code> async context manager; private <code>_provide_lazy_seed(seed)</code>; a context-local frame activator used transparently by <code>active_frame()</code>; one shared eager/lazy scope-drain primitive.</p>
+<ul>
+<li>[ ] <strong>Step 1: Add failing tests for the inactive and first-use transitions</strong></li>
+</ul>
+<p>Add focused async tests whose observable break is eager frame allocation or more than one activation:</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">asyncio</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_lazy_host_does_not_open_a_frame_for_a_singleton</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Service</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+    <span class="n">container</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Service</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+    <span class="n">opened</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ScopeFrame</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">async</span> <span class="k">with</span> <span class="n">_lazy_host</span><span class="p">(</span><span class="n">container</span><span class="p">,</span> <span class="n">on_open</span><span class="o">=</span><span class="n">opened</span><span class="o">.</span><span class="n">append</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="k">await</span> <span class="n">hosted_container</span><span class="p">()</span><span class="o">.</span><span class="n">aresolve</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span> <span class="ow">is</span> <span class="k">await</span> <span class="n">container</span><span class="o">.</span><span class="n">aresolve</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">opened</span> <span class="o">==</span> <span class="p">[]</span>
+
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">asyncio</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_lazy_host_opens_one_frame_on_first_scoped_resolution</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Service</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+    <span class="n">container</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Service</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">SCOPED</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+    <span class="n">opened</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ScopeFrame</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">async</span> <span class="k">with</span> <span class="n">_lazy_host</span><span class="p">(</span><span class="n">container</span><span class="p">,</span> <span class="n">on_open</span><span class="o">=</span><span class="n">opened</span><span class="o">.</span><span class="n">append</span><span class="p">):</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="k">await</span> <span class="n">hosted_container</span><span class="p">()</span><span class="o">.</span><span class="n">aresolve</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span>
+        <span class="n">second</span> <span class="o">=</span> <span class="k">await</span> <span class="n">hosted_container</span><span class="p">()</span><span class="o">.</span><span class="n">aresolve</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">first</span> <span class="ow">is</span> <span class="n">second</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">opened</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+</code></pre></div>
+<p>The first test must fail because no lazy host exists. The second must fail for the same missing feature, not because of an import or fixture error.</p>
+<ul>
+<li>[ ] <strong>Step 2: Verify RED</strong></li>
+</ul>
+<p>Run:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/unit/test_hosting.py<span class="w"> </span>-k<span class="w"> </span><span class="s1">'lazy_host'</span><span class="w"> </span>-vv
+</code></pre></div>
+<p>Expected: both new tests fail at the missing <code>_lazy_host</code> contract while existing hosting tests remain green.</p>
+<ul>
+<li>[ ] <strong>Step 3: Implement minimal lazy activation without teardown duplication</strong></li>
+</ul>
+<p>Create immutable/private seed state in <code>depin/_core/lazy_scope.py</code>. Keep the external shape private and type-safe:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">type</span> <span class="n">SeedIdentity</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>
+
+
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LazyScopeSeed</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">]</span>
+    <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">T</span><span class="p">]</span>
+    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+<p>Implement <code>LazyScopeState.frame()</code>, <code>LazyScopeState.provide()</code>, <code>LazyScopeState.seed()</code>, and <code>LazyScopeState.aclose()</code> around that immutable seed descriptor. Use a <code>ContextVar[LazyScopeState | None]</code> alongside the existing frame context. <code>active_frame()</code> asks the state to activate only after the ordinary active-frame lookup is empty. A missing <code>scope_value</code> read asks the active lazy state for a matching seed before producing the existing missing-value error. Ordinary scopes and unhosted resolutions take their existing branches unchanged.</p>
+<p>Factor the body/teardown exception handling currently used by <code>FrozenContainer.scope()</code> and <code>FrozenContainer.ascope()</code> into private helpers shared by eager and lazy entry. Do not duplicate drain order, exception grouping, pending-flight cleanup, or context restoration.</p>
+<ul>
+<li>[ ] <strong>Step 4: Verify GREEN for first use</strong></li>
+</ul>
+<p>Run:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/unit/test_hosting.py<span class="w"> </span>-k<span class="w"> </span><span class="s1">'lazy_host'</span><span class="w"> </span>-vv
+uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/unit/test_scope_frame.py<span class="w"> </span>tests/unit/test_frozen_scoped.py<span class="w"> </span>-q
+</code></pre></div>
+<p>Expected: the lazy tests pass; existing active-frame and scoped-resolution tests remain green with pristine output.</p>
+<ul>
+<li>[ ] <strong>Step 5: Add failing tests for lazy seeds, failures, cancellation, and concurrency</strong></li>
+</ul>
+<p>Add real-container tests with literal event logs:</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">asyncio</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_lazy_seed_is_applied_only_when_its_key_is_read</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">request</span> <span class="o">=</span> <span class="n">Token</span><span class="p">[</span><span class="nb">str</span><span class="p">](</span><span class="s1">'request'</span><span class="p">)</span>
+    <span class="n">built</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">container</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">scope_value</span><span class="p">(</span><span class="n">request</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">build_request</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">built</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'r-1'</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s1">'r-1'</span>
+
+    <span class="k">async</span> <span class="k">with</span> <span class="n">_lazy_host</span><span class="p">(</span><span class="n">container</span><span class="p">,</span> <span class="n">seeds</span><span class="o">=</span><span class="p">(</span><span class="n">LazyScopeSeed</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">build_request</span><span class="p">),)):</span>
+        <span class="k">assert</span> <span class="n">built</span> <span class="o">==</span> <span class="p">[]</span>
+        <span class="k">assert</span> <span class="k">await</span> <span class="n">hosted_container</span><span class="p">()</span><span class="o">.</span><span class="n">aresolve</span><span class="p">(</span><span class="n">request</span><span class="p">)</span> <span class="o">==</span> <span class="s1">'r-1'</span>
+
+    <span class="k">assert</span> <span class="n">built</span> <span class="o">==</span> <span class="p">[</span><span class="s1">'r-1'</span><span class="p">]</span>
+
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">asyncio</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_lazy_scope_retains_body_and_teardown_failures</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">events</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">resource</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="s1">'value'</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'closed'</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">LookupError</span><span class="p">(</span><span class="s1">'close failed'</span><span class="p">)</span>
+
+    <span class="n">container</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">SCOPED</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+    <span class="k">with</span> <span class="n">pytest</span><span class="o">.</span><span class="n">raises</span><span class="p">(</span><span class="n">ExceptionGroup</span><span class="p">)</span> <span class="k">as</span> <span class="n">raised</span><span class="p">:</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">_lazy_host</span><span class="p">(</span><span class="n">container</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="k">await</span> <span class="n">hosted_container</span><span class="p">()</span><span class="o">.</span><span class="n">aresolve</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="o">==</span> <span class="s1">'value'</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'body failed'</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">events</span> <span class="o">==</span> <span class="p">[</span><span class="s1">'closed'</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="p">{</span><span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="k">for</span> <span class="n">error</span> <span class="ow">in</span> <span class="n">raised</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">exceptions</span><span class="p">}</span> <span class="o">==</span> <span class="p">{</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">LookupError</span><span class="p">}</span>
+</code></pre></div>
+<p>Use <code>asyncio.Event</code> or <code>threading.Barrier</code>; never sleep. Add a test with two concurrent requests and distinct seed values; each must resolve one stable scoped identity and restore the enclosing host. Add cancellation after resource construction and assert one close event.</p>
+<ul>
+<li>[ ] <strong>Step 6: Verify RED, then implement seeds and complete cleanup</strong></li>
+</ul>
+<p>Run each new test by node ID and confirm the expected missing-seed/failure-preservation behavior first. Implement only the state transitions needed by those tests, then run:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/unit/test_hosting.py<span class="w"> </span>tests/unit/test_scope_frame.py<span class="w"> </span>tests/unit/test_frozen_scoped.py<span class="w"> </span>-q
+</code></pre></div>
+<p>Expected: all focused tests pass; removing lazy activation from <code>active_frame()</code> makes the scoped/concurrency tests fail, and removing lazy seed lookup makes the seed test fail.</p>
+<ul>
+<li>[ ] <strong>Step 7: Run commit gates and commit</strong></li>
+</ul>
+<p>Run the five repository gates in the required order. Then:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>depin/_core/lazy_scope.py<span class="w"> </span>depin/_core/scope.py<span class="w"> </span>depin/_core/hosting.py<span class="w"> </span>depin/_core/frozen.py<span class="w"> </span>tests/unit/test_hosting.py<span class="w"> </span>tests/unit/test_scope_frame.py<span class="w"> </span>tests/unit/test_frozen_scoped.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'feat: add lazy hosted request scopes'</span>
+</code></pre></div>
+<h3 id="task-2-fastapi-endpoint-compiler-and-installation">Task 2: FastAPI endpoint compiler and installation<a class="headerlink" href="#task-2-fastapi-endpoint-compiler-and-installation" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Create: <code>depin/ext/_fastapi.py</code>
+- Modify: <code>depin/ext/fastapi.py</code>
+- Modify: <code>depin/errors.py</code>
+- Modify: <code>depin/__init__.py</code>
+- Test: <code>tests/integration/test_fastapi_ext.py</code>
+- Test: <code>tests/integration/test_fastapi_robustness.py</code></p>
+<p><strong>Interfaces:</strong>
+- Consumes: Task 1 <code>_lazy_host</code> and <code>_provide_lazy_seed</code>; FastAPI <code>APIRoute</code> dependency graph; existing <code>Inject[T]</code> and eager <code>RequestScope</code>.
+- Produces: <code>install(app: FastAPI, container: FrozenContainer) -&gt; None</code>; <code>FastAPIIntegrationError</code>; private <code>_InjectResolver[T]</code>; private immutable <code>_EndpointProgram</code>; contained <code>compile_route(route, container)</code> compatibility adapter; private lazy ASGI middleware.</p>
+<ul>
+<li>[ ] <strong>Step 1: Write failing installation and single-program tests</strong></li>
+</ul>
+<p>Build real apps, call <code>install</code> after route registration, and send requests through <code>httpx.ASGITransport</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">asyncio</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_install_resolves_multiple_injections_through_one_program</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">events</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Shared</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'shared'</span><span class="p">)</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Left</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shared</span><span class="p">:</span> <span class="n">Shared</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shared</span> <span class="o">=</span> <span class="n">shared</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Right</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shared</span><span class="p">:</span> <span class="n">Shared</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shared</span> <span class="o">=</span> <span class="n">shared</span>
+
+    <span class="n">container</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Shared</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">SCOPED</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Left</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Right</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">()</span>
+
+    <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'/value'</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">value</span><span class="p">(</span><span class="n">left</span><span class="p">:</span> <span class="n">Inject</span><span class="p">[</span><span class="n">Left</span><span class="p">],</span> <span class="n">right</span><span class="p">:</span> <span class="n">Inject</span><span class="p">[</span><span class="n">Right</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">'shared'</span><span class="p">:</span> <span class="n">left</span><span class="o">.</span><span class="n">shared</span> <span class="ow">is</span> <span class="n">right</span><span class="o">.</span><span class="n">shared</span><span class="p">}</span>
+
+    <span class="n">install</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">container</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">request</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">'/value'</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span><span class="s1">'shared'</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+    <span class="k">assert</span> <span class="n">events</span> <span class="o">==</span> <span class="p">[</span><span class="s1">'shared'</span><span class="p">]</span>
+    <span class="n">route</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">route</span> <span class="k">for</span> <span class="n">route</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">routes</span> <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">route</span><span class="p">,</span> <span class="s1">'path'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="o">==</span> <span class="s1">'/value'</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">call</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">route</span><span class="o">.</span><span class="n">dependant</span><span class="o">.</span><span class="n">dependencies</span><span class="p">]</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">'_EndpointProgram'</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">call</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">!=</span> <span class="s1">'_InjectResolver'</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">route</span><span class="o">.</span><span class="n">dependant</span><span class="o">.</span><span class="n">dependencies</span><span class="p">)</span>
+</code></pre></div>
+<p>Add a no-injection route whose route call target and dependency list remain identical before and after <code>install</code>. Add a warm-singleton route that observes zero lazy-frame openings through the Task 1 test hook.</p>
+<ul>
+<li>[ ] <strong>Step 2: Verify RED</strong></li>
+</ul>
+<p>Run:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/integration/test_fastapi_ext.py<span class="w"> </span>-k<span class="w"> </span><span class="s1">'install or program or singleton'</span><span class="w"> </span>-vv
+</code></pre></div>
+<p>Expected: failure because <code>install</code> and compiled program inspection do not exist. Existing eager <code>RequestScope</code> tests remain green.</p>
+<ul>
+<li>[ ] <strong>Step 3: Implement resolver identity, compiler, and middleware</strong></li>
+</ul>
+<p>Use an immutable resolver instead of a closure:</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_InjectResolver</span><span class="p">[</span><span class="n">T</span><span class="p">]:</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">]</span> <span class="o">|</span> <span class="n">Token</span><span class="p">[</span><span class="n">T</span><span class="p">]</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">T</span><span class="p">:</span>
+        <span class="n">_provide_lazy_seed</span><span class="p">(</span><span class="n">ScopeSeed</span><span class="p">(</span><span class="n">Request</span><span class="p">,</span> <span class="n">request</span><span class="p">))</span>
+        <span class="n">container</span> <span class="o">=</span> <span class="n">optional_hosted_container</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">container</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ContainerNotBoundError</span><span class="p">(</span>
+                <span class="s1">'Inject[...] resolved outside a hosted FastAPI request; call install(app, container) '</span>
+                <span class="s1">'after route registration or install RequestScope compatibility middleware.'</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">container</span><span class="o">.</span><span class="n">aresolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+</code></pre></div>
+<p><code>Inject.__class_getitem__</code> returns <code>Annotated[key, Depends(dependency=_InjectResolver(key))]</code>. <code>compile_route</code> recognizes only direct dependency nodes whose callable is <code>_InjectResolver</code>, preserves their parameter order, replaces them with one <code>_EndpointProgram</code> node, replaces the route call target with a wrapper that merges the program mapping, and rebuilds the route ASGI callable only after all structural probes pass.</p>
+<p>The private ASGI middleware enters <code>_lazy_host</code> only for <code>http</code> and <code>websocket</code>, forwards lifespan untouched, supplies a metadata-only HTTP <code>Request</code> fallback lazily, and awaits the downstream app inside the host so response streaming, background tasks, and WebSockets complete before drain.</p>
+<ul>
+<li>[ ] <strong>Step 4: Verify GREEN and compatibility</strong></li>
+</ul>
+<p>Run:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/integration/test_fastapi_ext.py<span class="w"> </span>-q
+uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/integration/test_fastapi_robustness.py<span class="w"> </span>-q
+</code></pre></div>
+<p>Expected: compiled tests pass and all existing eager-middleware tests remain green.</p>
+<ul>
+<li>[ ] <strong>Step 5: Add failing idempotence and compatibility-boundary tests</strong></li>
+</ul>
+<p>Cover same-container reinstall after adding a route, different-container reinstall, install after middleware stack creation, and a deliberately malformed route double. Assert <code>FastAPIIntegrationError</code> includes route/application state, installed FastAPI version, and <code>RequestScope</code> recovery. The malformed route must remain unchanged after the failed install.</p>
+<ul>
+<li>[ ] <strong>Step 6: Verify RED, implement atomic setup, and re-run focused tests</strong></li>
+</ul>
+<p>Run the new node IDs, implement atomic preflight followed by mutation, and re-run both FastAPI integration files. Confirm that removing the preflight causes the no-partial-mutation test to fail.</p>
+<ul>
+<li>[ ] <strong>Step 7: Run commit gates and commit</strong></li>
+</ul>
+<p>Run the five gates in order and the strict docs build because public docstrings and errors changed. Then:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>depin/ext/_fastapi.py<span class="w"> </span>depin/ext/fastapi.py<span class="w"> </span>depin/errors.py<span class="w"> </span>depin/__init__.py<span class="w"> </span>tests/integration/test_fastapi_ext.py<span class="w"> </span>tests/integration/test_fastapi_robustness.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'perf: compile FastAPI endpoint injection'</span>
+</code></pre></div>
+<h3 id="task-3-lifecycle-equivalence-typing-and-user-documentation">Task 3: Lifecycle equivalence, typing, and user documentation<a class="headerlink" href="#task-3-lifecycle-equivalence-typing-and-user-documentation" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>tests/integration/test_fastapi_ext.py</code>
+- Modify: <code>tests/integration/test_fastapi_robustness.py</code>
+- Modify: <code>tests/typing/test_conformance_fastapi.py</code>
+- Modify: <code>tests/integration/test_conformance_coverage.py</code>
+- Modify: <code>docs/guide/fastapi.md</code>
+- Modify: <code>depin/ext/fastapi.py</code></p>
+<p><strong>Interfaces:</strong>
+- Consumes: Task 2 <code>install</code>, compiled endpoint program, eager <code>RequestScope</code>, and public error.
+- Produces: behavior matrix proving optimized/compatibility equivalence; source-typing examples for <code>install</code>; migration and compatibility documentation.</p>
+<ul>
+<li>[ ] <strong>Step 1: Add a failing optimized/compatibility equivalence matrix</strong></li>
+</ul>
+<p>Parameterize a real-app builder over eager and optimized setup. Compare literal results for mixed native dependencies and request validation:</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span><span class="s1">'setup'</span><span class="p">,</span> <span class="p">[</span><span class="n">setup_compatibility</span><span class="p">,</span> <span class="n">setup_optimized</span><span class="p">])</span>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">asyncio</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mixed_fastapi_inputs_remain_equivalent</span><span class="p">(</span><span class="n">setup</span><span class="p">:</span> <span class="n">Setup</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">app</span><span class="p">,</span> <span class="n">events</span> <span class="o">=</span> <span class="n">mixed_application</span><span class="p">(</span><span class="n">setup</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">post</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="s1">'/users/7?active=true'</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s1">'name'</span><span class="p">:</span> <span class="s1">'Ada'</span><span class="p">})</span>
+
+    <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span>
+    <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span><span class="s1">'id'</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span> <span class="s1">'active'</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">'name'</span><span class="p">:</span> <span class="s1">'Ada'</span><span class="p">,</span> <span class="s1">'tenant'</span><span class="p">:</span> <span class="s1">'acme'</span><span class="p">}</span>
+    <span class="k">assert</span> <span class="n">events</span> <span class="o">==</span> <span class="p">[</span><span class="s1">'dependency'</span><span class="p">,</span> <span class="s1">'provider'</span><span class="p">,</span> <span class="s1">'handler'</span><span class="p">,</span> <span class="s1">'close'</span><span class="p">]</span>
+
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">asyncio</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_optimized_openapi_and_validation_match_compatibility</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">compatibility</span> <span class="o">=</span> <span class="n">mixed_application</span><span class="p">(</span><span class="n">setup_compatibility</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">optimized</span> <span class="o">=</span> <span class="n">mixed_application</span><span class="p">(</span><span class="n">setup_optimized</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">assert</span> <span class="n">optimized</span><span class="o">.</span><span class="n">openapi</span><span class="p">()</span> <span class="o">==</span> <span class="n">compatibility</span><span class="o">.</span><span class="n">openapi</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="k">await</span> <span class="n">invalid_response</span><span class="p">(</span><span class="n">optimized</span><span class="p">)</span> <span class="o">==</span> <span class="k">await</span> <span class="n">invalid_response</span><span class="p">(</span><span class="n">compatibility</span><span class="p">)</span>
+</code></pre></div>
+<p>The expected dictionaries and event order are literals, not values computed by the application under test.</p>
+<ul>
+<li>[ ] <strong>Step 2: Verify RED and close semantic gaps</strong></li>
+</ul>
+<p>Run the new node IDs. Fix only optimized-path differences exposed by the tests, then run both FastAPI integration files.</p>
+<ul>
+<li>[ ] <strong>Step 3: Add failure, stream, background, WebSocket, and concurrency cases</strong></li>
+</ul>
+<p>Use real response streaming and WebSocket ASGI events. Cover handler error, provider error, response-stream error, cancellation, teardown error, body plus teardown <code>ExceptionGroup</code>, background task ordering, request identity, override isolation, and two concurrent scoped requests synchronized with <code>asyncio.Event</code>. Each case compares construction/closure logs with the eager path and asserts cleanup occurs after the last response/WebSocket event.</p>
+<ul>
+<li>[ ] <strong>Step 4: Prove the lifecycle tests guard the implementation</strong></li>
+</ul>
+<p>Run focused tests green. Temporarily bypass lazy drain or frame isolation and run the relevant focused test to observe failure; restore production code immediately and run it green again. Record both commands and outputs in the task report without committing the mutation.</p>
+<ul>
+<li>[ ] <strong>Step 5: Extend typing and documentation</strong></li>
+</ul>
+<p>Add source conformance that type-checks:</p>
+<div class="highlight"><pre><span></span><code><span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">()</span>
+<span class="n">container</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Service</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">endpoint</span><span class="p">(</span><span class="n">service</span><span class="p">:</span> <span class="n">Inject</span><span class="p">[</span><span class="n">Service</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">service</span><span class="o">.</span><span class="n">value</span>
+
+
+<span class="n">install</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">container</span><span class="p">)</span>
+</code></pre></div>
+<p>The fixture must keep <code>service</code> inferred as <code>Service</code> across Basedpyright, mypy, Pyright, ty, and Pyrefly expectations. Update the FastAPI guide to show route registration followed by <code>install</code>, explain <code>RequestScope</code> compatibility, late route registration, the tested floor/latest policy, lazy request behavior, and unchanged streaming/WebSocket lifetime. Keep every <code>pycon</code> block executable.</p>
+<ul>
+<li>[ ] <strong>Step 6: Run focused and full gates, then commit</strong></li>
+</ul>
+<p>Run the typing-source checks named by the repository, the five commit gates in order, and strict MkDocs. Then:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>tests/integration/test_fastapi_ext.py<span class="w"> </span>tests/integration/test_fastapi_robustness.py<span class="w"> </span>tests/typing/test_conformance_fastapi.py<span class="w"> </span>tests/integration/test_conformance_coverage.py<span class="w"> </span>docs/guide/fastapi.md<span class="w"> </span>depin/ext/fastapi.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'docs: document optimized FastAPI setup'</span>
+</code></pre></div>
+<h3 id="task-4-performance-workloads-and-regression-guards">Task 4: Performance workloads and regression guards<a class="headerlink" href="#task-4-performance-workloads-and-regression-guards" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Create: <code>benchmarks/workloads/component/fastapi.py</code>
+- Create: <code>tests/integration/test_fastapi_performance_contracts.py</code>
+- Modify: <code>benchmarks/workloads/application/sync.py</code>
+- Modify: <code>benchmarks/workloads/application/async_.py</code>
+- Modify: <code>benchmarks/workloads/application/inventory.py</code>
+- Modify: <code>benchmarks/workloads/application/measurement.py</code>
+- Modify: <code>benchmarks/workloads/component/__init__.py</code>
+- Modify: <code>benchmarks/leadership-targets.toml</code>
+- Modify: <code>tests/integration/test_comparison_contracts.py</code>
+- Modify: <code>tests/integration/test_comparison_collection.py</code></p>
+<p><strong>Interfaces:</strong>
+- Consumes: optimized <code>install</code>, existing six FastAPI application workloads, comparison protocol, deterministic observers, and authored leadership targets.
+- Produces: optimized application deployment, <code>fastapi_no_injection</code> pair, component decomposition, semantic counters, and contract tests that reject benchmark drift.</p>
+<ul>
+<li>[ ] <strong>Step 1: Write failing workload inventory and semantic tests</strong></li>
+</ul>
+<p>Assert the exact application names include the new pair and that the depin builders use optimized setup while the direct builders remain hand-wired. Exercise every workload once and validate literal status/body/event counts before timing. Add component tests that observe zero frame opens for no-injection and singleton cases, one frame for scoped/resource cases, one endpoint program call, and exact teardown counts.</p>
+<ul>
+<li>[ ] <strong>Step 2: Verify RED</strong></li>
+</ul>
+<p>Run:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/integration/test_fastapi_performance_contracts.py<span class="w"> </span>tests/integration/test_comparison_contracts.py<span class="w"> </span>tests/integration/test_comparison_collection.py<span class="w"> </span>-vv
+</code></pre></div>
+<p>Expected: failures name the missing no-injection and component workloads.</p>
+<ul>
+<li>[ ] <strong>Step 3: Implement the minimum benchmark changes</strong></li>
+</ul>
+<p>Move every depin FastAPI deployment to route-registration-then-<code>install</code>. Add a no-injection deployment whose route response is identical on both sides. Add component claims for lazy publication, first activation/drain, one-key and multi-key endpoint programs, request seed read, and async resource close. Reuse the existing measurement functions and deterministic observer; do not create a parallel harness.</p>
+<p>Author a leadership target for <code>fastapi_no_injection</code> using the repository target model and a calibrated fraction/fixed floor justified by the null run. Do not edit <code>benchmarks/budgets.toml</code> by hand.</p>
+<ul>
+<li>[ ] <strong>Step 4: Verify GREEN and run a quick diagnostic</strong></li>
+</ul>
+<p>Run the focused tests, then collect a short local diagnostic for the CPU-light, no-injection, request-scoped, resource, and startup cases. The diagnostic is not acceptance evidence; it only decides whether implementation work should continue before the full five-repetition run.</p>
+<p>Expected: CPU-light DI-attributable p50 point estimate improves by at least 25%, no-injection stays inside noise, and semantic counters match. If not, invoke systematic debugging, attribute the remaining time to endpoint traversal, host publication, activation, resolution, or teardown, and make a new failing performance-contract test before changing production code.</p>
+<ul>
+<li>[ ] <strong>Step 5: Run commit gates and commit</strong></li>
+</ul>
+<p>Run the five gates in order. Then:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>benchmarks/workloads/component/fastapi.py<span class="w"> </span>benchmarks/workloads/application/sync.py<span class="w"> </span>benchmarks/workloads/application/async_.py<span class="w"> </span>benchmarks/workloads/application/inventory.py<span class="w"> </span>benchmarks/workloads/application/measurement.py<span class="w"> </span>benchmarks/workloads/component/__init__.py<span class="w"> </span>benchmarks/leadership-targets.toml<span class="w"> </span>tests/integration/test_fastapi_performance_contracts.py<span class="w"> </span>tests/integration/test_comparison_contracts.py<span class="w"> </span>tests/integration/test_comparison_collection.py
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'perf: measure optimized FastAPI integration'</span>
+</code></pre></div>
+<h3 id="task-5-accepted-beforeafter-evidence-and-closure">Task 5: Accepted before/after evidence and closure<a class="headerlink" href="#task-5-accepted-beforeafter-evidence-and-closure" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Create: <code>benchmarks/results/2026-09-09-fastapi-minimum-overhead/environment.json</code>
+- Create: <code>benchmarks/results/2026-09-09-fastapi-minimum-overhead/base/</code>
+- Create: <code>benchmarks/results/2026-09-09-fastapi-minimum-overhead/head/</code>
+- Create: <code>benchmarks/results/2026-09-09-fastapi-minimum-overhead/report.md</code>
+- Create: <code>benchmarks/results/2026-09-09-fastapi-minimum-overhead/gate.txt</code>
+- Create: <code>benchmarks/results/2026-09-09-fastapi-minimum-overhead/analysis.md</code>
+- Modify: <code>docs/performance/comparison-baseline.md</code>
+- Modify: <code>specs/proposals/2026-09-02-fastapi-minimum-overhead-proposal.md</code>
+- Modify: <code>specs/roadmap.md</code></p>
+<p><strong>Interfaces:</strong>
+- Consumes: baseline SHA <code>086adf98459773e3175f4723b2b64e3f47306e42</code>, Task 4 workloads, paired harness, gate, accepted 2026-09-09 evidence.
+- Produces: five-repetition counterbalanced raw evidence, generated report, explicit gate output, concise before/after analysis, and updated active-decision documents.</p>
+<ul>
+<li>[ ] <strong>Step 1: Materialize an isolated baseline checkout and locked environments</strong></li>
+</ul>
+<p>Create a detached benchmark-only worktree outside the feature worktree at the exact baseline SHA. Synchronize baseline and head with:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>sync<span class="w"> </span>--locked<span class="w"> </span>--no-default-groups<span class="w"> </span>--group<span class="w"> </span>bench
+</code></pre></div>
+<p>Record both full SHAs, package pins, interpreter, CPU, kernel, governor, affinity, harness revision, and collection command in the result environment. Do not reuse the feature <code>.venv</code> for the baseline.</p>
+<ul>
+<li>[ ] <strong>Step 2: Collect five counterbalanced repetitions</strong></li>
+</ul>
+<p>Use <code>benchmarks.harness.pairs</code> with base/head directories, baseline revision <code>086adf9</code>, identical workload filters, and five alternating independent processes. Include the six existing FastAPI workloads and all common core guards. Collect the new no-injection and component workloads separately on head with their direct/null baselines because they do not exist at the baseline revision.</p>
+<p>Expected: every repetition validates payloads, event counts, teardown, and deterministic invariants before retaining timing samples.</p>
+<ul>
+<li>[ ] <strong>Step 3: Generate and run the gates</strong></li>
+</ul>
+<p>Generate <code>report.md</code> from the raw pair directories and run <code>benchmarks.harness.gate</code> against the accepted baseline and current authored targets. Capture stdout in <code>gate.txt</code>. Run the comparison leadership report for current FastAPI competitors without changing semantic classifications.</p>
+<p>Acceptance requires the paired CPU-light DI-attributable p50 confidence bound, tail totals, no-injection noise, memory, allocations, startup, contention, and all existing core budgets to satisfy the Global Constraints. A failed performance gate returns to the smallest owning task with a falsifiable attribution; do not weaken a target or edit generated budgets to make it pass.</p>
+<ul>
+<li>[ ] <strong>Step 4: Write the before/after analysis</strong></li>
+</ul>
+<p><code>analysis.md</code> must contain:</p>
+<ul>
+<li>the exact base/head revisions and environment;</li>
+<li>baseline and head p50/p95/p99 totals for every FastAPI workload;</li>
+<li>paired direct-baseline increments and 95% confidence intervals;</li>
+<li>CPU, throughput, allocation, peak/retained memory, startup, and contention deltas;</li>
+<li>decomposition of endpoint traversal, host publication, lazy activation, core resolution, and teardown;</li>
+<li>semantic-equivalence checks and unsupported comparisons;</li>
+<li>the 25% gate verdict and 30% stretch verdict; and</li>
+<li>any measured trade-off, even when inside budget.</li>
+</ul>
+<p>Update the published comparison page from generated evidence. Mark the proposal implemented only after the gate passes and route the roadmap to the next already-accepted item without activating provider discovery or native acceleration in this change.</p>
+<ul>
+<li>[ ] <strong>Step 5: Remove benchmark-only workspace and run final gates</strong></li>
+</ul>
+<p>Remove only the detached baseline worktree created in Step 1 after all raw evidence is safely inside the feature branch. Run:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format
+uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check
+uv<span class="w"> </span>run<span class="w"> </span>basedpyright
+uv<span class="w"> </span>run<span class="w"> </span>mypy
+uv<span class="w"> </span>run<span class="w"> </span>pytest
+uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>docs<span class="w"> </span>mkdocs<span class="w"> </span>build<span class="w"> </span>--strict
+</code></pre></div>
+<p>Also run the benchmark gate directly from the committed result directory and both lowest-direct and latest supported FastAPI/Starlette integration matrices.</p>
+<ul>
+<li>[ ] <strong>Step 6: Commit evidence and decision updates</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>benchmarks/results/2026-09-09-fastapi-minimum-overhead<span class="w"> </span>docs/performance/comparison-baseline.md<span class="w"> </span>specs/proposals/2026-09-02-fastapi-minimum-overhead-proposal.md<span class="w"> </span>specs/roadmap.md
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'perf: reduce FastAPI integration overhead'</span>
+</code></pre></div>
+<p>The branch is ready for final whole-branch review only after this commit's fresh verification evidence and benchmark gate are recorded.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

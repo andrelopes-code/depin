@@ -1593,81 +1593,19 @@ one middleware serves both. It is documented on the
 <a href="../starlette/">Starlette</a> page.</p>
 
 
-<div class="doc doc-object doc-class">
+<div class="doc doc-object doc-type_alias">
 
 
 
 <h2 id="depin.ext.fastapi.Inject" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">Inject</span>
+            <span class="doc doc-object-name doc-type_alias-name">Inject</span>
 
 
 <a href="#depin.ext.fastapi.Inject" class="headerlink" title="Permanent link">&para;</a></h2>
-
+<div class="doc-signature highlight"><pre><span></span><code><span class="nc">Inject</span> <span class="o">=</span> <span class="n">T</span>
+</code></pre></div>
 
     <div class="doc doc-contents first">
-
-
-
-        <p>FastAPI parameter annotation that resolves a dependency from depin.</p>
-<p>Write <code>svc: Inject[UserService]</code> on a route handler: to the type checker
-the parameter is plain <code>UserService</code>, while at runtime <code>Inject[T]</code>
-expands to <code>Annotated[T, Depends(...)]</code> so FastAPI resolves it through the
-active <code>RequestScope</code>. No default-value markers and no
-<code># noqa: B008</code> waivers at the call site.</p>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="ContainerNotBoundError (depin.errors.ContainerNotBoundError)" href="../errors/#depin.errors.ContainerNotBoundError">ContainerNotBoundError</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>No container is hosted in this context.
-Usually because the <code>RequestScope</code> middleware was never
-installed with <code>app.add_middleware(RequestScope,
-container=...)</code>; also raised for a route reached outside any
-active <code>Host</code> — for instance while it is being resolved from
-an ASGI lifespan hook with no <code>Host.activated()</code> in effect.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
     </div>
 
 </div>

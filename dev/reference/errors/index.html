@@ -1265,6 +1265,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#depin.errors.FastAPIIntegrationError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FastAPIIntegrationError
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1859,6 +1870,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#depin.errors.FastAPIIntegrationError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FastAPIIntegrationError
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2365,6 +2387,43 @@ FastAPI integration raises it when <code>Inject[T]</code> is evaluated outside a
 <p>Resolve it by opening a scope with <code>Host.scope()</code> / <code>Host.ascope()</code>
 around the unit of work, or by publishing the container with
 <code>Host.activated()</code>.</p>
+<p>Inherits <code>RuntimeError</code>, so existing <code>except RuntimeError</code> handlers keep
+working.</p>
+
+
+
+
+
+
+
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="depin.errors.FastAPIIntegrationError" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">FastAPIIntegrationError</span>
+
+
+<a href="#depin.errors.FastAPIIntegrationError" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="DepinError (depin.errors.DepinError)" href="#depin.errors.DepinError">DepinError</a></code>, <code><span title="RuntimeError">RuntimeError</span></code></p>
+
+
+
+        <p>FastAPI installation could not compile routes safely.</p>
+<p>Raised by <code>depin.ext.fastapi.install()</code> when the application was started,
+was already installed with another container, or exposes an unsupported
+route shape. Upgrade FastAPI to a tested release or use the compatible
+<code>RequestScope</code> middleware instead.</p>
 <p>Inherits <code>RuntimeError</code>, so existing <code>except RuntimeError</code> handlers keep
 working.</p>
 
