@@ -10,8 +10,10 @@ the immutable raw files::
 """
 
 import argparse
+import hashlib
 import json
 import math
+import shutil
 import subprocess
 import sys
 import time
@@ -45,6 +47,82 @@ def _revision() -> str:
     if completed.returncode != 0:
         raise HarnessError('cannot determine the source revision for FastAPI evidence capture')
     return completed.stdout.strip()
+
+
+def _target_revision(root: Path) -> str:
+    completed = subprocess.run(
+        ('git', '-C', str(root), 'rev-parse', 'HEAD'), capture_output=True, text=True, check=False
+    )
+    if completed.returncode != 0:
+        raise HarnessError(f'{root}: cannot determine target revision')
+    return completed.stdout.strip()
+
+
+def _sha256(path: Path) -> str:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError as error:
+        raise HarnessError(f'{path}: cannot hash ({error})') from error
+
+
+def collect(
+    out: Path,
+    *,
+    base: Path,
+    head: Path,
+    interpreters: Mapping[str, Path],
+    cache: Path,
+) -> None:
+    """Run semantic probes from an external bundle against two locked checkouts."""
+    if out.exists():
+        raise HarnessError(f'{out}: collection destination already exists')
+    runner = Path(__file__).with_name('fastapi_target_runner.py')
+    bundle = out.parent / f'{out.name}-runner'
+    if bundle.exists():
+        raise HarnessError(f'{bundle}: external runner bundle already exists')
+    bundle.mkdir(parents=True)
+    copied = bundle / runner.name
+    shutil.copyfile(runner, copied)
+    manifests: dict[str, object] = {}
+    targets = {'base': base, 'head': head}
+    for side, root in targets.items():
+        interpreter = interpreters.get(side)
+        if interpreter is None or not interpreter.is_file():
+            raise HarnessError(f'{side}: a locked target interpreter is required')
+        revision = _target_revision(root)
+        lock = _sha256(root / 'uv.lock')
+        manifests[side] = {'root': str(root.resolve()), 'revision': revision, 'lock_sha256': lock}
+        for repetition in range(REPETITIONS):
+            record = out / side / f'rep{repetition}.json'
+            argv = (
+                str(interpreter.resolve()),
+                '-I',
+                str(copied),
+                '--source-root',
+                str(root.resolve()),
+                '--expected-revision',
+                revision,
+                '--expected-lock-sha256',
+                lock,
+                '--out',
+                str(record),
+                '--bundle-root',
+                str(bundle.resolve()),
+                '--environment-root',
+                str(interpreter.resolve().parent.parent),
+                '--cache-root',
+                str(cache.resolve()),
+                '--side',
+                side,
+                '--repetition',
+                str(repetition),
+            )
+            completed = subprocess.run(argv, capture_output=True, text=True, check=False)
+            if completed.returncode != 0:
+                raise HarnessError(
+                    f'{side} rep{repetition}: neutral runner failed\n{completed.stdout}{completed.stderr}'
+                )
+    write_json(out / 'source-manifest.json', {'runner_sha256': _sha256(copied), 'targets': manifests})
 
 
 def _median(call: Callable[[], object], *, samples: int = 101) -> float:
@@ -439,6 +517,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     capture_parser.add_argument('--out', type=Path, required=True)
     capture_parser.add_argument('--side', required=True)
     capture_parser.add_argument('--repetition', type=int, required=True)
+    collect_parser = commands.add_parser('collect')
+    collect_parser.add_argument('--out', type=Path, required=True)
+    collect_parser.add_argument('--base-dir', type=Path, required=True)
+    collect_parser.add_argument('--head-dir', type=Path, required=True)
+    collect_parser.add_argument('--base-python', type=Path, required=True)
+    collect_parser.add_argument('--head-python', type=Path, required=True)
+    collect_parser.add_argument('--cache-root', type=Path, required=True)
     reduce_parser = commands.add_parser('reduce')
     reduce_parser.add_argument('--raw', type=Path, required=True)
     reduce_parser.add_argument('--out', type=Path, required=True)
@@ -450,6 +535,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if arguments.command == 'capture':
             capture(arguments.out, side=arguments.side, repetition=arguments.repetition)
+        elif arguments.command == 'collect':
+            collect(
+                arguments.out,
+                base=arguments.base_dir,
+                head=arguments.head_dir,
+                interpreters={'base': arguments.base_python, 'head': arguments.head_python},
+                cache=arguments.cache_root,
+            )
         else:
             output = reduce(
                 arguments.raw,
