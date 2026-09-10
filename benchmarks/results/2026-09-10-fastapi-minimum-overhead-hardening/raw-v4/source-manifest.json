@@ -1,4 +1,24 @@
 {
+  "collection_command": [
+    "python",
+    "-m",
+    "benchmarks.harness.fastapi_evidence",
+    "collect",
+    "--out",
+    "/tmp/depin-fastapi-hardening.O7uX5D/accepted-raw10",
+    "--base-dir",
+    "/tmp/depin-fastapi-hardening.O7uX5D/base",
+    "--head-dir",
+    "/tmp/depin-fastapi-hardening.O7uX5D/head",
+    "--base-python",
+    "/tmp/depin-fastapi-hardening.O7uX5D/env-base/bin/python",
+    "--head-python",
+    "/tmp/depin-fastapi-hardening.O7uX5D/env-head/bin/python",
+    "--cache-root",
+    "/tmp/depin-fastapi-hardening.O7uX5D/cache",
+    "--repetitions",
+    "10"
+  ],
   "runner_sha256": "a314ade8f32898461f360b296772bd7be0818b48612a416b4221cb37723cf4d3",
   "targets": {
     "base": {

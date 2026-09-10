@@ -4,344 +4,344 @@
     "test_latency[fastapi_application_startup-depin]": {
       "case_id": "test_latency[fastapi_application_startup-depin]",
       "first": "head",
-      "iqr": 0.0012484039762057364,
-      "mean": 0.0036444153309785985,
-      "median": 0.002891074982471764,
+      "iqr": 0.0002630077942740172,
+      "mean": 0.002948703256213458,
+      "median": 0.0026981349801644683,
       "method": "pytest-benchmark",
-      "minimum": 0.0024163409834727645,
+      "minimum": 0.002367194974794984,
       "order": 0,
-      "p95": 0.00576905618654564,
-      "p99": 0.008914962578564882,
+      "p95": 0.003917835198808462,
+      "p99": 0.004932413748465478,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
       "rounds": 813,
       "side": "head",
-      "stddev": 0.0038584227106432945,
+      "stddev": 0.002533644857184868,
       "unit": "seconds per operation"
     },
     "test_latency[fastapi_application_startup-direct]": {
       "case_id": "test_latency[fastapi_application_startup-direct]",
       "first": "head",
-      "iqr": 0.0021620370098389685,
-      "mean": 0.003704293618095107,
-      "median": 0.0028252899937797338,
+      "iqr": 0.00022348947823047638,
+      "mean": 0.001816817265294958,
+      "median": 0.0016269235056824982,
       "method": "pytest-benchmark",
-      "minimum": 0.0015168230165727437,
+      "minimum": 0.0014237959985621274,
       "order": 0,
-      "p95": 0.007227240939391772,
-      "p99": 0.012323219468235032,
+      "p95": 0.0021594533813185986,
+      "p99": 0.0032175738090882075,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
       "rounds": 1000,
       "side": "head",
-      "stddev": 0.007456171228208261,
+      "stddev": 0.0021088114109980268,
       "unit": "seconds per operation"
     },
     "test_latency[fastapi_async_resource_teardown-depin]": {
       "case_id": "test_latency[fastapi_async_resource_teardown-depin]",
       "first": "head",
-      "iqr": 4.770627128891647e-05,
-      "mean": 0.0008660142288437851,
-      "median": 0.0007385649951174855,
+      "iqr": 6.102777842897922e-05,
+      "mean": 0.0007685333217207524,
+      "median": 0.0007420579786412418,
       "method": "pytest-benchmark",
-      "minimum": 0.0006807619938626885,
+      "minimum": 0.0006609739502891898,
       "order": 0,
-      "p95": 0.001405922975391149,
-      "p99": 0.0037407047115266324,
+      "p95": 0.0009059149888344109,
+      "p99": 0.0010805858823005109,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
-      "rounds": 1325,
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
+      "rounds": 1371,
       "side": "head",
-      "stddev": 0.0004946817435249946,
+      "stddev": 8.946419067419582e-05,
       "unit": "seconds per operation"
     },
     "test_latency[fastapi_async_resource_teardown-direct]": {
       "case_id": "test_latency[fastapi_async_resource_teardown-direct]",
       "first": "head",
-      "iqr": 6.514595588669181e-05,
-      "mean": 0.0008026226387438276,
-      "median": 0.0006550749822054058,
+      "iqr": 4.229805199429393e-05,
+      "mean": 0.000639967718197201,
+      "median": 0.0006277555075939745,
       "method": "pytest-benchmark",
-      "minimum": 0.000585290021263063,
+      "minimum": 0.0005332930013537407,
       "order": 0,
-      "p95": 0.001656680781161412,
-      "p99": 0.00367744481889531,
+      "p95": 0.0007159849628806114,
+      "p99": 0.0008707788394531238,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
-      "rounds": 1590,
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
+      "rounds": 1506,
       "side": "head",
-      "stddev": 0.0005529005704687629,
+      "stddev": 5.7733393967955485e-05,
       "unit": "seconds per operation"
     },
     "test_latency[fastapi_cpu_light_endpoint-depin]": {
       "case_id": "test_latency[fastapi_cpu_light_endpoint-depin]",
       "first": "head",
-      "iqr": 0.0001131807075580582,
-      "mean": 0.0008325210913442922,
-      "median": 0.0006916310521773994,
+      "iqr": 3.770303737837821e-05,
+      "mean": 0.0006875695960644298,
+      "median": 0.0006613340228796005,
       "method": "pytest-benchmark",
-      "minimum": 0.000610210990998894,
+      "minimum": 0.0005840850062668324,
       "order": 0,
-      "p95": 0.0015822197019588176,
-      "p99": 0.0030889091396238614,
+      "p95": 0.0008543372037820513,
+      "p99": 0.0011547750048339369,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
-      "rounds": 1047,
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
+      "rounds": 1433,
       "side": "head",
-      "stddev": 0.0005096403034621172,
+      "stddev": 0.00013685967986786334,
       "unit": "seconds per operation"
     },
     "test_latency[fastapi_cpu_light_endpoint-direct]": {
       "case_id": "test_latency[fastapi_cpu_light_endpoint-direct]",
       "first": "head",
-      "iqr": 0.0008145224710460752,
-      "mean": 0.001193772624419413,
-      "median": 0.0007038519834168255,
+      "iqr": 4.060847277287394e-05,
+      "mean": 0.0006606053263180534,
+      "median": 0.000626994005870074,
       "method": "pytest-benchmark",
-      "minimum": 0.0005851730238646269,
+      "minimum": 0.0005335710011422634,
       "order": 0,
-      "p95": 0.003216930734924972,
-      "p99": 0.005237391571281475,
+      "p95": 0.0008195472066290676,
+      "p99": 0.001198978384491058,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
-      "rounds": 1524,
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
+      "rounds": 1629,
       "side": "head",
-      "stddev": 0.00098499272325333,
+      "stddev": 0.0002646382008702365,
       "unit": "seconds per operation"
     },
     "test_latency[fastapi_endpoint_with_work-depin]": {
       "case_id": "test_latency[fastapi_endpoint_with_work-depin]",
       "first": "head",
-      "iqr": 0.00016734801465645432,
-      "mean": 0.0012081184058915823,
-      "median": 0.001033394510159269,
+      "iqr": 4.4048967538401484e-05,
+      "mean": 0.0009571573161068592,
+      "median": 0.0009456579573452473,
       "method": "pytest-benchmark",
-      "minimum": 0.0009062709868885577,
+      "minimum": 0.0008499769610352814,
       "order": 0,
-      "p95": 0.0020581704156938936,
-      "p99": 0.0040855093684513104,
+      "p95": 0.0010566603858023881,
+      "p99": 0.0011880699440371247,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
-      "rounds": 1000,
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
+      "rounds": 1083,
       "side": "head",
-      "stddev": 0.0005573503586704261,
+      "stddev": 5.678497290866812e-05,
       "unit": "seconds per operation"
     },
     "test_latency[fastapi_endpoint_with_work-direct]": {
       "case_id": "test_latency[fastapi_endpoint_with_work-direct]",
       "first": "head",
-      "iqr": 0.00019036572484765202,
-      "mean": 0.0011116887769971103,
-      "median": 0.0009451669757254422,
+      "iqr": 5.5331969633698463e-05,
+      "mean": 0.0009060253004251648,
+      "median": 0.0008603149908594787,
       "method": "pytest-benchmark",
-      "minimum": 0.0008168719941750169,
+      "minimum": 0.0007563110557384789,
       "order": 0,
-      "p95": 0.0020444899855647236,
-      "p99": 0.0036349665315356106,
+      "p95": 0.0011084628640674048,
+      "p99": 0.0017512355657527212,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
-      "rounds": 1051,
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
+      "rounds": 1168,
       "side": "head",
-      "stddev": 0.0005154155691770662,
+      "stddev": 0.00021041223340841192,
       "unit": "seconds per operation"
     },
     "test_latency[fastapi_request_scoped_graph-depin]": {
       "case_id": "test_latency[fastapi_request_scoped_graph-depin]",
       "first": "head",
-      "iqr": 0.0006468664796557277,
-      "mean": 0.0011651501517419142,
-      "median": 0.0008622540044598281,
+      "iqr": 3.8358994061127305e-05,
+      "mean": 0.0007611466414730681,
+      "median": 0.0007284579914994538,
       "method": "pytest-benchmark",
-      "minimum": 0.0006822880241088569,
+      "minimum": 0.0006467709899879992,
       "order": 0,
-      "p95": 0.0023321852320805194,
-      "p99": 0.0032075076829642035,
+      "p95": 0.000935923820361495,
+      "p99": 0.0013083292450755835,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
-      "rounds": 1168,
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
+      "rounds": 1005,
       "side": "head",
-      "stddev": 0.0005960063851820387,
+      "stddev": 0.00016694169562987105,
       "unit": "seconds per operation"
     },
     "test_latency[fastapi_request_scoped_graph-direct]": {
       "case_id": "test_latency[fastapi_request_scoped_graph-direct]",
       "first": "head",
-      "iqr": 0.00025480298791080713,
-      "mean": 0.0009253013937268406,
-      "median": 0.0007306455227080733,
+      "iqr": 4.495751636568457e-05,
+      "mean": 0.0007185270762460273,
+      "median": 0.0006351880147121847,
       "method": "pytest-benchmark",
-      "minimum": 0.0005996000254526734,
+      "minimum": 0.000562132045160979,
       "order": 0,
-      "p95": 0.001948212855495512,
-      "p99": 0.002999623043579049,
+      "p95": 0.0010984500113409013,
+      "p99": 0.0022042159049305873,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
-      "rounds": 1000,
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
+      "rounds": 1091,
       "side": "head",
-      "stddev": 0.0005028263297801197,
+      "stddev": 0.0003660785924707889,
       "unit": "seconds per operation"
     },
     "test_latency[fastapi_singletons_and_transients-depin]": {
       "case_id": "test_latency[fastapi_singletons_and_transients-depin]",
       "first": "head",
-      "iqr": 0.00014195105177350342,
-      "mean": 0.0008803895461023785,
-      "median": 0.0007659285038243979,
+      "iqr": 3.6869998439215124e-05,
+      "mean": 0.0007361877724930574,
+      "median": 0.0006845379830338061,
       "method": "pytest-benchmark",
-      "minimum": 0.0006565969670191407,
+      "minimum": 0.0005836929776705801,
       "order": 0,
-      "p95": 0.0016143458749866106,
-      "p99": 0.0024218935251701617,
+      "p95": 0.0008850358193740248,
+      "p99": 0.0018955226289108324,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
-      "rounds": 1000,
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
+      "rounds": 1065,
       "side": "head",
-      "stddev": 0.00034790234109893835,
+      "stddev": 0.00029132832992362286,
       "unit": "seconds per operation"
     },
     "test_latency[fastapi_singletons_and_transients-direct]": {
       "case_id": "test_latency[fastapi_singletons_and_transients-direct]",
       "first": "head",
-      "iqr": 0.00013758003478869796,
-      "mean": 0.0008972664233851056,
-      "median": 0.0006528114899992943,
+      "iqr": 3.43172432621941e-05,
+      "mean": 0.0006436112521598231,
+      "median": 0.0006295099738053977,
       "method": "pytest-benchmark",
-      "minimum": 0.0005820569931529462,
+      "minimum": 0.0005566530162468553,
       "order": 0,
-      "p95": 0.002162636280991137,
-      "p99": 0.0037344619928626334,
+      "p95": 0.0007476999890059233,
+      "p99": 0.00090933118481189,
       "repetition": 9,
-      "report_sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca",
-      "rounds": 1614,
+      "report_sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c",
+      "rounds": 1541,
       "side": "head",
-      "stddev": 0.0006737521233330026,
+      "stddev": 6.39547001423226e-05,
       "unit": "seconds per operation"
     }
   },
   "benchmark_report": {
     "aggregates": {
       "test_latency[fastapi_application_startup-depin]": {
-        "iqr": 0.0012484039762057364,
-        "mean": 0.0036444153309785985,
-        "median": 0.002891074982471764,
-        "minimum": 0.0024163409834727645,
-        "p95": 0.00576905618654564,
-        "p99": 0.008914962578564882,
+        "iqr": 0.0002630077942740172,
+        "mean": 0.002948703256213458,
+        "median": 0.0026981349801644683,
+        "minimum": 0.002367194974794984,
+        "p95": 0.003917835198808462,
+        "p99": 0.004932413748465478,
         "rounds": 813,
-        "stddev": 0.0038584227106432945
+        "stddev": 0.002533644857184868
       },
       "test_latency[fastapi_application_startup-direct]": {
-        "iqr": 0.0021620370098389685,
-        "mean": 0.003704293618095107,
-        "median": 0.0028252899937797338,
-        "minimum": 0.0015168230165727437,
-        "p95": 0.007227240939391772,
-        "p99": 0.012323219468235032,
+        "iqr": 0.00022348947823047638,
+        "mean": 0.001816817265294958,
+        "median": 0.0016269235056824982,
+        "minimum": 0.0014237959985621274,
+        "p95": 0.0021594533813185986,
+        "p99": 0.0032175738090882075,
         "rounds": 1000,
-        "stddev": 0.007456171228208261
+        "stddev": 0.0021088114109980268
       },
       "test_latency[fastapi_async_resource_teardown-depin]": {
-        "iqr": 4.770627128891647e-05,
-        "mean": 0.0008660142288437851,
-        "median": 0.0007385649951174855,
-        "minimum": 0.0006807619938626885,
-        "p95": 0.001405922975391149,
-        "p99": 0.0037407047115266324,
-        "rounds": 1325,
-        "stddev": 0.0004946817435249946
+        "iqr": 6.102777842897922e-05,
+        "mean": 0.0007685333217207524,
+        "median": 0.0007420579786412418,
+        "minimum": 0.0006609739502891898,
+        "p95": 0.0009059149888344109,
+        "p99": 0.0010805858823005109,
+        "rounds": 1371,
+        "stddev": 8.946419067419582e-05
       },
       "test_latency[fastapi_async_resource_teardown-direct]": {
-        "iqr": 6.514595588669181e-05,
-        "mean": 0.0008026226387438276,
-        "median": 0.0006550749822054058,
-        "minimum": 0.000585290021263063,
-        "p95": 0.001656680781161412,
-        "p99": 0.00367744481889531,
-        "rounds": 1590,
-        "stddev": 0.0005529005704687629
+        "iqr": 4.229805199429393e-05,
+        "mean": 0.000639967718197201,
+        "median": 0.0006277555075939745,
+        "minimum": 0.0005332930013537407,
+        "p95": 0.0007159849628806114,
+        "p99": 0.0008707788394531238,
+        "rounds": 1506,
+        "stddev": 5.7733393967955485e-05
       },
       "test_latency[fastapi_cpu_light_endpoint-depin]": {
-        "iqr": 0.0001131807075580582,
-        "mean": 0.0008325210913442922,
-        "median": 0.0006916310521773994,
-        "minimum": 0.000610210990998894,
-        "p95": 0.0015822197019588176,
-        "p99": 0.0030889091396238614,
-        "rounds": 1047,
-        "stddev": 0.0005096403034621172
+        "iqr": 3.770303737837821e-05,
+        "mean": 0.0006875695960644298,
+        "median": 0.0006613340228796005,
+        "minimum": 0.0005840850062668324,
+        "p95": 0.0008543372037820513,
+        "p99": 0.0011547750048339369,
+        "rounds": 1433,
+        "stddev": 0.00013685967986786334
       },
       "test_latency[fastapi_cpu_light_endpoint-direct]": {
-        "iqr": 0.0008145224710460752,
-        "mean": 0.001193772624419413,
-        "median": 0.0007038519834168255,
-        "minimum": 0.0005851730238646269,
-        "p95": 0.003216930734924972,
-        "p99": 0.005237391571281475,
-        "rounds": 1524,
-        "stddev": 0.00098499272325333
+        "iqr": 4.060847277287394e-05,
+        "mean": 0.0006606053263180534,
+        "median": 0.000626994005870074,
+        "minimum": 0.0005335710011422634,
+        "p95": 0.0008195472066290676,
+        "p99": 0.001198978384491058,
+        "rounds": 1629,
+        "stddev": 0.0002646382008702365
       },
       "test_latency[fastapi_endpoint_with_work-depin]": {
-        "iqr": 0.00016734801465645432,
-        "mean": 0.0012081184058915823,
-        "median": 0.001033394510159269,
-        "minimum": 0.0009062709868885577,
-        "p95": 0.0020581704156938936,
-        "p99": 0.0040855093684513104,
-        "rounds": 1000,
-        "stddev": 0.0005573503586704261
+        "iqr": 4.4048967538401484e-05,
+        "mean": 0.0009571573161068592,
+        "median": 0.0009456579573452473,
+        "minimum": 0.0008499769610352814,
+        "p95": 0.0010566603858023881,
+        "p99": 0.0011880699440371247,
+        "rounds": 1083,
+        "stddev": 5.678497290866812e-05
       },
       "test_latency[fastapi_endpoint_with_work-direct]": {
-        "iqr": 0.00019036572484765202,
-        "mean": 0.0011116887769971103,
-        "median": 0.0009451669757254422,
-        "minimum": 0.0008168719941750169,
-        "p95": 0.0020444899855647236,
-        "p99": 0.0036349665315356106,
-        "rounds": 1051,
-        "stddev": 0.0005154155691770662
+        "iqr": 5.5331969633698463e-05,
+        "mean": 0.0009060253004251648,
+        "median": 0.0008603149908594787,
+        "minimum": 0.0007563110557384789,
+        "p95": 0.0011084628640674048,
+        "p99": 0.0017512355657527212,
+        "rounds": 1168,
+        "stddev": 0.00021041223340841192
       },
       "test_latency[fastapi_request_scoped_graph-depin]": {
-        "iqr": 0.0006468664796557277,
-        "mean": 0.0011651501517419142,
-        "median": 0.0008622540044598281,
-        "minimum": 0.0006822880241088569,
-        "p95": 0.0023321852320805194,
-        "p99": 0.0032075076829642035,
-        "rounds": 1168,
-        "stddev": 0.0005960063851820387
+        "iqr": 3.8358994061127305e-05,
+        "mean": 0.0007611466414730681,
+        "median": 0.0007284579914994538,
+        "minimum": 0.0006467709899879992,
+        "p95": 0.000935923820361495,
+        "p99": 0.0013083292450755835,
+        "rounds": 1005,
+        "stddev": 0.00016694169562987105
       },
       "test_latency[fastapi_request_scoped_graph-direct]": {
-        "iqr": 0.00025480298791080713,
-        "mean": 0.0009253013937268406,
-        "median": 0.0007306455227080733,
-        "minimum": 0.0005996000254526734,
-        "p95": 0.001948212855495512,
-        "p99": 0.002999623043579049,
-        "rounds": 1000,
-        "stddev": 0.0005028263297801197
+        "iqr": 4.495751636568457e-05,
+        "mean": 0.0007185270762460273,
+        "median": 0.0006351880147121847,
+        "minimum": 0.000562132045160979,
+        "p95": 0.0010984500113409013,
+        "p99": 0.0022042159049305873,
+        "rounds": 1091,
+        "stddev": 0.0003660785924707889
       },
       "test_latency[fastapi_singletons_and_transients-depin]": {
-        "iqr": 0.00014195105177350342,
-        "mean": 0.0008803895461023785,
-        "median": 0.0007659285038243979,
-        "minimum": 0.0006565969670191407,
-        "p95": 0.0016143458749866106,
-        "p99": 0.0024218935251701617,
-        "rounds": 1000,
-        "stddev": 0.00034790234109893835
+        "iqr": 3.6869998439215124e-05,
+        "mean": 0.0007361877724930574,
+        "median": 0.0006845379830338061,
+        "minimum": 0.0005836929776705801,
+        "p95": 0.0008850358193740248,
+        "p99": 0.0018955226289108324,
+        "rounds": 1065,
+        "stddev": 0.00029132832992362286
       },
       "test_latency[fastapi_singletons_and_transients-direct]": {
-        "iqr": 0.00013758003478869796,
-        "mean": 0.0008972664233851056,
-        "median": 0.0006528114899992943,
-        "minimum": 0.0005820569931529462,
-        "p95": 0.002162636280991137,
-        "p99": 0.0037344619928626334,
-        "rounds": 1614,
-        "stddev": 0.0006737521233330026
+        "iqr": 3.43172432621941e-05,
+        "mean": 0.0006436112521598231,
+        "median": 0.0006295099738053977,
+        "minimum": 0.0005566530162468553,
+        "p95": 0.0007476999890059233,
+        "p99": 0.00090933118481189,
+        "rounds": 1541,
+        "stddev": 6.39547001423226e-05
       }
     },
-    "sha256": "e63c60d5559770a0c4b57437205a444f6d46e8f6f8bed71babe9b49e55471bca"
+    "sha256": "bd3d3d8495a9328fae44d7eb0029302b6f06bf54423491de50690b97db19713c"
   },
   "contention": {
     "config": {
@@ -351,12 +351,12 @@
     "depin": {
       "method": "synchronized-wave",
       "unit": "seconds",
-      "value": 0.001219662
+      "value": 0.00035617760000000004
     },
     "direct": {
       "method": "synchronized-wave",
       "unit": "seconds",
-      "value": 0.0007379724000000001
+      "value": 0.00014497963999999999
     }
   },
   "environment": {
@@ -388,9 +388,9 @@
       "available_processors": 4,
       "cpu_model": "Intel(R) Xeon(R) CPU E5-2683 v4 @ 2.10GHz",
       "load_average": [
-        10.09,
-        12.35,
-        11.48
+        3.88,
+        4.58,
+        5.13
       ],
       "machine": "x86_64",
       "processor": "x86_64",
@@ -425,12 +425,12 @@
         "control": {
           "method": "direct-null",
           "unit": "seconds per operation",
-          "value": 0.0006374230142682791
+          "value": 0.000628377019893378
         },
         "depin": {
           "method": "component-observation",
           "unit": "seconds per operation",
-          "value": 0.0007709754863753915
+          "value": 0.0007095600012689829
         }
       },
       "fastapi_endpoint_program_many_keys": {
@@ -440,12 +440,12 @@
         "control": {
           "method": "direct-null",
           "unit": "seconds per operation",
-          "value": 0.0006374230142682791
+          "value": 0.000628377019893378
         },
         "depin": {
           "method": "component-observation",
           "unit": "seconds per operation",
-          "value": 0.0006590730044990778
+          "value": 0.000661529484204948
         }
       },
       "fastapi_endpoint_program_one_key": {
@@ -455,12 +455,12 @@
         "control": {
           "method": "direct-null",
           "unit": "seconds per operation",
-          "value": 0.0006374230142682791
+          "value": 0.000628377019893378
         },
         "depin": {
           "method": "component-observation",
           "unit": "seconds per operation",
-          "value": 0.0006499839946627617
+          "value": 0.0006535429856739938
         }
       },
       "fastapi_lazy_frame_activation_and_drain": {
@@ -470,12 +470,12 @@
         "control": {
           "method": "direct-null",
           "unit": "seconds per operation",
-          "value": 0.0006374230142682791
+          "value": 0.000628377019893378
         },
         "depin": {
           "method": "component-observation",
           "unit": "seconds per operation",
-          "value": 0.0007167754811234772
+          "value": 0.0006813564978074282
         }
       },
       "fastapi_lazy_host_publication": {
@@ -485,12 +485,12 @@
         "control": {
           "method": "direct-null",
           "unit": "seconds per operation",
-          "value": 0.0006374230142682791
+          "value": 0.000628377019893378
         },
         "depin": {
           "method": "component-observation",
           "unit": "seconds per operation",
-          "value": 0.0006514154956676066
+          "value": 0.0006479265284724534
         }
       },
       "fastapi_request_seed_read": {
@@ -500,12 +500,12 @@
         "control": {
           "method": "direct-null",
           "unit": "seconds per operation",
-          "value": 0.0006374230142682791
+          "value": 0.000628377019893378
         },
         "depin": {
           "method": "component-observation",
           "unit": "seconds per operation",
-          "value": 0.000844264985062182
+          "value": 0.0007151519821491092
         }
       }
     },
@@ -513,12 +513,12 @@
       "depin": {
         "method": "direct-null",
         "unit": "seconds per operation",
-        "value": 0.0007002399943303317
+        "value": 0.0006481360178440809
       },
       "direct": {
         "method": "direct-null",
         "unit": "seconds per operation",
-        "value": 0.0006374230142682791
+        "value": 0.000628377019893378
       }
     }
   },
@@ -538,7 +538,7 @@
     "retained": {
       "method": "tracemalloc-retained",
       "unit": "bytes",
-      "value": 988.0
+      "value": 941.0
     },
     "work": {
       "config": {

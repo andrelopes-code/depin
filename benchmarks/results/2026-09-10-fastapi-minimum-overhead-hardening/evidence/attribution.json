@@ -5,53 +5,53 @@
   "metric": "p50",
   "repetitions": [
     {
-      "base_direct_p50": 0.0006366340385284275,
-      "head_direct_p50": 0.0006495295092463493,
+      "base_direct_p50": 0.0006219430069904774,
+      "head_direct_p50": 0.0006227054982446134,
       "repetition": 0
     },
     {
-      "base_direct_p50": 0.0007107885030563921,
-      "head_direct_p50": 0.0007245220185723156,
+      "base_direct_p50": 0.0006321955006569624,
+      "head_direct_p50": 0.0006347044836729765,
       "repetition": 1
     },
     {
-      "base_direct_p50": 0.0006684430118184537,
-      "head_direct_p50": 0.0006914549740031362,
+      "base_direct_p50": 0.0006284009723458439,
+      "head_direct_p50": 0.000625382992438972,
       "repetition": 2
     },
     {
-      "base_direct_p50": 0.0006383009895216674,
-      "head_direct_p50": 0.0007235264929477125,
+      "base_direct_p50": 0.0006258250214159489,
+      "head_direct_p50": 0.0006289510056376457,
       "repetition": 3
     },
     {
-      "base_direct_p50": 0.0007702975126449019,
-      "head_direct_p50": 0.0006862239970359951,
+      "base_direct_p50": 0.0006291259778663516,
+      "head_direct_p50": 0.0006594349979422987,
       "repetition": 4
     },
     {
-      "base_direct_p50": 0.000666900014039129,
-      "head_direct_p50": 0.0006397070246748626,
+      "base_direct_p50": 0.000627028988674283,
+      "head_direct_p50": 0.0006246450357139111,
       "repetition": 5
     },
     {
-      "base_direct_p50": 0.0007816560100764036,
-      "head_direct_p50": 0.0007534464821219444,
+      "base_direct_p50": 0.0006221089861355722,
+      "head_direct_p50": 0.0006299900123849511,
       "repetition": 6
     },
     {
-      "base_direct_p50": 0.000665100000333041,
-      "head_direct_p50": 0.0006570715049747378,
+      "base_direct_p50": 0.0006541525071952492,
+      "head_direct_p50": 0.0006203724769875407,
       "repetition": 7
     },
     {
-      "base_direct_p50": 0.0006775245419703424,
-      "head_direct_p50": 0.0009395984816364944,
+      "base_direct_p50": 0.0006186449900269508,
+      "head_direct_p50": 0.000651968497550115,
       "repetition": 8
     },
     {
-      "base_direct_p50": 0.0006990130059421062,
-      "head_direct_p50": 0.0007038519834168255,
+      "base_direct_p50": 0.0006464030011557043,
+      "head_direct_p50": 0.000626994005870074,
       "repetition": 9
     }
   ],
