@@ -42,7 +42,11 @@ def _dataset(tmp_path: Path, *, head_median: float = 70.0, head_p95: float = 120
         {
             'seed': DEFAULT_SEED,
             'repetitions': 5,
-            'environment': {'interpreter': {}, 'host': {}, 'distributions': {}},
+            'environment': {
+                'interpreter': {'implementation': 'CPython', 'version': '3.12.0', 'compiler': 'test compiler'},
+                'host': {'system': 'Linux', 'release': 'test-kernel', 'machine': 'x86_64', 'available_processors': 1},
+                'distributions': {'pydepin': '1.0', 'pytest': '1.0', 'pytest-benchmark': '1.0'},
+            },
         },
     )
     for repetition in range(5):
@@ -182,9 +186,37 @@ def _provenance(tmp_path: Path) -> Path:
                 'workloads': list(TAIL_WORKLOADS),
             },
             'semantic_validation': [
-                {'workload': workload, 'response': 'equivalent', 'lifecycle': 'equivalent'}
+                {
+                    'workload': workload,
+                    'repetition': repetition,
+                    'base_revision': BASELINE_REVISION,
+                    'head_revision': HEAD_REVISION,
+                    'response': 'equivalent',
+                    'lifecycle': 'equivalent',
+                    'event_counts': {'base': 1, 'head': 1},
+                    'teardown': 'equivalent',
+                    'deterministic': 'passed',
+                }
                 for workload in TAIL_WORKLOADS
+                for repetition in range(5)
             ],
+            'environment': {
+                'interpreter': {'implementation': 'CPython', 'version': '3.12.0'},
+                'cpu': {'model': 'test CPU'},
+                'kernel': 'test-kernel',
+                'governor': 'performance',
+                'affinity': [0],
+                'packages': {
+                    'pydepin': '1.0',
+                    'pytest': '1.0',
+                    'pytest-benchmark': '1.0',
+                    'fastapi': '1.0',
+                    'starlette': '1.0',
+                },
+                'harness_revision': HEAD_REVISION,
+                'collection_command': ['python', '-m', 'benchmarks.harness.pairs'],
+                'locked_environment': {'base': 'sha256:base', 'head': 'sha256:head'},
+            },
         },
     )
     return path
@@ -320,6 +352,78 @@ def test_missing_semantic_lifecycle_validation_fails_closed(tmp_path: Path) -> N
     write_json(provenance, payload)
 
     with pytest.raises(HarnessError, match='semantic_validation'):
+        _ = evaluate(
+            _dataset(tmp_path),
+            _attribution(tmp_path),
+            _sidecars(tmp_path),
+            provenance,
+            evaluated_head_revision=HEAD_REVISION,
+        )
+
+
+def test_one_missing_repetition_validation_fails_closed(tmp_path: Path) -> None:
+    provenance = _provenance(tmp_path)
+    payload = read_json(provenance)
+    validations = require_array(payload.get('semantic_validation'), 'semantic_validation')
+    _ = validations.pop()
+    write_json(provenance, payload)
+
+    with pytest.raises(HarnessError, match='semantic_validation'):
+        _ = evaluate(
+            _dataset(tmp_path),
+            _attribution(tmp_path),
+            _sidecars(tmp_path),
+            provenance,
+            evaluated_head_revision=HEAD_REVISION,
+        )
+
+
+def test_one_corrupt_repetition_validation_fails_closed(tmp_path: Path) -> None:
+    provenance = _provenance(tmp_path)
+    payload = read_json(provenance)
+    validation = require_object(
+        require_array(payload.get('semantic_validation'), 'semantic_validation')[0], 'validation'
+    )
+    counts = require_object(validation.get('event_counts'), 'event_counts')
+    counts['head'] = 2
+    write_json(provenance, payload)
+
+    with pytest.raises(HarnessError, match='event_counts'):
+        _ = evaluate(
+            _dataset(tmp_path),
+            _attribution(tmp_path),
+            _sidecars(tmp_path),
+            provenance,
+            evaluated_head_revision=HEAD_REVISION,
+        )
+
+
+@pytest.mark.parametrize('field', ['kernel', 'governor'])
+def test_empty_required_environment_provenance_field_fails_closed(tmp_path: Path, field: str) -> None:
+    provenance = _provenance(tmp_path)
+    payload = read_json(provenance)
+    environment = require_object(payload.get('environment'), 'environment')
+    environment[field] = ''
+    write_json(provenance, payload)
+
+    with pytest.raises(HarnessError, match=field):
+        _ = evaluate(
+            _dataset(tmp_path),
+            _attribution(tmp_path),
+            _sidecars(tmp_path),
+            provenance,
+            evaluated_head_revision=HEAD_REVISION,
+        )
+
+
+def test_missing_required_environment_provenance_field_fails_closed(tmp_path: Path) -> None:
+    provenance = _provenance(tmp_path)
+    payload = read_json(provenance)
+    environment = require_object(payload.get('environment'), 'environment')
+    _ = environment.pop('packages')
+    write_json(provenance, payload)
+
+    with pytest.raises(HarnessError, match='packages'):
         _ = evaluate(
             _dataset(tmp_path),
             _attribution(tmp_path),

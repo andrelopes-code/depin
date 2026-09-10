@@ -128,8 +128,28 @@ def _pairs(dataset: Path) -> tuple[dict[str, tuple[_Pair, ...]], int]:
     if repetitions != REPETITIONS:
         raise HarnessError(f'{dataset / "environment.json"}: repetitions must be exactly {REPETITIONS}')
     environment = require_object(metadata.get('environment'), f'{dataset / "environment.json"}: environment')
-    for field in ('interpreter', 'host', 'distributions'):
-        _ = require_object(environment.get(field), f'{dataset / "environment.json"}: environment.{field}')
+    interpreter = require_object(
+        environment.get('interpreter'), f'{dataset / "environment.json"}: environment.interpreter'
+    )
+    for field in ('implementation', 'version', 'compiler'):
+        _ = require_text(interpreter.get(field), f'{dataset / "environment.json"}: environment.interpreter.{field}')
+    host = require_object(environment.get('host'), f'{dataset / "environment.json"}: environment.host')
+    for field in ('system', 'release', 'machine'):
+        _ = require_text(host.get(field), f'{dataset / "environment.json"}: environment.host.{field}')
+    if (
+        require_integer(
+            host.get('available_processors'), f'{dataset / "environment.json"}: environment.host.available_processors'
+        )
+        < 1
+    ):
+        raise HarnessError(f'{dataset / "environment.json"}: environment.host.available_processors must be positive')
+    distributions = require_object(
+        environment.get('distributions'), f'{dataset / "environment.json"}: environment.distributions'
+    )
+    for package in ('pydepin', 'pytest', 'pytest-benchmark'):
+        _ = require_text(
+            distributions.get(package), f'{dataset / "environment.json"}: environment.distributions.{package}'
+        )
     base, head = _side_repetitions(dataset, 'base'), _side_repetitions(dataset, 'head')
     pairs: dict[str, tuple[_Pair, ...]] = {}
     for workload in TAIL_WORKLOADS:
@@ -233,16 +253,66 @@ def _provenance(path: Path, evaluated_head_revision: str) -> None:
     workloads = require_array(protocol.get('workloads'), f'{path}: protocol.workloads')
     if tuple(require_text(value, f'{path}: protocol.workloads') for value in workloads) != TAIL_WORKLOADS:
         raise HarnessError(f'{path}: protocol.workloads must exactly match the FastAPI paired inventory')
+    environment = require_object(payload.get('environment'), f'{path}: environment')
+    interpreter = require_object(environment.get('interpreter'), f'{path}: environment.interpreter')
+    for field in ('implementation', 'version'):
+        _ = require_text(interpreter.get(field), f'{path}: environment.interpreter.{field}')
+    cpu = require_object(environment.get('cpu'), f'{path}: environment.cpu')
+    _ = require_text(cpu.get('model'), f'{path}: environment.cpu.model')
+    for field in ('kernel', 'governor'):
+        _ = require_text(environment.get(field), f'{path}: environment.{field}')
+    affinity = require_array(environment.get('affinity'), f'{path}: environment.affinity')
+    if not affinity:
+        raise HarnessError(f'{path}: environment.affinity must not be empty')
+    for index, processor in enumerate(affinity):
+        if require_integer(processor, f'{path}: environment.affinity[{index}]') < 0:
+            raise HarnessError(f'{path}: environment.affinity[{index}] must be non-negative')
+    packages = require_object(environment.get('packages'), f'{path}: environment.packages')
+    for package in ('pydepin', 'pytest', 'pytest-benchmark', 'fastapi', 'starlette'):
+        _ = require_text(packages.get(package), f'{path}: environment.packages.{package}')
+    _ = _revision(environment.get('harness_revision'), f'{path}: environment.harness_revision')
+    command = require_array(environment.get('collection_command'), f'{path}: environment.collection_command')
+    if not command:
+        raise HarnessError(f'{path}: environment.collection_command must not be empty')
+    for index, argument in enumerate(command):
+        _ = require_text(argument, f'{path}: environment.collection_command[{index}]')
+    locked_environment = require_object(
+        environment.get('locked_environment'), f'{path}: environment.locked_environment'
+    )
+    for side in ('base', 'head'):
+        _ = require_text(locked_environment.get(side), f'{path}: environment.locked_environment.{side}')
     validations = require_array(payload.get('semantic_validation'), f'{path}: semantic_validation')
-    proven: set[str] = set()
+    proven: set[tuple[str, int]] = set()
     for index, value in enumerate(validations):
         validation = require_object(value, f'{path}: semantic_validation[{index}]')
         workload = require_text(validation.get('workload'), f'{path}: semantic_validation[{index}].workload')
+        repetition = require_integer(validation.get('repetition'), f'{path}: semantic_validation[{index}].repetition')
+        if (
+            _revision(validation.get('base_revision'), f'{path}: semantic_validation[{index}].base_revision')
+            != BASELINE_REVISION
+        ):
+            raise HarnessError(f'{path}: semantic_validation[{index}].base_revision does not match the baseline')
+        if (
+            _revision(validation.get('head_revision'), f'{path}: semantic_validation[{index}].head_revision')
+            != evaluated_head_revision
+        ):
+            raise HarnessError(f'{path}: semantic_validation[{index}].head_revision does not match the evaluated head')
         if validation.get('response') != 'equivalent' or validation.get('lifecycle') != 'equivalent':
             raise HarnessError(f'{path}: {workload} lacks equivalent response and lifecycle validation')
-        proven.add(workload)
-    if proven != set(TAIL_WORKLOADS) or len(validations) != len(proven):
-        raise HarnessError(f'{path}: semantic_validation must cover each FastAPI paired workload exactly once')
+        counts = require_object(validation.get('event_counts'), f'{path}: semantic_validation[{index}].event_counts')
+        base_events = require_integer(counts.get('base'), f'{path}: semantic_validation[{index}].event_counts.base')
+        head_events = require_integer(counts.get('head'), f'{path}: semantic_validation[{index}].event_counts.head')
+        if base_events < 0 or head_events < 0 or base_events != head_events:
+            raise HarnessError(f'{path}: semantic_validation[{index}].event_counts must be equal non-negative counts')
+        if validation.get('teardown') != 'equivalent' or validation.get('deterministic') != 'passed':
+            raise HarnessError(f'{path}: {workload} lacks teardown or deterministic validation')
+        key = (workload, repetition)
+        if key in proven:
+            raise HarnessError(f'{path}: semantic_validation repeats {workload} repetition {repetition}')
+        proven.add(key)
+    expected = {(workload, repetition) for workload in TAIL_WORKLOADS for repetition in range(REPETITIONS)}
+    if proven != expected or len(validations) != len(expected):
+        raise HarnessError(f'{path}: semantic_validation must cover every FastAPI workload and repetition exactly once')
 
 
 def _tails(pairs: Mapping[str, Sequence[_Pair]]) -> tuple[Verdict, ...]:
