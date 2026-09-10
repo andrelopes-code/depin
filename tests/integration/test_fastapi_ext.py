@@ -437,8 +437,10 @@ async def test_install_resolves_multiple_injections_through_one_program() -> Non
     app = FastAPI()
 
     @app.get('/value')
-    async def value(left: Inject[Left], right: Inject[Right]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+    async def value(left: Inject[Left], right: Inject[Right]) -> dict[str, bool]:
         return {'shared': left.shared is right.shared}
+
+    _ = value
 
     fastapi_ext.install(app, container)
 

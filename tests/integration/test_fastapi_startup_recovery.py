@@ -116,8 +116,8 @@ def test_install_reserves_hidden_request_name_for_root_special_parameters() -> N
     )
 
 
-def test_install_does_not_reserve_nested_only_dependency_parameter_names() -> None:
-    """Nested dependency values do not collide with the root wrapper call."""
+def test_install_retains_inject_before_a_direct_native_dependency() -> None:
+    """A later direct native dependency preserves the original FastAPI graph."""
 
     class Service:
         pass
@@ -138,7 +138,7 @@ def test_install_does_not_reserve_nested_only_dependency_parameter_names() -> No
     _ = endpoint
     install(app, Container().bind(Service).freeze())
 
-    assert _route(app, '/').dependant.request_param_name == '__depin_request__'
+    assert _route(app, '/').dependant.request_param_name is None
 
 
 def test_install_does_not_recurse_when_selecting_hidden_request_name(monkeypatch: pytest.MonkeyPatch) -> None:

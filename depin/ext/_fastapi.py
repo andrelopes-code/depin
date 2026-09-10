@@ -265,6 +265,8 @@ def _plan_route(
             replacement.append(dependency)
     if not resolvers:
         return None
+    if not _direct_dependency_order_is_equivalent(dependencies):
+        return None
     if any(not isinstance(name, str) for name, _ in resolvers):
         raise _setup_error(f'route {route.path!r} has a direct Inject dependency with no parameter name')
     entries = tuple((name, resolver.key) for name, resolver in resolvers if isinstance(name, str))
@@ -459,6 +461,16 @@ def _setup_error(reason: str) -> FastAPIIntegrationError:
 
 def _is_resolver(call: object) -> TypeGuard[_InjectResolver[object]]:
     return isinstance(call, _InjectResolver)
+
+
+def _direct_dependency_order_is_equivalent(dependencies: list[Dependant]) -> bool:
+    saw_resolver = False
+    for dependency in dependencies:
+        if _is_resolver(dependency.call):
+            saw_resolver = True
+        elif saw_resolver:
+            return False
+    return True
 
 
 def _is_fastapi_request(value: object) -> TypeGuard[Request]:

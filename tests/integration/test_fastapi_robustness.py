@@ -126,8 +126,10 @@ async def test_streaming_response_round_trips() -> None:
     app.add_middleware(RequestScope, container=Container().freeze())
 
     @app.get('/stream')
-    async def _stream() -> StreamingResponse:  # pyright: ignore[reportUnusedFunction]
+    async def _stream() -> StreamingResponse:
         return StreamingResponse(gen(), media_type='text/plain')
+
+    _ = _stream
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url='http://t') as client:
@@ -150,8 +152,10 @@ async def test_route_body_parsing_unaffected_by_metadata_provider() -> None:
     app.add_middleware(RequestScope, container=frozen)
 
     @app.post('/m')
-    async def _m(payload: _Payload, probe: Inject[HeaderProbe]) -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
+    async def _m(payload: _Payload, probe: Inject[HeaderProbe]) -> dict[str, str]:
         return {'name': payload.name, 'probe': probe.probe}
+
+    _ = _m
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url='http://t') as client:
@@ -165,8 +169,10 @@ async def test_inject_outside_request_scope_raises_actionable_error() -> None:
     app = FastAPI()  # no RequestScope middleware installed
 
     @app.get('/x')
-    async def _x(svc: Inject[_Service]) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]
+    async def _x(svc: Inject[_Service]) -> dict[str, int]:
         return {'v': svc.value}
+
+    _ = _x
 
     transport = ASGITransport(app=app, raise_app_exceptions=True)
     async with AsyncClient(transport=transport, base_url='http://t') as client:
@@ -186,8 +192,10 @@ async def test_install_recompiles_routes_added_with_the_same_container() -> None
     fastapi_ext.install(app, container)
 
     @app.get('/value')
-    async def value(service: Inject[Service]) -> dict[str, int]:  # pyright: ignore[reportUnusedFunction]
+    async def value(service: Inject[Service]) -> dict[str, int]:
         return {'value': service.value}
+
+    _ = value
 
     fastapi_ext.install(app, container)
 
@@ -219,8 +227,10 @@ async def test_install_rejects_an_application_after_its_middleware_stack_is_buil
     app = FastAPI()
 
     @app.get('/plain')
-    async def plain() -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+    async def plain() -> dict[str, bool]:
         return {'ok': True}
+
+    _ = plain
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url='http://t') as client:
@@ -243,14 +253,18 @@ def test_install_does_not_mutate_earlier_routes_when_a_later_route_is_malformed(
     app = FastAPI()
 
     @app.get('/first')
-    async def first(service: Inject[First]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+    async def first(service: Inject[First]) -> dict[str, bool]:
         del service
         return {'ok': True}
 
+    _ = first
+
     @app.get('/second')
-    async def second(service: Inject[Second]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+    async def second(service: Inject[Second]) -> dict[str, bool]:
         del service
         return {'ok': True}
+
+    _ = second
 
     first_route = _route(app, '/first')
     second_route = _route(app, '/second')
@@ -276,14 +290,18 @@ def test_install_does_not_rebuild_when_a_later_route_handler_is_unavailable() ->
     app = FastAPI()
 
     @app.get('/first')
-    async def first(service: Inject[First]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+    async def first(service: Inject[First]) -> dict[str, bool]:
         del service
         return {'ok': True}
 
+    _ = first
+
     @app.get('/second')
-    async def second(service: Inject[Second]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+    async def second(service: Inject[Second]) -> dict[str, bool]:
         del service
         return {'ok': True}
+
+    _ = second
 
     first_route = _route(app, '/first')
     second_route = _route(app, '/second')
@@ -313,14 +331,18 @@ def test_install_does_not_call_a_route_handler_rebuild_with_an_arbitrary_failure
     app = FastAPI()
 
     @app.get('/first')
-    async def first(service: Inject[First]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+    async def first(service: Inject[First]) -> dict[str, bool]:
         del service
         return {'ok': True}
 
+    _ = first
+
     @app.get('/second')
-    async def second(service: Inject[Second]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+    async def second(service: Inject[Second]) -> dict[str, bool]:
         del service
         return {'ok': True}
+
+    _ = second
 
     first_route = _route(app, '/first')
     second_route = _route(app, '/second')
@@ -345,9 +367,11 @@ def test_install_rejects_an_invalid_application_shape_without_mutating_routes() 
     app = FastAPI()
 
     @app.get('/value')
-    async def value(service: Inject[Service]) -> dict[str, bool]:  # pyright: ignore[reportUnusedFunction]
+    async def value(service: Inject[Service]) -> dict[str, bool]:
         del service
         return {'ok': True}
+
+    _ = value
 
     route = _route(app, '/value')
     original_call: object = route.dependant.call
