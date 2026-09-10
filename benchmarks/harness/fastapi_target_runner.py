@@ -13,13 +13,15 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import math
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, TypeGuard
 
-WORKLOADS = (
+REQUIRED_WORKLOADS = (
     'fastapi_cpu_light_endpoint',
     'fastapi_request_scoped_graph',
     'fastapi_singletons_and_transients',
@@ -27,10 +29,189 @@ WORKLOADS = (
     'fastapi_endpoint_with_work',
     'fastapi_application_startup',
 )
+OPTIONAL_WORKLOADS = (
+    'fastapi_no_injection',
+    'fastapi_lazy_host_publication',
+    'fastapi_lazy_frame_activation_and_drain',
+    'fastapi_endpoint_program_one_key',
+    'fastapi_endpoint_program_many_keys',
+    'fastapi_request_seed_read',
+    'fastapi_async_resource_close',
+)
+
+
+class ReportError(RuntimeError):
+    """A target pytest-benchmark report that cannot be trusted."""
+
+
+class JsonObject(dict[str, object]):
+    """A JSON object built only by the duplicate-key-checking decoder."""
+
+
+@dataclass(frozen=True, slots=True)
+class DecodedReport:
+    sha256: str
+    aggregates: dict[str, dict[str, object]]
+    metrics: dict[str, dict[str, object]]
 
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _is_object(value: object) -> TypeGuard[dict[str, object]]:
+    return isinstance(value, JsonObject)
+
+
+def _object(value: object, where: str) -> dict[str, object]:
+    if not _is_object(value):
+        raise ReportError(f'{where}: expected an object with text keys')
+    return value
+
+
+def _is_array(value: object) -> TypeGuard[list[object]]:
+    return isinstance(value, list)
+
+
+def _array(value: object, where: str) -> list[object]:
+    if not _is_array(value):
+        raise ReportError(f'{where}: expected an array')
+    return value
+
+
+def _number(value: object, where: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ReportError(f'{where}: expected a number')
+    result = float(value)
+    if not math.isfinite(result) or result <= 0.0:
+        raise ReportError(f'{where}: expected a finite positive number')
+    return result
+
+
+def _integer(value: object, where: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ReportError(f'{where}: expected a positive integer')
+    return value
+
+
+def _quantile(values: list[float], fraction: float) -> float:
+    ordered = sorted(values)
+    position = fraction * (len(ordered) - 1)
+    lower = math.floor(position)
+    upper = math.ceil(position)
+    if lower == upper:
+        return ordered[lower]
+    return ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower)
+
+
+def _strict_report(path: Path) -> dict[str, object]:
+    def pairs(values: list[tuple[str, object]]) -> JsonObject:
+        decoded = JsonObject()
+        for key, value in values:
+            if key in decoded:
+                raise ReportError(f'{path}: duplicate JSON key {key!r}')
+            decoded[key] = value
+        return decoded
+
+    def invalid(constant: str) -> object:
+        raise ReportError(f'{path}: invalid JSON constant {constant!r}')
+
+    try:
+        return _object(
+            json.loads(path.read_text(encoding='utf-8'), object_pairs_hook=pairs, parse_constant=invalid), str(path)
+        )
+    except OSError as error:
+        raise ReportError(f'{path}: cannot read benchmark report ({error})') from error
+    except json.JSONDecodeError as error:
+        raise ReportError(f'{path}: invalid benchmark report ({error.msg})') from error
+
+
+def decode_report(report: Path, *, side: str, repetition: int, first: str) -> DecodedReport:
+    """Strictly reduce exactly the selected target-side pytest-benchmark report."""
+    before = digest(report)
+    payload = _strict_report(report)
+    entries = _array(payload.get('benchmarks'), f'{report}: benchmarks')
+    expected_workloads = REQUIRED_WORKLOADS + (OPTIONAL_WORKLOADS if side == 'head' else ())
+    expected = {f'test_latency[{workload}-{label}]' for workload in expected_workloads for label in ('direct', 'depin')}
+    required = {f'test_latency[{workload}-{label}]' for workload in REQUIRED_WORKLOADS for label in ('direct', 'depin')}
+    aggregates: dict[str, dict[str, object]] = {}
+    metrics: dict[str, dict[str, object]] = {}
+    for index, value in enumerate(entries):
+        entry = _object(value, f'{report}: benchmarks[{index}]')
+        name = entry.get('name')
+        if not isinstance(name, str) or not name:
+            raise ReportError(f'{report}: benchmarks[{index}].name must be text')
+        if name not in expected:
+            raise ReportError(f'{report}: unexpected benchmark {name!r}')
+        if name in aggregates:
+            raise ReportError(f'{report}: duplicate benchmark {name!r}')
+        stats = _object(entry.get('stats'), f'{report}: {name}.stats')
+        rounds = _integer(stats.get('rounds'), f'{report}: {name}.stats.rounds')
+        data = [
+            _number(item, f'{report}: {name}.stats.data')
+            for item in _array(stats.get('data'), f'{report}: {name}.stats.data')
+        ]
+        if len(data) != rounds:
+            raise ReportError(f'{report}: {name}.stats.data length does not match rounds')
+        aggregate: dict[str, object] = {
+            'rounds': rounds,
+            'minimum': _number(stats.get('min'), f'{report}: {name}.stats.min'),
+            'median': _number(stats.get('median'), f'{report}: {name}.stats.median'),
+            'mean': _number(stats.get('mean'), f'{report}: {name}.stats.mean'),
+            'stddev': _number(stats.get('stddev'), f'{report}: {name}.stats.stddev'),
+            'iqr': _number(stats.get('iqr'), f'{report}: {name}.stats.iqr'),
+            'p95': _quantile(data, 0.95),
+            'p99': _quantile(data, 0.99),
+        }
+        aggregates[name] = aggregate
+        metrics[name] = {
+            'case_id': name,
+            **aggregate,
+            'unit': 'seconds per operation',
+            'method': 'pytest-benchmark',
+            'side': side,
+            'repetition': repetition,
+            'first': first,
+            'order': 0 if side == first else 1,
+            'report_sha256': before,
+        }
+    if required - set(aggregates):
+        raise ReportError(f'{report}: missing required benchmark cases {sorted(required - set(aggregates))}')
+    if digest(report) != before:
+        raise ReportError(f'{report}: benchmark report digest changed while decoding')
+    return DecodedReport(before, aggregates, metrics)
+
+
+def _benchmark_expression(side: str) -> str:
+    workloads = REQUIRED_WORKLOADS + (OPTIONAL_WORKLOADS if side == 'head' else ())
+    return ' or '.join(workloads)
+
+
+def benchmark(root: Path, report: Path, side: str, repetition: int, first: str) -> DecodedReport:
+    if report.exists():
+        raise RuntimeError(f'{report} already exists; target benchmark reports are immutable')
+    report.parent.mkdir(parents=True, exist_ok=True)
+    command = (
+        sys.executable,
+        '-I',
+        '-m',
+        'pytest',
+        str(root / 'benchmarks' / 'test_latency.py'),
+        '--benchmark-only',
+        '-q',
+        f'--benchmark-json={report}',
+        '-k',
+        _benchmark_expression(side),
+    )
+    completed = subprocess.run(command, cwd=root, capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        raise RuntimeError(f'target pytest benchmark failed\n{completed.stdout}{completed.stderr}')
+    if not report.is_file():
+        raise RuntimeError('target pytest benchmark did not write its JSON report')
+    try:
+        return decode_report(report, side=side, repetition=repetition, first=first)
+    except ReportError as error:
+        raise RuntimeError(str(error)) from error
 
 
 def git(root: Path, *arguments: str) -> str:
@@ -128,6 +309,8 @@ def capture(
     cache: Path,
     side: str,
     repetition: int,
+    first: str,
+    benchmark_report: Path,
 ) -> None:
     distinct(root, out, bundle, environment, cache)
     clean_target(root, expected)
@@ -139,7 +322,7 @@ def capture(
     from benchmarks.workloads.application.inventory import WORKLOADS as inventory
 
     selected = {workload.name: workload for workload in inventory}
-    if set(WORKLOADS) - set(selected):
+    if set(REQUIRED_WORKLOADS) - set(selected):
         raise RuntimeError('target checkout lacks a required common FastAPI workload')
     imports = {}
     for module in (
@@ -154,7 +337,7 @@ def capture(
             raise RuntimeError(f'{module} has no resolved file')
         imports[module] = under(Path(location), root)
     records: list[dict[str, object]] = []
-    for name in WORKLOADS:
+    for name in REQUIRED_WORKLOADS:
         workload = selected[name]
         if workload.baseline is None:
             raise RuntimeError(f'{name} lacks a direct implementation')
@@ -165,6 +348,7 @@ def capture(
                 'direct': attempt(workload.baseline),
             }
         )
+    decoded = benchmark(root, benchmark_report, side, repetition, first)
     clean_target(root, expected)
     payload = {
         'schema_version': 2,
@@ -184,6 +368,13 @@ def capture(
         'pydepin_direct_url': installed('pydepin', root)[1],
         'imports': imports,
         'observations': records,
+        'first': first,
+        'benchmark_report': {
+            'path': str(benchmark_report.resolve()),
+            'sha256': decoded.sha256,
+            'aggregates': decoded.aggregates,
+        },
+        'benchmark_metrics': decoded.metrics,
     }
     out.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=out.parent, delete=False) as temporary:
@@ -204,6 +395,8 @@ def main() -> int:
     parser.add_argument('--cache-root', type=Path, required=True)
     parser.add_argument('--side', choices=('base', 'head'), required=True)
     parser.add_argument('--repetition', type=int, required=True)
+    parser.add_argument('--first', choices=('base', 'head'), required=True)
+    parser.add_argument('--benchmark-report', type=Path, required=True)
     arguments = parser.parse_args()
     try:
         capture(
@@ -216,6 +409,8 @@ def main() -> int:
             arguments.cache_root,
             arguments.side,
             arguments.repetition,
+            arguments.first,
+            arguments.benchmark_report,
         )
     except RuntimeError as error:
         _ = sys.stderr.write(f'{error}\n')

@@ -89,11 +89,21 @@ def collect(
         interpreter = interpreters.get(side)
         if interpreter is None or not interpreter.is_file():
             raise HarnessError(f'{side}: a locked target interpreter is required')
-        revision = _target_revision(root)
-        lock = _sha256(root / 'uv.lock')
-        manifests[side] = {'root': str(root.resolve()), 'revision': revision, 'lock_sha256': lock}
-        for repetition in range(REPETITIONS):
+        manifests[side] = {
+            'root': str(root.resolve()),
+            'revision': _target_revision(root),
+            'lock_sha256': _sha256(root / 'uv.lock'),
+        }
+    for repetition in range(REPETITIONS):
+        order = ('base', 'head') if repetition % 2 == 0 else ('head', 'base')
+        for side in order:
+            root = targets[side]
+            interpreter = interpreters[side]
+            manifest = require_object(manifests[side], f'{side} manifest')
+            revision = require_text(manifest.get('revision'), f'{side} manifest revision')
+            lock = require_text(manifest.get('lock_sha256'), f'{side} manifest lock SHA256')
             record = out / side / f'rep{repetition}.json'
+            report = bundle / 'reports' / side / f'rep{repetition}.json'
             argv = (
                 str(interpreter.resolve()),
                 '-I',
@@ -116,6 +126,10 @@ def collect(
                 side,
                 '--repetition',
                 str(repetition),
+                '--first',
+                order[0],
+                '--benchmark-report',
+                str(report),
             )
             completed = subprocess.run(argv, capture_output=True, text=True, check=False)
             if completed.returncode != 0:
@@ -308,6 +322,38 @@ def _raw(path: Path, side: str, repetition: int, revision: str, environment: Pat
     for workload in TAIL_WORKLOADS:
         _ = _report_aggregate(payload, path, workload, 'depin')
         _ = _report_aggregate(payload, path, workload, 'direct')
+    report = require_object(payload.get('benchmark_report'), f'{path}: benchmark report')
+    report_digest = require_text(report.get('sha256'), f'{path}: benchmark report.sha256')
+    metrics = require_object(payload.get('benchmark_metrics'), f'{path}: benchmark metrics')
+    expected_cases = {
+        f'test_latency[{workload}-{label}]' for workload in TAIL_WORKLOADS for label in ('direct', 'depin')
+    }
+    if set(metrics) != expected_cases:
+        raise HarnessError(f'{path}: benchmark metrics must exactly cover the common FastAPI inventory')
+    for case in expected_cases:
+        metric = require_object(metrics.get(case), f'{path}: benchmark metric {case}')
+        if require_text(metric.get('case_id'), f'{path}: benchmark metric {case}.case_id') != case:
+            raise HarnessError(f'{path}: benchmark metric case identifier mismatch')
+        if require_text(metric.get('report_sha256'), f'{path}: benchmark metric {case}.report_sha256') != report_digest:
+            raise HarnessError(f'{path}: benchmark metric digest mismatch')
+        if require_text(metric.get('side'), f'{path}: benchmark metric {case}.side') != side:
+            raise HarnessError(f'{path}: benchmark metric side mismatch')
+        if require_integer(metric.get('repetition'), f'{path}: benchmark metric {case}.repetition') != repetition:
+            raise HarnessError(f'{path}: benchmark metric repetition mismatch')
+        expected_first = 'base' if repetition % 2 == 0 else 'head'
+        if require_text(metric.get('first'), f'{path}: benchmark metric {case}.first') != expected_first:
+            raise HarnessError(f'{path}: benchmark metric first-side mismatch')
+        expected_order = 0 if side == expected_first else 1
+        if require_integer(metric.get('order'), f'{path}: benchmark metric {case}.order') != expected_order:
+            raise HarnessError(f'{path}: benchmark metric order mismatch')
+        if require_text(metric.get('unit'), f'{path}: benchmark metric {case}.unit') != 'seconds per operation':
+            raise HarnessError(f'{path}: benchmark metric unit mismatch')
+        if require_text(metric.get('method'), f'{path}: benchmark metric {case}.method') != 'pytest-benchmark':
+            raise HarnessError(f'{path}: benchmark metric method mismatch')
+        for field in ('median', 'p95', 'p99'):
+            _ = _positive(metric.get(field), f'{path}: benchmark metric {case}.{field}')
+        if require_integer(metric.get('rounds'), f'{path}: benchmark metric {case}.rounds') <= 0:
+            raise HarnessError(f'{path}: benchmark metric {case}.rounds must be positive')
     return payload
 
 

@@ -11,6 +11,28 @@ HEAD_REVISION = 'f' * 40
 
 
 def _raw(side: str, repetition: int, revision: str, interpreter: str) -> dict[str, object]:
+    aggregates = {
+        f'test_latency[{name}-{label}]': {
+            'rounds': 1000,
+            'minimum': 0.001,
+            'median': 0.010 if label == 'depin' else 0.005,
+            'mean': 0.010 if label == 'depin' else 0.005,
+            'stddev': 0.0001,
+            'iqr': 0.0001,
+            'p95': 0.011 if label == 'depin' else 0.006,
+            'p99': 0.012 if label == 'depin' else 0.007,
+        }
+        for name in (
+            'fastapi_cpu_light_endpoint',
+            'fastapi_request_scoped_graph',
+            'fastapi_singletons_and_transients',
+            'fastapi_async_resource_teardown',
+            'fastapi_endpoint_with_work',
+            'fastapi_application_startup',
+        )
+        for label in ('depin', 'direct')
+    }
+    report_sha256 = 'a' * 64
     return {
         'schema_version': 1,
         'side': side,
@@ -18,27 +40,22 @@ def _raw(side: str, repetition: int, revision: str, interpreter: str) -> dict[st
         'revision': revision,
         'interpreter': interpreter,
         'benchmark_report': {
-            'aggregates': {
-                f'test_latency[{name}-{label}]': {
-                    'rounds': 1000,
-                    'minimum': 0.001,
-                    'median': 0.010 if label == 'depin' else 0.005,
-                    'mean': 0.010 if label == 'depin' else 0.005,
-                    'stddev': 0.0001,
-                    'iqr': 0.0001,
-                    'p95': 0.011 if label == 'depin' else 0.006,
-                    'p99': 0.012 if label == 'depin' else 0.007,
-                }
-                for name in (
-                    'fastapi_cpu_light_endpoint',
-                    'fastapi_request_scoped_graph',
-                    'fastapi_singletons_and_transients',
-                    'fastapi_async_resource_teardown',
-                    'fastapi_endpoint_with_work',
-                    'fastapi_application_startup',
-                )
-                for label in ('depin', 'direct')
+            'sha256': report_sha256,
+            'aggregates': aggregates,
+        },
+        'benchmark_metrics': {
+            case: {
+                'case_id': case,
+                **aggregate,
+                'unit': 'seconds per operation',
+                'method': 'pytest-benchmark',
+                'side': side,
+                'repetition': repetition,
+                'first': 'base' if repetition % 2 == 0 else 'head',
+                'order': 0 if side == ('base' if repetition % 2 == 0 else 'head') else 1,
+                'report_sha256': report_sha256,
             }
+            for case, aggregate in aggregates.items()
         },
         'guards': [
             {
@@ -104,6 +121,19 @@ def test_reduction_refuses_duplicate_or_wrong_raw_provenance(tmp_path: Path) -> 
     write_json(tmp_path / 'raw' / 'base' / 'rep4.json', payload)
 
     with pytest.raises(HarnessError, match='repetition'):
+        reduce(tmp_path / 'raw', BASELINE_REVISION, HEAD_REVISION, {'base': '/tmp/base-env', 'head': '/tmp/head-env'})
+
+
+def test_reduction_refuses_a_metric_bound_to_another_report_digest(tmp_path: Path) -> None:
+    for repetition in range(5):
+        _write_pair(tmp_path, repetition)
+    payload = read_json(tmp_path / 'raw' / 'head' / 'rep2.json')
+    metrics = require_object(payload.get('benchmark_metrics'), 'benchmark metrics')
+    metric = require_object(metrics.get('test_latency[fastapi_cpu_light_endpoint-depin]'), 'benchmark metric')
+    metric['report_sha256'] = 'b' * 64
+    write_json(tmp_path / 'raw' / 'head' / 'rep2.json', payload)
+
+    with pytest.raises(HarnessError, match='digest mismatch'):
         reduce(tmp_path / 'raw', BASELINE_REVISION, HEAD_REVISION, {'base': '/tmp/base-env', 'head': '/tmp/head-env'})
 
 
