@@ -807,12 +807,14 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
             'base': {
                 'repetitions': [
                     {'record': aggregate_record(record, index)} for index, record in enumerate(base_records)
-                ]
+                ],
+                'deterministic': {'work': {}, 'allocations': {}, 'retained': {}, 'scaling': {}},
             },
             'head': {
                 'repetitions': [
                     {'record': aggregate_record(record, index)} for index, record in enumerate(head_records)
-                ]
+                ],
+                'deterministic': {'work': {}, 'allocations': {}, 'retained': {}, 'scaling': {}},
             },
         },
         'envelopes': {'base': list(base_records), 'head': list(head_records)},
@@ -985,6 +987,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                         / f'rep{require_integer(record.get("repetition"), "dataset repetition")}.json',
                         record,
                     )
+                write_json(
+                    arguments.out / 'dataset' / side / 'deterministic.json',
+                    require_object(
+                        require_object(dataset[side], f'{side} dataset').get('deterministic'), 'deterministic'
+                    ),
+                )
             write_json(arguments.out / 'attribution.json', require_object(output['attribution'], 'attribution output'))
             write_json(arguments.out / 'sidecars.json', require_object(output['sidecars'], 'sidecars output'))
             write_json(arguments.out / 'provenance.json', require_object(output['provenance'], 'provenance output'))

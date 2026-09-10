@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from benchmarks.harness import HarnessError, read_json, require_array, require_integer, require_object, write_json
+from benchmarks.harness import HarnessError, gate, read_json, require_array, require_integer, require_object, write_json
 from benchmarks.harness.fastapi_acceptance import COMPONENT_WORKLOADS, TAIL_WORKLOADS, evaluate
 from benchmarks.harness.fastapi_evidence import BASELINE_REVISION, reduce
 
@@ -179,6 +179,10 @@ def test_reduction_preserves_repetitions_and_projects_evaluator_inputs(tmp_path:
                 record = require_object(require_object(entry, 'entry')['record'], 'record')
                 repetition = require_integer(record.get('repetition'), 'repetition')
                 write_json(tmp_path / 'evidence' / name / f'rep{repetition}.json', record)
+            write_json(
+                tmp_path / 'evidence' / name / 'deterministic.json',
+                require_object(require_object(payload, name)['deterministic'], 'deterministic'),
+            )
     for name in ('attribution', 'sidecars', 'provenance'):
         write_json(tmp_path / 'evidence' / f'{name}.json', require_object(output[name], name))
     assert evaluate(
@@ -186,6 +190,22 @@ def test_reduction_preserves_repetitions_and_projects_evaluator_inputs(tmp_path:
         *(tmp_path / 'evidence' / f'{name}.json' for name in ('attribution', 'sidecars', 'provenance')),
         evaluated_head_revision=HEAD_REVISION,
     ).passed
+    assert gate.run(tmp_path / 'evidence', Path('benchmarks/budgets.toml')) == gate.EXIT_PASS
+    deterministic = tmp_path / 'evidence' / 'head' / 'deterministic.json'
+    deterministic.unlink()
+    with pytest.raises(HarnessError, match='cannot be read'):
+        _ = gate.run(tmp_path / 'evidence', Path('benchmarks/budgets.toml'))
+    write_json(deterministic, {'work': [], 'allocations': {}, 'retained': {}, 'scaling': {}})
+    with pytest.raises(HarnessError, match='work'):
+        _ = gate.run(tmp_path / 'evidence', Path('benchmarks/budgets.toml'))
+
+
+def test_generic_projection_requires_exact_deterministic_layout(tmp_path: Path) -> None:
+    output = _reduced(tmp_path)
+    dataset = require_object(output['dataset'], 'dataset')
+    deterministic = require_object(require_object(dataset['base'], 'base')['deterministic'], 'deterministic')
+
+    assert deterministic == {'work': {}, 'allocations': {}, 'retained': {}, 'scaling': {}}
 
 
 @pytest.mark.parametrize(
