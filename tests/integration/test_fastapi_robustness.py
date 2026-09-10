@@ -3,6 +3,8 @@ from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
 import fastapi.dependencies.models as fastapi_models
+import fastapi.dependencies.utils as fastapi_utils
+import fastapi.routing as fastapi_routing
 import pytest
 from fastapi import BackgroundTasks, Depends, FastAPI, Security, WebSocket
 from fastapi import Request as FastAPIRequest
@@ -1030,7 +1032,7 @@ async def test_installed_no_inject_failure_re_raises_and_restores_outer_host() -
     assert optional_hosted_container() is None
 
 
-def test_install_accepts_fastapi_without_models_coroutine_detector(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_install_accepts_fastapi_0133_coroutine_detector(monkeypatch: pytest.MonkeyPatch) -> None:
     class Service:
         pass
 
@@ -1042,6 +1044,161 @@ def test_install_accepts_fastapi_without_models_coroutine_detector(monkeypatch: 
         return {'injected': True}
 
     _ = endpoint
+    detector = vars(fastapi_models)['_is_coroutine_callable']
+    monkeypatch.setattr(fastapi_routing, 'is_async_callable', detector, raising=False)
+    monkeypatch.delattr(fastapi_utils, '_is_coroutine_callable')
     monkeypatch.delattr(fastapi_models, '_is_coroutine_callable')
 
     fastapi_ext.install(app, Container().bind(Service).freeze())
+
+
+def test_install_rejects_fastapi_without_a_coroutine_detector(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Service:
+        pass
+
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint(service: Inject[Service]) -> None:
+        del service
+
+    _ = endpoint
+    monkeypatch.delattr(fastapi_routing, 'is_async_callable', raising=False)
+    monkeypatch.delattr(fastapi_utils, '_is_coroutine_callable')
+    monkeypatch.delattr(fastapi_models, '_is_coroutine_callable')
+
+    with pytest.raises(FastAPIIntegrationError, match='coroutine-shape detector'):
+        fastapi_ext.install(app, Container().bind(Service).freeze())
+
+
+@pytest.mark.parametrize(
+    ('attribute', 'value', 'message'),
+    [
+        ('middleware_stack', object(), 'middleware stack'),
+        ('add_middleware', None, 'add_middleware'),
+    ],
+)
+def test_install_rejects_invalid_application_shapes(attribute: str, value: object, message: str) -> None:
+    app = FastAPI()
+    object.__setattr__(app, attribute, value)
+
+    with pytest.raises(FastAPIIntegrationError, match=message):
+        fastapi_ext.install(app, Container().freeze())
+
+
+def test_install_rejects_nonlist_application_routes() -> None:
+    app = FastAPI()
+    object.__setattr__(app.router, 'routes', ())
+
+    with pytest.raises(FastAPIIntegrationError, match='routes'):
+        fastapi_ext.install(app, Container().freeze())
+
+
+def test_install_rejects_duplicate_lazy_request_middleware() -> None:
+    app = FastAPI()
+    container = Container().freeze()
+    fastapi_ext.install(app, container)
+    app.user_middleware.append(app.user_middleware[0])
+
+    with pytest.raises(FastAPIIntegrationError, match='multiple depin'):
+        fastapi_ext.install(app, container)
+
+
+def test_compile_route_reports_whether_a_route_was_compiled() -> None:
+    import depin.ext._fastapi as implementation
+
+    class Service:
+        pass
+
+    app = FastAPI()
+
+    @app.get('/plain')
+    async def plain() -> None:
+        return None
+
+    @app.get('/injected')
+    async def injected(service: Inject[Service]) -> None:
+        del service
+
+    _ = plain, injected
+    container = Container().bind(Service).freeze()
+
+    assert not implementation.compile_route(_route(app, '/plain'), container)
+    assert implementation.compile_route(_route(app, '/injected'), container)
+
+
+def test_install_rejects_a_route_missing_required_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint() -> None:
+        return None
+
+    _ = endpoint
+    monkeypatch.delattr(_route(app, '/'), 'app')
+
+    with pytest.raises(FastAPIIntegrationError, match="required attribute 'app'"):
+        fastapi_ext.install(app, Container().freeze())
+
+
+def test_install_rejects_a_non_fastapi_root_dependant() -> None:
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint() -> None:
+        return None
+
+    _ = endpoint
+    object.__setattr__(_route(app, '/'), 'dependant', object())
+
+    with pytest.raises(FastAPIIntegrationError, match='mutable Dependant'):
+        fastapi_ext.install(app, Container().freeze())
+
+
+def test_install_rejects_a_dependant_missing_required_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint() -> None:
+        return None
+
+    _ = endpoint
+    monkeypatch.delattr(_route(app, '/').dependant, 'body_params')
+
+    with pytest.raises(FastAPIIntegrationError, match="required attribute 'body_params'"):
+        fastapi_ext.install(app, Container().freeze())
+
+
+def test_install_rejects_an_unnamed_inject_dependency() -> None:
+    class Service:
+        pass
+
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint(service: Inject[Service]) -> None:
+        del service
+
+    _ = endpoint
+    dependency = _route(app, '/').dependant.dependencies[0]
+    object.__setattr__(dependency, 'name', None)
+
+    with pytest.raises(FastAPIIntegrationError, match='no parameter name'):
+        fastapi_ext.install(app, Container().bind(Service).freeze())
+
+
+def test_install_rejects_a_route_without_an_endpoint_call() -> None:
+    class Service:
+        pass
+
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint(service: Inject[Service]) -> None:
+        del service
+
+    _ = endpoint
+    object.__setattr__(_route(app, '/').dependant, 'call', None)
+
+    with pytest.raises(FastAPIIntegrationError, match='no callable endpoint'):
+        fastapi_ext.install(app, Container().bind(Service).freeze())
