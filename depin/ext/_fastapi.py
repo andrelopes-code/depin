@@ -6,6 +6,7 @@ from typing import Annotated, Final, Protocol, TypeGuard, override, runtime_chec
 
 import fastapi
 import fastapi.dependencies.models as fastapi_models
+import fastapi.dependencies.utils as fastapi_utils
 from fastapi import FastAPI, Request
 from fastapi.dependencies.models import Dependant
 from fastapi.dependencies.utils import get_dependant
@@ -427,10 +428,11 @@ def _program_dependant(route: APIRoute, program: _EndpointProgram, name: str) ->
 
 
 def _coroutine_shape() -> _CoroutineShape:
-    candidate = vars(fastapi_models).get('_is_coroutine_callable')
-    if not isinstance(candidate, _CoroutineShape):
-        raise _setup_error('FastAPI does not expose a callable coroutine-shape detector')
-    return candidate
+    for module in (fastapi_utils, fastapi_models):
+        candidate = vars(module).get('_is_coroutine_callable')
+        if isinstance(candidate, _CoroutineShape):
+            return candidate
+    raise _setup_error('FastAPI does not expose a callable coroutine-shape detector')
 
 
 def _require_application_shape(app: FastAPI) -> list[Middleware]:

@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
+import fastapi.dependencies.models as fastapi_models
 import pytest
 from fastapi import BackgroundTasks, Depends, FastAPI, Security, WebSocket
 from fastapi import Request as FastAPIRequest
@@ -1027,3 +1028,20 @@ async def test_installed_no_inject_failure_re_raises_and_restores_outer_host() -
     assert frames == [False]
     assert container.scope_activity() == (0, 0)
     assert optional_hosted_container() is None
+
+
+def test_install_accepts_fastapi_without_models_coroutine_detector(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Service:
+        pass
+
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint(service: Inject[Service]) -> dict[str, bool]:
+        del service
+        return {'injected': True}
+
+    _ = endpoint
+    monkeypatch.delattr(fastapi_models, '_is_coroutine_callable')
+
+    fastapi_ext.install(app, Container().bind(Service).freeze())

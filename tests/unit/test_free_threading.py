@@ -234,7 +234,7 @@ def test_scopes_stay_isolated_and_every_teardown_runs_with_no_gil() -> None:
 
 def test_the_unified_flight_table_survives_concurrent_creation() -> None:
     frame = ScopeFrame()
-    mutex = object.__getattribute__(frame, '_mutex')
+    mutex = object.__getattribute__(frame, 'mutex')
     assert isinstance(mutex, type(threading.Lock()))
     object.__setattr__(frame, '_flights', _RendezvousFlightTable(mutex, threading.Barrier(THREADS)))
 
