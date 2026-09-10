@@ -58,6 +58,16 @@ DEFAULT_SEED = 20260902
 REPORT_PLACEHOLDER = '{report}'
 ENVIRONMENT_FILE = 'environment.json'
 DETERMINISTIC_FILE = 'deterministic.json'
+HEAD_ONLY_LATENCY_WORKLOADS = (
+    'fastapi_no_injection',
+    'fastapi_lazy_host_publication',
+    'fastapi_lazy_frame_activation_and_drain',
+    'fastapi_endpoint_program_one_key',
+    'fastapi_endpoint_program_many_keys',
+    'fastapi_request_seed_read',
+    'fastapi_async_resource_close',
+)
+PAIRED_SELECTOR = ' and '.join(f'not {workload}' for workload in HEAD_ONLY_LATENCY_WORKLOADS)
 # No `--benchmark-min-rounds` here. pytest-benchmark's calibration under-samples
 # a workload often enough to matter — one repetition of `build_the_graph_view` ran
 # 16 rounds where its four siblings ran 183 to 232 — but the floor that repairs
@@ -68,9 +78,11 @@ DETERMINISTIC_FILE = 'deterministic.json'
 LATENCY_COMMAND = (
     '-m',
     'pytest',
-    'benchmarks',
+    'benchmarks/test_latency.py',
     '--benchmark-only',
     '-q',
+    '-k',
+    PAIRED_SELECTOR,
     '--benchmark-json={report}',
 )
 DETERMINISTIC_COMMAND = ('-m', 'benchmarks.harness.pairs', '--deterministic', '{report}')

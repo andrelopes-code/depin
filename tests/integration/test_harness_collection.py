@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from benchmarks.harness import HarnessError, gate, pairs, require_object
-from benchmarks.workloads import scale
+from benchmarks.workloads import PAIRED_WORKLOADS, WORKLOADS, scale
 
 from .test_harness_gate import budget_file, latency_budget, work_budget
 
@@ -120,6 +120,14 @@ def test_a_collection_gates_end_to_end(tmp_path: Path) -> None:
     budgets = budget_file(tmp_path / 'budgets.toml', [latency_budget('probe'), work_budget('probe')])
 
     assert gate.main([str(out), '--budgets', str(budgets)]) == gate.EXIT_REGRESSION
+
+
+def test_default_latency_collection_excludes_head_only_cases_across_revisions() -> None:
+    head_only = {workload.name for workload in WORKLOADS} - {workload.name for workload in PAIRED_WORKLOADS}
+
+    assert pairs.LATENCY_COMMAND[2] == 'benchmarks/test_latency.py'
+    assert set(pairs.HEAD_ONLY_LATENCY_WORKLOADS) == head_only
+    assert pairs.LATENCY_COMMAND[-3:] == ('-k', pairs.PAIRED_SELECTOR, '--benchmark-json={report}')
 
 
 def test_a_collection_refuses_a_revision_directory_that_does_not_exist(tmp_path: Path) -> None:

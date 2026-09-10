@@ -116,8 +116,10 @@ The correction is limited to the evidence system:
 6. The generated report renders scalar and array provenance fields emitted by
    the real collector.
 7. FastAPI diagnostics declared head-only are retained in their dedicated
-   inventories but excluded from the generic paired collector, whose budget
-   completeness gate otherwise rejects them by design.
+   inventories. The generic paired command targets only the canonical latency
+   shell and carries a revision-independent exclusion selector, so an older base
+   tree cannot reintroduce unbudgeted diagnostics and the budget-completeness
+   gate can continue to reject them by design.
 
 The stored dedicated and generic outputs are
 [`fastapi-acceptance.txt`](fastapi-acceptance.txt) and
