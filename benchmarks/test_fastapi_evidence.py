@@ -140,6 +140,9 @@ def test_reduction_preserves_repetitions_and_projects_evaluator_inputs(tmp_path:
         for value in base
     ] == [0, 1, 2, 3, 4]
     assert require_object(require_object(output['sidecars'], 'sidecars')['retained_memory'], 'memory')['base'] == 102.0
+    assert require_object(require_object(output['sidecars'], 'sidecars')['contention'], 'contention')['base'] == 0.0102
+    semantic = require_array(require_object(output['provenance'], 'provenance')['semantic_validation'], 'semantic')
+    assert len(semantic) == 30
     for name, payload in dataset.items():
         if name == 'environment.json':
             write_json(tmp_path / 'evidence' / name, require_object(payload, name))
@@ -164,6 +167,9 @@ def test_reduction_preserves_repetitions_and_projects_evaluator_inputs(tmp_path:
         (('memory', 'retained', 'value'), float('nan'), 'invalid JSON constant'),
         (('contention', 'config', 'workers'), 3, 'contention configuration'),
         (('head_only', 'components'), {}, 'component inventory'),
+        (('benchmark_report', 'aggregates', 'test_latency[fastapi_cpu_light_endpoint-depin]', 'extra'), 1, 'fields'),
+        (('benchmark_metrics', 'test_latency[fastapi_cpu_light_endpoint-depin]', 'extra'), 1, 'fields'),
+        (('observations',), [], 'observations must exactly cover'),
     ],
 )
 def test_reduction_refuses_invalid_envelope(tmp_path: Path, path: tuple[str, ...], value: object, message: str) -> None:
@@ -182,4 +188,30 @@ def test_reduction_refuses_duplicate_json_key(tmp_path: Path) -> None:
     _ = _reduced(tmp_path)
     (tmp_path / 'raw' / 'base' / 'rep0.json').write_text('{"schema_version":3,"schema_version":3}', encoding='utf-8')
     with pytest.raises(HarnessError, match='duplicate JSON key'):
+        reduce(tmp_path / 'raw', BASELINE_REVISION, HEAD_REVISION, {'base': '/tmp/base-env', 'head': '/tmp/head-env'})
+
+
+def test_reduction_accepts_zero_dispersion_but_refuses_empty_resource_teardown(tmp_path: Path) -> None:
+    _ = _reduced(tmp_path)
+    payload = read_json(tmp_path / 'raw' / 'head' / 'rep2.json')
+    aggregate = require_object(
+        require_object(payload['benchmark_report'], 'report')['aggregates'], 'aggregates'
+    )['test_latency[fastapi_cpu_light_endpoint-depin]']
+    aggregate_fields = require_object(aggregate, 'aggregate')
+    aggregate_fields['stddev'] = 0.0
+    aggregate_fields['iqr'] = 0.0
+    metric = require_object(payload['benchmark_metrics'], 'metrics')['test_latency[fastapi_cpu_light_endpoint-depin]']
+    metric_fields = require_object(metric, 'metric')
+    metric_fields['stddev'] = 0.0
+    metric_fields['iqr'] = 0.0
+    resource = next(
+        require_object(entry, 'observation')
+        for entry in require_array(payload['observations'], 'observations')
+        if require_object(entry, 'observation')['workload'] == 'fastapi_async_resource_teardown'
+    )
+    for label in ('depin', 'direct'):
+        require_object(resource[label], label)['constructed'] = []
+        require_object(resource[label], label)['closed'] = []
+    write_json(tmp_path / 'raw' / 'head' / 'rep2.json', payload)
+    with pytest.raises(HarnessError, match='teardown must close'):
         reduce(tmp_path / 'raw', BASELINE_REVISION, HEAD_REVISION, {'base': '/tmp/base-env', 'head': '/tmp/head-env'})

@@ -53,6 +53,7 @@ class DecodedReport:
     sha256: str
     aggregates: dict[str, dict[str, object]]
     metrics: dict[str, dict[str, object]]
+    head_only: dict[str, dict[str, object]]
 
 
 def digest(path: Path) -> str:
@@ -85,6 +86,15 @@ def _number(value: object, where: str) -> float:
     result = float(value)
     if not math.isfinite(result) or result <= 0.0:
         raise ReportError(f'{where}: expected a finite positive number')
+    return result
+
+
+def _nonnegative(value: object, where: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ReportError(f'{where}: expected a number')
+    result = float(value)
+    if not math.isfinite(result) or result < 0.0:
+        raise ReportError(f'{where}: expected a finite non-negative number')
     return result
 
 
@@ -131,11 +141,18 @@ def decode_report(report: Path, *, side: str, repetition: int, first: str) -> De
     before = digest(report)
     payload = _strict_report(report)
     entries = _array(payload.get('benchmarks'), f'{report}: benchmarks')
-    expected_workloads = REQUIRED_WORKLOADS + (OPTIONAL_WORKLOADS if side == 'head' else ())
-    expected = {f'test_latency[{workload}-{label}]' for workload in expected_workloads for label in ('direct', 'depin')}
+    common = {f'test_latency[{workload}-{label}]' for workload in REQUIRED_WORKLOADS for label in ('direct', 'depin')}
+    optional: set[str] = (
+        {f'test_latency[fastapi_no_injection-{label}]' for label in ('direct', 'depin')}
+        | {f'test_latency[{workload}-depin]' for workload in OPTIONAL_WORKLOADS if workload != 'fastapi_no_injection'}
+        if side == 'head'
+        else set()
+    )
+    expected = common | optional
     required = {f'test_latency[{workload}-{label}]' for workload in REQUIRED_WORKLOADS for label in ('direct', 'depin')}
     aggregates: dict[str, dict[str, object]] = {}
     metrics: dict[str, dict[str, object]] = {}
+    head_only: dict[str, dict[str, object]] = {}
     for index, value in enumerate(entries):
         entry = _object(value, f'{report}: benchmarks[{index}]')
         name = entry.get('name')
@@ -158,11 +175,14 @@ def decode_report(report: Path, *, side: str, repetition: int, first: str) -> De
             'minimum': _number(stats.get('min'), f'{report}: {name}.stats.min'),
             'median': _number(stats.get('median'), f'{report}: {name}.stats.median'),
             'mean': _number(stats.get('mean'), f'{report}: {name}.stats.mean'),
-            'stddev': _number(stats.get('stddev'), f'{report}: {name}.stats.stddev'),
-            'iqr': _number(stats.get('iqr'), f'{report}: {name}.stats.iqr'),
+            'stddev': _nonnegative(stats.get('stddev'), f'{report}: {name}.stats.stddev'),
+            'iqr': _nonnegative(stats.get('iqr'), f'{report}: {name}.stats.iqr'),
             'p95': _quantile(data, 0.95),
             'p99': _quantile(data, 0.99),
         }
+        if name not in common:
+            head_only[name] = aggregate
+            continue
         aggregates[name] = aggregate
         metrics[name] = {
             'case_id': name,
@@ -179,12 +199,28 @@ def decode_report(report: Path, *, side: str, repetition: int, first: str) -> De
         raise ReportError(f'{report}: missing required benchmark cases {sorted(required - set(aggregates))}')
     if digest(report) != before:
         raise ReportError(f'{report}: benchmark report digest changed while decoding')
-    return DecodedReport(before, aggregates, metrics)
+    return DecodedReport(before, aggregates, metrics, head_only)
 
 
 def _benchmark_expression(side: str) -> str:
     workloads = REQUIRED_WORKLOADS + (OPTIONAL_WORKLOADS if side == 'head' else ())
     return ' or '.join(workloads)
+
+
+def _measurement(value: float, unit: str, method: str) -> dict[str, object]:
+    return {'value': value, 'unit': unit, 'method': method}
+
+
+def _aggregate_measurement(
+    decoded: DecodedReport, case: str, unit: str, method: str
+) -> dict[str, object]:
+    aggregate = decoded.head_only.get(case)
+    if aggregate is None:
+        raise RuntimeError(f'{case}: target benchmark report lacks the required head-only case')
+    value = aggregate.get('median')
+    if not isinstance(value, float):
+        raise RuntimeError(f'{case}: target benchmark median is malformed')
+    return _measurement(value, unit, method)
 
 
 def benchmark(root: Path, report: Path, side: str, repetition: int, first: str) -> DecodedReport:
@@ -319,12 +355,14 @@ def capture(
     if out.exists():
         raise RuntimeError(f'{out} already exists; raw target records are immutable')
     sys.path.insert(0, str(root))
+    from benchmarks.experiments import contention
+    from benchmarks.harness import environment as harness_environment
+    from benchmarks.harness import memory, work
     from benchmarks.workloads.application.inventory import WORKLOADS as inventory
 
     selected = {workload.name: workload for workload in inventory}
     if set(REQUIRED_WORKLOADS) - set(selected):
         raise RuntimeError('target checkout lacks a required common FastAPI workload')
-    imports = {}
     for module in (
         'depin',
         'benchmarks',
@@ -335,7 +373,8 @@ def capture(
         location = getattr(loaded, '__file__', None)
         if not isinstance(location, str):
             raise RuntimeError(f'{module} has no resolved file')
-        imports[module] = under(Path(location), root)
+        _ = under(Path(location), root)
+    _ = tuple(installed(name, root) for name in ('pydepin', 'pytest', 'pytest-benchmark', 'fastapi', 'starlette'))
     records: list[dict[str, object]] = []
     for name in REQUIRED_WORKLOADS:
         workload = selected[name]
@@ -348,34 +387,78 @@ def capture(
                 'direct': attempt(workload.baseline),
             }
         )
+    cpu = selected.get('fastapi_cpu_light_endpoint')
+    if cpu is None:
+        raise RuntimeError('fastapi_cpu_light_endpoint is absent from the target inventory')
+    prepared = cpu.subject.prepare()
+    try:
+        allocation = memory.allocations_per_operation(prepared.call, operations=1)
+        retained = memory.retained(prepared.call)
+        calls = work.calls_per_operation(prepared.call, operations=1)
+    finally:
+        if prepared.close is not None:
+            prepared.close()
+    profile = contention.collect(samples=5, workers=2)['profiles']['request_scopes']
     decoded = benchmark(root, benchmark_report, side, repetition, first)
     clean_target(root, expected)
     payload = {
-        'schema_version': 2,
+        'schema_version': 3,
         'side': side,
         'repetition': repetition,
         'revision': expected,
-        'source_root': str(root.resolve()),
         'interpreter': str(Path(sys.executable).resolve()),
-        'prefix': str(Path(sys.prefix).resolve()),
-        'lock_sha256': digest(root / 'uv.lock'),
-        'runner_sha256': digest(Path(__file__)),
-        'clean_before': True,
-        'clean_after': True,
-        'pins': {
-            name: installed(name, root)[0] for name in ('pydepin', 'pytest', 'pytest-benchmark', 'fastapi', 'starlette')
-        },
-        'pydepin_direct_url': installed('pydepin', root)[1],
-        'imports': imports,
+        'environment': harness_environment.capture(),
         'observations': records,
         'first': first,
         'benchmark_report': {
-            'path': str(benchmark_report.resolve()),
             'sha256': decoded.sha256,
             'aggregates': decoded.aggregates,
         },
         'benchmark_metrics': decoded.metrics,
+        'memory': {
+            'retained': _measurement(float(retained), 'bytes', 'tracemalloc-retained'),
+            'allocations': _measurement(float(allocation.blocks), 'allocation-count', 'tracemalloc-allocation-count'),
+            'peak': _measurement(float(allocation.peak), 'bytes', 'tracemalloc-peak'),
+            'work': {
+                **_measurement(float(calls), 'calls per operation', 'calls-per-operation'),
+                'operations': 1,
+                'sample_count': 1,
+                'config': {'operations': 1},
+            },
+        },
+        'contention': {
+            'config': {'samples': 5, 'workers': 2},
+            'direct': _measurement(profile['direct']['p99_seconds'], 'seconds', 'synchronized-wave'),
+            'depin': _measurement(profile['depin']['p99_seconds'], 'seconds', 'synchronized-wave'),
+        },
     }
+    if side == 'head':
+        from benchmarks.workloads.component.fastapi import WORKLOADS as components
+
+        control = _aggregate_measurement(
+            decoded, 'test_latency[fastapi_no_injection-direct]', 'seconds per operation', 'direct-null'
+        )
+        payload['head_only'] = {
+            'no_injection': {
+                'direct': control,
+                'depin': _aggregate_measurement(
+                    decoded, 'test_latency[fastapi_no_injection-depin]', 'seconds per operation', 'direct-null'
+                ),
+            },
+            'components': {
+                workload.name: {
+                    'control': control,
+                    'depin': _aggregate_measurement(
+                        decoded,
+                        f'test_latency[{workload.name}-depin]',
+                        'seconds per operation',
+                        'component-observation',
+                    ),
+                    'config': {'control_case': 'test_latency[fastapi_no_injection-direct]'},
+                }
+                for workload in components
+            },
+        }
     out.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=out.parent, delete=False) as temporary:
         json.dump(payload, temporary, sort_keys=True, separators=(',', ':'))

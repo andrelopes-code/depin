@@ -74,6 +74,18 @@ def test_decode_report_records_distinct_implementation_values_and_provenance(tmp
     assert depin['report_sha256'] == decoded.sha256
 
 
+def test_decode_report_projects_only_the_v3_common_inventory(tmp_path: Path) -> None:
+    report = tmp_path / 'report.json'
+    _report(report)
+    payload = json.loads(report.read_text(encoding='utf-8'))
+    _entries(payload).append(_entry('test_latency[fastapi_no_injection-depin]', [0.001] * 1_000))
+    report.write_text(json.dumps(payload), encoding='utf-8')
+
+    decoded = decode_report(report, side='head', repetition=0, first='base')
+
+    assert 'test_latency[fastapi_no_injection-depin]' not in decoded.aggregates
+
+
 @pytest.mark.parametrize(
     ('mutate', 'message'),
     [

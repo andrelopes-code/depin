@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import shutil
 import subprocess
 import sys
@@ -132,7 +133,13 @@ def collect(
                 '--benchmark-report',
                 str(report),
             )
-            completed = subprocess.run(argv, capture_output=True, text=True, check=False)
+            completed = subprocess.run(
+                argv,
+                capture_output=True,
+                text=True,
+                check=False,
+                env=os.environ | {'PYTHONHASHSEED': memory.HASH_SEED},
+            )
             if completed.returncode != 0:
                 raise HarnessError(
                     f'{side} rep{repetition}: neutral runner failed\n{completed.stdout}{completed.stderr}'
@@ -426,10 +433,14 @@ def _aggregate_v3(value: object, where: str) -> benchmark_reduce.Aggregate:
     aggregate = benchmark_reduce.decode(where, value, where)
     if aggregate.rounds <= 0:
         raise HarnessError(f'{where}: rounds must be positive')
-    for field in ('minimum', 'median', 'mean', 'stddev', 'iqr', 'p95', 'p99'):
+    for field in ('minimum', 'median', 'mean', 'p95', 'p99'):
         number = getattr(aggregate, field)
         if number is None or not math.isfinite(number) or number <= 0.0:
             raise HarnessError(f'{where}.{field}: expected a finite positive measurement')
+    for field in ('stddev', 'iqr'):
+        number = getattr(aggregate, field)
+        if number is None or not math.isfinite(number) or number < 0.0:
+            raise HarnessError(f'{where}.{field}: expected a finite non-negative measurement')
     return aggregate
 
 
@@ -487,8 +498,36 @@ def _envelope(path: Path, side: str, repetition: int, revision: str, environment
     if set(metrics) != expected_cases:
         raise HarnessError(f'{path}: benchmark metrics must exactly cover the common FastAPI inventory')
     for case in expected_cases:
-        aggregate = _aggregate_v3(aggregates.get(case), f'{path}: benchmark aggregate {case}')
+        aggregate_payload = require_object(aggregates.get(case), f'{path}: benchmark aggregate {case}')
+        _keys(
+            aggregate_payload,
+            {'rounds', 'minimum', 'median', 'mean', 'stddev', 'iqr', 'p95', 'p99'},
+            f'{path}: benchmark aggregate {case}',
+        )
+        aggregate = _aggregate_v3(aggregate_payload, f'{path}: benchmark aggregate {case}')
         metric = require_object(metrics.get(case), f'{path}: benchmark metric {case}')
+        _keys(
+            metric,
+            {
+                'case_id',
+                'rounds',
+                'minimum',
+                'median',
+                'mean',
+                'stddev',
+                'iqr',
+                'p95',
+                'p99',
+                'unit',
+                'method',
+                'side',
+                'repetition',
+                'first',
+                'order',
+                'report_sha256',
+            },
+            f'{path}: benchmark metric {case}',
+        )
         for field, value in (
             ('case_id', case),
             ('unit', 'seconds per operation'),
@@ -520,6 +559,11 @@ def _envelope(path: Path, side: str, repetition: int, revision: str, environment
         )
         if depin != direct:
             raise HarnessError(f'{path}: {name}: semantic observation mismatch')
+        if name == 'fastapi_async_resource_teardown':
+            constructed = require_array(depin.get('constructed'), f'{path}: {name}.constructed')
+            closed = require_array(depin.get('closed'), f'{path}: {name}.closed')
+            if not constructed or closed != list(reversed(constructed)):
+                raise HarnessError(f'{path}: {name}: teardown must close every constructed resource in reverse order')
         found[name] = (depin, direct)
     if set(found) != set(TAIL_WORKLOADS):
         raise HarnessError(f'{path}: observations must exactly cover FastAPI acceptance workloads')
@@ -546,7 +590,13 @@ def _envelope(path: Path, side: str, repetition: int, revision: str, environment
     _ = require_object(work.get('config'), f'{path}: work.config')
     contention_values = require_object(payload.get('contention'), f'{path}: contention')
     _keys(contention_values, {'config', 'direct', 'depin'}, f'{path}: contention')
-    _ = require_object(contention_values.get('config'), f'{path}: contention.config')
+    contention_config = require_object(contention_values.get('config'), f'{path}: contention.config')
+    _keys(contention_config, {'samples', 'workers'}, f'{path}: contention.config')
+    if (
+        require_integer(contention_config.get('samples'), f'{path}: contention.config.samples') < 5
+        or require_integer(contention_config.get('workers'), f'{path}: contention.config.workers') < 2
+    ):
+        raise HarnessError(f'{path}: contention configuration is below the synchronized collection minimum')
     _ = _measurement(contention_values.get('direct'), f'{path}: contention.direct', 'seconds', 'synchronized-wave')
     _ = _measurement(contention_values.get('depin'), f'{path}: contention.depin', 'seconds', 'synchronized-wave')
     if side == 'head':
@@ -705,7 +755,7 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
     }
     no_injection = require_object(head_only.get('no_injection'), 'no-injection evidence')
     contention_values = {
-        'direct': _sidecar(contention(base_records, 'direct')),
+        'direct': _sidecar(contention(base_records, 'depin')),
         'depin': _sidecar(contention(head_records, 'depin')),
     }
     base_memory = {
