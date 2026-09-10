@@ -25,8 +25,7 @@ from benchmarks.workloads.component.resolution import (
 )
 from benchmarks.workloads.component.scope import open_a_request_shaped_scope
 
-WORKLOADS: tuple[Workload, ...] = (
-    *FASTAPI_WORKLOADS,
+PAIRED_WORKLOADS: tuple[Workload, ...] = (
     *(freeze_a_chain(size) for size in (10, 100, LARGE_GRAPH)),
     *(freeze_a_generic_key_chain(size) for size in (10, 100, LARGE_GRAPH)),
     *(freeze_a_decorated_chain(size) for size in (10, 100, LARGE_GRAPH)),
@@ -40,3 +39,5 @@ WORKLOADS: tuple[Workload, ...] = (
     *(freeze_a_chain_missing_a_provider(size) for size in FAILING_FREEZE_SIZES),
     *(explain_an_unbound_key(size) for size in UNBOUND_EXPLAIN_SIZES),
 )
+
+WORKLOADS: tuple[Workload, ...] = (*FASTAPI_WORKLOADS, *PAIRED_WORKLOADS)

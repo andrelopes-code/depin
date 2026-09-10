@@ -13,6 +13,9 @@ from .inventory import (
     ORDER_CLAIM as ORDER_CLAIM,
 )
 from .inventory import (
+    PAIRED_WORKLOADS as PAIRED_WORKLOADS,
+)
+from .inventory import (
     PRICE_CLAIM as PRICE_CLAIM,
 )
 from .inventory import (

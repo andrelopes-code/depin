@@ -142,9 +142,9 @@ def split_size(name: str) -> tuple[str, int]:
 
 
 def _inventory() -> tuple[Workload, ...]:
-    from benchmarks.workloads import WORKLOADS
+    from benchmarks.workloads import PAIRED_WORKLOADS
 
-    return WORKLOADS
+    return PAIRED_WORKLOADS
 
 
 def measure(workloads: Sequence[Workload]) -> dict[str, object]:

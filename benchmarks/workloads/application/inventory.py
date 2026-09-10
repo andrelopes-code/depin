@@ -207,14 +207,15 @@ NO_INJECTION_CLAIM = Claim(
     invalid=(*TIER_THREE_INVALID, 'It is not an injection or resolution measurement.'),
 )
 
-WORKLOADS: tuple[Workload, ...] = (
-    Workload(
-        name='fastapi_no_injection',
-        tier=Tier.APPLICATION,
-        claim=NO_INJECTION_CLAIM,
-        subject=request_implementations('depin', build_depin_sync_no_injection_deployment, '/plain'),
-        baseline=request_implementations('direct', build_direct_sync_no_injection_deployment, '/plain'),
-    ),
+_NO_INJECTION_WORKLOAD = Workload(
+    name='fastapi_no_injection',
+    tier=Tier.APPLICATION,
+    claim=NO_INJECTION_CLAIM,
+    subject=request_implementations('depin', build_depin_sync_no_injection_deployment, '/plain'),
+    baseline=request_implementations('direct', build_direct_sync_no_injection_deployment, '/plain'),
+)
+
+PAIRED_WORKLOADS: tuple[Workload, ...] = (
     Workload(
         name='fastapi_cpu_light_endpoint',
         tier=Tier.APPLICATION,
@@ -266,3 +267,5 @@ WORKLOADS: tuple[Workload, ...] = (
         ),
     ),
 )
+
+WORKLOADS: tuple[Workload, ...] = (_NO_INJECTION_WORKLOAD, *PAIRED_WORKLOADS)
