@@ -1,14 +1,14 @@
 """FastAPI endpoint compilation behind the public integration surface."""
 
-from collections.abc import Callable, Generator, Mapping
+from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from typing import Annotated, Final, Protocol, TypeGuard, override, runtime_checkable
 
 import fastapi
 import fastapi.dependencies.models as fastapi_models
-from anyio.from_thread import run as run_from_thread
 from fastapi import FastAPI, Request
 from fastapi.dependencies.models import Dependant
+from fastapi.dependencies.utils import get_dependant
 from fastapi.params import Depends
 from fastapi.routing import APIRoute
 from starlette.middleware import Middleware
@@ -61,7 +61,7 @@ class _EndpointProgram:
     container: FrozenContainer
     entries: tuple[tuple[str, type[object] | Token[object]], ...]
 
-    async def resolve(self, request: Request[Mapping[str, object]]) -> dict[str, object]:
+    async def resolve(self, request: Request) -> dict[str, object]:
         _provide_lazy_seed(LazyScopeSeed(Request, lambda: request))
         return {name: await self.container.aresolve(key) for name, key in self.entries}
 
@@ -84,7 +84,7 @@ class _ObservedEndpointProgram(_EndpointProgram):
     observation: FastAPIObservation
 
     @override
-    async def resolve(self, request: Request[Mapping[str, object]]) -> dict[str, object]:
+    async def resolve(self, request: Request) -> dict[str, object]:
         self.observation.program_resolved()
         return await _EndpointProgram.resolve(self, request)
 
@@ -106,6 +106,7 @@ class _RoutePlan:
     request_argument: str
     passes_request: bool
     is_async: bool
+    program_argument: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -271,6 +272,11 @@ def _plan_route(
         raise _setup_error(f'route {route.path!r} has no callable endpoint')
     request_argument = route.dependant.request_param_name
     passes_request = request_argument is not None
+    is_async = _coroutine_shape()(endpoint)
+    program_argument: str | None = None
+    if not is_async:
+        program_argument = _request_argument_name(route.dependant)
+        replacement.append(_program_dependant(route, program, program_argument))
     return _RoutePlan(
         route,
         route.dependant,
@@ -279,7 +285,8 @@ def _plan_route(
         endpoint,
         request_argument or _request_argument_name(route.dependant),
         passes_request,
-        _coroutine_shape()(endpoint),
+        is_async,
+        program_argument,
     )
 
 
@@ -305,16 +312,24 @@ def _apply_plan(plan: _RoutePlan) -> _AppliedRoute:
 
     else:
 
+        if plan.program_argument is None:
+            raise _setup_error(f'route {route.path!r} has no compiled program argument')
+
+        program_argument = plan.program_argument
+
         def sync_endpoint(**arguments: object) -> object:
-            request = _compiled_request(route, plan, arguments)
-            arguments.update(run_from_thread(plan.program.resolve, request))
+            values = arguments.pop(program_argument)
+            if not _is_program_values(values):
+                raise _setup_error(f'route {route.path!r} did not provide compiled dependency values')
+            arguments.update(values)
             return original(**arguments)
 
         endpoint = sync_endpoint
 
     try:
         plan.dependant.dependencies = plan.dependencies
-        plan.dependant.request_param_name = plan.request_argument
+        if plan.is_async:
+            plan.dependant.request_param_name = plan.request_argument
         plan.dependant.call = endpoint
     except Exception as error:
         _restore_route(applied)
@@ -362,7 +377,7 @@ def _require_dependant_shape(route: APIRoute, dependant: Dependant) -> None:
         _require_dependant_shape(route, dependency)
 
 
-def _compiled_request(route: APIRoute, plan: _RoutePlan, arguments: dict[str, object]) -> Request[Mapping[str, object]]:
+def _compiled_request(route: APIRoute, plan: _RoutePlan, arguments: dict[str, object]) -> Request:
     request = arguments[plan.request_argument] if plan.passes_request else arguments.pop(plan.request_argument)
     if not _is_fastapi_request(request):
         raise _setup_error(f'route {route.path!r} did not provide a FastAPI Request to its compiled call')
@@ -374,6 +389,18 @@ async def _await_endpoint(route: APIRoute, endpoint: Callable[..., object], argu
     if not isinstance(result, _AwaitableObject):
         raise _setup_error(f'route {route.path!r} has an asynchronous FastAPI call that returned a non-awaitable')
     return await result
+
+
+def _program_dependant(route: APIRoute, program: _EndpointProgram, name: str) -> Dependant:
+    async def resolve_program(request: Request) -> dict[str, object]:
+        return await program.resolve(request)
+
+    try:
+        dependency = get_dependant(path=route.path_format, call=resolve_program, name=name)
+    except Exception as error:
+        raise _setup_error(f'route {route.path!r} could not build its compiled program dependency: {error}') from error
+    _require_dependant_shape(route, dependency)
+    return dependency
 
 
 def _coroutine_shape() -> _CoroutineShape:
@@ -413,8 +440,12 @@ def _is_resolver(call: object) -> TypeGuard[_InjectResolver[object]]:
     return isinstance(call, _InjectResolver)
 
 
-def _is_fastapi_request(value: object) -> TypeGuard[Request[Mapping[str, object]]]:
+def _is_fastapi_request(value: object) -> TypeGuard[Request]:
     return isinstance(value, Request)
+
+
+def _is_program_values(value: object) -> TypeGuard[dict[str, object]]:
+    return isinstance(value, dict)
 
 
 def _request_argument_name(dependant: Dependant) -> str:
