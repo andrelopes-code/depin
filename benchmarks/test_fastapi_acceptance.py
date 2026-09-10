@@ -14,9 +14,11 @@ from benchmarks.harness.fastapi_acceptance import (
     CHECK_PEAK_MEMORY,
     COMPONENT_WORKLOADS,
     DEFAULT_SEED,
+    EXIT_INCONCLUSIVE,
     TAIL_WORKLOADS,
     Acceptance,
     evaluate,
+    run,
 )
 
 HEAD_REVISION = 'f' * 40
@@ -100,8 +102,8 @@ def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None =
             'unit': 'seconds per operation',
             'method': 'direct-null',
             'scope': 'head-only',
-            'direct': 100.0,
-            'depin': 101.0,
+            'direct': [100.0] * 5,
+            'depin': [101.0] * 5,
             'limit': 0.05,
         },
         'retained_memory': {
@@ -110,8 +112,8 @@ def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None =
             'unit': 'bytes',
             'method': 'tracemalloc-retained',
             'scope': 'paired',
-            'base': 100.0,
-            'head': 100.0,
+            'base': [100.0] * 5,
+            'head': [100.0] * 5,
             'limit': 0.02,
         },
         'peak_memory': {
@@ -120,8 +122,8 @@ def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None =
             'unit': 'bytes',
             'method': 'tracemalloc-peak',
             'scope': 'paired',
-            'base': 100.0,
-            'head': 100.0,
+            'base': [100.0] * 5,
+            'head': [100.0] * 5,
             'limit': 0.05,
         },
         'allocations': {
@@ -130,8 +132,8 @@ def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None =
             'unit': 'allocation-count',
             'method': 'tracemalloc-allocation-count',
             'scope': 'paired',
-            'base': 100.0,
-            'head': 100.0,
+            'base': [100.0] * 5,
+            'head': [100.0] * 5,
             'limit': 0.0,
         },
         'application_startup': {
@@ -148,8 +150,8 @@ def _sidecars(tmp_path: Path, *, checks: Sequence[Mapping[str, object]] | None =
             'unit': 'seconds',
             'method': 'synchronized-wave',
             'scope': 'paired',
-            'base': 100.0,
-            'head': 100.0,
+            'base': [100.0] * 5,
+            'head': [100.0] * 5,
             'limit': 0.05,
         },
         'components': [
@@ -253,6 +255,41 @@ def test_total_latency_tails_fail_when_they_regress_more_than_five_percent(tmp_p
     assert outcomes['fastapi_cpu_light_endpoint:p99-total'] == 'fail'
 
 
+@pytest.mark.parametrize(
+    ('head', 'outcome'),
+    [([104.0] * 5, 'pass'), ([106.0, 106.0, 106.0, 90.0, 90.0], 'inconclusive'), ([106.0] * 5, 'fail')],
+)
+def test_repeated_regression_sidecars_follow_the_paired_ci_rule(
+    tmp_path: Path, head: list[float], outcome: str
+) -> None:
+    sidecars = _sidecars(tmp_path)
+    payload = read_json(sidecars)
+    contention = require_object(payload.get(CHECK_CONTENTION), 'contention')
+    contention['head'] = head
+    write_json(sidecars, payload)
+
+    assert _outcomes(_evaluate(_dataset(tmp_path), _attribution(tmp_path), sidecars))[CHECK_CONTENTION] == outcome
+
+
+def test_inconclusive_repeated_regression_returns_generic_gate_status(tmp_path: Path) -> None:
+    sidecars = _sidecars(tmp_path)
+    payload = read_json(sidecars)
+    contention = require_object(payload.get(CHECK_CONTENTION), 'contention')
+    contention['head'] = [106.0, 106.0, 106.0, 90.0, 90.0]
+    write_json(sidecars, payload)
+
+    assert (
+        run(
+            _dataset(tmp_path),
+            _attribution(tmp_path),
+            sidecars,
+            _provenance(tmp_path),
+            evaluated_head_revision=HEAD_REVISION,
+        )
+        == EXIT_INCONCLUSIVE
+    )
+
+
 def test_missing_contention_fails_closed(tmp_path: Path) -> None:
     sidecars = _sidecars(tmp_path)
     payload = read_json(sidecars)
@@ -268,7 +305,7 @@ def test_peak_memory_regression_fails_and_missing_evidence_is_refused(tmp_path: 
     payload = read_json(sidecars)
     peak = payload[CHECK_PEAK_MEMORY]
     assert isinstance(peak, dict)
-    peak['head'] = 106.0
+    peak['head'] = [106.0] * 5
     write_json(sidecars, payload)
 
     assert _outcomes(_evaluate(_dataset(tmp_path), _attribution(tmp_path), sidecars))[CHECK_PEAK_MEMORY] == 'fail'

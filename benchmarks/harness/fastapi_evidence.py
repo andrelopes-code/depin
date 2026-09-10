@@ -20,7 +20,6 @@ import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from statistics import median
 
 from benchmarks.contracts import Implementation, Observation, Workload
 from benchmarks.experiments import contention
@@ -643,10 +642,6 @@ def _envelope(path: Path, side: str, repetition: int, revision: str, environment
     return payload
 
 
-def _sidecar(values: Sequence[float]) -> float:
-    return float(median(values))
-
-
 def _stable_environment(value: object, where: str) -> dict[str, object]:
     environment = require_object(value, where)
     host = require_object(environment.get('host'), f'{where}.host')
@@ -783,23 +778,21 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
         measured(base_records, 'allocations', 'allocation-count', 'tracemalloc-allocation-count'),
         measured(head_records, 'allocations', 'allocation-count', 'tracemalloc-allocation-count'),
     )
-    head_only = {
-        'no_injection': {'direct': _sidecar(head_measurements('direct')), 'depin': _sidecar(head_measurements('depin'))}
-    }
+    head_only = {'no_injection': {'direct': head_measurements('direct'), 'depin': head_measurements('depin')}}
     no_injection = require_object(head_only.get('no_injection'), 'no-injection evidence')
     contention_values = {
-        'direct': _sidecar(contention(base_records, 'depin')),
-        'depin': _sidecar(contention(head_records, 'depin')),
+        'direct': contention(base_records, 'depin'),
+        'depin': contention(head_records, 'depin'),
     }
     base_memory = {
-        'retained': _sidecar(base_retained),
-        'peak': _sidecar(base_peak),
-        'allocations': _sidecar(base_allocations),
+        'retained': base_retained,
+        'peak': base_peak,
+        'allocations': base_allocations,
     }
     head_memory = {
-        'retained': _sidecar(head_retained),
-        'peak': _sidecar(head_peak),
-        'allocations': _sidecar(head_allocations),
+        'retained': head_retained,
+        'peak': head_peak,
+        'allocations': head_allocations,
     }
     return {
         'dataset': {
@@ -848,8 +841,8 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
                 'unit': 'seconds per operation',
                 'method': 'direct-null',
                 'scope': 'head-only',
-                'direct': _positive(no_injection.get('direct'), 'no injection direct'),
-                'depin': _positive(no_injection.get('depin'), 'no injection depin'),
+                'direct': require_array(no_injection.get('direct'), 'no injection direct'),
+                'depin': require_array(no_injection.get('depin'), 'no injection depin'),
                 'limit': 0.05,
             },
             'retained_memory': {
@@ -858,8 +851,8 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
                 'unit': 'bytes',
                 'method': 'tracemalloc-retained',
                 'scope': 'paired',
-                'base': _positive(base_memory.get('retained'), 'base retained'),
-                'head': _positive(head_memory.get('retained'), 'head retained'),
+                'base': require_array(base_memory.get('retained'), 'base retained'),
+                'head': require_array(head_memory.get('retained'), 'head retained'),
                 'limit': 0.02,
             },
             'peak_memory': {
@@ -868,8 +861,8 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
                 'unit': 'bytes',
                 'method': 'tracemalloc-peak',
                 'scope': 'paired',
-                'base': _positive(base_memory.get('peak'), 'base peak'),
-                'head': _positive(head_memory.get('peak'), 'head peak'),
+                'base': require_array(base_memory.get('peak'), 'base peak'),
+                'head': require_array(head_memory.get('peak'), 'head peak'),
                 'limit': 0.05,
             },
             'allocations': {
@@ -878,8 +871,8 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
                 'unit': 'allocation-count',
                 'method': 'tracemalloc-allocation-count',
                 'scope': 'paired',
-                'base': _positive(base_memory.get('allocations'), 'base allocations'),
-                'head': _positive(head_memory.get('allocations'), 'head allocations'),
+                'base': require_array(base_memory.get('allocations'), 'base allocations'),
+                'head': require_array(head_memory.get('allocations'), 'head allocations'),
                 'limit': 0.0,
             },
             'application_startup': {
@@ -896,8 +889,8 @@ def reduce(raw: Path, baseline_revision: str, head_revision: str, environments: 
                 'unit': 'seconds',
                 'method': 'synchronized-wave',
                 'scope': 'paired',
-                'base': _positive(contention_values.get('direct'), 'contention direct'),
-                'head': _positive(contention_values.get('depin'), 'contention depin'),
+                'base': require_array(contention_values.get('direct'), 'contention direct'),
+                'head': require_array(contention_values.get('depin'), 'contention depin'),
                 'limit': 0.05,
             },
             'components': [

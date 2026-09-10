@@ -161,8 +161,20 @@ def test_reduction_preserves_repetitions_and_projects_evaluator_inputs(tmp_path:
         )
         for value in base
     ] == [0, 1, 2, 3, 4]
-    assert require_object(require_object(output['sidecars'], 'sidecars')['retained_memory'], 'memory')['base'] == 102.0
-    assert require_object(require_object(output['sidecars'], 'sidecars')['contention'], 'contention')['base'] == 0.0102
+    assert require_object(require_object(output['sidecars'], 'sidecars')['retained_memory'], 'memory')['base'] == [
+        100.0,
+        101.0,
+        102.0,
+        103.0,
+        104.0,
+    ]
+    assert require_object(require_object(output['sidecars'], 'sidecars')['contention'], 'contention')['base'] == [
+        0.01,
+        0.0101,
+        0.0102,
+        0.0103,
+        0.0104,
+    ]
     semantic = require_array(require_object(output['provenance'], 'provenance')['semantic_validation'], 'semantic')
     assert len(semantic) == 30
     envelopes = require_object(output['envelopes'], 'envelopes')
@@ -252,9 +264,9 @@ def test_reduction_refuses_duplicate_json_key(tmp_path: Path) -> None:
 def test_reduction_accepts_zero_dispersion_but_refuses_empty_resource_teardown(tmp_path: Path) -> None:
     _ = _reduced(tmp_path)
     payload = read_json(tmp_path / 'raw' / 'head' / 'rep2.json')
-    aggregate = require_object(
-        require_object(payload['benchmark_report'], 'report')['aggregates'], 'aggregates'
-    )['test_latency[fastapi_cpu_light_endpoint-depin]']
+    aggregate = require_object(require_object(payload['benchmark_report'], 'report')['aggregates'], 'aggregates')[
+        'test_latency[fastapi_cpu_light_endpoint-depin]'
+    ]
     aggregate_fields = require_object(aggregate, 'aggregate')
     aggregate_fields['stddev'] = 0.0
     aggregate_fields['iqr'] = 0.0

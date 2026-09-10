@@ -60,6 +60,10 @@ TAIL_LIMIT = 0.05
 ATTRIBUTION_LIMIT = -0.25
 ATTRIBUTION_TARGET = -0.30
 SCHEMA_VERSION = 1
+EXIT_PASS = 0
+EXIT_REGRESSION = 1
+EXIT_MISUSE = 2
+EXIT_INCONCLUSIVE = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -328,15 +332,7 @@ def _tails(pairs: Mapping[str, Sequence[_Pair]]) -> tuple[Verdict, ...]:
                     raise HarnessError(f'{workload}: {field} is missing from repetition {pair.repetition}')
                 base.append(_finite_positive(before, f'{workload}: base {field}'))
                 head.append(_finite_positive(after, f'{workload}: head {field}'))
-            paired = stats.paired_ratio(base, head, seed=DEFAULT_SEED)
-            outcome = Outcome.PASS if paired.ratio <= TAIL_LIMIT else Outcome.FAIL
-            verdicts.append(
-                Verdict(
-                    f'{workload}:{label}',
-                    outcome,
-                    f'{paired.ratio:+.2%} total-latency change must be <= {TAIL_LIMIT:+.0%} n={paired.n}',
-                )
-            )
+            verdicts.append(_regression_verdict(f'{workload}:{label}', base, head, TAIL_LIMIT))
     return tuple(verdicts)
 
 
@@ -344,6 +340,33 @@ def _change(base: float, head: float, criterion: str) -> float:
     _finite_positive(base, f'{criterion}: base')
     _finite_positive(head, f'{criterion}: head')
     return head / base - 1.0
+
+
+def _series(value: object, where: str) -> list[float]:
+    readings = require_array(value, where)
+    if len(readings) != REPETITIONS:
+        raise HarnessError(f'{where}: requires exactly {REPETITIONS} paired observations')
+    return [
+        _finite_positive(require_number(reading, f'{where}[{index}]'), where) for index, reading in enumerate(readings)
+    ]
+
+
+def _regression_verdict(
+    criterion: str, base: Sequence[float], head: Sequence[float], limit: float, scope: str = 'paired'
+) -> Verdict:
+    paired = stats.paired_ratio(base, head, seed=DEFAULT_SEED)
+    if paired.low > limit:
+        outcome = Outcome.FAIL
+    elif paired.high <= limit:
+        outcome = Outcome.PASS
+    else:
+        outcome = Outcome.INCONCLUSIVE
+    return Verdict(
+        criterion,
+        outcome,
+        f'{paired.ratio:+.2%} [{paired.low:+.2%}, {paired.high:+.2%}] budget {limit:+.2%} n={paired.n}',
+        scope,
+    )
 
 
 def _typed_check(
@@ -357,19 +380,25 @@ def _typed_check(
         raise HarnessError(f'{path}: {criterion}.limit must be finite and non-negative')
     before, after = (
         (
-            require_number(fields.get('direct'), f'{path}: {criterion}.direct'),
-            require_number(fields.get('depin'), f'{path}: {criterion}.depin'),
+            _series(fields.get('direct'), f'{path}: {criterion}.direct'),
+            _series(fields.get('depin'), f'{path}: {criterion}.depin'),
         )
         if criterion == CHECK_NO_INJECTION
         else (
-            require_number(fields.get('base'), f'{path}: {criterion}.base'),
-            require_number(fields.get('head'), f'{path}: {criterion}.head'),
+            _series(fields.get('base'), f'{path}: {criterion}.base'),
+            _series(fields.get('head'), f'{path}: {criterion}.head'),
         )
     )
-    change = _change(before, after, criterion)
-    return Verdict(
-        criterion, Outcome.PASS if change <= limit else Outcome.FAIL, f'{change:+.2%} budget {limit:+.2%}', expected[4]
-    )
+    if criterion == CHECK_ALLOCATION:
+        changes = [_change(left, right, criterion) for left, right in zip(before, after, strict=True)]
+        worst = max(changes)
+        return Verdict(
+            criterion,
+            Outcome.PASS if worst <= limit else Outcome.FAIL,
+            f'worst paired change {worst:+.2%} budget {limit:+.2%} n={len(changes)}',
+            expected[4],
+        )
+    return _regression_verdict(criterion, before, after, limit, expected[4])
 
 
 def _sidecars(path: Path, pairs: Mapping[str, Sequence[_Pair]]) -> tuple[Verdict, ...]:
@@ -400,16 +429,12 @@ def _sidecars(path: Path, pairs: Mapping[str, Sequence[_Pair]]) -> tuple[Verdict
         if require_text(startup.get(field), f'{path}: {CHECK_STARTUP}.{field}') != value:
             raise HarnessError(f'{path}: {CHECK_STARTUP}.{field} must be {value!r}')
     limit = require_number(startup.get('limit'), f'{path}: {CHECK_STARTUP}.limit')
-    paired = stats.paired_ratio(
-        [pair.base.median for pair in pairs['fastapi_application_startup']],
-        [pair.head.median for pair in pairs['fastapi_application_startup']],
-        seed=DEFAULT_SEED,
-    )
     verdicts.append(
-        Verdict(
+        _regression_verdict(
             CHECK_STARTUP,
-            Outcome.PASS if paired.ratio <= limit else Outcome.FAIL,
-            f'{paired.ratio:+.2%} budget {limit:+.2%}',
+            [pair.base.median for pair in pairs['fastapi_application_startup']],
+            [pair.head.median for pair in pairs['fastapi_application_startup']],
+            limit,
         )
     )
     entries = require_array(payload.get('components'), f'{path}: components')
@@ -457,7 +482,12 @@ def run(dataset: Path, attribution: Path, sidecars: Path, provenance: Path, *, e
     for verdict in acceptance.verdicts:
         marker = 'required' if verdict.required else 'target'
         print(f'{verdict.outcome.value:12} {marker:8} {verdict.scope:9} {verdict.criterion}: {verdict.detail}')
-    return 0 if acceptance.passed else 1
+    outcomes = {verdict.outcome for verdict in acceptance.verdicts if verdict.required}
+    if Outcome.FAIL in outcomes:
+        return EXIT_REGRESSION
+    if Outcome.INCONCLUSIVE in outcomes or Outcome.NO_VERDICT in outcomes:
+        return EXIT_INCONCLUSIVE
+    return EXIT_PASS
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -479,7 +509,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     except HarnessError as error:
         print(f'misuse: {error}')
-        return 2
+        return EXIT_MISUSE
 
 
 if __name__ == '__main__':
