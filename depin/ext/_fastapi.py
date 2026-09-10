@@ -103,6 +103,7 @@ class _RoutePlan:
     program: _EndpointProgram
     dependencies: list[Dependant]
     endpoint: Callable[..., object]
+    compiled_endpoint: Callable[..., object]
     request_argument: str
     passes_request: bool
     is_async: bool
@@ -251,11 +252,17 @@ def _plan_route(
 ) -> _RoutePlan | None:
     _require_route_shape(route)
     dependencies = route.dependant.dependencies
+    reserved = _root_value_names(route.dependant)
     resolvers: list[tuple[str | None, _InjectResolver[object]]] = []
+    replacement: list[Dependant] = []
     for dependency in dependencies:
+        if isinstance(dependency.name, str):
+            reserved.add(dependency.name)
         call: object = dependency.call
         if _is_resolver(call):
             resolvers.append((dependency.name, call))
+        else:
+            replacement.append(dependency)
     if not resolvers:
         return None
     if any(not isinstance(name, str) for name, _ in resolvers):
@@ -266,7 +273,6 @@ def _plan_route(
         program = _EndpointProgram(container, entries)
     else:
         program = _ObservedEndpointProgram(container, entries, observation)
-    replacement = [dependency for dependency in dependencies if not _is_resolver(dependency.call)]
     endpoint = route.dependant.call
     if endpoint is None:
         raise _setup_error(f'route {route.path!r} has no callable endpoint')
@@ -275,15 +281,25 @@ def _plan_route(
     is_async = _coroutine_shape()(endpoint)
     program_argument: str | None = None
     if not is_async:
-        program_argument = _request_argument_name(route.dependant)
+        program_argument = _request_argument_name(reserved)
         replacement.append(_program_dependant(route, program, program_argument))
+    compiled_endpoint = _compiled_endpoint(
+        route,
+        endpoint,
+        program,
+        request_argument or _request_argument_name(reserved),
+        passes_request,
+        is_async,
+        program_argument,
+    )
     return _RoutePlan(
         route,
         route.dependant,
         program,
         replacement,
         endpoint,
-        request_argument or _request_argument_name(route.dependant),
+        compiled_endpoint,
+        request_argument or _request_argument_name(reserved),
         passes_request,
         is_async,
         program_argument,
@@ -291,9 +307,6 @@ def _plan_route(
 
 
 def _apply_plan(plan: _RoutePlan) -> _AppliedRoute:
-    route = plan.route
-    original = plan.endpoint
-    endpoint: Callable[..., object]
     applied = _AppliedRoute(
         plan.dependant,
         plan.dependant.call,
@@ -301,39 +314,14 @@ def _apply_plan(plan: _RoutePlan) -> _AppliedRoute:
         plan.dependant.request_param_name,
     )
 
-    if plan.is_async:
-
-        async def async_endpoint(**arguments: object) -> object:
-            request = _compiled_request(route, plan, arguments)
-            arguments.update(await plan.program.resolve(request))
-            return await _await_endpoint(route, original, arguments)
-
-        endpoint = async_endpoint
-
-    else:
-
-        if plan.program_argument is None:
-            raise _setup_error(f'route {route.path!r} has no compiled program argument')
-
-        program_argument = plan.program_argument
-
-        def sync_endpoint(**arguments: object) -> object:
-            values = arguments.pop(program_argument)
-            if not _is_program_values(values):
-                raise _setup_error(f'route {route.path!r} did not provide compiled dependency values')
-            arguments.update(values)
-            return original(**arguments)
-
-        endpoint = sync_endpoint
-
     try:
         plan.dependant.dependencies = plan.dependencies
         if plan.is_async:
             plan.dependant.request_param_name = plan.request_argument
-        plan.dependant.call = endpoint
+        plan.dependant.call = plan.compiled_endpoint
     except Exception as error:
         _restore_route(applied)
-        raise _setup_error(f'route {route.path!r} could not apply its compiled call: {error}') from error
+        raise _setup_error(f'route {plan.route.path!r} could not apply its compiled call: {error}') from error
     return applied
 
 
@@ -377,8 +365,41 @@ def _require_dependant_shape(route: APIRoute, dependant: Dependant) -> None:
         _require_dependant_shape(route, dependency)
 
 
-def _compiled_request(route: APIRoute, plan: _RoutePlan, arguments: dict[str, object]) -> Request:
-    request = arguments[plan.request_argument] if plan.passes_request else arguments.pop(plan.request_argument)
+def _compiled_endpoint(
+    route: APIRoute,
+    original: Callable[..., object],
+    program: _EndpointProgram,
+    request_argument: str,
+    passes_request: bool,
+    is_async: bool,
+    program_argument: str | None,
+) -> Callable[..., object]:
+    if is_async:
+
+        async def async_endpoint(**arguments: object) -> object:
+            request = _compiled_request(route, request_argument, passes_request, arguments)
+            arguments.update(await program.resolve(request))
+            return await _await_endpoint(route, original, arguments)
+
+        return async_endpoint
+
+    if program_argument is None:
+        raise _setup_error(f'route {route.path!r} has no compiled program argument')
+
+    def sync_endpoint(**arguments: object) -> object:
+        values = arguments.pop(program_argument)
+        if not _is_program_values(values):
+            raise _setup_error(f'route {route.path!r} did not provide compiled dependency values')
+        arguments.update(values)
+        return original(**arguments)
+
+    return sync_endpoint
+
+
+def _compiled_request(
+    route: APIRoute, request_argument: str, passes_request: bool, arguments: dict[str, object]
+) -> Request:
+    request = arguments[request_argument] if passes_request else arguments.pop(request_argument)
     if not _is_fastapi_request(request):
         raise _setup_error(f'route {route.path!r} did not provide a FastAPI Request to its compiled call')
     return request
@@ -448,19 +469,17 @@ def _is_program_values(value: object) -> TypeGuard[dict[str, object]]:
     return isinstance(value, dict)
 
 
-def _request_argument_name(dependant: Dependant) -> str:
-    reserved = _dependency_value_names(dependant)
+def _request_argument_name(reserved: set[str]) -> str:
     candidate = _REQUEST_ARGUMENT_PREFIX
     while candidate in reserved:
         candidate = f'{candidate}_'
     return candidate
 
 
-def _dependency_value_names(dependant: Dependant) -> set[str]:
+def _root_value_names(dependant: Dependant) -> set[str]:
     names = {
         name
         for name in (
-            dependant.name,
             dependant.request_param_name,
             dependant.websocket_param_name,
             dependant.http_connection_param_name,
@@ -478,8 +497,6 @@ def _dependency_value_names(dependant: Dependant) -> set[str]:
         dependant.body_params,
     ):
         names.update(field.name for field in fields)
-    for dependency in dependant.dependencies:
-        names.update(_dependency_value_names(dependency))
     return names
 
 

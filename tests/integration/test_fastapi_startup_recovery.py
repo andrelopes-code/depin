@@ -6,11 +6,12 @@ from threading import get_ident
 from typing import Annotated
 
 import pytest
-from fastapi import Depends, FastAPI, HTTPException, Request, Security
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response, Security
 from fastapi.routing import APIRoute
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, SecurityScopes
 from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel
+from starlette.requests import HTTPConnection
 
 from depin import Container, Scope, optional_hosted_container
 from depin.errors import FastAPIIntegrationError
@@ -19,6 +20,150 @@ from depin.ext.fastapi import Inject, install
 
 def _route(app: FastAPI, path: str) -> APIRoute:
     return next(route for route in app.routes if isinstance(route, APIRoute) and route.path == path)
+
+
+def test_install_reserves_hidden_request_name_for_direct_dependency() -> None:
+    """A direct FastAPI dependency keeps the preferred hidden request name."""
+
+    class Service:
+        pass
+
+    async def native() -> str:
+        return 'native'
+
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint(service: Inject[Service], __depin_request__: str = Depends(native)) -> dict[str, str]:
+        del service
+        return {'value': __depin_request__}
+
+    _ = endpoint
+    install(app, Container().bind(Service).freeze())
+
+    assert _route(app, '/').dependant.request_param_name != '__depin_request__'
+
+
+def test_install_reserves_hidden_request_name_for_root_parameter_fields() -> None:
+    """Root endpoint fields cannot be overwritten by the synthesized request."""
+
+    class Service:
+        pass
+
+    class Payload(BaseModel):
+        value: str
+
+    app = FastAPI()
+
+    @app.get('/path/{__depin_request__}')
+    async def path(service: Inject[Service], __depin_request__: str) -> dict[str, str]:
+        del service
+        return {'value': __depin_request__}
+
+    @app.get('/query')
+    async def query(service: Inject[Service], __depin_request__: str) -> dict[str, str]:
+        del service
+        return {'value': __depin_request__}
+
+    @app.post('/body')
+    async def body(service: Inject[Service], __depin_request__: Payload) -> dict[str, str]:
+        del service
+        return {'value': __depin_request__.value}
+
+    _ = path, query, body
+    install(app, Container().bind(Service).freeze())
+
+    assert all(
+        _route(app, path).dependant.request_param_name != '__depin_request__'
+        for path in ('/path/{__depin_request__}', '/query', '/body')
+    )
+
+
+def test_install_reserves_hidden_request_name_for_root_special_parameters() -> None:
+    """FastAPI root special parameters cannot be overwritten by the synthesized request."""
+
+    class Service:
+        pass
+
+    app = FastAPI()
+
+    @app.get('/response')
+    async def response(service: Inject[Service], __depin_request__: Response) -> dict[str, bool]:
+        del service, __depin_request__
+        return {'ok': True}
+
+    @app.get('/background')
+    async def background(service: Inject[Service], __depin_request__: BackgroundTasks) -> dict[str, bool]:
+        del service, __depin_request__
+        return {'ok': True}
+
+    @app.get('/connection')
+    async def connection(service: Inject[Service], __depin_request__: HTTPConnection) -> dict[str, bool]:
+        del service, __depin_request__
+        return {'ok': True}
+
+    @app.get('/scopes')
+    async def scopes(service: Inject[Service], __depin_request__: SecurityScopes) -> dict[str, bool]:
+        del service, __depin_request__
+        return {'ok': True}
+
+    _ = response, background, connection, scopes
+    install(app, Container().bind(Service).freeze())
+
+    assert all(
+        _route(app, path).dependant.request_param_name != '__depin_request__'
+        for path in ('/response', '/background', '/connection', '/scopes')
+    )
+
+
+def test_install_does_not_reserve_nested_only_dependency_parameter_names() -> None:
+    """Nested dependency values do not collide with the root wrapper call."""
+
+    class Service:
+        pass
+
+    async def nested(__depin_request__: str = 'nested') -> str:
+        return __depin_request__
+
+    async def direct(value: str = Depends(nested)) -> str:
+        return value
+
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint(service: Inject[Service], value: str = Depends(direct)) -> dict[str, str]:
+        del service
+        return {'value': value}
+
+    _ = endpoint
+    install(app, Container().bind(Service).freeze())
+
+    assert _route(app, '/').dependant.request_param_name == '__depin_request__'
+
+
+def test_install_does_not_recurse_when_selecting_hidden_request_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hidden request selection uses the direct dependency scan from preflight."""
+
+    import depin.ext._fastapi as fastapi_implementation
+
+    class Service:
+        pass
+
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint(service: Inject[Service]) -> dict[str, bool]:
+        del service
+        return {'ok': True}
+
+    _ = endpoint
+
+    def recursive_collection() -> set[str]:
+        raise AssertionError('recursive hidden-name collection ran')
+
+    monkeypatch.setitem(fastapi_implementation.__dict__, '_dependency_value_names', recursive_collection)
+
+    install(app, Container().bind(Service).freeze())
 
 
 @pytest.mark.asyncio
