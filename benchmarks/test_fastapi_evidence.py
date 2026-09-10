@@ -115,7 +115,7 @@ def _raw(side: str, repetition: int, revision: str, interpreter: str) -> dict[st
             },
             'components': {
                 name: {
-                    'control': {'value': 0.001, 'unit': 'seconds per operation', 'method': 'median-control'},
+                    'control': {'value': 0.001, 'unit': 'seconds per operation', 'method': 'direct-null'},
                     'depin': {'value': 0.010, 'unit': 'seconds per operation', 'method': 'component-observation'},
                     'config': {'samples': 101},
                 }
@@ -158,6 +158,12 @@ def test_reduction_preserves_repetitions_and_projects_evaluator_inputs(tmp_path:
     assert require_object(require_object(output['sidecars'], 'sidecars')['contention'], 'contention')['base'] == 0.0102
     semantic = require_array(require_object(output['provenance'], 'provenance')['semantic_validation'], 'semantic')
     assert len(semantic) == 30
+    envelopes = require_object(output['envelopes'], 'envelopes')
+    for record in require_array(envelopes['head'], 'head envelopes'):
+        components = require_object(require_object(record, 'record')['head_only'], 'head only')['components']
+        for name in COMPONENT_WORKLOADS:
+            control = require_object(require_object(components, 'components')[name], name)['control']
+            assert require_object(control, 'control')['method'] == 'direct-null'
     for name, payload in dataset.items():
         if name == 'environment.json':
             write_json(tmp_path / 'evidence' / name, require_object(payload, name))

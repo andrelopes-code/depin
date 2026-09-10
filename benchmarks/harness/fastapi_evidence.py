@@ -631,7 +631,7 @@ def _envelope(path: Path, side: str, repetition: int, revision: str, environment
             component = require_object(components.get(name), f'{path}: component {name}')
             _keys(component, {'control', 'depin', 'config'}, f'{path}: component {name}')
             _ = _measurement(
-                component.get('control'), f'{path}: component {name}.control', 'seconds per operation', 'median-control'
+                component.get('control'), f'{path}: component {name}.control', 'seconds per operation', 'direct-null'
             )
             _ = _measurement(
                 component.get('depin'),
