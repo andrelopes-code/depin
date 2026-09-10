@@ -25,3 +25,20 @@ tail and contention intervals are broad and do not establish attribution.
 See `evidence-bridge-bb10/failed-criteria-analysis.json` for every repetition,
 bootstrap interval, selector, and absolute delta. The v4 raw reports are under
 `raw-v4-bb10/`; provenance annotations are under `evidence-bridge-bb10/`.
+
+## Competitor evidence
+
+Competitive evidence was collected from clean external sources and locked
+external environments. The immutable archive baseline is
+`086adf98459773e3175f4723b2b64e3f47306e42`; the clean candidate source used
+for this packaging-only comparison is
+`4f798bec90b5222427254a659052a94b511c3e00`. The latter is not claimed as the
+measured FastAPI runtime/workload revision.
+
+Leadership classifies `resolve_a_transient_chain` as competitive,
+`construct_a_singleton_for_the_first_time` and `open_and_close_a_scope` as
+losses, and `fastapi_async_resource_teardown` as unstable. All remaining
+reported workloads have no equivalent competitor. The null calibration, real
+collection, archive-validation provenance, and evaluator output are retained
+under `comparison-bb10/`. The earlier missing-marker failure is retained there
+as `initial-marker-blocker.txt` for diagnosis only.

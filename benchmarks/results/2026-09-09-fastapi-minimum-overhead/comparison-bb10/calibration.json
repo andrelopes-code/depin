@@ -1,0 +1,883 @@
+{
+  "provenance": {
+    "harness_revision": "4f798bec90b5222427254a659052a94b511c3e00",
+    "null_dataset_sha256": "315380bfb8fc80846cff8d69a5365b7c2f15fd40417e5fab1a9a1d41335608dc",
+    "protocol": {
+      "budget_contract_sha256": "0ed202f2ec87a7935bdeae3a3bb5fba43ef4566741598a78e0ea3a270edf5498",
+      "environment": {
+        "host": {
+          "available_processors": 4,
+          "cpu_model": "Intel(R) Xeon(R) CPU E5-2683 v4 @ 2.10GHz",
+          "machine": "x86_64",
+          "processor": "x86_64",
+          "system": "Linux"
+        },
+        "interpreter": {
+          "free_threading": false,
+          "hash_randomization": true,
+          "implementation": "CPython",
+          "version": "3.12.13"
+        },
+        "python_hash_seed": "0"
+      },
+      "minimum_repetitions": 5,
+      "pins": {
+        "dependency-injector": "4.49.1",
+        "dishka": "1.10.1",
+        "pydepin": "0.19.0",
+        "svcs": "26.2.0",
+        "wireup": "2.12.0"
+      },
+      "protocol": "counterbalanced-comparison-v1",
+      "schema_version": 1,
+      "targets": {
+        "call_through_an_inject_wrapper": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector wiring does not share depin injection wrapper calling semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka injection does not share depin injection wrapper calling semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup injection does not share depin injection wrapper calling semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no depin injection wrapper calling semantics"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1e-06,
+            "fraction_of_direct": null,
+            "justification": "One injection wrapper dispatch ceiling from the parameter binding formula."
+          }
+        },
+        "call_through_an_inject_wrapper_with_explicit_arguments": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector wiring does not share depin injection wrapper calling semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka injection does not share depin injection wrapper calling semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup injection does not share depin injection wrapper calling semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no depin injection wrapper calling semantics"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1e-06,
+            "fraction_of_direct": null,
+            "justification": "One injection wrapper dispatch ceiling from the explicit argument binding formula."
+          }
+        },
+        "construct_a_singleton_for_the_first_time": {
+          "candidates": [
+            {
+              "classification": "equivalent",
+              "label": "dependency-injector-4.49.1",
+              "reason": "matches the singleton or transient provider lifecycle and construction shape"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka does not expose the depin provider operation this workload measures"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup does not expose the depin provider operation this workload measures"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs does not expose the depin provider operation this workload measures"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 5e-07,
+            "fraction_of_direct": null,
+            "justification": "First singleton construction ceiling from the cold-cache formula."
+          }
+        },
+        "fastapi_application_startup": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 3e-05,
+            "fraction_of_direct": 0.1,
+            "justification": "FastAPI startup ceiling from the direct baseline fraction formula."
+          }
+        },
+        "fastapi_async_resource_teardown": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1.8e-05,
+            "fraction_of_direct": 0.1,
+            "justification": "FastAPI asynchronous teardown ceiling from the direct baseline fraction formula."
+          }
+        },
+        "fastapi_cpu_light_endpoint": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1.2e-05,
+            "fraction_of_direct": 0.1,
+            "justification": "FastAPI light endpoint ceiling from the direct baseline fraction formula."
+          }
+        },
+        "fastapi_endpoint_with_work": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1.2e-05,
+            "fraction_of_direct": 0.1,
+            "justification": "FastAPI representative work ceiling from the direct baseline fraction formula."
+          }
+        },
+        "fastapi_no_injection": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1.2e-05,
+            "fraction_of_direct": 0.1,
+            "justification": "FastAPI no-injection ceiling from the direct baseline fraction formula."
+          }
+        },
+        "fastapi_request_scoped_graph": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "provider overrides are substitutions, not nested scope frames with scoped caches"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1.6e-05,
+            "fraction_of_direct": 0.1,
+            "justification": "FastAPI scoped graph ceiling from the direct baseline fraction formula."
+          }
+        },
+        "fastapi_singletons_and_transients": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "the FastAPI integration has different request lifecycle and dependency declaration semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no FastAPI integration with depin request lifecycle and declaration semantics"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1.6e-05,
+            "fraction_of_direct": 0.1,
+            "justification": "FastAPI singleton and transient ceiling from the direct baseline fraction formula."
+          }
+        },
+        "open_a_request_shaped_scope": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "provider overrides are substitutions, not nested scope frames with scoped caches"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka does not expose the depin provider operation this workload measures"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup does not expose the depin provider operation this workload measures"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs containers have no nested scope frames with scoped caches"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 3.5e-06,
+            "fraction_of_direct": null,
+            "justification": "Request-shaped scope lifecycle ceiling from the scoped resource formula."
+          }
+        },
+        "open_and_close_a_scope": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "provider overrides are substitutions, not nested scope frames with scoped caches"
+            },
+            {
+              "classification": "equivalent",
+              "label": "dishka-1.10.1",
+              "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+            },
+            {
+              "classification": "equivalent",
+              "label": "wireup-2.12.0",
+              "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs containers have no nested scope frames with scoped caches"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1.2e-05,
+            "fraction_of_direct": null,
+            "justification": "Scope entry and exit ceiling from the frame lifecycle formula."
+          }
+        },
+        "resolve_a_collection_of_10": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector has no depin collection binding and aggregation operation"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka has no depin collection binding and aggregation operation"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup has no depin collection binding and aggregation operation"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no depin collection binding and aggregation operation"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 5e-06,
+            "fraction_of_direct": null,
+            "justification": "Collection assembly ceiling from the fixed per-member lookup formula at ten members."
+          }
+        },
+        "resolve_a_collection_of_100": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector has no depin collection binding and aggregation operation"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka has no depin collection binding and aggregation operation"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup has no depin collection binding and aggregation operation"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no depin collection binding and aggregation operation"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 5e-05,
+            "fraction_of_direct": null,
+            "justification": "Collection assembly ceiling from the fixed per-member lookup formula at one hundred members."
+          }
+        },
+        "resolve_a_generic_key": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector providers are not resolved from depin parameterised generic keys"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka providers are not resolved from depin parameterised generic keys"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup providers are not resolved from depin parameterised generic keys"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs services are not resolved from depin parameterised generic keys"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 5e-07,
+            "fraction_of_direct": null,
+            "justification": "Cached generic-key lookup ceiling from the key resolution formula."
+          }
+        },
+        "resolve_a_sync_resource_with_teardown": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector async and resource providers have different resolution and teardown semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka async and resource providers have different resolution and teardown semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup async and resource providers have different resolution and teardown semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs async factories and cleanup do not share depin resolution and teardown semantics"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 3e-06,
+            "fraction_of_direct": null,
+            "justification": "Synchronous resource construction and teardown ceiling from the lifecycle formula."
+          }
+        },
+        "resolve_a_transient_chain": {
+          "candidates": [
+            {
+              "classification": "equivalent",
+              "label": "dependency-injector-4.49.1",
+              "reason": "matches the singleton or transient provider lifecycle and construction shape"
+            },
+            {
+              "classification": "equivalent",
+              "label": "dishka-1.10.1",
+              "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+            },
+            {
+              "classification": "equivalent",
+              "label": "wireup-2.12.0",
+              "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs does not expose the depin provider operation this workload measures"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1e-05,
+            "fraction_of_direct": null,
+            "justification": "Transient construction ceiling from the per-node construction formula."
+          }
+        },
+        "resolve_an_async_singleton": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector async and resource providers have different resolution and teardown semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka async and resource providers have different resolution and teardown semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup async and resource providers have different resolution and teardown semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs async factories and cleanup do not share depin resolution and teardown semantics"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 5e-07,
+            "fraction_of_direct": null,
+            "justification": "Cached asynchronous lookup ceiling from the coroutine boundary formula."
+          }
+        },
+        "resolve_cached_singleton": {
+          "candidates": [
+            {
+              "classification": "equivalent",
+              "label": "dependency-injector-4.49.1",
+              "reason": "matches the singleton or transient provider lifecycle and construction shape"
+            },
+            {
+              "classification": "equivalent",
+              "label": "dishka-1.10.1",
+              "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+            },
+            {
+              "classification": "equivalent",
+              "label": "wireup-2.12.0",
+              "reason": "matches the singleton, transient, or request-scoped provider lifecycle and construction shape"
+            },
+            {
+              "classification": "partial",
+              "label": "svcs-26.2.0",
+              "reason": "per-container caching has no singleton single-flight guarantee or nested lifetime contract"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 5e-07,
+            "fraction_of_direct": null,
+            "justification": "One cached lookup ceiling from the steady-state resolution formula."
+          }
+        },
+        "resolve_cached_singleton_through_an_alias": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector delegates do not provide depin typed-key alias resolution"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka alias resolution does not demonstrate depin typed-key alias cache semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup alias resolution does not demonstrate depin typed-key alias cache semantics"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no depin typed-key alias resolution"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1e-06,
+            "fraction_of_direct": null,
+            "justification": "Cached lookup plus one alias hop ceiling from the indirection formula."
+          }
+        },
+        "resolve_singleton_through_a_two_deep_decoration_chain": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector provider composition does not model depin decoration chains"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka provider composition does not model depin decoration chains"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup provider composition does not model depin decoration chains"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs registrations do not model depin decoration chains"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1.5e-06,
+            "fraction_of_direct": null,
+            "justification": "Cached lookup plus two decoration hops ceiling from the wrapper formula."
+          }
+        },
+        "resolve_through_an_active_override": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector provider overrides are not depin context-local override frames"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka provider substitution is not a depin context-local override frame"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup provider substitution is not a depin context-local override frame"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no depin context-local override frames"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 1e-06,
+            "fraction_of_direct": null,
+            "justification": "Cached lookup plus one override frame ceiling from the substitution formula."
+          }
+        },
+        "resolve_with_no_active_override": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector provider overrides are not depin context-local override frames"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka provider substitution is not a depin context-local override frame"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup provider substitution is not a depin context-local override frame"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no depin context-local override frames"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 5e-07,
+            "fraction_of_direct": null,
+            "justification": "Cached lookup with an empty override stack ceiling from the baseline formula."
+          }
+        },
+        "warmup_a_cold_singleton_graph": {
+          "candidates": [
+            {
+              "classification": "incomparable",
+              "label": "dependency-injector-4.49.1",
+              "reason": "Dependency Injector has no separate frozen resolution plan or depin graph diagnostics operation"
+            },
+            {
+              "classification": "incomparable",
+              "label": "dishka-1.10.1",
+              "reason": "Dishka has no separate frozen resolution plan or depin graph diagnostics operation"
+            },
+            {
+              "classification": "incomparable",
+              "label": "wireup-2.12.0",
+              "reason": "Wireup has no separate frozen resolution plan or depin graph diagnostics operation"
+            },
+            {
+              "classification": "incomparable",
+              "label": "svcs-26.2.0",
+              "reason": "svcs has no separate frozen resolution plan or depin graph diagnostics operation"
+            }
+          ],
+          "secondary_metrics": [],
+          "target": {
+            "fixed_seconds": 0.0005,
+            "fraction_of_direct": null,
+            "justification": "Graph warmup ceiling from the per-singleton construction formula at one thousand nodes."
+          }
+        }
+      }
+    },
+    "protocol_fingerprint": "27f89d9ac4f63be5f1f61374bb96ad8d4c867650dba8ca7c5c1e4c8e4db24fc5",
+    "source_revision": "4f798bec90b5222427254a659052a94b511c3e00",
+    "version": 1
+  },
+  "schema_version": 1,
+  "workloads": {
+    "call_through_an_inject_wrapper": {
+      "allowance": 0.013000000000000001,
+      "eligible": true,
+      "p99": 0.012482676409873392
+    },
+    "call_through_an_inject_wrapper_with_explicit_arguments": {
+      "allowance": 0.017,
+      "eligible": true,
+      "p99": 0.016400915079897615
+    },
+    "construct_a_singleton_for_the_first_time": {
+      "allowance": 0.024,
+      "eligible": true,
+      "p99": 0.02384992095014242
+    },
+    "fastapi_application_startup": {
+      "allowance": 0.032,
+      "eligible": true,
+      "p99": 0.0318809298685162
+    },
+    "fastapi_async_resource_teardown": {
+      "allowance": 0.058,
+      "eligible": false,
+      "p99": 0.05728296445228449
+    },
+    "fastapi_cpu_light_endpoint": {
+      "allowance": 0.023,
+      "eligible": true,
+      "p99": 0.022416396409367528
+    },
+    "fastapi_endpoint_with_work": {
+      "allowance": 0.038,
+      "eligible": true,
+      "p99": 0.037612133758401674
+    },
+    "fastapi_no_injection": {
+      "allowance": 0.027,
+      "eligible": true,
+      "p99": 0.02670203131826226
+    },
+    "fastapi_request_scoped_graph": {
+      "allowance": 0.027,
+      "eligible": true,
+      "p99": 0.026308964834688375
+    },
+    "fastapi_singletons_and_transients": {
+      "allowance": 0.031,
+      "eligible": true,
+      "p99": 0.030669385001713848
+    },
+    "open_a_request_shaped_scope": {
+      "allowance": 0.015,
+      "eligible": true,
+      "p99": 0.014440537209383314
+    },
+    "open_and_close_a_scope": {
+      "allowance": 0.017,
+      "eligible": true,
+      "p99": 0.01626181993461964
+    },
+    "resolve_a_collection_of_10": {
+      "allowance": 0.016,
+      "eligible": true,
+      "p99": 0.015148505913153826
+    },
+    "resolve_a_collection_of_100": {
+      "allowance": 0.01,
+      "eligible": true,
+      "p99": 0.009151774425947088
+    },
+    "resolve_a_generic_key": {
+      "allowance": 0.012,
+      "eligible": true,
+      "p99": 0.011876750700279734
+    },
+    "resolve_a_sync_resource_with_teardown": {
+      "allowance": 0.019,
+      "eligible": true,
+      "p99": 0.01832227916792259
+    },
+    "resolve_a_transient_chain": {
+      "allowance": 0.028,
+      "eligible": true,
+      "p99": 0.027266792119511718
+    },
+    "resolve_an_async_singleton": {
+      "allowance": 0.045,
+      "eligible": true,
+      "p99": 0.04421289015601048
+    },
+    "resolve_cached_singleton": {
+      "allowance": 0.024,
+      "eligible": true,
+      "p99": 0.023339544578845593
+    },
+    "resolve_cached_singleton_through_an_alias": {
+      "allowance": 0.03,
+      "eligible": true,
+      "p99": 0.029518181269976042
+    },
+    "resolve_singleton_through_a_two_deep_decoration_chain": {
+      "allowance": 0.025,
+      "eligible": true,
+      "p99": 0.02423258378775775
+    },
+    "resolve_through_an_active_override": {
+      "allowance": 0.015,
+      "eligible": true,
+      "p99": 0.014958606908365524
+    },
+    "resolve_with_no_active_override": {
+      "allowance": 0.016,
+      "eligible": true,
+      "p99": 0.015329208606518924
+    },
+    "warmup_a_cold_singleton_graph": {
+      "allowance": 0.047,
+      "eligible": true,
+      "p99": 0.04601627019830252
+    }
+  }
+}
