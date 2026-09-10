@@ -6,7 +6,7 @@ from threading import get_ident
 from typing import Annotated
 
 import pytest
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response, Security
+from fastapi import BackgroundTasks, Cookie, Depends, FastAPI, HTTPException, Header, Request, Response, Security
 from fastapi.routing import APIRoute
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, SecurityScopes
 from httpx import ASGITransport, AsyncClient
@@ -164,6 +164,93 @@ def test_install_does_not_recurse_when_selecting_hidden_request_name(monkeypatch
     monkeypatch.setitem(fastapi_implementation.__dict__, '_dependency_value_names', recursive_collection)
 
     install(app, Container().bind(Service).freeze())
+
+
+@pytest.mark.asyncio
+async def test_install_routes_header_and_cookie_values_named_like_hidden_request() -> None:
+    """Root header and cookie values remain distinct from the synthesized request."""
+
+    class Service:
+        pass
+
+    app = FastAPI()
+
+    @app.get('/header')
+    async def header(
+        service: Inject[Service], __depin_request__: Annotated[str, Header(convert_underscores=False)]
+    ) -> dict[str, str]:
+        del service
+        return {'value': __depin_request__}
+
+    @app.get('/cookie')
+    async def cookie(service: Inject[Service], __depin_request__: Annotated[str, Cookie()]) -> dict[str, str]:
+        del service
+        return {'value': __depin_request__}
+
+    _ = header, cookie
+    install(app, Container().bind(Service).freeze())
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url='http://test', cookies={'__depin_request__': 'cookie'}
+    ) as client:
+        header_response = await client.get('/header', headers={'__depin_request__': 'header'})
+        cookie_response = await client.get('/cookie')
+
+    assert header_response.json() == {'value': 'header'}
+    assert cookie_response.json() == {'value': 'cookie'}
+    assert _route(app, '/header').dependant.request_param_name != '__depin_request__'
+    assert _route(app, '/cookie').dependant.request_param_name != '__depin_request__'
+
+
+@pytest.mark.asyncio
+async def test_install_preserves_root_request_named_like_hidden_request() -> None:
+    """An explicit root Request remains the instance seeded for direct injection."""
+
+    class Probe:
+        def __init__(self, request: Request) -> None:
+            self.request = request
+
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint(probe: Inject[Probe], __depin_request__: Request) -> dict[str, bool]:
+        return {'same_request': probe.request is __depin_request__}
+
+    _ = endpoint
+    install(app, Container().scope_value(Request).bind(Probe, scope=Scope.SCOPED).freeze())
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as client:
+        response = await client.get('/')
+
+    assert response.json() == {'same_request': True}
+    assert _route(app, '/').dependant.request_param_name == '__depin_request__'
+
+
+@pytest.mark.asyncio
+async def test_install_routes_direct_security_result_named_like_hidden_request() -> None:
+    """A direct Security result keeps its root dependency name during compilation."""
+
+    class Service:
+        pass
+
+    bearer = HTTPBearer()
+    app = FastAPI()
+
+    @app.get('/')
+    async def endpoint(
+        service: Inject[Service], __depin_request__: Annotated[HTTPAuthorizationCredentials, Security(bearer)]
+    ) -> dict[str, str]:
+        del service
+        return {'token': __depin_request__.credentials}
+
+    _ = endpoint
+    install(app, Container().bind(Service).freeze())
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as client:
+        response = await client.get('/', headers={'Authorization': 'Bearer protected'})
+
+    assert response.json() == {'token': 'protected'}
+    assert _route(app, '/').dependant.request_param_name != '__depin_request__'
 
 
 @pytest.mark.asyncio
