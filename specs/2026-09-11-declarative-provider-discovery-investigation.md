@@ -1,16 +1,16 @@
 # Declarative provider discovery design investigation
 
 Date: 2026-09-11
-Status: investigation complete; mechanism retained; formal-design gate inconclusive; public API unselected
+Status: investigation complete; mechanism retained; formal-design gate failed; public API unselected
 Source proposal: [declarative provider discovery](proposals/2026-09-05-declarative-provider-discovery-proposal.md)
 
 ## Decision boundary
 
-This investigation recommends **module-owned local provider catalogues composed
-through an explicitly imported manifest** as the mechanism to retain while the
-objective gate is completed. Only a green gate could advance it into a future
-design phase. This document does not accept a decorator name, a
-binding-collector method, an argument shape, or an implementation.
+This investigation retains **module-owned local provider catalogues composed
+through an explicitly imported manifest** as the recommended mechanism, but the
+completed cost gate blocks it from advancing into a formal-design phase. This
+document does not accept a decorator name, a binding-collector method, an
+argument shape, or an implementation.
 
 Recursive package scanning is not selected as the definitive mechanism.
 Reachability from explicit roots is not sufficient as the primary mechanism,
@@ -474,6 +474,199 @@ separately pre-registered higher-power paired experiment that reduces the
 freeze and absolute-resolution confidence intervals below the existing bounds;
 this run cannot be repeated selectively or used to loosen them.
 
+### Pre-registered higher-power paired cost contract — 2026-09-11
+
+This second contract decides only the three inconclusive rows above. It does
+not reinterpret or replace any earlier result, measure import, declaration,
+composition, memory, startup, or tails, and does not evaluate an API or a
+runtime implementation. The only candidate remains the name-neutral disposable
+prototype: immutable catalogues owned by their modules and concatenated by an
+ordinary explicitly imported manifest. Recursive package discovery,
+explicit-root reachability, filesystem or `sys.modules` scanning, global state,
+and mutation after `freeze()` remain excluded.
+
+The first experiment used 20 measured pairs and 50 ms calibrated intervals.
+For a conservative power calculation, assume that longer intervals provide no
+precision benefit and that a one-sided interval's distance from its point
+estimate contracts only as `1 / sqrt(n)`. If `w = U95 − point` and `b` is the
+unchanged limit, the pair count needed to place the projected upper endpoint at
+the limit is `ceil(20 × (w / (b − point))²)`. Published values therefore require
+107 pairs for the 100-provider absolute freeze result
+(`w = 2.469 ms`, `b − point = 1.069 ms`), 1,972 for the 1,000-provider result
+(`w = 9.679 ms`, `b − point = 0.975 ms`), and 148 for absolute resolution
+(`w = 318.89 ns`, `b − point = 117.47 ns`). This run fixes 160, 2,304, and 192
+measured pairs respectively. The corresponding conservative projected absolute
+upper endpoints are approximately +0.507 ms, +1.427 ms, and +45.27 ns. The
+250 ms minimum interval is a separate fivefold reduction of within-process
+sampling noise and is not credited in those projections.
+
+Each metric discards exactly 10 warm-up pairs. Each side of every warm-up,
+calibration, and measured pair runs in a fresh interpreter process; a process
+measures only one side. A non-comparative calibration phase chooses a common
+loop count for both sides that made each side run for at least 250 ms. That
+count is then fixed for every warm-up and measured pair of the metric. The
+orchestrator sets `PYTHONHASHSEED=0`, uses the same interpreter and environment
+for both sides, disables garbage collection only inside the timed interval, and
+pins itself and descendants to the lowest CPU in `os.sched_getaffinity(0)` when
+that API and permission are available. Failure to pin is recorded and does not
+change the protocol. Even-numbered pairs run baseline then candidate; odd-numbered
+pairs run candidate then baseline, giving exact AB/BA balance because every
+fixed pair count is even.
+
+For freeze, **M** is a `Container` populated by one current manual `bind()` call
+per source. **C** uses the same source objects grouped ten per module into
+immutable local `BindRecord` tuples; an explicitly imported manifest
+concatenates them in source order, validates the staged count and callable
+sources, and exposes one immutable `Bindings.records()` snapshot to a fresh
+`Container`. Before any calibration or timing, a semantic worker must prove
+`tuple(M.records()) == tuple(C.records())` and
+`build_plan(M.records()) == build_plan(C.records())` at both 100 and 1,000
+providers. The proof and the timings use the same generated application,
+sources, scopes, order, and dependency-free graph. A failed equality aborts
+before measurement and yields no cost verdict. The timed operation is the
+current `Container.freeze()` call on a fresh, already-populated builder; local
+catalogue construction, manifest staging, validation, and binding calls remain
+outside it.
+
+For resolution, **R0** is synchronized `main` and **R1** is this documentation
+worktree. Before calibration or timing, the harness computes SHA-256 for every
+sorted relative `depin/**/*.py` path and hashes the sequence
+`path + NUL + file_digest + LF`; the aggregate hashes and every per-file digest
+must be identical. Both sides use the same fresh interpreter to import from the
+selected checkout, build the same transient three-class chain, and time only
+the existing `resolve(Root)` path. No discovery hook, lookup, branch, or state
+may be added to either checkout. Hash inequality aborts before measurement and
+yields no resolution verdict.
+
+For pair `i`, freeze uses `d_i = C_i − M_i` and `r_i = C_i / M_i`; resolution
+uses `d_i = R1_i − R0_i` and `r_i = R1_i / R0_i`. Each point estimate is the
+median of its paired values. A deterministic paired percentile bootstrap draws
+the pair indices with replacement, preserving each difference/ratio pair, and
+computes 50,000 resampled medians with `random.Random(2026091102)`. After sorting
+the bootstrap values, quantile `q` uses linear interpolation at
+`h = (B − 1)q`; L95 is `q = 0.05` and U95 is `q = 0.95`, the existing one-sided
+95% rule. All durations must be finite and positive and every fixed sample must
+be present.
+
+The limits remain exactly:
+
+| Metric | Absolute limit | Relative limit |
+| --- | ---: | ---: |
+| C−M `freeze()`, 100 providers | ≤ +0.600 ms | C/M ≤ 1.10 |
+| C−M `freeze()`, 1,000 providers | ≤ +1.500 ms | C/M ≤ 1.10 |
+| R1−R0 resolution | ≤ +50 ns per resolution | R1/R0 ≤ 1.05 |
+
+A row is **PASS** only when the point estimate and U95 meet both its absolute
+and relative limits. It is **FAIL** when the point estimate and L95 exceed
+either limit. It is **INCONCLUSIVE** in every other case. Rows cannot be
+averaged or compensate for one another.
+
+Smoke runs may validate generation, equivalence, CLI behavior, configured
+sample counts, and output shape, but may neither emit nor retain comparative
+timings. The dedicated run writes no intermediate comparison to stdout and
+publishes its raw JSON atomically only after every fixed pair is complete. A
+mechanical failure before the first measured pair permits a harness correction
+and a complete restart, with the correction and new hash recorded. After the
+first measured pair, methodology, limits, sampling, fixtures, and harness bytes
+are frozen: an interrupted run may be restarted once only in full with identical
+bytes and a documented external cause, without inspecting partial timings; a
+second interruption makes the experiment mechanically INCONCLUSIVE. There is
+no optional stopping, retuning, selective repetition, or new measurement after
+observing the completed comparison in this session, regardless of its verdict.
+
+The harness, generated package, environment-specific files, and raw JSON are
+temporary. Only their sufficient construction rule, exact commands, versions,
+content hashes, scalar estimates and bounds, limits, and verdicts may survive in
+this Markdown document. The formal-design gate remains unchanged until this
+contract has one completed result.
+
+### Higher-power paired cost results — 2026-09-11
+
+The contract above was committed separately as `95e4a11` before the harness or
+fixtures existed and before any new comparison. The smoke run emitted
+`comparative_timings: false`, proved both source-tree hashes equal, and proved
+record and plan equality at both sizes. The dedicated run then completed all
+fixed pairs without interruption or correction. No partial timing was inspected
+and no metric was repeated.
+
+The disposable generator again wrote ten empty provider classes per module.
+Each module owned a tuple of those classes and an immutable tuple of transient
+`BindRecord` values; `manifest.py` explicitly imported every module and
+concatenated both tuples in source order. M called current `Container.bind()`
+once per manifest source. C validated the manifest count, callability, and
+source identity, then supplied its immutable snapshot through current
+`Container(*sources)`. A semantic worker called current `build_plan()` on both
+record tuples before the timing workers were allowed to start. Freeze workers
+created already-populated builders outside the timed region and timed only
+`freeze()`; resolution workers built and froze the three-transient-class chain
+outside the timed region and timed only `resolve(Root)`. Every side of every
+pair was a new subprocess.
+
+The original commands were:
+
+```console
+$ uv run python /tmp/depin-discovery-cost-20260911.1UnHtN/paired_cost_probe.py --smoke --root /tmp/depin-discovery-cost-20260911.1UnHtN --main /home/dreco/dev/depin --candidate /home/dreco/dev/depin/.worktrees/declarative-discovery-cost-gate
+$ uv pip install numpy
+$ PYTHONHASHSEED=0 uv run --no-sync python /tmp/depin-discovery-cost-20260911.1UnHtN/paired_cost_probe.py --run --root /tmp/depin-discovery-cost-20260911.1UnHtN --main /home/dreco/dev/depin --candidate /home/dreco/dev/depin/.worktrees/declarative-discovery-cost-gate --output /tmp/depin-discovery-cost-20260911.1UnHtN/paired-cost-results.json
+```
+
+The environment was CPython 3.12.13 built with Clang 22.1.3, uv 0.11.13,
+NumPy 2.5.3, and Linux 6.8.0-138-generic x86_64 with glibc 2.39 on a four-CPU
+Intel Xeon E5-2683 v4. Affinity was available and both orchestrator and workers
+were pinned to CPU 0. Main was
+`531d6e335312a6a028a9007306458f70838db450`; the pre-registered documentation
+worktree was `95e4a11ec126f7faa10fd565d6d1d7a601790a1e`.
+
+| Temporary artifact | SHA-256 |
+| --- | --- |
+| Harness | `f7198085926efd7c9c16c6bd14409d6146ae956997243104bcbeb673ad741201` |
+| Generated fixture tree, 114 files | `248061fdc40a1f13f13b162d6ce44add03309fa01f6398e3ccdd6a621e7fda37` |
+| Raw result JSON | `ea740cfb0d53af6960374a92a020556293afd2f71b151163b9a943156b0a0239` |
+
+The sorted 48-file `depin/**/*.py` hash was identical on both worktrees:
+`dcdba3cc85275f9a58dc54abdd7dac9669b90efe466beedc47a267c932390173`.
+The semantic controls were exact:
+
+| Providers | M/C records | Records equal | M/C plan order | Plans equal |
+| ---: | ---: | --- | ---: | --- |
+| 100 | 100/100 | yes | 100/100 | yes |
+| 1,000 | 1,000/1,000 | yes | 1,000/1,000 | yes |
+
+The non-comparative calibration fixed 32 loops for freeze/100, two for
+freeze/1,000, and 65,536 for resolution. Verification intervals were
+531.050/488.476 ms for M/C at 100, 296.016/298.417 ms for M/C at 1,000, and
+368.679/386.781 ms for R0/R1, so every side exceeded 250 ms before the loop
+counts were frozen.
+
+The table reports the paired point estimate, L95, U95, unchanged limit, and
+per-metric verdict. Absolute freeze values are milliseconds; resolution values
+are nanoseconds per resolution.
+
+| Metric | M or R0 median | C or R1 median | Absolute point / L95 / U95 / limit | Relative point / L95 / U95 / limit | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `freeze()`, 100 providers | 14.991952 ms | 14.961293 ms | +0.022135 / −0.007376 / +0.051490 / +0.600000 ms | 1.001480 / 0.999503 / 1.003443 / 1.100000 | **PASS** |
+| `freeze()`, 1,000 providers | 149.977675 ms | 150.943945 ms | +1.119652 / +1.027894 / +1.211556 / +1.500000 ms | 1.007468 / 1.006857 / 1.008081 / 1.100000 | **PASS** |
+| resolution without discovery | 5,742.411 ns | 5,851.304 ns | +134.879 / +101.553 / +161.847 / +50.000 ns | 1.023390 / 1.017728 / 1.028706 / 1.050000 | **FAIL** |
+
+The difference of the two displayed side medians need not equal the paired
+median difference; the decision statistic is the pre-registered median of
+within-pair differences. Both freeze rows are now decisive PASS results. The
+resolution ratio also passes, but its absolute point and L95 both exceed +50 ns,
+which makes the row FAIL under the rule fixed before measurement. Identical
+source hashes exclude discovery runtime code as the cause but do not cancel or
+reinterpret the measured null-control failure.
+
+Overall, the focused experiment produced two PASS and one FAIL. It was not
+repeated. The cost proof is therefore FAIL, and declarative provider discovery
+is not ready for formal design. The redirect is a separate investigation of the
+identical-source resolution-control bias before any further cost claim. The
+gate may be reconsidered only after that investigation supplies a falsifiable
+cause and a new independently pre-registered control that meets the same
++50 ns and 1.05 limits; more samples, selective repetition, or relaxed limits
+alone are not a remedy. This conclusion retains the catalogue-plus-explicit-
+manifest mechanism only as the preferred mechanism among those investigated;
+it accepts no public API, signature, decorator, method, class, or name.
+
 ### Reconstructing the discarded probes
 
 This section retains enough source shape and command detail to reconstruct the
@@ -926,14 +1119,15 @@ does not answer those API questions.
 | 5. Determinism contract | **PASS** | Source/declaration order is preserved; explicit object identity governs aliases/reexports; repeats/overlaps preserve literal input then use current duplicate validation; incomplete imports are not consumed; reload is not live update and frozen containers remain unchanged. |
 | 6. Typing proof | **PASS** | All five pinned checkers accepted 17 exact-type positive assignments for every provider form and both `provides()` orders, and rejected all five invalid metadata categories at configuration. No forbidden type escape or register change occurred. |
 | 7. Cost acceptance contract | **PASS** | The dated absolute/relative bounds, controls, bootstrap decision rule, and inconclusive rule are retained in `4dea4b9`; cost results first appear in the later commit `8b1ce17`. |
-| 8. Cost proof | **INCONCLUSIVE** | Records, plans, memory, import, and declaration passed with zero failures, but freeze U95 crossed the fixed caps at P=100 and P=1,000, and absolute resolution U95 was +251.42 ns against +50 ns. A fresh pre-registered higher-power paired experiment must narrow all three intervals below the existing limits. |
+| 8. Cost proof | **FAIL** | The separately pre-registered higher-power run proved exact record/plan and source-hash equality and moved both pending freeze rows to PASS. Resolution without discovery failed its unchanged absolute limit: point +134.879 ns, L95 +101.553 ns, and U95 +161.847 ns against +50 ns, although its ratio passed. |
 | 9. Error contract | **PASS** | The documented boundary requires `DepinError`, preserved import `__cause__`, manifest/domain plus module/declaration context, current pipeline errors unchanged, and atomicity only for depin-owned state. |
 
-The formal-design gate is **INCONCLUSIVE** and declarative provider discovery is
-**not ready for formal design**. The sole blocking gate is the precision of the
-pre-registered cost proof, not an observed limit violation. The recommended
-redirect is the narrow higher-power cost experiment described in gate 8; the
-consumer, atomicity, parity, import, determinism, typing, and error evidence need
-not expand into runtime or public-API work while that blocker remains. Mechanism
+The formal-design gate is **FAIL** and declarative provider discovery is **not
+ready for formal design**. The cost proof now contains an observed limit
+violation in the identical-source resolution control, not an interval that
+merely needs more precision. The recommended redirect is the independent
+control-bias investigation recorded with the higher-power results; consumer,
+atomicity, parity, import, determinism, typing, and error evidence need not
+expand into runtime or public-API work while that failure remains. Mechanism
 evidence, public API, and naming stay separate, and no formal design or
 implementation plan is authorized by this document.
