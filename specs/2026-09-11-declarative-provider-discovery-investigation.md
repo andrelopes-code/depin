@@ -1,15 +1,16 @@
 # Declarative provider discovery design investigation
 
 Date: 2026-09-11
-Status: investigation complete; mechanism recommended for formal design; public API unselected
+Status: investigation complete; mechanism retained; formal-design gate inconclusive; public API unselected
 Source proposal: [declarative provider discovery](proposals/2026-09-05-declarative-provider-discovery-proposal.md)
 
 ## Decision boundary
 
 This investigation recommends **module-owned local provider catalogues composed
-through an explicitly imported manifest** as the mechanism to take into a future
-design phase. It does not accept a decorator name, a binding-collector method,
-an argument shape, or an implementation.
+through an explicitly imported manifest** as the mechanism to retain while the
+objective gate is completed. Only a green gate could advance it into a future
+design phase. This document does not accept a decorator name, a
+binding-collector method, an argument shape, or an implementation.
 
 Recursive package scanning is not selected as the definitive mechanism.
 Reachability from explicit roots is not sufficient as the primary mechanism,
@@ -141,7 +142,7 @@ The terms below describe mechanisms only. None implies a public name.
 | Expected import/discovery/freeze cost | Cold cost is all selected module imports plus enumeration, namespace inspection, ownership checks, deduplication, and sorting. Warm discovery still scans attributes. Freeze remains the existing cost for the resulting graph. | Cold cost is explicit manifest imports. Registration and composition are linear in declared providers/catalogues, with no attribute scan. Freeze is unchanged for an equivalent record set. | Lowest cost for a small reachable subset, but adds a pre-freeze graph traversal and repeated annotation/metadata work before the normal graph is built. |
 | Expected retained memory | Python retains every imported descendant; declarations add metadata and staged records. The frozen plan is unchanged after staging is released. | Retains explicitly selected modules, their catalogues, their normal transitive imports, and the same frozen plan, while avoiding descendants imported only by recursive scanning. Collector snapshots are linear in declared providers. | Retains roots and the reachable records, but any reverse implementation index needed for parity becomes a catalogue under another name. |
 | Resolution when unused | Can be zero only if no scan hook, global index, or resolution fallback is installed and `FrozenContainer` remains plan-only. | Naturally zero: consumers that do not import or include a catalogue keep the current registration and frozen runtime paths. | Can be zero if traversal ends before plan creation; any lazy expansion from `resolve()` is rejected. |
-| Result | Do not select recursive package scanning as the default. Exact-module inspection is narrower but keeps reexport/reload/attribute-scan complexity without beating an explicit catalogue. | **Recommended for formal design**, subject to the gate below. It provides direct primaries, explicit bounds, ordinary import behavior, isolation, and the smallest new mechanism. | Reject as the primary mechanism because it fails the direct-primary and provider-parity contracts. Reconsider only as optional pruning after complete catalogue selection. |
+| Result | Do not select recursive package scanning as the default. Exact-module inspection is narrower but keeps reexport/reload/attribute-scan complexity without beating an explicit catalogue. | **Retain as the recommended mechanism; formal design remains blocked by the gate below.** It provides direct primaries, explicit bounds, ordinary import behavior, isolation, and the smallest new mechanism. | Reject as the primary mechanism because it fails the direct-primary and provider-parity contracts. Reconsider only as optional pruning after complete catalogue selection. |
 
 ## Cost model and evidence boundary
 
@@ -231,6 +232,230 @@ resolution control passes. A noisy or inconclusive result is not permission to
 loosen this contract; it requires a fresh pre-registered experiment in a later
 investigation.
 
+## Disposable proof results — 2026-09-11
+
+All names used by these probes were fixture-local placeholders. They accept no
+public decorator, catalogue, manifest, method, exception, or signature. The
+cost contract was fixed in commit `4dea4b9` before the cost probe was run. The
+checkout used CPython 3.12.13 and uv 0.11.13 unless a row says otherwise.
+
+The scripts, generated packages, wheels, environments, and raw outputs were
+temporary by design. To make the recorded runs identifiable, their SHA-256
+digests before disposal were:
+
+| Evidence | SHA-256 |
+| --- | --- |
+| Import-contract script / output | `a07a2e27ae57096923e03665e0a633cf350527be349954fcb8b879da6d75ac9b` / `15b1b53f63de9e698e135556f8dda5128773278934e8b845747c807810e76d69` |
+| Typing positive / negative fixtures | `f7a4b8602de8d02d183e76f27cf43d3fde6386a9254e7cb2ec35fe843885b22b` / `d364522305f95a5dec193edf2d06d20578f1e4b2829c17a60c19a16597ea6080` |
+| Cost script / JSON result | `f501f7f14861dcdd7f0287044cb5896e02546f87ec2a114c3dc95ad8d64c561d` / `1d2f7e7b62ffbbda237656f6c89ef5f08ce9fec7390be6cb0d34ad2657c3409f` |
+
+The tables below are the reproduction recipe: rebuild the named fixture forms,
+run from synchronized `a618c7a` after `uv sync --all-groups --all-extras`, and
+apply the commands and assertions stated for each proof. Nothing depends on an
+unpublished depin implementation.
+
+### Consumer comparison
+
+One representative nine-provider graph was built three ways. It contained a
+`DirectPrimary` resolved only by primary lookup, `SqlStore` under the abstract
+`Store` protocol and tag `primary`, a dependent sync `make_client` factory, a
+coroutine factory, generator and async-generator lifecycle factories,
+`contextmanager` and `asynccontextmanager` factories, `when=True`, a `healthy`
+check, and a class carrying current `provides()` metadata.
+
+| Form | Composition-root entries | Result |
+| --- | ---: | --- |
+| Current manual binding | 9 provider-level `bind()` calls | 9 records |
+| Module-owned immutable catalogues | 2 local catalogues containing the same 9 records | no shared mutable catalogue |
+| Explicit manifest | 2 explicit catalogue imports | ordered 9-record snapshot |
+
+Moving from nine individual root bindings to two module imports removes seven
+provider-level entries, a 77.8% reduction, while leaving both imports visible.
+The manifest imported `CORE_CATALOGUE` and `LIFECYCLE_CATALOGUE` explicitly; it
+did not enumerate a package, filesystem, or `sys.modules`.
+
+Manual and catalogue tuples compared equal over every `BindRecord` field. Their
+plans compared equal both as `ResolutionPlan` dataclasses and as explicit
+signatures over `order`, `by_key`, `inactive`, and every ordered
+`ProviderSpec` field. The disposable program exited zero with 20 top-level
+assertions, and the current provider, lifecycle, health, and graph-validation
+tests passed with 146 tests. A root set containing only `make_client` could
+neither find direct-only `DirectPrimary` nor infer that `SqlStore` implements
+its tagged `Store` parameter. Root reachability therefore still needs a reverse
+provider index for the abstract-key case and explicit enumeration for the
+direct-only case; it remains rejected as the primary mechanism.
+
+### Atomic receiver mutation
+
+The prototype imported and concatenated complete catalogue snapshots, checked
+that every element was an immutable `BindRecord`, and called current
+`build_plan(staged)` before one `include()` on a real receiver. A seeded
+`Container` and `Registry` changed from exactly `before` to `before + staged`
+only on successful commit. For every failure below, a commit-call counter stayed
+at zero and `tuple(receiver.records()) == before` remained true:
+
+| Failure before commit | Observed staging result |
+| --- | --- |
+| Manifest import | original `ImportError` from the deliberately failing module |
+| Invalid declaration | current `InvalidProviderError` for source `42` |
+| Manifest composition | fixture-local rejection of a non-immutable/non-record tuple |
+| Duplicate binding | current `DuplicateProviderError` for `Store`, tag `primary` |
+| Repeated catalogue | the same current duplicate error; no identity de-duplication |
+| Overlapping catalogues/domains | the same current duplicate error; no implicit winner |
+
+This is staging plus one depin-owned mutation, not transactional Python import.
+Successfully imported dependencies, `sys.modules`, logging, I/O, or any other
+application import effect are outside the atomicity claim and are not rolled
+back.
+
+### Provider parity
+
+Every automatically converted declaration must populate the existing frozen
+`BindRecord(source, scope, provides, tag, condition, check)` and then use
+`build_specs()` and `build_plan()` unchanged.
+
+| Hypothetical declaration input | Existing authoritative path | Valid scopes proved |
+| --- | --- | --- |
+| Class | `source` -> class shape -> `ProviderSpec` -> graph | singleton, scoped, transient |
+| Sync factory | `source` -> function shape and typed parameters -> graph | singleton, scoped, transient |
+| Coroutine factory | `source` -> async-function shape/flag -> graph | singleton, scoped, transient |
+| Generator factory | `source` -> generator lifecycle shape -> graph/teardown | singleton, scoped; transient rejected |
+| Async-generator factory | `source` -> async-generator lifecycle shape -> graph/teardown | singleton, scoped; transient rejected |
+| `contextmanager` factory | `source` -> context-manager lifecycle shape -> graph/teardown | singleton, scoped; transient rejected |
+| `asynccontextmanager` factory | `source` -> async-context-manager lifecycle shape -> graph/teardown | singleton, scoped; transient rejected |
+| Explicit key | `provides` -> current key resolution -> `ProviderSpec.key` | same as its source form |
+| Tag | `tag` -> provider identity and `by_key` | same as its source form |
+| Activation | `condition` -> current active/inactive filtering | same as its source form |
+| Health check | `check` -> current checked-provider/health path | same as its source form |
+| Existing `provides()` | current target metadata lookup composed in both decorator orders | class case proved |
+
+The parity loop executed nine valid non-lifecycle shape/lifetime combinations,
+eight valid lifecycle combinations, and all four lifecycle/transient
+rejections. Ready-made values, aliases, collections, scope-frame values, and
+provider decoration remain explicit APIs and are not automatic declaration
+conversions.
+
+### Import and determinism contract
+
+An ordinary-import probe produced 24 PASS and no unresolved case: 22 core
+loader/import assertions under Python 3.12.3, plus editable and wheel installs
+in fresh uv-managed CPython 3.12.13 environments. The packaging reproduction
+commands were `uv venv`, `uv pip install --python <venv>/bin/python -e
+<fixture>`, `uv build --wheel`, and installation of that exact wheel into a
+second fresh environment.
+
+| Case | Deterministic supported outcome |
+| --- | --- |
+| Regular module/package | import the exact manifest name and read its explicit catalogue references |
+| Namespace package | import an explicit manifest from one portion; do not enumerate or include another portion |
+| Editable/wheel install | the exact installed manifest imports and exposes the same catalogue tuple |
+| Zip import | the exact manifest imports through the standard zip loader |
+| Python-supported cycle | a cycle that defers catalogue access until both modules initialize completes as `('A', 'B')` |
+| Early cyclic/partial access | ordinary `ImportError`/initialization failure; no manifest is consumed and the receiver stays unchanged |
+| Partial import failure | the failing module is not consumable; successfully imported dependencies can remain cached |
+| Reexport/alias | explicit references preserve object identity; no ownership or alias scan |
+| Manifest/catalogue order | preserve manifest source order and each local declaration order; graph topological order remains authoritative afterward |
+| Repeated/overlapping catalogue | preserve literal composition, then reject duplicate key/tag through current validation; never silently de-duplicate or select a winner |
+| Module `__getattr__` | exact known imports/access avoid it; arbitrary namespace probing invokes it and is forbidden |
+| Custom loader without enumeration | exact-name import succeeds; no `iter_modules` or equivalent is required |
+| Reload | outside live-update support: reload creates new catalogue/provider identities; old references and snapshots remain old |
+
+The reload probe froze a real container from the old catalogue, rewrote and
+reloaded the provider module, and observed version `1` both before and after
+reload. The old record tuple stayed equal, the reloaded class/catalogue had new
+identities, and the frozen container rejected the new class key. A newly built
+container may see only the new catalogue object explicitly supplied to it.
+
+There is deliberately no fallback based on the filesystem, `sys.modules`,
+implicit or recursive package scanning, module attribute enumeration, or
+loader-specific enumeration. Python import caching and application side effects
+remain ordinary Python behavior, not depin-owned state.
+
+### Five-checker typing proof
+
+A name-neutral identity declaration used overloads for bare and configured
+forms. Seventeen typed identity assignments covered a class plus paired bare and
+configured sync, coroutine, generator, async-generator, context-manager, and
+async-context-manager factories. Configured cases supplied scope, key, tag,
+condition, and health-check metadata. Both orders with current `provides()` were
+typed. Factory parameter and return/yield/context-manager wrapper types stayed
+exact.
+
+| Checker pinned by the repository on this date | Positive fixture | Negative fixture |
+| --- | --- | --- |
+| mypy 2.3.1 | `mypy --strict`: zero diagnostics | five intended errors |
+| Basedpyright 1.39.10 / Pyright 1.1.412 | repository-strict disposable config: zero errors, warnings, or notes | five `reportArgumentType` errors |
+| stock Pyright 1.1.411 | source-gate-equivalent config: zero diagnostics | five `reportArgumentType` errors |
+| ty 0.0.79 | repository-equivalent config: all checks passed | five `invalid-argument-type` diagnostics |
+| Pyrefly 1.2.0 | `--preset strict` plus repository-equivalent config: zero errors | five `bad-argument-type` diagnostics |
+
+The five negative cases supplied an invalid scope, key, tag, one-argument
+condition, and non-callable health check. Every checker located each error at
+the configuration call. A source scan found no `Any`, `cast`, suppression,
+baseline, or expected-register reference; no register changed.
+
+One signature limit belongs to future design: a conventional configured
+decorator receives its health check before it receives the provider, so this
+prototype could prove that metadata preserves the provider type but could not
+relate the check parameter to that later return/yield type. The fixture used a
+contravariant `Callable[[Never], object]` boundary. A formal API would need a
+different type shape if it promises the same check-argument precision as
+`bind(check=...)`. This does not select that shape or weaken provider identity.
+
+### Cost results against the pre-registration
+
+The cost harness ran 20 measured paired timings after three discarded warm-up
+pairs, 15 paired retained-memory processes, and the fixed 10,000-resample
+bootstrap. Manual/catalogue record tuples and plans were equal at every size.
+The `depin/**/*.py` source hash was identical on main and the branch:
+`d3b7ea2ab73f013e7627e74b037cabfa0f28dc59afbfd474a8f145dfb544d7af`.
+
+The timing cells show control/candidate medians:
+
+| Providers | Cold import I0/C | Declaration M/C | Freeze M/C | Verdicts |
+| ---: | ---: | ---: | ---: | --- |
+| 10 | 197.863/196.623 ms | 17.278/18.077 µs | 1.651/1.691 ms | PASS / PASS / PASS |
+| 100 | 200.322/200.958 ms | 163.405/159.054 µs | 14.954/13.970 ms | PASS / PASS / **INCONCLUSIVE** |
+| 1,000 | 245.320/258.232 ms | 1.660/1.595 ms | 138.744/138.395 ms | PASS / PASS / **INCONCLUSIVE** |
+
+| Providers | Retained before freeze M/C | Retained after freeze M/C | Contract result |
+| ---: | ---: | ---: | --- |
+| 10 | 1,056/1,352 B | 4,036/4,107 B | PASS / PASS |
+| 100 | 8,992/11,144 B | 30,573/32,653 B | PASS / PASS |
+| 1,000 | 88,928/109,064 B | 284,608/305,244 B | PASS / PASS |
+
+No point estimate failed. Freeze at 100 providers had paired median difference
+−0.469 ms but U95 +2.000 ms over the +0.600 ms absolute cap, and ratio U95
+1.1358 over 1.10. Freeze at 1,000 had paired median +0.525 ms and ratio U95
+1.0778, but absolute U95 +10.204 ms exceeded +1.500 ms. Both are therefore
+INCONCLUSIVE under the rule fixed before measurement.
+
+The unchanged-resolution control measured main/branch medians of
+5,895.53/5,924.73 ns per transient-chain resolution. Its paired ratio was
+0.9887 with U95 1.0433, within 1.05, but the paired absolute difference U95 was
++251.42 ns, above +50 ns. It too is INCONCLUSIVE. Overall cost evidence is 13
+PASS, zero FAIL, and three INCONCLUSIVE. The required next evidence is a fresh,
+separately pre-registered higher-power paired experiment that reduces the
+freeze and absolute-resolution confidence intervals below the existing bounds;
+this run cannot be repeated selectively or used to loosen them.
+
+### Error boundary for a future design
+
+- Every discovery-specific exception must inherit `DepinError`.
+- A wrapper around an import failure must use explicit exception chaining so
+  the original import exception remains in `__cause__`.
+- The message must name the requested manifest or domain and the failing module;
+  declaration and composition errors must also name the offending declaration
+  or catalogue.
+- Current pipeline errors such as `InvalidProviderError`,
+  `InvalidScopeError`, `DuplicateProviderError`, `MissingProviderError`,
+  `CircularDependencyError`, and `CaptiveDependencyError` remain authoritative
+  once staged records enter the existing pipeline. Discovery must not translate
+  or duplicate them merely to change their category.
+- Atomicity covers only depin-owned collector records and the one staged commit.
+  It never promises rollback of `sys.modules` or application import side
+  effects.
+
 ## Recommended mechanism for a future design
 
 The design candidate should have these properties:
@@ -289,67 +514,34 @@ cannot provide. Pure root reachability stays rejected unless it can represent
 direct-only providers and all factory/key/tag cases without introducing a hidden
 global reverse index.
 
-## Open questions
+## Questions intentionally left to design
 
-- What declaration metadata shape covers `scope`, explicit key, tag, condition,
-  and health check for every class/factory form while preserving exact types?
-- What is the smallest manifest contract that composes module-owned catalogues
-  without accepting a new public naming scheme prematurely?
-- Is repeated inclusion of the same catalogue an existing duplicate-provider
-  error, or should manifest composition remove exact repeated record identities?
-- Which decorator orders with `provides()`, generator/context-manager wrappers,
-  and ordinary wrappers are supported, rejected, or normalized?
-- Is reload explicitly outside the supported contract, or must a new-container
-  workflow after controlled reload receive deterministic tests?
-- Which import failures need a discovery-specific `DepinError` subtype, and
-  which existing provider/graph errors remain authoritative?
-- Which numerical, baseline-relative import, declaration, freeze,
-  retained-memory, and no-discovery resolution bounds will be recorded before
-  measuring 10, 100, and 1,000 providers?
-- Does a manifest with one entry per provider module remove enough
-  composition-root repetition in representative applications to justify a new
-  public surface instead of documenting the existing `Registry` pattern?
+No public name, decorator shape, manifest type, method, signature, or exception
+taxonomy was accepted. A future design, once authorized, would still need to
+choose the smallest public surface, decide how a configured declaration relates
+a health-check parameter to the later provider type, and specify decorator
+ordering without changing context-manager shape detection. The mechanism proof
+does not answer those API questions.
 
 ## Objective gate for writing a formal design
 
-A formal design may be written only when all of these checks are green:
+| Gate | Result | Reproducible evidence or exact missing evidence |
+| --- | --- | --- |
+| 1. Consumer proof | **PASS** | Nine manual provider entries became two explicit module-catalogue imports (77.8% fewer); the graph includes direct-only, abstract-key, dependent factory, async/lifecycle, tag, condition, and check cases. Root reachability missed the direct-only and abstract implementation cases. |
+| 2. Atomicity proof | **PASS** | Six pre-commit failures left real receiver `records()` equal to the seeded snapshot and made zero commit calls; successful staging made one `include()`. |
+| 3. Provider-parity map | **PASS** | All seven source shapes, all valid lifetimes, six record fields, current `provides()` composition, and four lifecycle/transient rejections use the existing provider/graph pipeline. The five excluded binding forms remain explicit. |
+| 4. Import contract | **PASS** | Exact ordinary imports passed for module/package, namespace manifest, editable, wheel, zip, supported cycle, partial failure, reexports/aliases, reload, `__getattr__`, and a loader with no enumeration API. No fallback was used. |
+| 5. Determinism contract | **PASS** | Source/declaration order is preserved; explicit object identity governs aliases/reexports; repeats/overlaps preserve literal input then use current duplicate validation; incomplete imports are not consumed; reload is not live update and frozen containers remain unchanged. |
+| 6. Typing proof | **PASS** | All five pinned checkers accepted 17 exact-type positive assignments for every provider form and both `provides()` orders, and rejected all five invalid metadata categories at configuration. No forbidden type escape or register change occurred. |
+| 7. Cost acceptance contract | **PASS** | The dated absolute/relative bounds, controls, bootstrap decision rule, and inconclusive rule were committed as `4dea4b9` before measurement output existed. |
+| 8. Cost proof | **INCONCLUSIVE** | Records, plans, memory, import, and declaration passed with zero failures, but freeze U95 crossed the fixed caps at P=100 and P=1,000, and absolute resolution U95 was +251.42 ns against +50 ns. A fresh pre-registered higher-power paired experiment must narrow all three intervals below the existing limits. |
+| 9. Error contract | **PASS** | The documented boundary requires `DepinError`, preserved import `__cause__`, manifest/domain plus module/declaration context, current pipeline errors unchanged, and atomicity only for depin-owned state. |
 
-1. **Consumer proof:** the same representative application is expressed with
-   manual binding, module-owned catalogues, and explicit roots; the catalogue
-   form includes a direct-only primary provider and reduces composition-root
-   entries from providers to modules without hiding imports.
-2. **Atomicity proof:** a disposable prototype shows that an import failure,
-   invalid declaration, and manifest-composition failure each leave the
-   receiving collector's `records()` tuple equal to its pre-operation snapshot.
-   The write is one commit after complete staging.
-3. **Provider-parity map:** every source and option in the proposal maps to a
-   `BindRecord` field and an existing `ProviderSpec`/`ResolutionPlan` path;
-   excluded value/alias/collection/scope-value/decoration forms remain explicit.
-4. **Import contract:** regular modules/packages, an explicit manifest under a
-   namespace package, editable and wheel installs, and zip imports use only
-   ordinary import semantics. Unsupported custom-loader or reload behavior is
-   stated as a boundary, not silently skipped.
-5. **Determinism contract:** manifest order, reexports, repeated and overlapping
-   catalogues, duplicates, aliases, import cycles, partially initialized
-   modules, and reload each have one testable outcome.
-6. **Typing proof:** a throwaway signature prototype covers configured and
-   unconfigured declaration of every provider shape in the five-checker corpus,
-   with no `Any`, suppression, new diagnostic, or expected-register increase.
-7. **Cost acceptance contract:** before measurement, a dated probe contract
-   records numerical baseline-relative upper bounds and a statistical decision
-   rule for import overhead against importing the same application modules,
-   declaration and freeze overhead against manual binding of the same graph,
-   retained memory against both controls, and no-discovery resolution against
-   current `main`. No result is seen before those pass/fail bounds are fixed.
-8. **Cost proof:** disposable 10, 100, and 1,000-provider measurements separate
-   imports from catalogue work and freeze, record retained memory, demonstrate
-   plan equivalence, and meet every predeclared bound, including the
-   no-discovery resolution control. They do not edit `budgets.toml` or published
-   evidence.
-9. **Error contract:** proposed failure classes all inherit `DepinError`, retain
-   import exception chaining, name the requested manifest and failing module or
-   declaration, and limit atomicity claims to depin-owned state.
-
-The mechanism comparison and import-system analysis are complete. The consumer,
-atomicity, five-checker signature, and bounded cost proofs remain prerequisites,
-not implementation work authorized by this investigation.
+The formal-design gate is **INCONCLUSIVE** and declarative provider discovery is
+**not ready for formal design**. The sole blocking gate is the precision of the
+pre-registered cost proof, not an observed limit violation. The recommended
+redirect is the narrow higher-power cost experiment described in gate 8; the
+consumer, atomicity, parity, import, determinism, typing, and error evidence need
+not expand into runtime or public-API work while that blocker remains. Mechanism
+evidence, public API, and naming stay separate, and no formal design or
+implementation plan is authorized by this document.
