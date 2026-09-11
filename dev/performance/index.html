@@ -1665,6 +1665,10 @@ scales, and where it stops being measurable at all.</p>
 <li><strong><a href="results/">Results</a></strong> — the measured figures, separated into startup and
   recurring costs, each against a direct-Python baseline. That page is generated
   from the committed dataset, so it cannot drift from its evidence.</li>
+<li><strong><a href="comparison-baseline/">Comparative baseline</a></strong> — the accepted 2026-09-09
+  per-workload comparison with equivalent current libraries. It is also an
+  exact render of its committed dataset and is not rewritten by later,
+  differently scoped evidence.</li>
 <li><strong><a href="methodology/">Methodology</a></strong> — how the numbers are produced, and what
   would make them wrong.</li>
 <li><strong><a href="reproducing/">Reproducing</a></strong> — the commands to run all of it yourself.</li>
@@ -1703,9 +1707,14 @@ carrying their baseline and their uncertainty. Where two libraries cannot be mad
 to do observably the same thing, the workload is labelled incomparable rather than
 counted as a win — and unfavourable <code>depin</code> results are published under exactly
 the same rules as favourable ones.</p>
-<p>Comparisons with other libraries are not published yet. The eligibility screen has
-been run and recorded; the comparison page is deliberately left until the
-methodology has been exercised on <code>depin</code> alone.</p>
+<p>The 2026-09-09 comparison with other libraries is published as a per-workload
+baseline. The separate 2026-09-10 FastAPI study compares the published v0.20.0
+runtime with v0.19.0; it does not turn semantically incomparable framework
+integrations into competitors or replace the comparative dataset. That study
+meets the CPU-light DI-attributable p50 objective and the generic p50 gate for
+all six FastAPI workloads. Its tail and application-startup criteria remain
+inconclusive pending measurement in a dedicated environment, so no tail or
+startup leadership claim is made here.</p>
 
 
 
