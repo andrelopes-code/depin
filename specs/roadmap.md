@@ -33,28 +33,34 @@ inconclusive and require measurement in a dedicated environment. This result
 closes endpoint compilation and lazy request scope as delivered v0.20 work; the
 pending measurements do not reopen either design.
 
-## Active sequence
+## Active product sequence
 
-1. Maintain comparative evidence under the accepted
-   [competitive-performance leadership proposal](proposals/2026-09-02-competitive-performance-leadership-proposal.md).
-   Keep the generated 2026-09-09 comparison page tied to its accepted dataset;
-   the 2026-09-10 published-release comparison is supplemental evidence rather
-   than a replacement dataset.
-2. Measure FastAPI application startup and unresolved p95 and p99 criteria in a
-   dedicated environment under the completed
-   [FastAPI minimum-overhead proposal](proposals/2026-09-02-fastapi-minimum-overhead-proposal.md).
-   This is an evidence task, not authorization to change runtime, budgets, or
-   the completed endpoint-compilation and lazy-scope design.
-3. Advance
-   [declarative provider discovery](proposals/2026-09-05-declarative-provider-discovery-proposal.md),
-   to design investigation. Compare the proposal's bounded mechanisms and
-   invariants while keeping explicit package discovery, `@provide`, and
-   `discover()` as hypotheses rather than accepted API or implementation, and
-   do not present discovery as a performance fix.
-4. Keep the optional native accelerator NO-GO under the
+1. Advance
+   [declarative provider discovery](proposals/2026-09-05-declarative-provider-discovery-proposal.md)
+   as the next active product work by closing the objective formal-design gate
+   in its completed
+   [design investigation](2026-09-11-declarative-provider-discovery-investigation.md).
+   Module-owned local catalogues are the recommended mechanism to evaluate;
+   public spelling and implementation remain unselected, and discovery is not a
+   performance fix.
+2. Keep the optional native accelerator NO-GO under the
    [optional-native accelerator proposal](proposals/2026-09-02-optional-native-accelerator-proposal.md).
-5. Complete the final public-API audit, stability commitment, comparison page,
+3. Complete the final public-API audit, stability commitment, comparison page,
    and package classifier; maintainers then decide whether to tag `1.0.0`.
+
+## Parallel, non-blocking evidence
+
+- Maintain comparative evidence under the accepted
+  [competitive-performance leadership proposal](proposals/2026-09-02-competitive-performance-leadership-proposal.md).
+  Keep the generated 2026-09-09 comparison page tied to its accepted dataset;
+  the 2026-09-10 published-release comparison is supplemental evidence rather
+  than a replacement dataset.
+- When a dedicated environment is available, measure FastAPI application
+  startup and unresolved p95 and p99 criteria under the completed
+  [FastAPI minimum-overhead proposal](proposals/2026-09-02-fastapi-minimum-overhead-proposal.md).
+  This evidence task does not block the active product sequence, authorize
+  runtime or budget changes, or reopen endpoint compilation and lazy request
+  scope.
 
 ## Evidence and operating references
 

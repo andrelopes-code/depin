@@ -1,7 +1,7 @@
 # Proposal: declarative provider discovery
 
 Date: 2026-09-05
-Status: accepted for investigation; public API and mechanism unselected
+Status: investigated 2026-09-11; mechanism recommended for design; public API unselected
 Scope: provider declaration, explicit package discovery, freeze-time registration,
 consumer typing, startup cost, and import behavior
 
@@ -20,6 +20,12 @@ caused the change.
 
 Implementation still requires a reviewed design, a written test-first plan,
 and the normal repository gates.
+
+The completed
+[design investigation](../2026-09-11-declarative-provider-discovery-investigation.md)
+recommends module-owned local catalogues composed through an explicit importable
+manifest. That recommendation does not accept a public spelling or authorize
+implementation.
 
 ## Executive summary
 
@@ -165,11 +171,11 @@ decoration are not automatically converted into target decorators by this
 proposal. Their present explicit APIs remain available unless later evidence
 identifies an equally clear declarative contract.
 
-## Candidate direction: explicit package discovery
+## Original candidate direction: explicit package discovery
 
-The leading hypothesis is a method on the binding collector, represented here
-as `discover()` so that `Container` and `Registry` share one verb and one
-implementation:
+The proposal's leading hypothesis was a method on the binding collector,
+represented here as `discover()` so that `Container` and `Registry` share one
+verb and one implementation:
 
 ```python
 app = Registry('app').discover('app.providers')
@@ -210,7 +216,7 @@ walking, or any other traversal implementation in advance.
 
 ### Explicit package or module discovery
 
-This is the leading candidate. It supports providers resolved directly, avoids
+This was the proposal's leading candidate. It supports providers resolved directly, avoids
 per-class composition-root imports, isolates different applications and tests,
 and performs work before `freeze()`. Its costs are importing the selected module
 tree and defining precise behavior across Python loaders and reexports.
@@ -448,7 +454,9 @@ early sketch.
 
 ## Active decision
 
-Investigate declarative provider discovery. Treat explicit package discovery as
-the leading hypothesis, not as an accepted API. A future design may select a
-better mechanism when it satisfies the same consumer outcome and invariants with
-stronger Python compatibility, isolation, typing, or measured performance.
+The investigation recommends module-owned local catalogues composed through an
+explicit importable manifest for a future design. Recursive package scanning is
+not the selected definitive mechanism, and explicit-root reachability is
+insufficient as the primary mechanism. Public spelling and implementation remain
+unselected; the investigation's objective formal-design gate must be satisfied
+before that work begins.
