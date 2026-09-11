@@ -1,7 +1,7 @@
 # Proposal: competitive performance leadership
 
 Date: 2026-09-02
-Status: accepted, active; rebaselined 2026-09-09
+Status: accepted, active; rebaselined 2026-09-09; FastAPI outcome reconciled 2026-09-10
 Scope: comparative evidence, performance targets, ergonomics guardrails, and sequencing of optimization work
 
 ## Nature of this document
@@ -66,6 +66,15 @@ microseconds, leaving 60.7 microseconds attributable to DI at p50. The previous
 decomposition assigned only about 8 microseconds to core resolution and the
 remainder to FastAPI dependency traversal, host publication, and unconditional
 scope lifecycle. Independent tail percentiles are not subtracted for attribution.
+
+The retained 2026-09-10 published-release comparison changes the FastAPI
+decision without replacing the 2026-09-09 comparative dataset. Against v0.19.0,
+v0.20.0 passes the primary CPU-light DI-attributable p50 objective at `-59.47%
+[-69.81%, -51.20%]`; the generic p50 gate passes all six FastAPI workloads. The
+remaining p95 and p99 criteria and the dedicated application-startup rule are
+inconclusive. They require a dedicated measurement environment and are not
+evidence to reopen endpoint compilation, lazy request scope, runtime, or
+budgets.
 
 The base/head matrix also records unfavorable current-main evidence. Missing-key
 explanation regressed 59.43% and 61.53% at sizes 16 and 20, and failing freeze at
@@ -217,20 +226,25 @@ work onto the user.
 
 ## Program sequence
 
+Compiled resolution, FastAPI endpoint compilation, lazy request scope, and the
+FastAPI p50 objective are complete. The remaining sequence is:
+
 1. Maintain the 2026-09-09 competitor baseline and material-leadership gates.
-2. Execute the FastAPI endpoint-compilation and lazy-scope proposal against the
-   60.7-to-150.6-microsecond p50 integration increments.
-3. Rebaseline core and application results after that proposal, including
-   contention tails.
-4. Keep native NO-GO unless the post-FastAPI attribution satisfies its entry
-   threshold; provider discovery remains a product-surface task, not a
-   performance intervention.
+2. Measure unresolved FastAPI tails, contention, and application startup in a
+   dedicated environment without changing runtime, budgets, or the completed
+   FastAPI design.
+3. Advance declarative provider discovery as a product-surface design
+   investigation independent of the remaining measurements. No public spelling,
+   discovery mechanism, or implementation is accepted by that step.
+4. Keep native NO-GO unless later evidence satisfies its entry threshold;
+   provider discovery remains a product-surface task, not a performance
+   intervention.
 5. Publish the final 1.0 comparison page from fresh accepted data.
 
-Compiled resolution is complete. The sequence now prevents provider discovery
-from being presented as a runtime fix, prevents Rust from receiving credit for
-work pure-Python competitors already prove avoidable, and makes framework
-overhead the next measured target.
+This sequence prevents provider discovery from being presented as a runtime fix
+and prevents Rust from receiving credit for work pure-Python competitors already
+prove avoidable. Dedicated tail and startup collection closes evidence
+uncertainty; it is not a new optimization proposal.
 
 ## CI and release policy
 
@@ -311,7 +325,9 @@ Rejected. That would replace the product rather than improve it.
 
 Performance leadership, semantic equivalence, and unchanged ergonomics remain
 the governing quality contract for the remaining pre-1.0 performance work. The
-single next performance proposal is minimum-overhead FastAPI integration through
-endpoint compilation and lazy request scope. Compiled resolution is complete,
-provider discovery is deferred outside this performance sequence, and optional
+FastAPI p50 objective is met, while its tails and application startup remain
+pending dedicated-environment measurement. Endpoint compilation and lazy
+request scope are complete and are not reopened by that uncertainty. Declarative
+provider discovery may advance to design investigation outside the performance
+sequence, without implementation or acceptance of an API or mechanism. Optional
 native acceleration remains NO-GO.
