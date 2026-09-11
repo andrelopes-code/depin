@@ -158,16 +158,78 @@ catalogues, `P` providers, and `E` dependency edges.
   index.
 - For equal `BindRecord` sets, every alternative should have the same
   `build_specs()`/`build_plan()` complexity and the same frozen-plan memory.
-- No numeric performance claim is made here. No benchmark, budget, or published
-  evidence was changed. A formal design must define measurements that separate
-  module import, declaration/discovery, freeze, retained metadata, and
-  resolution controls.
+- No benchmark, budget, or published evidence is changed by this investigation.
 
 Zero unused-resolution impact is structural, not aspirational: discovery must
 not add a branch, lookup, registry consultation, reflection step, or mutation
 hook to `FrozenContainer`. Equivalent manual and catalogue-derived records must
 produce equivalent plans, and existing no-discovery resolution workloads must
 remain the control.
+
+### Pre-registered disposable cost contract — 2026-09-11
+
+This contract was written before running or inspecting any discovery cost
+measurement. It evaluates a name-neutral throwaway prototype, not a proposed
+API. The generated workload sizes are 10, 100, and 1,000 providers, split into
+modules of at most ten providers. Every variant defines and imports the same
+provider sources and builds the same dependency graph.
+
+The controls are:
+
+- **I0, import-only:** explicit imports of the generated modules, with the same
+  provider definitions but no declaration metadata or catalogue construction;
+- **M, manual:** I0 followed by the current public binding calls, one call per
+  provider, and the current `freeze()` pipeline;
+- **C, catalogue:** ordinary explicit imports of modules that own immutable
+  local record tuples, followed by an explicitly imported manifest that stages
+  those tuples before one receiver mutation; and
+- **R0, no-discovery resolution:** the unchanged transient-resolution workload
+  run from synchronized `main` at
+  `a618c7aaea0d92dbad6d758f8873242f0c32c760`; **R1** is the same workload and
+  source run from the investigation branch. Documentation is excluded from the
+  import path for both.
+
+Cold import is measured in fresh interpreters and includes Python loading plus
+module-local declaration work; I0 isolates the cost of loading the same source
+modules. Hot declaration/composition is measured separately after importing the
+targets: M times the equivalent binding calls, while C times local immutable
+record construction, ordered manifest staging, validation, and its single
+receiver commit. Freeze timing begins only after equal `BindRecord` tuples have
+been demonstrated and ends when the current `ResolutionPlan` is built. Retained
+memory is the live `tracemalloc` delta after `gc.collect()`, never peak memory,
+recorded before and after freeze against both I0 and M.
+
+Each timing result uses 20 independent paired samples after three discarded
+warm-up pairs. Pair order alternates AB/BA, `PYTHONHASHSEED=0`, the same
+interpreter and environment, and garbage collection disabled only inside the
+timed interval. Inner loops are calibrated without inspecting comparative
+results to last at least 50 ms; cold import remains one fresh import per
+interpreter. Memory uses 15 fresh paired interpreters. Paired ratios and paired
+differences are summarized by the median. A deterministic bootstrap with seed
+`20260911` and 10,000 resamples supplies one-sided 95% lower and upper
+confidence bounds.
+
+| Metric, for each provider count | Absolute upper bound | Upper bound relative to baseline |
+| --- | --- | --- |
+| C cold import versus I0 | incremental time at most `2 ms + 30 µs × P` | C/I0 at most 3.00 for P=10, 1.75 for P=100, and 1.50 for P=1,000 |
+| C declaration plus manifest composition versus M binding | incremental time at most `1 ms + 15 µs × P` | C/M at most 2.50 for P=10 and 2.00 for P=100 or 1,000 |
+| C freeze versus M freeze after record equality | incremental time at most `0.5 ms + 1 µs × P` | C/M at most 1.10 |
+| C retained memory before freeze versus I0 and M | C−I0 at most `64 KiB + 512 B × P` | C−I0 at most `1.25 × (M−I0) + 64 KiB` |
+| C retained memory after freeze versus I0 and M | C−M at most `64 KiB + 64 B × P` | C−I0 at most `1.25 × (M−I0) + 64 KiB`, and C/M at most 1.10 after subtracting interpreter startup |
+| R1 warm resolution versus R0 | incremental time at most 50 ns per resolution | R1/R0 at most 1.05 |
+
+A metric is **PASS** only when its point estimate and one-sided 95% upper
+confidence bound meet every applicable absolute and relative bound. It is
+**FAIL** when the point estimate and one-sided 95% lower confidence bound exceed
+any applicable bound. It is **INCONCLUSIVE** otherwise, including unavailable
+controls, fewer samples, non-positive adjusted memory denominators, or a plan
+inequivalence. Every provider count must pass independently; no averaging across
+sizes or compensating one regression with another is allowed. A complete cost
+gate passes only if all timing and memory rows pass at all sizes, every M/C
+record tuple and `ResolutionPlan` is equal, R0/R1 source hashes match, and the
+resolution control passes. A noisy or inconclusive result is not permission to
+loosen this contract; it requires a fresh pre-registered experiment in a later
+investigation.
 
 ## Recommended mechanism for a future design
 
