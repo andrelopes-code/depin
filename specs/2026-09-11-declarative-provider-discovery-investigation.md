@@ -474,6 +474,112 @@ separately pre-registered higher-power paired experiment that reduces the
 freeze and absolute-resolution confidence intervals below the existing bounds;
 this run cannot be repeated selectively or used to loosen them.
 
+### Pre-registered higher-power paired cost contract — 2026-09-11
+
+This second contract decides only the three inconclusive rows above. It does
+not reinterpret or replace any earlier result, measure import, declaration,
+composition, memory, startup, or tails, and does not evaluate an API or a
+runtime implementation. The only candidate remains the name-neutral disposable
+prototype: immutable catalogues owned by their modules and concatenated by an
+ordinary explicitly imported manifest. Recursive package discovery,
+explicit-root reachability, filesystem or `sys.modules` scanning, global state,
+and mutation after `freeze()` remain excluded.
+
+The first experiment used 20 measured pairs and 50 ms calibrated intervals.
+For a conservative power calculation, assume that longer intervals provide no
+precision benefit and that a one-sided interval's distance from its point
+estimate contracts only as `1 / sqrt(n)`. If `w = U95 − point` and `b` is the
+unchanged limit, the pair count needed to place the projected upper endpoint at
+the limit is `ceil(20 × (w / (b − point))²)`. Published values therefore require
+107 pairs for the 100-provider absolute freeze result
+(`w = 2.469 ms`, `b − point = 1.069 ms`), 1,972 for the 1,000-provider result
+(`w = 9.679 ms`, `b − point = 0.975 ms`), and 148 for absolute resolution
+(`w = 318.89 ns`, `b − point = 117.47 ns`). This run fixes 160, 2,304, and 192
+measured pairs respectively. The corresponding conservative projected absolute
+upper endpoints are approximately +0.507 ms, +1.427 ms, and +45.27 ns. The
+250 ms minimum interval is a separate fivefold reduction of within-process
+sampling noise and is not credited in those projections.
+
+Each metric discards exactly 10 warm-up pairs. Each side of every warm-up,
+calibration, and measured pair runs in a fresh interpreter process; a process
+measures only one side. A non-comparative calibration phase chooses a common
+loop count for both sides that made each side run for at least 250 ms. That
+count is then fixed for every warm-up and measured pair of the metric. The
+orchestrator sets `PYTHONHASHSEED=0`, uses the same interpreter and environment
+for both sides, disables garbage collection only inside the timed interval, and
+pins itself and descendants to the lowest CPU in `os.sched_getaffinity(0)` when
+that API and permission are available. Failure to pin is recorded and does not
+change the protocol. Even-numbered pairs run baseline then candidate; odd-numbered
+pairs run candidate then baseline, giving exact AB/BA balance because every
+fixed pair count is even.
+
+For freeze, **M** is a `Container` populated by one current manual `bind()` call
+per source. **C** uses the same source objects grouped ten per module into
+immutable local `BindRecord` tuples; an explicitly imported manifest
+concatenates them in source order, validates the staged count and callable
+sources, and exposes one immutable `Bindings.records()` snapshot to a fresh
+`Container`. Before any calibration or timing, a semantic worker must prove
+`tuple(M.records()) == tuple(C.records())` and
+`build_plan(M.records()) == build_plan(C.records())` at both 100 and 1,000
+providers. The proof and the timings use the same generated application,
+sources, scopes, order, and dependency-free graph. A failed equality aborts
+before measurement and yields no cost verdict. The timed operation is the
+current `Container.freeze()` call on a fresh, already-populated builder; local
+catalogue construction, manifest staging, validation, and binding calls remain
+outside it.
+
+For resolution, **R0** is synchronized `main` and **R1** is this documentation
+worktree. Before calibration or timing, the harness computes SHA-256 for every
+sorted relative `depin/**/*.py` path and hashes the sequence
+`path + NUL + file_digest + LF`; the aggregate hashes and every per-file digest
+must be identical. Both sides use the same fresh interpreter to import from the
+selected checkout, build the same transient three-class chain, and time only
+the existing `resolve(Root)` path. No discovery hook, lookup, branch, or state
+may be added to either checkout. Hash inequality aborts before measurement and
+yields no resolution verdict.
+
+For pair `i`, freeze uses `d_i = C_i − M_i` and `r_i = C_i / M_i`; resolution
+uses `d_i = R1_i − R0_i` and `r_i = R1_i / R0_i`. Each point estimate is the
+median of its paired values. A deterministic paired percentile bootstrap draws
+the pair indices with replacement, preserving each difference/ratio pair, and
+computes 50,000 resampled medians with `random.Random(2026091102)`. After sorting
+the bootstrap values, quantile `q` uses linear interpolation at
+`h = (B − 1)q`; L95 is `q = 0.05` and U95 is `q = 0.95`, the existing one-sided
+95% rule. All durations must be finite and positive and every fixed sample must
+be present.
+
+The limits remain exactly:
+
+| Metric | Absolute limit | Relative limit |
+| --- | ---: | ---: |
+| C−M `freeze()`, 100 providers | ≤ +0.600 ms | C/M ≤ 1.10 |
+| C−M `freeze()`, 1,000 providers | ≤ +1.500 ms | C/M ≤ 1.10 |
+| R1−R0 resolution | ≤ +50 ns per resolution | R1/R0 ≤ 1.05 |
+
+A row is **PASS** only when the point estimate and U95 meet both its absolute
+and relative limits. It is **FAIL** when the point estimate and L95 exceed
+either limit. It is **INCONCLUSIVE** in every other case. Rows cannot be
+averaged or compensate for one another.
+
+Smoke runs may validate generation, equivalence, CLI behavior, configured
+sample counts, and output shape, but may neither emit nor retain comparative
+timings. The dedicated run writes no intermediate comparison to stdout and
+publishes its raw JSON atomically only after every fixed pair is complete. A
+mechanical failure before the first measured pair permits a harness correction
+and a complete restart, with the correction and new hash recorded. After the
+first measured pair, methodology, limits, sampling, fixtures, and harness bytes
+are frozen: an interrupted run may be restarted once only in full with identical
+bytes and a documented external cause, without inspecting partial timings; a
+second interruption makes the experiment mechanically INCONCLUSIVE. There is
+no optional stopping, retuning, selective repetition, or new measurement after
+observing the completed comparison in this session, regardless of its verdict.
+
+The harness, generated package, environment-specific files, and raw JSON are
+temporary. Only their sufficient construction rule, exact commands, versions,
+content hashes, scalar estimates and bounds, limits, and verdicts may survive in
+this Markdown document. The formal-design gate remains unchanged until this
+contract has one completed result.
+
 ### Reconstructing the discarded probes
 
 This section retains enough source shape and command detail to reconstruct the
