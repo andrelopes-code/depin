@@ -1,15 +1,16 @@
 # Proposal: minimum-overhead FastAPI integration
 
 Date: 2026-09-02
-Status: accepted and formalized by `../2026-09-09-fastapi-minimum-overhead-design.md`; rebaselined 2026-09-09
+Status: implemented in v0.20.0; p50 objective met 2026-09-10; tails and startup pending dedicated measurement
 Scope: `depin.ext.fastapi`, request hosting, scope activation, endpoint injection, and application benchmarks
 
 ## Nature of this document
 
-This proposal defines the application-level performance outcome. The formal
-specification linked above selects the public setup function, endpoint compiler,
-lazy request state, compatibility boundary, and verification protocol before the
-exact `1.0.0` API freeze.
+This proposal defines the application-level performance outcome. The
+[formal specification](../2026-09-09-fastapi-minimum-overhead-design.md)
+selected the public setup function, endpoint compiler, lazy request state,
+compatibility boundary, and verification protocol implemented in v0.20.0 before
+the exact `1.0.0` API freeze.
 
 ## Executive summary
 
@@ -32,6 +33,23 @@ reachable graph requires one, and keeping the public ASGI middleware safe for
 streaming responses and WebSockets. An optimized integration must use supported
 FastAPI and Starlette extension points or carry an explicit compatibility policy;
 it must not silently depend on unstable internals.
+
+## Post-v0.20 outcome
+
+The retained 2026-09-10 comparison of published v0.20.0 against the accepted
+v0.19.0 baseline closes the proposal's primary p50 objective. After ten
+counterbalanced pairs, the CPU-light DI-attributable p50 change is `-59.47%
+[-69.81%, -51.20%]`: its upper confidence bound clears the required `-25%`
+margin and its point estimate clears the `-30%` stretch target. The generic p50
+gate passes all six FastAPI workloads, and the no-injection p50 check passes at
+`+2.57% [+2.02%, +3.29%]` within its `+5%` allowance.
+
+The same evidence does not close the tails or startup. Most p95 and p99 checks
+remain statistically inconclusive, and application-startup p50 is `+5.97%
+[+4.33%, +8.89%]`: the point estimate is inside the `+6%` budget, but the
+dedicated confidence-bound rule is inconclusive. These criteria remain pending
+measurement in a dedicated environment. They do not reopen endpoint
+compilation, lazy request scope, the runtime, or the budgets.
 
 ## Goals
 
@@ -232,15 +250,13 @@ validation, security, and dependency facilities.
 
 ## Active decision
 
-Execute endpoint compilation and lazy request scope as the single next
-performance proposal. The design must preserve framework behavior and the
-current injection call site, measure total and DI-attributable p50/p95/p99, and
-meet the material leadership gate rather than statistical parity. Provider
-discovery is deferred because it does not address this measured overhead; native
-acceleration remains NO-GO pending the post-FastAPI attribution.
+Endpoint compilation and lazy request scope are implemented and closed as v0.20
+work. The p50 objective is met. Follow-up is limited to measuring unresolved
+p95, p99, contention, and application-startup criteria in a dedicated
+environment; this evidence work does not authorize another runtime, budget, or
+benchmark-design change.
 
-The 2026-09-09 implementation diagnostic did not meet that gate. Its first
-counterbalanced CPU-light pair measured a 108.542-microsecond head increment,
-above both the 60.7-microsecond accepted baseline and the 45.525-microsecond
-25% target. The proposal remains active; do not mark it implemented or advance
-the roadmap until a fresh five-repetition collection passes.
+Provider discovery is no longer deferred by this proposal and may proceed to a
+separate design investigation under its own accepted proposal. That
+investigation does not implement discovery or accept a public API or mechanism.
+Optional native acceleration remains NO-GO.
