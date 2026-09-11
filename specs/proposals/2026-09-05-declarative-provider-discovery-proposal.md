@@ -1,7 +1,7 @@
 # Proposal: declarative provider discovery
 
 Date: 2026-09-05
-Status: investigated 2026-09-11; mechanism recommended for design; public API unselected
+Status: investigated 2026-09-11; mechanism retained; formal-design gate inconclusive; public API unselected
 Scope: provider declaration, explicit package discovery, freeze-time registration,
 consumer typing, startup cost, and import behavior
 
@@ -21,11 +21,11 @@ caused the change.
 Implementation still requires a reviewed design, a written test-first plan,
 and the normal repository gates.
 
-The completed
+The completed but cost-inconclusive
 [design investigation](../2026-09-11-declarative-provider-discovery-investigation.md)
 recommends module-owned local catalogues composed through an explicit importable
-manifest. That recommendation does not accept a public spelling or authorize
-implementation.
+manifest. That recommendation does not yet authorize formal design, does not
+accept a public spelling, and does not authorize implementation.
 
 ## Executive summary
 
