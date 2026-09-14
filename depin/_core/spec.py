@@ -319,18 +319,18 @@ class ResolutionPlan:
 class Bindings(Protocol):
     """Anything that can hand a container a set of bindings.
 
-    Both `Registry` and `Container` satisfy it, so either can seed a new
-    container: ``Container(infra, services)``. Implement it on your own type to
-    plug a custom binding source into the same call.
+    `Manifest`, `Registry`, and `Container` satisfy it, so any of them can seed a
+    new container. Implement it on your own type to plug a custom binding source
+    into the same call.
 
     Example:
         ```pycon
-        >>> from depin import Container, Registry, Bindings
+        >>> from depin import Bindings, Catalog, Container, Manifest, provider
         >>> class Svc: ...
-        >>> registry = Registry('infra').bind(Svc)
-        >>> isinstance(registry, Bindings)
+        >>> manifest = Manifest(__name__, Catalog(__name__, provider(Svc)))
+        >>> isinstance(manifest, Bindings)
         True
-        >>> di = Container(registry).freeze()
+        >>> di = Container(manifest).freeze()
         >>> isinstance(di[Svc], Svc)
         True
 

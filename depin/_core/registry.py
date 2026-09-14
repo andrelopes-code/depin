@@ -7,9 +7,9 @@ class Registry(BindingCollector):
     """A reusable, composable collection of bindings.
 
     A ``Registry`` holds the same kind of bindings as a `Container` but performs
-    no validation and no resolution: it is a module-level catalogue you declare
-    once and feed into one or more containers. Registries compose with ``|``, and
-    a container accepts any number of them at construction.
+    no validation and no resolution. Unlike an immutable provider-only `Catalog`,
+    it is a mutable builder for every explicit binding form. Registries compose
+    with ``|``, can include a `Manifest`, and can feed one or more containers.
 
     Args:
         name: Optional label, used only to identify the registry; combining two

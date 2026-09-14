@@ -643,17 +643,32 @@ class BindingCollector:
     def include(self, *sources: Bindings) -> Self:
         """Append the bindings of one or more sources, in order.
 
-        Each source is anything satisfying `Bindings` — usually a `Registry` or
-        another `Container`. Records are concatenated, not de-duplicated: a key
-        bound here and in a source raises `DuplicateProviderError` at
-        `Container.freeze()`.
+        Each source is anything satisfying `Bindings`, including a `Manifest`,
+        `Registry`, or another `Container`. A source is materialized and appended
+        atomically as one contiguous segment; if a later independent source
+        fails, earlier segments remain. Records are not de-duplicated: a repeated
+        key reaches `DuplicateProviderError` at `Container.freeze()`.
+
+        Args:
+            *sources: Completed binding sources in append order.
+
+        Returns:
+            ``self``, for chaining.
+
+        Raises:
+            InvalidProviderError: A source does not satisfy `Bindings`, exposes
+                a malformed `records()` member or result, yields something other
+                than a binding record, or is a `Catalog` not composed through a
+                `Manifest`.
 
         Example:
             ```pycon
-            >>> from depin import Container, Registry
+            >>> from depin import Catalog, Container, Manifest, provider
             >>> class Logger: ...
             >>> class Metrics: ...
-            >>> di = Container().include(Registry().bind(Logger), Registry().bind(Metrics)).freeze()
+            >>> providers = Catalog(__name__, provider(Logger), provider(Metrics))
+            >>> manifest = Manifest(__name__, providers)
+            >>> di = Container().include(manifest).freeze()
             >>> isinstance(di[Logger], Logger) and isinstance(di[Metrics], Metrics)
             True
 

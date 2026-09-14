@@ -10,16 +10,22 @@ class Container(BindingCollector):
     """Mutable builder for a dependency graph.
 
     Collect bindings with `bind()`, `value()`, `scope_value()`, `alias()`,
-    `collect()`, `decorate()`, and the `singleton()` / `scoped()` / `transient()` decorators, then call
-    `freeze()` to validate the graph and obtain an immutable `FrozenContainer`. A
-    ``Container`` performs no resolution itself; nothing is constructed until you
-    resolve from the frozen view. Registration order does not matter — providers
-    are matched by key and ordered at `freeze()` time.
+    `collect()`, `decorate()`, explicit `Manifest` sources, and the
+    `singleton()` / `scoped()` / `transient()` decorators, then call `freeze()`
+    to validate the graph and obtain an immutable `FrozenContainer`. A
+    ``Container`` performs no resolution itself; nothing is constructed until
+    you resolve from the frozen view. Registration order does not matter —
+    providers are matched by key and ordered at `freeze()` time.
 
     Args:
-        *sources: Binding sources to load up front — `Registry` instances, other
-            containers, anything satisfying `Bindings`. Equivalent to calling
-            `include()` with the same arguments.
+        *sources: Binding sources to load up front — `Manifest` or `Registry`
+            instances, other containers, or anything satisfying `Bindings`.
+            Equivalent to calling `include()` with the same arguments.
+
+    Raises:
+        InvalidProviderError: A source does not satisfy `Bindings`, its
+            `records()` result is malformed, or a `Catalog` is supplied without
+            first composing it through a `Manifest`.
 
     Example:
         ```pycon

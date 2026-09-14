@@ -1,21 +1,23 @@
 """depin — type-first dependency injection for Python.
 
-Declare bindings on a mutable `Container`, call `Container.freeze()`
-to validate the dependency graph, and resolve values from the immutable
-`FrozenContainer` it returns. Resolution is driven by type hints;
+Declare providers locally with `provider()`, collect each module's declarations
+in an immutable `Catalog`, and explicitly compose catalogues in a `Manifest`.
+Pass that manifest or manual bindings to a mutable `Container`, call
+`Container.freeze()` to validate the dependency graph, and resolve values from
+the immutable `FrozenContainer` it returns. Resolution is driven by type hints;
 ``Protocol`` and ``Annotated`` are first-class. The core has zero runtime
 dependencies; the optional FastAPI integration lives in ``depin.ext.fastapi``.
 
 Example:
     ```pycon
-    >>> from depin import Container
+    >>> from depin import Catalog, Container, Manifest, provider
     >>> class Config:
     ...     value = 42
-    >>> class Service:
-    ...     def __init__(self, config: Config) -> None:
-    ...         self.config = config
-    >>> di = Container().bind(Config).bind(Service).freeze()
-    >>> di[Service].config.value
+    >>> config = provider(Config)
+    >>> providers = Catalog(__name__, config)
+    >>> manifest = Manifest(__name__, providers)
+    >>> di = Container(manifest).freeze()
+    >>> di[Config].value
     42
 
     ```
@@ -26,6 +28,7 @@ from importlib.metadata import PackageNotFoundError, version
 from depin._core.bindings import ScopeDecorator
 from depin._core.container import Container
 from depin._core.diagnostics import DependencyGraph, GraphEdge, GraphNode
+from depin._core.discovery import Catalog, Manifest, Provider, provider
 from depin._core.frozen import FrozenContainer, ProviderOverride
 from depin._core.health import HealthCheck, HealthReport, HealthResult
 from depin._core.hosting import (
@@ -54,6 +57,7 @@ __all__ = (
     'CONTRACT_VERSION',
     'AsyncInSyncContextError',
     'Bindings',
+    'Catalog',
     'Condition',
     'Container',
     'ContainerClosedError',
@@ -68,7 +72,9 @@ __all__ = (
     'HealthReport',
     'HealthResult',
     'Host',
+    'Manifest',
     'Named',
+    'Provider',
     'ProviderKey',
     'ProviderOverride',
     'ProviderShape',
@@ -85,6 +91,7 @@ __all__ = (
     'hosted_container',
     'injected',
     'optional_hosted_container',
+    'provider',
     'provides',
     'render_key',
 )

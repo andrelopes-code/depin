@@ -2,15 +2,18 @@
 
 import importlib
 import importlib.metadata
+import inspect
 
 import pytest
 
 import depin
+from depin.errors import InvalidProviderError
 
 EXPECTED_EXPORTS = (
     'CONTRACT_VERSION',
     'AsyncInSyncContextError',
     'Bindings',
+    'Catalog',
     'Condition',
     'Container',
     'ContainerClosedError',
@@ -25,7 +28,9 @@ EXPECTED_EXPORTS = (
     'HealthReport',
     'HealthResult',
     'Host',
+    'Manifest',
     'Named',
+    'Provider',
     'ProviderKey',
     'ProviderOverride',
     'ProviderShape',
@@ -42,6 +47,7 @@ EXPECTED_EXPORTS = (
     'hosted_container',
     'injected',
     'optional_hosted_container',
+    'provider',
     'provides',
     'render_key',
 )
@@ -92,3 +98,50 @@ def test_provider_shape_is_exported_with_the_alias_member() -> None:
 
 def test_provider_shape_is_exported_with_the_collection_member() -> None:
     assert depin.ProviderShape.COLLECTION.value == 'collection'
+
+
+def _public_value(path: str) -> object:
+    value: object = depin
+    for part in path.split('.'):
+        value = getattr(value, part)
+    return value
+
+
+@pytest.mark.parametrize(
+    ('path', 'required'),
+    [
+        ('Provider', ('immutable', 'provider(target)', 'InvalidProviderError', 'Example:')),
+        ('Provider.configure', ('replaces', 'Args:', 'Returns:', 'Raises:', 'Example:')),
+        ('provider', ('identity', 'Args:', 'Returns:', 'Raises:', 'Example:')),
+        ('Catalog', ('immutable', 'owning module', 'ordered')),
+        ('Catalog.__init__', ('Args:', 'Raises:', 'Example:')),
+        ('Manifest', ('immutable', 'Bindings', 'nested')),
+        ('Manifest.__init__', ('Args:', 'Raises:', 'Example:')),
+        ('Manifest.records', ('flatten', 'Returns:', 'Raises:', 'Example:')),
+    ],
+)
+def test_declarative_discovery_public_docstrings_define_their_contract(
+    path: str,
+    required: tuple[str, ...],
+) -> None:
+    doc = inspect.getdoc(_public_value(path))
+
+    assert doc is not None
+    for fragment in required:
+        assert fragment.casefold() in doc.casefold()
+
+
+def test_existing_public_docs_integrate_manifest_ingestion_and_discovery_failures() -> None:
+    contracts = (
+        (inspect.getdoc(depin), ('provider', 'Catalog', 'Manifest', 'freeze')),
+        (inspect.getdoc(depin.Container), ('Manifest', 'Bindings')),
+        (inspect.getdoc(depin.Registry), ('Catalog', 'Manifest')),
+        (inspect.getdoc(depin.Bindings), ('Manifest',)),
+        (inspect.getdoc(depin.Container.include), ('Manifest', 'atomic', 'InvalidProviderError')),
+        (inspect.getdoc(InvalidProviderError), ('provider', 'Catalog', 'Manifest', 'records')),
+    )
+
+    for doc, fragments in contracts:
+        assert doc is not None
+        for fragment in fragments:
+            assert fragment.casefold() in doc.casefold()

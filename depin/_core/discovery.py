@@ -71,6 +71,27 @@ def _caller_location() -> _SourceLocation:
 
 @dataclass(frozen=True, slots=True, init=False)
 class Provider[T](metaclass=_ProviderMeta):
+    """An immutable declaration created only by `provider()`.
+
+    The declaration retains the exact target identity and its declaration-site
+    ownership. Calling ``Provider(...)`` directly is invalid; use
+    ``provider(target)`` so depin can capture that provenance.
+
+    Raises:
+        InvalidProviderError: The class is constructed directly instead of
+            through `provider()`.
+
+    Example:
+        ```pycon
+        >>> from depin import Provider, provider
+        >>> class Service: ...
+        >>> declaration = provider(Service)
+        >>> isinstance(declaration, Provider)
+        True
+
+        ```
+    """
+
     _data: _ProviderData = field(repr=False)
 
     def __new__(cls, _token: _ProviderToken, /) -> Self:
@@ -86,6 +107,37 @@ class Provider[T](metaclass=_ProviderMeta):
         when: Condition | None = None,
         check: Callable[[U], object] | None = None,
     ) -> Provider[U]:
+        """Return a new declaration whose metadata replaces the current metadata.
+
+        Omitted arguments reset to their defaults. Conditions and health checks
+        are stored without being evaluated; `Container.freeze()` evaluates the
+        condition, and the frozen container runs the check.
+
+        Args:
+            scope: Lifetime to apply to the produced value.
+            provides: Explicit key, replacing inference from the target.
+            tag: Disambiguator for other providers under the same key.
+            when: Condition deciding whether the binding enters the plan.
+            check: Health check associated with the produced value.
+
+        Returns:
+            A new immutable declaration retaining the original target and
+            declaration location.
+
+        Raises:
+            InvalidProviderError: Any metadata value violates its contract.
+
+        Example:
+            ```pycon
+            >>> from depin import Scope, provider
+            >>> class Service: ...
+            >>> base = provider(Service)
+            >>> configured = base.configure(scope=Scope.TRANSIENT, tag='worker')
+            >>> configured is base
+            False
+
+            ```
+        """
         _validate_metadata(scope, provides, tag, when, check)
         data = _ProviderData(
             target=self._data.target,
@@ -158,6 +210,32 @@ def provider[**P, T](target: Callable[P, T], /) -> Provider[T]: ...
 
 
 def provider(target: type[object] | Callable[..., object], /) -> Provider[object]:
+    """Capture one provider target without wrapping or replacing its identity.
+
+    Declaration records only the explicit target and its source location. It
+    performs no scanning, condition evaluation, provider analysis, or import.
+
+    Args:
+        target: Class or factory to declare.
+
+    Returns:
+        An immutable declaration ready for optional `Provider.configure()` and
+        inclusion in its owning module's `Catalog`.
+
+    Raises:
+        InvalidProviderError: The target is neither a class nor callable, or the
+            declaration module cannot be determined.
+
+    Example:
+        ```pycon
+        >>> from depin import Provider, provider
+        >>> class Service: ...
+        >>> declaration = provider(Service)
+        >>> isinstance(declaration, Provider)
+        True
+
+        ```
+    """
     if not isinstance(target, type) and not callable(target):
         raise InvalidProviderError(f'cannot declare {target!r} as a provider; pass a class or callable instead.')
     location = _caller_location()
@@ -248,10 +326,38 @@ class _StagingPath:
 
 @dataclass(frozen=True, slots=True, init=False)
 class Catalog:
+    """An immutable ordered declaration snapshot kept by its owning module.
+
+    A catalogue records only local `Provider` declarations. It is not a
+    `Bindings` source: composition roots explicitly place completed catalogues
+    inside a `Manifest` before ingestion.
+    """
+
     _module: str
     _providers: tuple[Provider[object], ...]
 
     def __init__(self, module: str, /, *providers: Provider[object]) -> None:
+        """Create the completed snapshot for its owning module.
+
+        Args:
+            module: The caller's module name, conventionally ``__name__``.
+            *providers: Local declarations in their desired lexical order.
+
+        Raises:
+            InvalidProviderError: The owner is not the caller, a member is not a
+                declaration, or a declaration belongs to another module.
+
+        Example:
+            ```pycon
+            >>> from depin import Catalog, provider
+            >>> class Service: ...
+            >>> declaration = provider(Service)
+            >>> providers = Catalog(__name__, declaration)
+            >>> providers.providers == (declaration,)
+            True
+
+            ```
+        """
         caller = _caller_location()
         owner = _validated_owner('Catalog', module, caller.module)
         for index, declaration in enumerate(providers):
@@ -270,10 +376,38 @@ class Catalog:
 
 @dataclass(frozen=True, slots=True, init=False)
 class Manifest:
+    """An immutable ordered composition of catalogues and nested manifests.
+
+    A manifest is the explicit discovery boundary and satisfies `Bindings`.
+    Sources flatten left-to-right; repeated occurrences remain repeated. No
+    package scan, name search, or de-duplication occurs.
+    """
+
     _module: str
     _sources: tuple[Catalog | Manifest, ...]
 
     def __init__(self, module: str, /, *sources: Catalog | Manifest) -> None:
+        """Create an explicit composition snapshot.
+
+        Args:
+            module: The caller's module name, conventionally ``__name__``.
+            *sources: Completed catalogues or manifests in ingestion order.
+
+        Raises:
+            InvalidProviderError: The owner is not the caller or a source is not
+                a completed `Catalog` or `Manifest`.
+
+        Example:
+            ```pycon
+            >>> from depin import Catalog, Manifest, provider
+            >>> class Service: ...
+            >>> providers = Catalog(__name__, provider(Service))
+            >>> manifest = Manifest(__name__, providers)
+            >>> manifest.sources == (providers,)
+            True
+
+            ```
+        """
         caller = _caller_location()
         owner = _validated_owner('Manifest', module, caller.module)
         for index, source in enumerate(sources):
@@ -290,6 +424,30 @@ class Manifest:
         return self._sources
 
     def records(self) -> Iterable[BindRecord]:
+        """Flatten every occurrence into one complete record tuple.
+
+        Staging preserves lexical order and every repetition, then discards
+        discovery provenance. Conditions and checks are copied but not run.
+
+        Returns:
+            Ordinary records ready for one atomic collector append.
+
+        Raises:
+            InvalidProviderError: A forged or otherwise malformed snapshot is
+                detected before any tuple is returned.
+
+        Example:
+            ```pycon
+            >>> from depin import Catalog, Manifest, provider
+            >>> class Service: ...
+            >>> providers = Catalog(__name__, provider(Service))
+            >>> leaf = Manifest(__name__, providers)
+            >>> records = Manifest(__name__, leaf, leaf).records()
+            >>> [record.source for record in records] == [Service, Service]
+            True
+
+            ```
+        """
         return _stage_manifest(self)
 
 
