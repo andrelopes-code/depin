@@ -1,8 +1,9 @@
 # Declarative provider discovery design
 
 Date: 2026-09-14
-Status: formal mechanism design; public API and naming unselected; implementation not authorized
+Status: formal mechanism and public API selected; implementation not authorized
 Investigation: [declarative provider discovery design investigation](2026-09-11-declarative-provider-discovery-investigation.md)
+Public API: [declarative provider discovery public API design](2026-09-14-declarative-provider-discovery-public-api-design.md)
 
 ## Decision
 
