@@ -1,8 +1,10 @@
 # Declarative provider discovery design investigation
 
 Date: 2026-09-11
-Status: investigation closed by governance; formal design authorized; public API unselected
+Status: investigation closed by governance; formal mechanism and public API selected; implementation not authorized
 Source proposal: [declarative provider discovery](proposals/2026-09-05-declarative-provider-discovery-proposal.md)
+Mechanism design: [declarative provider discovery design](2026-09-14-declarative-provider-discovery-design.md)
+Public API design: [declarative provider discovery public API design](2026-09-14-declarative-provider-discovery-public-api-design.md)
 
 ## Decision boundary
 
