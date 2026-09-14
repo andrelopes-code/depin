@@ -11,6 +11,7 @@ from typing import Never, Self, overload, override
 
 from depin._core.scope import Scope
 from depin._core.spec import Condition, ProviderKey
+from depin._core.typeguards import is_provider_key
 from depin.errors import InvalidProviderError
 
 
@@ -76,11 +77,56 @@ class Provider[T](metaclass=_ProviderMeta):
         del _token
         return object.__new__(cls)
 
+    def configure[U](
+        self: Provider[U],
+        *,
+        scope: Scope = Scope.SINGLETON,
+        provides: ProviderKey | None = None,
+        tag: str | None = None,
+        when: Condition | None = None,
+        check: Callable[[U], object] | None = None,
+    ) -> Provider[U]:
+        _validate_metadata(scope, provides, tag, when, check)
+        data = _ProviderData(
+            target=self._data.target,
+            scope=scope,
+            provides=provides,
+            tag=tag,
+            condition=when,
+            check=check,
+            owner=self._data.owner,
+            location=self._data.location,
+        )
+        return _allocate_provider(type(self), data)
+
 
 def _allocate_provider[T](provider_type: type[Provider[T]], data: _ProviderData) -> Provider[T]:
     declaration = object.__new__(provider_type)
     object.__setattr__(declaration, '_data', data)
     return declaration
+
+
+def _validate_metadata(
+    scope: object,
+    provides: object,
+    tag: object,
+    when: object,
+    check: object,
+) -> None:
+    if not isinstance(scope, Scope):
+        raise InvalidProviderError(f'cannot use {scope!r} as provider scope; pass a Scope value.')
+    if provides is not None and not is_provider_key(provides):
+        raise InvalidProviderError(
+            f'cannot use {provides!r} as provider provides metadata; pass a valid ProviderKey or None.'
+        )
+    if tag is not None and not isinstance(tag, str):
+        raise InvalidProviderError(f'cannot use {tag!r} as provider tag; pass a string or None.')
+    if when is not None and not isinstance(when, bool) and not callable(when):
+        raise InvalidProviderError(
+            f'cannot use {when!r} as provider when metadata; pass a bool, a zero-argument callable, or None.'
+        )
+    if check is not None and not callable(check):
+        raise InvalidProviderError(f'cannot use {check!r} as provider check; pass a callable or None.')
 
 
 @overload
