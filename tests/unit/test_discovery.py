@@ -1,7 +1,7 @@
 """Declarative provider values, ownership, and immutable composition."""
 
 import inspect
-from collections.abc import AsyncGenerator, Callable, Generator
+from collections.abc import AsyncGenerator, Callable, Generator, Iterable
 from contextlib import AbstractAsyncContextManager, AbstractContextManager, asynccontextmanager, contextmanager
 from dataclasses import FrozenInstanceError
 from typing import Protocol, assert_type, runtime_checkable
@@ -9,12 +9,14 @@ from typing import Protocol, assert_type, runtime_checkable
 import pytest
 
 from depin._core import discovery as discovery_module
-from depin._core.discovery import Provider, provider
+from depin._core.discovery import Catalog, Manifest, Provider, provider
 from depin._core.markers import provides
 from depin._core.scope import Scope
+from depin._core.spec import BindRecord
 from depin.errors import InvalidProviderError
 
 _DATA_ATTRIBUTE = '_data'
+_MODULE_ATTRIBUTE = '_module'
 _TOKEN_ATTRIBUTE = '_ProviderToken'
 
 
@@ -106,6 +108,29 @@ def _private_provider_token() -> object:
     if not callable(token_type):
         pytest.fail('_ProviderToken is not callable')
     return token_type()
+
+
+def _foreign_discovery_values() -> tuple[Provider[object], Catalog, Manifest]:
+    namespace: dict[str, object] = {
+        '__name__': 'foreign_discovery_module',
+        'Catalog': Catalog,
+        'Manifest': Manifest,
+        'Service': Service,
+        'provider': provider,
+    }
+    exec(
+        'declaration = provider(Service)\n'
+        'catalog = Catalog(__name__, declaration)\n'
+        'manifest = Manifest(__name__, catalog)',
+        namespace,
+    )
+    catalog = namespace['catalog']
+    manifest = namespace['manifest']
+    if not isinstance(catalog, Catalog):
+        pytest.fail('foreign catalogue is not a Catalog')
+    if not isinstance(manifest, Manifest):
+        pytest.fail('foreign manifest is not a Manifest')
+    return catalog.providers[0], catalog, manifest
 
 
 def test_provider_stores_the_exact_target_and_location() -> None:
@@ -283,3 +308,124 @@ def test_provider_configure_rejects_invalid_runtime_metadata(keyword: str, value
 
     with pytest.raises(InvalidProviderError, match=keyword):
         _call_with_keywords(declaration.configure, {keyword: value})
+
+
+def catalog_and_manifest_types() -> None:
+    declaration = provider(Service)
+    catalog = Catalog(__name__, declaration)
+    manifest = Manifest(__name__, catalog)
+
+    assert_type(catalog.module, str)
+    assert_type(catalog.providers, tuple[Provider[object], ...])
+    assert_type(manifest.module, str)
+    assert_type(manifest.sources, tuple[Catalog | Manifest, ...])
+    assert_type(manifest.records(), Iterable[BindRecord])
+
+
+def test_catalog_is_an_immutable_ordered_provider_snapshot() -> None:
+    first = provider(Service)
+    second = provider(ValueError)
+
+    catalog = Catalog(__name__, first, second, first)
+
+    assert catalog.module == __name__
+    assert catalog.providers == (first, second, first)
+    assert catalog.providers[0] is catalog.providers[2]
+    assert catalog.providers is catalog.providers
+    with pytest.raises(FrozenInstanceError):
+        setattr(catalog, _MODULE_ATTRIBUTE, 'changed')
+    assert not hasattr(catalog, '__dict__')
+
+
+def test_catalog_accepts_imported_targets_declared_locally() -> None:
+    declaration = provider(ValueError)
+
+    catalog = Catalog(__name__, declaration)
+
+    assert catalog.providers == (declaration,)
+    assert _provider_data(declaration).owner == __name__
+
+
+def test_catalog_allows_multiple_local_snapshots() -> None:
+    first = provider(Service)
+    second = provider(ValueError)
+
+    services = Catalog(__name__, first)
+    complete = Catalog(__name__, second, first)
+
+    assert services.providers == (first,)
+    assert complete.providers == (second, first)
+
+
+def test_manifest_is_an_immutable_ordered_cross_module_snapshot() -> None:
+    _, foreign_catalog, foreign_manifest = _foreign_discovery_values()
+    local_catalog = Catalog(__name__, provider(Service))
+
+    manifest = Manifest(__name__, foreign_catalog, foreign_manifest, local_catalog, foreign_catalog)
+
+    assert manifest.module == __name__
+    assert manifest.sources == (foreign_catalog, foreign_manifest, local_catalog, foreign_catalog)
+    assert manifest.sources[0] is manifest.sources[3]
+    assert manifest.sources is manifest.sources
+    with pytest.raises(FrozenInstanceError):
+        setattr(manifest, _MODULE_ATTRIBUTE, 'changed')
+    assert not hasattr(manifest, '__dict__')
+
+
+@pytest.mark.parametrize('value', ['', 'forged.module'])
+@pytest.mark.parametrize('constructor', [Catalog, Manifest], ids=['catalog', 'manifest'])
+def test_catalog_and_manifest_reject_invalid_constructor_owner(constructor: Callable[..., object], value: str) -> None:
+    with pytest.raises(InvalidProviderError) as exc:
+        _call(constructor, (value,))
+
+    message = str(exc.value)
+    assert repr(value) in message
+    assert repr(__name__) in message
+    assert '__name__' in message
+
+
+@pytest.mark.parametrize('constructor', [Catalog, Manifest], ids=['catalog', 'manifest'])
+def test_catalog_and_manifest_reject_non_string_owner(constructor: Callable[..., object]) -> None:
+    with pytest.raises(InvalidProviderError, match='non-empty __name__'):
+        _call(constructor, (None,))
+
+
+def test_catalog_rejects_a_foreign_provider_even_after_local_configuration() -> None:
+    foreign, _, _ = _foreign_discovery_values()
+    configured = foreign.configure(tag='configured-locally')
+
+    with pytest.raises(InvalidProviderError) as exc:
+        Catalog(__name__, configured)
+
+    message = str(exc.value)
+    assert repr(__name__) in message
+    assert repr('foreign_discovery_module') in message
+    assert 'index 0' in message
+    assert _provider_data(configured).location.filename in message
+    assert 'completed Catalog' in message
+
+
+def test_catalog_rejects_a_non_provider_member_with_actionable_context() -> None:
+    member = object()
+
+    with pytest.raises(InvalidProviderError) as exc:
+        _call(Catalog, (__name__, member))
+
+    message = str(exc.value)
+    assert repr(__name__) in message
+    assert 'index 0' in message
+    assert repr(member) in message
+    assert 'provider(target)' in message
+
+
+def test_manifest_rejects_a_non_composition_member_with_actionable_context() -> None:
+    member = object()
+
+    with pytest.raises(InvalidProviderError) as exc:
+        _call(Manifest, (__name__, member))
+
+    message = str(exc.value)
+    assert repr(__name__) in message
+    assert 'index 0' in message
+    assert repr(member) in message
+    assert 'Catalog or Manifest' in message

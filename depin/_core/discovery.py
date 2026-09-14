@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
+from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Iterable
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from dataclasses import dataclass, field
 from types import FrameType
-from typing import Never, Self, overload, override
+from typing import Never, Self, TypeGuard, overload, override
 
 from depin._core.scope import Scope
-from depin._core.spec import Condition, ProviderKey
+from depin._core.spec import BindRecord, Condition, ProviderKey
 from depin._core.typeguards import is_provider_key
 from depin.errors import InvalidProviderError
 
@@ -56,13 +56,13 @@ def _caller_location() -> _SourceLocation:
             caller = public_frame.f_back
         if caller is None:
             raise InvalidProviderError(
-                'cannot determine the provider declaration module; call provider(target) from a Python module.'
+                'cannot determine the declaration or composition module; create discovery values from a Python module.'
             )
         module = caller.f_globals.get('__name__')
         if not isinstance(module, str) or not module:
             raise InvalidProviderError(
-                'cannot determine the provider declaration module because the caller has no non-empty __name__; '
-                'call provider(target) from a Python module.'
+                'cannot determine the declaration or composition module because the caller has no non-empty __name__; '
+                'create discovery values from a Python module.'
             )
         return _SourceLocation(module=module, filename=caller.f_code.co_filename, line=caller.f_lineno)
     finally:
@@ -172,3 +172,98 @@ def provider(target: type[object] | Callable[..., object], /) -> Provider[object
         location=location,
     )
     return _allocate_provider(Provider, data)
+
+
+def _validated_owner(kind: str, supplied: object, caller: str) -> str:
+    if not isinstance(supplied, str) or not supplied or supplied != caller:
+        raise InvalidProviderError(
+            f'cannot create {kind} for module {supplied!r} from caller {caller!r}; '
+            "pass the caller module's non-empty __name__ as the first argument."
+        )
+    return supplied
+
+
+def _is_provider(value: object) -> TypeGuard[Provider[object]]:
+    return isinstance(value, Provider)
+
+
+def _catalog_member(owner: str, index: int, declaration: object) -> None:
+    if not _is_provider(declaration):
+        raise InvalidProviderError(
+            f'Catalog {owner!r} provider at index {index} is {declaration!r}; '
+            'pass a Provider created with provider(target).'
+        )
+    try:
+        snapshot: object = object.__getattribute__(declaration, '_data')
+    except AttributeError as exc:
+        raise InvalidProviderError(
+            f'Catalog {owner!r} provider at index {index} has no valid declaration snapshot; '
+            'pass a Provider created with provider(target).'
+        ) from exc
+    if not isinstance(snapshot, _ProviderData):
+        raise InvalidProviderError(
+            f'Catalog {owner!r} provider at index {index} has invalid declaration data {snapshot!r}; '
+            'pass a Provider created with provider(target).'
+        )
+    if snapshot.owner != owner:
+        raise InvalidProviderError(
+            f'Catalog {owner!r} provider at index {index} was declared by {snapshot.owner!r} at '
+            f'{snapshot.location.filename}:{snapshot.location.line}; keep the declaration in its owning module, '
+            'construct a completed Catalog there, and import that completed Catalog.'
+        )
+
+
+def _manifest_member(owner: str, index: int, source: object) -> None:
+    if not isinstance(source, Catalog | Manifest):
+        raise InvalidProviderError(
+            f'Manifest {owner!r} source at index {index} is {source!r}; pass a Catalog or Manifest.'
+        )
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class Catalog:
+    _module: str
+    _providers: tuple[Provider[object], ...]
+
+    def __init__(self, module: str, /, *providers: Provider[object]) -> None:
+        caller = _caller_location()
+        owner = _validated_owner('Catalog', module, caller.module)
+        for index, declaration in enumerate(providers):
+            _catalog_member(owner, index, declaration)
+        object.__setattr__(self, '_module', owner)
+        object.__setattr__(self, '_providers', providers)
+
+    @property
+    def module(self) -> str:
+        return self._module
+
+    @property
+    def providers(self) -> tuple[Provider[object], ...]:
+        return self._providers
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class Manifest:
+    _module: str
+    _sources: tuple[Catalog | Manifest, ...]
+
+    def __init__(self, module: str, /, *sources: Catalog | Manifest) -> None:
+        caller = _caller_location()
+        owner = _validated_owner('Manifest', module, caller.module)
+        for index, source in enumerate(sources):
+            _manifest_member(owner, index, source)
+        object.__setattr__(self, '_module', owner)
+        object.__setattr__(self, '_sources', sources)
+
+    @property
+    def module(self) -> str:
+        return self._module
+
+    @property
+    def sources(self) -> tuple[Catalog | Manifest, ...]:
+        return self._sources
+
+    def records(self) -> Iterable[BindRecord]:
+        raise InvalidProviderError(
+            f'cannot materialize Manifest {self._module!r} before declarative record staging is available.'
+        )
