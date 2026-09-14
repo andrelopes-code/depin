@@ -1,9 +1,10 @@
 # Declarative provider discovery public API design
 
 Date: 2026-09-14
-Status: public API and naming selected; implementation not authorized
+Status: public API and naming selected; implementation formally planned
 Investigation: [declarative provider discovery design investigation](2026-09-11-declarative-provider-discovery-investigation.md)
 Internal design: [declarative provider discovery design](2026-09-14-declarative-provider-discovery-design.md)
+Implementation plan: [declarative provider discovery implementation plan](2026-09-14-declarative-provider-discovery-implementation-plan.md)
 
 ## Decision
 
