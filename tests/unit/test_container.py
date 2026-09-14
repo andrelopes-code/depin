@@ -1,14 +1,38 @@
 """Container construction and composition of binding sources."""
 
+from collections.abc import Callable, Iterable
 from typing import Annotated
 
 import pytest
 
 from depin._core.container import Container
+from depin._core.discovery import Catalog, Manifest, provider
 from depin._core.markers import Named, Token
 from depin._core.registry import Registry
 from depin._core.scope import Scope
+from depin._core.spec import BindRecord
 from depin.errors import InvalidProviderError
+
+
+class _MissingRecords: ...
+
+
+class _NonCallableRecords:
+    records = 42
+
+
+class _NonIterableRecords:
+    def records(self) -> object:
+        return object()
+
+
+class _InvalidMemberRecords:
+    def records(self) -> Iterable[object]:
+        return (object(),)
+
+
+def _call(callable_: Callable[..., object], arguments: tuple[object, ...]) -> object:
+    return callable_(*arguments)
 
 
 def test_container_bind_returns_self() -> None:
@@ -74,6 +98,65 @@ def test_a_container_accepts_sources_at_construction() -> None:
     di = Container(Registry().bind(A), Registry().bind(B)).freeze()
     assert isinstance(di[A], A)
     assert isinstance(di[B], B)
+
+
+def test_container_constructor_and_include_accept_a_complete_manifest() -> None:
+    class A: ...
+
+    class B: ...
+
+    manifest = Manifest(__name__, Catalog(__name__, provider(A), provider(B)))
+    expected = (
+        BindRecord(A, Scope.SINGLETON, None, None),
+        BindRecord(B, Scope.SINGLETON, None, None),
+    )
+
+    constructed = Container(manifest)
+    included = Container().include(manifest)
+
+    assert constructed.records() == expected
+    assert included.records() == expected
+
+
+def test_container_rejects_a_catalog_until_it_is_composed_through_a_manifest() -> None:
+    catalog = Catalog(__name__, provider(ValueError))
+
+    with pytest.raises(InvalidProviderError) as exc:
+        _call(Container, (catalog,))
+
+    message = str(exc.value)
+    assert repr(catalog) in message
+    assert 'Manifest' in message
+    assert 'Catalog' in message
+
+
+@pytest.mark.parametrize(
+    ('source_type', 'expected_context'),
+    [
+        (_MissingRecords, 'records'),
+        (_NonCallableRecords, 'callable'),
+        (_NonIterableRecords, 'iterable'),
+        (_InvalidMemberRecords, 'BindRecord'),
+    ],
+)
+def test_container_include_rejects_malformed_structural_sources_atomically(
+    source_type: type[object],
+    expected_context: str,
+) -> None:
+    class Existing: ...
+
+    container = Container().bind(Existing)
+    before = tuple(container.records())
+    source = source_type()
+
+    with pytest.raises(InvalidProviderError) as exc:
+        _call(container.include, (source,))
+
+    message = str(exc.value)
+    assert repr(source) in message
+    assert expected_context in message
+    assert 'Bindings' in message or 'return' in message
+    assert container.records() == before
 
 
 def test_the_scope_decorators_register_a_factory_and_return_it_unchanged() -> None:

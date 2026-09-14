@@ -2,8 +2,9 @@
 
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Iterable, Sequence
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
-from typing import Self, final, overload
+from typing import Self, TypeGuard, final, overload
 
+from depin._core.discovery import Catalog
 from depin._core.markers import Token, TokenKeyBase
 from depin._core.scope import Scope
 from depin._core.spec import (
@@ -29,6 +30,69 @@ type _BindFn = Callable[
     ],
     None,
 ]
+
+
+def _is_object_iterable(value: object) -> TypeGuard[Iterable[object]]:
+    return isinstance(value, Iterable)
+
+
+def _bindings_correction() -> str:
+    return 'pass a Bindings source whose callable records() returns only BindRecord values'
+
+
+def _stage_binding_source(source: object) -> tuple[BindRecord, ...]:
+    if isinstance(source, Catalog):
+        raise InvalidProviderError(
+            f'cannot include Catalog {source!r} directly; compose it through Manifest(module, catalog) first.'
+        )
+    satisfies_protocol = isinstance(source, Bindings)
+    try:
+        records_member: object = source.__getattribute__('records')
+    except AttributeError as exc:
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because it has no records member; {_bindings_correction()}.'
+        ) from exc
+    except Exception as exc:
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because reading its records member raised {exc!r}; '
+            f'{_bindings_correction()}.'
+        ) from exc
+    if not callable(records_member):
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because records is not callable; {_bindings_correction()}.'
+        )
+    if not satisfies_protocol:
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because it does not satisfy Bindings; {_bindings_correction()}.'
+        )
+    try:
+        result: object = records_member()
+    except Exception as exc:
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because records() raised {exc!r}; '
+            f'fix records() and {_bindings_correction()}.'
+        ) from exc
+    if not _is_object_iterable(result):
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because records() returned non-iterable {result!r}; '
+            f'{_bindings_correction()}.'
+        )
+    try:
+        materialized = tuple(result)
+    except Exception as exc:
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because iterating records() raised {exc!r}; '
+            f'fix records() and {_bindings_correction()}.'
+        ) from exc
+    staged: list[BindRecord] = []
+    for index, record in enumerate(materialized):
+        if not isinstance(record, BindRecord):
+            raise InvalidProviderError(
+                f'cannot include binding source {source!r} because records() yielded {record!r} at index {index}; '
+                f'{_bindings_correction()}.'
+            )
+        staged.append(record)
+    return tuple(staged)
 
 
 @final
@@ -596,7 +660,8 @@ class BindingCollector:
             ```
         """
         for source in sources:
-            self._records.extend(source.records())
+            staged = _stage_binding_source(source)
+            self._records.extend(staged)
         return self
 
     def records(self) -> Iterable[BindRecord]:
