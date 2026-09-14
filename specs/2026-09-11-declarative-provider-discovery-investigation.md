@@ -1,7 +1,7 @@
 # Declarative provider discovery design investigation
 
 Date: 2026-09-11
-Status: investigation complete; mechanism retained; formal-design gate failed; public API unselected
+Status: investigation closed by governance; formal design authorized; public API unselected
 Source proposal: [declarative provider discovery](proposals/2026-09-05-declarative-provider-discovery-proposal.md)
 
 ## Decision boundary
@@ -1131,3 +1131,44 @@ atomicity, parity, import, determinism, typing, and error evidence need not
 expand into runtime or public-API work while that failure remains. Mechanism
 evidence, public API, and naming stay separate, and no formal design or
 implementation plan is authorized by this document.
+
+## Governance disposition — 2026-09-14
+
+This disposition changes the investigation's current status without amending
+its pre-registered contracts, raw results, or historical conclusions. The
+resolution-control experiment remains **FAIL** under its original rule: the
+paired point estimate was +134.879 ns, L95 was +101.553 ns, and U95 was
++161.847 ns against the +50 ns absolute limit. Its 1.023390 point ratio passed
+the 1.05 relative limit, but rows required both limits to pass. The experiment's
+verdict is therefore unchanged and is not rewritten as PASS.
+
+That statistical verdict and a causal inference about discovery answer
+different questions. R0 and R1 had identical aggregate and per-file hashes for
+`depin/**/*.py`; neither checkout contained a discovery hook, branch, lookup,
+or state in the runtime. A control between identical runtime sources measures
+the measurement system and its uncontrolled variation or bias. It cannot
+attribute the observed difference to discovery code that did not exist on
+either side. The failed null control is valid evidence about that experiment,
+but it is not causal evidence of discovery overhead.
+
+By explicit governance decision, the investigation is now closed and the
+identical-source resolution control no longer blocks formal design. This
+authorization does not claim that the cost gate passed. It recognizes that the
+chosen mechanism—module-owned local catalogues composed by an explicitly
+imported manifest—has sufficient non-runtime evidence for design while
+reserving runtime acceptance for a comparison that contains an actual code
+difference.
+
+The +50 ns absolute limit and 1.05 relative limit transfer unchanged to the
+acceptance gate for a future implementation. That gate must compare synchronized
+`main` with the real implementation after establishing equivalent graphs and
+resolution workloads. The earlier identical-source control will not be
+repeated. The two higher-power `freeze()` results for 100 and 1,000 providers
+remain PASS and retain their recorded evidence.
+
+Formal design must prohibit discovery hooks, branches, lookups, or state in the
+resolution path. Discovery must finish before the frozen runtime exists, and
+`resolve()`, `aresolve()`, scopes, overrides, and injection must consume only
+the already produced `ResolutionPlan`. Public API shape and naming remain
+separate, unselected decisions. This disposition authorizes only the formal
+mechanism design; it does not authorize a public API or implementation plan.
