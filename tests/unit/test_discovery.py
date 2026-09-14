@@ -429,3 +429,103 @@ def test_manifest_rejects_a_non_composition_member_with_actionable_context() -> 
     assert 'index 0' in message
     assert repr(member) in message
     assert 'Catalog or Manifest' in message
+
+
+def test_manifest_records_stage_flat_catalogues_field_for_field() -> None:
+    class Contract: ...
+
+    def enabled() -> bool:
+        return True
+
+    def healthy(service: Service) -> bool:
+        del service
+        return True
+
+    service = provider(Service).configure(
+        scope=Scope.SCOPED,
+        provides=Contract,
+        tag='primary',
+        when=enabled,
+        check=healthy,
+    )
+    error = provider(ValueError).configure(scope=Scope.TRANSIENT)
+    manifest = Manifest(__name__, Catalog(__name__, service), Catalog(__name__, error))
+
+    records = manifest.records()
+
+    assert records == (
+        BindRecord(
+            source=Service,
+            scope=Scope.SCOPED,
+            provides=Contract,
+            tag='primary',
+            condition=enabled,
+            check=healthy,
+        ),
+        BindRecord(
+            source=ValueError,
+            scope=Scope.TRANSIENT,
+            provides=None,
+            tag=None,
+            condition=None,
+            check=None,
+        ),
+    )
+
+
+def test_manifest_records_flatten_nested_manifests_left_to_right() -> None:
+    service = Catalog(__name__, provider(Service))
+    runtime_error = Catalog(__name__, provider(RuntimeError))
+    value_error = Catalog(__name__, provider(ValueError))
+    nested = Manifest(__name__, runtime_error, Manifest(__name__, value_error))
+    manifest = Manifest(__name__, service, nested, Catalog(__name__, provider(KeyError)))
+
+    records = manifest.records()
+
+    assert records == (
+        BindRecord(Service, Scope.SINGLETON, None, None),
+        BindRecord(RuntimeError, Scope.SINGLETON, None, None),
+        BindRecord(ValueError, Scope.SINGLETON, None, None),
+        BindRecord(KeyError, Scope.SINGLETON, None, None),
+    )
+
+
+def test_manifest_records_preserve_every_repeated_occurrence() -> None:
+    service = Catalog(__name__, provider(Service))
+    error = Catalog(__name__, provider(ValueError))
+    nested = Manifest(__name__, error, service)
+    manifest = Manifest(__name__, service, nested, service, nested)
+
+    records = manifest.records()
+
+    assert records == (
+        BindRecord(Service, Scope.SINGLETON, None, None),
+        BindRecord(ValueError, Scope.SINGLETON, None, None),
+        BindRecord(Service, Scope.SINGLETON, None, None),
+        BindRecord(Service, Scope.SINGLETON, None, None),
+        BindRecord(ValueError, Scope.SINGLETON, None, None),
+        BindRecord(Service, Scope.SINGLETON, None, None),
+    )
+
+
+def test_manifest_staging_rejects_a_forged_provider_snapshot_with_full_provenance() -> None:
+    declaration = provider(Service)
+    data = _provider_data(declaration)
+    location = data.location
+    catalog = Catalog(__name__, declaration)
+    nested = Manifest(__name__, catalog)
+    manifest = Manifest(__name__, nested)
+    offending = object()
+    object.__setattr__(data, 'target', offending)
+
+    with pytest.raises(InvalidProviderError) as exc:
+        manifest.records()
+
+    message = str(exc.value)
+    assert repr(manifest.module) in message
+    assert 'source index 0' in message
+    assert repr(catalog.module) in message
+    assert 'provider index 0' in message
+    assert f'{location.filename}:{location.line}' in message
+    assert repr(offending) in message
+    assert 'provider(target)' in message
