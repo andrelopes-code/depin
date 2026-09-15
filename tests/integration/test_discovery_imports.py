@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from importlib.machinery import ModuleSpec
 from pathlib import Path
 from types import ModuleType
-from typing import Protocol, override, runtime_checkable
+from typing import Protocol, TypeGuard, override, runtime_checkable
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
@@ -83,6 +83,26 @@ class _SupportedSecondView(Protocol):
     def observed_declaration(self) -> object: ...
 
 
+def _is_layout_view(value: object) -> TypeGuard[_LayoutView]:
+    return isinstance(value, _LayoutView)
+
+
+def _is_manifest_module_view(value: object) -> TypeGuard[_ManifestModuleView]:
+    return isinstance(value, _ManifestModuleView)
+
+
+def _is_trap_module_view(value: object) -> TypeGuard[_TrapModuleView]:
+    return isinstance(value, _TrapModuleView)
+
+
+def _is_supported_first_view(value: object) -> TypeGuard[_SupportedFirstView]:
+    return isinstance(value, _SupportedFirstView)
+
+
+def _is_supported_second_view(value: object) -> TypeGuard[_SupportedSecondView]:
+    return isinstance(value, _SupportedSecondView)
+
+
 def _module_file(module: ModuleType) -> Path:
     filename = module.__file__
     if filename is None:
@@ -103,31 +123,31 @@ def _forget_package(package: str) -> None:
 
 
 def _layout_view(module: ModuleType) -> _LayoutView:
-    if not isinstance(module, _LayoutView):
+    if not _is_layout_view(module):
         pytest.fail(f'{module.__name__} does not expose the layout fixture contract')
     return module
 
 
 def _manifest_module_view(module: ModuleType) -> _ManifestModuleView:
-    if not isinstance(module, _ManifestModuleView):
+    if not _is_manifest_module_view(module):
         pytest.fail(f'{module.__name__} does not expose a manifest')
     return module
 
 
 def _trap_module_view(module: ModuleType) -> _TrapModuleView:
-    if not isinstance(module, _TrapModuleView):
+    if not _is_trap_module_view(module):
         pytest.fail(f'{module.__name__} does not expose the getattr trap counter')
     return module
 
 
 def _supported_first_view(module: ModuleType) -> _SupportedFirstView:
-    if not isinstance(module, _SupportedFirstView):
+    if not _is_supported_first_view(module):
         pytest.fail(f'{module.__name__} does not expose the supported-cycle first-module contract')
     return module
 
 
 def _supported_second_view(module: ModuleType) -> _SupportedSecondView:
-    if not isinstance(module, _SupportedSecondView):
+    if not _is_supported_second_view(module):
         pytest.fail(f'{module.__name__} does not expose the supported-cycle second-module contract')
     return module
 

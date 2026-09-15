@@ -4,5 +4,5 @@
 class EarlyCycleError(Exception): ...
 
 
-active = False
+active: bool = False
 cause = LookupError('first.ready is not bound')

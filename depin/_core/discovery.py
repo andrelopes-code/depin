@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Iter
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from dataclasses import dataclass, field
 from types import FrameType
-from typing import Never, Protocol, Self, TypeGuard, overload, override
+from typing import TYPE_CHECKING, Never, Protocol, Self, TypeGuard, overload, override
 
 from depin._core.scope import Scope
 from depin._core.spec import BindRecord, Condition, ProviderKey
@@ -20,10 +20,19 @@ class _ProviderToken:
 
 
 class _ProviderMeta(type):
-    @override
-    def __call__(cls, *args: object, **kwargs: object) -> Never:
-        del cls, args, kwargs
-        raise InvalidProviderError('Provider cannot be constructed directly; use provider(target) instead.')
+    if TYPE_CHECKING:
+
+        @override
+        def __call__(cls, _token: _ProviderToken, /) -> Never:
+            del cls, _token
+            raise InvalidProviderError('Provider cannot be constructed directly; use provider(target) instead.')
+
+    else:
+
+        @override
+        def __call__(cls, *args: object, **kwargs: object) -> Never:
+            del cls, args, kwargs
+            raise InvalidProviderError('Provider cannot be constructed directly; use provider(target) instead.')
 
 
 @dataclass(frozen=True, slots=True)
