@@ -4,6 +4,7 @@ import inspect
 from collections.abc import AsyncGenerator, Callable, Generator, Iterable
 from contextlib import AbstractAsyncContextManager, AbstractContextManager, asynccontextmanager, contextmanager
 from dataclasses import FrozenInstanceError
+from operator import call
 from typing import Protocol, assert_type, runtime_checkable
 
 import pytest
@@ -93,7 +94,7 @@ def declared_provider_types() -> None:
 
 
 def _call(callable_: Callable[..., object], arguments: tuple[object, ...]) -> object:
-    return callable_(*arguments)  # lgtm[py/call/wrong-arguments] -- negative tests require invalid calls.
+    return call(callable_, *arguments)
 
 
 def _call_with_keywords(callable_: Callable[..., object], keywords: dict[str, object]) -> object:
