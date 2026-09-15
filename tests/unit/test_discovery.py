@@ -93,7 +93,7 @@ def declared_provider_types() -> None:
 
 
 def _call(callable_: Callable[..., object], arguments: tuple[object, ...]) -> object:
-    return callable_(*arguments)
+    return callable_(*arguments)  # codeql[py/call/wrong-arguments] -- negative tests require invalid calls.
 
 
 def _call_with_keywords(callable_: Callable[..., object], keywords: dict[str, object]) -> object:

@@ -18,8 +18,6 @@ from depin import Catalog, Container, Manifest
 from depin.errors import MissingProviderError
 from tests.fixtures.discovery_imports.cycles.early import state as early_cycle_state_fixture
 from tests.fixtures.discovery_imports.cycles.partial import state as partial_cycle_state_fixture
-from tests.fixtures.discovery_imports.cycles.supported import first as supported_cycle_first_fixture
-from tests.fixtures.discovery_imports.cycles.supported import second as supported_cycle_second_fixture
 from tests.fixtures.discovery_imports.namespace.portion_a.discovery_namespace import first as namespace_first_fixture
 from tests.fixtures.discovery_imports.regular import discovery_layout as regular_layout
 
@@ -366,18 +364,21 @@ def test_module_getattr_is_not_probed() -> None:
     assert regular_layout.getattr_calls() == 0
 
 
-def test_supported_import_cycle_uses_names_bound_before_the_cycle() -> None:
-    first = _supported_first_view(supported_cycle_first_fixture)
-    second = _supported_second_view(supported_cycle_second_fixture)
+@pytest.mark.parametrize('entry_module', [_SUPPORTED_FIRST, _SUPPORTED_SECOND], ids=['first', 'second'])
+def test_supported_import_cycle_uses_names_bound_before_the_cycle(entry_module: str) -> None:
+    with _isolated_modules(_SUPPORTED_FIRST, _SUPPORTED_SECOND):
+        importlib.import_module(entry_module)
+        first = _supported_first_view(sys.modules[_SUPPORTED_FIRST])
+        second = _supported_second_view(sys.modules[_SUPPORTED_SECOND])
 
-    assert second.observed_first() is first.First
-    assert second.observed_declaration() is first.first_catalog.providers[0]
-    assert first.manifest.sources == (first.first_catalog, second.second_catalog)
-    assert _manifest_sources(first.manifest) == (first.First, second.Second)
+        assert second.observed_first() is first.First
+        assert second.observed_declaration() is first.first_catalog.providers[0]
+        assert first.manifest.sources == (first.first_catalog, second.second_catalog)
+        assert _manifest_sources(first.manifest) == (first.First, second.Second)
 
-    frozen = Container(first.manifest).freeze()
-    assert isinstance(frozen.resolve(first.First), first.First)
-    assert isinstance(frozen.resolve(second.Second), second.Second)
+        frozen = Container(first.manifest).freeze()
+        assert isinstance(frozen.resolve(first.First), first.First)
+        assert isinstance(frozen.resolve(second.Second), second.Second)
 
 
 def test_early_import_cycle_preserves_the_original_exception_and_cause() -> None:

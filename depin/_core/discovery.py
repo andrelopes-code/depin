@@ -59,7 +59,7 @@ class _ProviderInput(Protocol):
     def _data(self) -> _ProviderData: ...
 
 
-def _caller_location() -> _SourceLocation:
+def _caller_location() -> _SourceLocation:  # pragma: no mutate block - trampolines change the observed caller.
     frame = inspect.currentframe()
     public_frame: FrameType | None = None
     caller: FrameType | None = None
@@ -223,7 +223,8 @@ def provider[**P, T](target: Callable[P, Awaitable[T]], /) -> Provider[T]: ...
 def provider[**P, T](target: Callable[P, T], /) -> Provider[T]: ...
 
 
-def provider(target: type[object] | Callable[..., object], /) -> Provider[object]:
+# Mutation trampolines add frames that invalidate declaration-site ownership.
+def provider(target: type[object] | Callable[..., object], /) -> Provider[object]:  # pragma: no mutate block
     """Capture one provider target without wrapping or replacing its identity.
 
     Declaration records only the explicit target and its source location. It
@@ -365,7 +366,8 @@ class Catalog:
     _module: str
     _providers: tuple[Provider[object], ...]
 
-    def __init__(self, module: str, /, *providers: _ProviderInput) -> None:
+    # Mutation trampolines would become the observed caller.
+    def __init__(self, module: str, /, *providers: _ProviderInput) -> None:  # pragma: no mutate block
         """Create the completed snapshot for its owning module.
 
         Args:
@@ -430,7 +432,8 @@ class Manifest:
     _module: str
     _sources: tuple[Catalog | Manifest, ...]
 
-    def __init__(self, module: str, /, *sources: Catalog | Manifest) -> None:
+    # Mutation trampolines would become the observed caller.
+    def __init__(self, module: str, /, *sources: Catalog | Manifest) -> None:  # pragma: no mutate block
         """Create an explicit composition snapshot.
 
         Args:
