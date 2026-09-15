@@ -3,6 +3,9 @@
 A container is built from binding sources. A `Registry` is one; another
 container is one; so is anything implementing `Bindings`.
 
+For immutable provider-only module snapshots and explicit import composition,
+see [declarative discovery](discovery.md).
+
 ## Registries
 
 A registry is a catalogue you declare once, at module level, and reuse:
