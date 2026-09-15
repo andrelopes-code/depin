@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Iter
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from dataclasses import dataclass, field
 from types import FrameType
-from typing import Never, Self, TypeGuard, overload, override
+from typing import Never, Protocol, Self, TypeGuard, overload, override
 
 from depin._core.scope import Scope
 from depin._core.spec import BindRecord, Condition, ProviderKey
@@ -43,6 +43,11 @@ class _ProviderData:
     check: object | None
     owner: str
     location: _SourceLocation
+
+
+class _ProviderInput(Protocol):
+    @property
+    def _data(self) -> _ProviderData: ...
 
 
 def _caller_location() -> _SourceLocation:
@@ -336,7 +341,7 @@ class Catalog:
     _module: str
     _providers: tuple[Provider[object], ...]
 
-    def __init__(self, module: str, /, *providers: Provider[object]) -> None:
+    def __init__(self, module: str, /, *providers: _ProviderInput) -> None:
         """Create the completed snapshot for its owning module.
 
         Args:
