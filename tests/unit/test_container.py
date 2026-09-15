@@ -1,7 +1,7 @@
 """Container construction and composition of binding sources."""
 
 from collections.abc import Callable, Iterable
-from typing import Annotated
+from typing import Annotated, override
 
 import pytest
 
@@ -29,6 +29,37 @@ class _NonIterableRecords:
 class _InvalidMemberRecords:
     def records(self) -> Iterable[object]:
         return (object(),)
+
+
+class _RecordsFailure(Exception): ...
+
+
+class _UnreadableRecords:
+    @override
+    def __getattribute__(self, name: str) -> object:
+        if name == 'records':
+            raise _RecordsFailure('records cannot be read')
+        return object.__getattribute__(self, name)
+
+    def records(self) -> Iterable[BindRecord]:
+        return ()
+
+
+class _DynamicRecords:
+    @override
+    def __getattribute__(self, name: str) -> object:
+        if name == 'records':
+
+            def records() -> Iterable[BindRecord]:
+                return ()
+
+            return records
+        return object.__getattribute__(self, name)
+
+
+class _RaisingRecords:
+    def records(self) -> Iterable[BindRecord]:
+        raise _RecordsFailure('records cannot be called')
 
 
 def _call(callable_: Callable[..., object], arguments: tuple[object, ...]) -> object:
@@ -131,17 +162,21 @@ def test_container_rejects_a_catalog_until_it_is_composed_through_a_manifest() -
 
 
 @pytest.mark.parametrize(
-    ('source_type', 'expected_context'),
+    ('source_type', 'expected_context', 'failure_cause'),
     [
-        (_MissingRecords, 'records'),
-        (_NonCallableRecords, 'callable'),
-        (_NonIterableRecords, 'iterable'),
-        (_InvalidMemberRecords, 'BindRecord'),
+        (_MissingRecords, 'records', False),
+        (_NonCallableRecords, 'callable', False),
+        (_NonIterableRecords, 'iterable', False),
+        (_InvalidMemberRecords, 'BindRecord', False),
+        (_UnreadableRecords, 'reading its records', True),
+        (_DynamicRecords, 'does not satisfy Bindings', False),
+        (_RaisingRecords, 'records() raised', True),
     ],
 )
 def test_container_include_rejects_malformed_structural_sources_atomically(
     source_type: type[object],
     expected_context: str,
+    failure_cause: bool,
 ) -> None:
     class Existing: ...
 
@@ -157,6 +192,8 @@ def test_container_include_rejects_malformed_structural_sources_atomically(
     assert expected_context in message
     assert 'Bindings' in message or 'return' in message
     assert container.records() == before
+    if failure_cause:
+        assert isinstance(exc.value.__cause__, _RecordsFailure)
 
 
 def test_the_scope_decorators_register_a_factory_and_return_it_unchanged() -> None:

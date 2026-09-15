@@ -16,8 +16,12 @@ from depin._core.spec import BindRecord
 from depin.errors import InvalidProviderError
 
 _DATA_ATTRIBUTE = '_data'
+_MANIFEST_MODULE_ATTRIBUTE = '_manifest_module'
 _MODULE_ATTRIBUTE = '_module'
+_PROVIDERS_ATTRIBUTE = '_providers'
+_SOURCES_ATTRIBUTE = '_sources'
 _TOKEN_ATTRIBUTE = '_ProviderToken'
+_DELETE_ATTRIBUTE = object()
 
 
 class Service: ...
@@ -103,6 +107,13 @@ def _provider_data(declaration: object) -> _ProviderDataView:
     return snapshot
 
 
+def _corrupt_attribute(target: object, attribute: str, replacement: object) -> None:
+    if replacement is _DELETE_ATTRIBUTE:
+        object.__delattr__(target, attribute)
+    else:
+        object.__setattr__(target, attribute, replacement)
+
+
 def _private_provider_token() -> object:
     token_type: object = getattr(discovery_module, _TOKEN_ATTRIBUTE)
     if not callable(token_type):
@@ -146,6 +157,23 @@ def test_provider_stores_the_exact_target_and_location() -> None:
     assert data.location.module == __name__
     assert data.location.filename == __file__
     assert data.location.line == declaration_line
+
+
+def test_provider_rejects_a_missing_caller_frame(monkeypatch: pytest.MonkeyPatch) -> None:
+    def no_frame() -> None:
+        return None
+
+    monkeypatch.setattr(inspect, 'currentframe', no_frame)
+
+    with pytest.raises(InvalidProviderError, match='cannot determine the declaration or composition module'):
+        provider(Service)
+
+
+def test_provider_rejects_a_caller_without_a_module_name() -> None:
+    namespace: dict[str, object] = {'Service': Service, 'provider': provider}
+
+    with pytest.raises(InvalidProviderError, match='caller has no non-empty __name__'):
+        exec('provider(Service)', namespace)
 
 
 def test_provider_is_frozen_and_slotted() -> None:
@@ -529,3 +557,168 @@ def test_manifest_staging_rejects_a_forged_provider_snapshot_with_full_provenanc
     assert f'{location.filename}:{location.line}' in message
     assert repr(offending) in message
     assert 'provider(target)' in message
+
+
+@pytest.mark.parametrize(
+    ('replacement', 'expected_context'),
+    [
+        pytest.param(_DELETE_ATTRIBUTE, 'no valid declaration snapshot', id='missing-data'),
+        pytest.param(object(), 'invalid declaration data', id='invalid-data'),
+    ],
+)
+def test_catalog_rejects_a_malformed_private_provider_snapshot(
+    replacement: object,
+    expected_context: str,
+) -> None:
+    declaration = provider(Service)
+    _corrupt_attribute(declaration, _DATA_ATTRIBUTE, replacement)
+
+    with pytest.raises(InvalidProviderError) as exc:
+        Catalog(__name__, declaration)
+
+    message = str(exc.value)
+    assert expected_context in message
+    assert 'provider(target)' in message
+
+
+@pytest.mark.parametrize(
+    ('target_name', 'attribute', 'replacement', 'expected_context'),
+    [
+        pytest.param(
+            'manifest', _MODULE_ATTRIBUTE, _DELETE_ATTRIBUTE, 'no valid module snapshot', id='manifest-module-missing'
+        ),
+        pytest.param('manifest', _MODULE_ATTRIBUTE, None, 'invalid module', id='manifest-module-invalid'),
+        pytest.param(
+            'manifest', _SOURCES_ATTRIBUTE, _DELETE_ATTRIBUTE, 'no valid source snapshot', id='manifest-sources-missing'
+        ),
+        pytest.param('manifest', _SOURCES_ATTRIBUTE, [], 'invalid source snapshot', id='manifest-sources-invalid'),
+        pytest.param('manifest', _SOURCES_ATTRIBUTE, (object(),), 'source index 0', id='manifest-member-invalid'),
+        pytest.param(
+            'catalog', _MODULE_ATTRIBUTE, _DELETE_ATTRIBUTE, 'no valid catalogue snapshot', id='catalog-module-missing'
+        ),
+        pytest.param('catalog', _MODULE_ATTRIBUTE, None, 'invalid catalogue owner', id='catalog-module-invalid'),
+        pytest.param(
+            'catalog',
+            _PROVIDERS_ATTRIBUTE,
+            _DELETE_ATTRIBUTE,
+            'no valid catalogue snapshot',
+            id='catalog-providers-missing',
+        ),
+        pytest.param('catalog', _PROVIDERS_ATTRIBUTE, [], 'invalid provider snapshot', id='catalog-providers-invalid'),
+        pytest.param('catalog', _PROVIDERS_ATTRIBUTE, (object(),), 'provider index 0', id='catalog-member-invalid'),
+    ],
+)
+def test_manifest_staging_rejects_malformed_private_composition_snapshots(
+    target_name: str,
+    attribute: str,
+    replacement: object,
+    expected_context: str,
+) -> None:
+    catalog = Catalog(__name__, provider(Service))
+    manifest = Manifest(__name__, catalog)
+    target = manifest if target_name == 'manifest' else catalog
+    _corrupt_attribute(target, attribute, replacement)
+
+    with pytest.raises(InvalidProviderError) as exc:
+        manifest.records()
+
+    message = str(exc.value)
+    assert expected_context in message
+    assert 'recreate' in message
+
+
+@pytest.mark.parametrize(
+    ('corruption', 'expected_context'),
+    [
+        ('missing-data', 'no valid declaration snapshot'),
+        ('invalid-data', 'invalid declaration snapshot'),
+        ('invalid-location', 'invalid declaration location'),
+        ('empty-location-module', 'invalid declaration location'),
+        ('empty-location-filename', 'invalid declaration location'),
+        ('zero-location-line', 'invalid declaration location'),
+        ('boolean-location-line', 'invalid declaration location'),
+        ('owner-mismatch', 'not catalogue owner'),
+        ('location-owner-mismatch', 'not declaration owner'),
+        ('invalid-metadata', 'invalid metadata'),
+    ],
+)
+def test_manifest_staging_rejects_malformed_private_provider_records(
+    corruption: str,
+    expected_context: str,
+) -> None:
+    declaration = provider(Service)
+    data = _provider_data(declaration)
+    location = data.location
+    catalog = Catalog(__name__, declaration)
+    manifest = Manifest(__name__, catalog)
+
+    if corruption == 'missing-data':
+        object.__delattr__(declaration, _DATA_ATTRIBUTE)
+    elif corruption == 'invalid-data':
+        object.__setattr__(declaration, _DATA_ATTRIBUTE, object())
+    elif corruption == 'invalid-location':
+        object.__setattr__(data, 'location', object())
+    elif corruption == 'empty-location-module':
+        object.__setattr__(location, 'module', '')
+    elif corruption == 'empty-location-filename':
+        object.__setattr__(location, 'filename', '')
+    elif corruption == 'zero-location-line':
+        object.__setattr__(location, 'line', 0)
+    elif corruption == 'boolean-location-line':
+        object.__setattr__(location, 'line', True)
+    elif corruption == 'owner-mismatch':
+        object.__setattr__(data, 'owner', 'foreign.module')
+    elif corruption == 'location-owner-mismatch':
+        object.__setattr__(location, 'module', 'foreign.module')
+    else:
+        object.__setattr__(data, 'scope', object())
+
+    with pytest.raises(InvalidProviderError) as exc:
+        manifest.records()
+
+    message = str(exc.value)
+    assert repr(manifest.module) in message
+    assert 'source index 0' in message
+    assert 'provider index 0' in message
+    assert expected_context in message
+    assert 'recreate' in message.lower()
+
+
+def test_manifest_staging_rejects_a_recursive_private_snapshot() -> None:
+    manifest = Manifest(__name__)
+    object.__setattr__(manifest, _SOURCES_ATTRIBUTE, (manifest,))
+
+    with pytest.raises(InvalidProviderError) as exc:
+        manifest.records()
+
+    message = str(exc.value)
+    assert 'recursive manifest composition' in message
+    assert 'source index 0' in message
+
+
+def test_manifest_staging_rejects_an_owner_that_changes_during_staging(monkeypatch: pytest.MonkeyPatch) -> None:
+    manifest = Manifest(__name__)
+    original_manifest_module: object = getattr(discovery_module, _MANIFEST_MODULE_ATTRIBUTE)
+    if not callable(original_manifest_module):
+        pytest.fail('_manifest_module is not callable')
+    calls = 0
+
+    def changing_manifest_module(value: Manifest, context: str) -> str:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            return 'changed.module'
+        module: object = original_manifest_module(value, context)
+        if not isinstance(module, str):
+            pytest.fail('_manifest_module did not return a module name')
+        return module
+
+    monkeypatch.setattr(discovery_module, _MANIFEST_MODULE_ATTRIBUTE, changing_manifest_module)
+
+    with pytest.raises(InvalidProviderError) as exc:
+        manifest.records()
+
+    message = str(exc.value)
+    assert 'has changed owner to' in message
+    assert repr(__name__) in message
+    assert repr('changed.module') in message
