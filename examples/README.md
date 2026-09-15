@@ -13,6 +13,7 @@ Every example is a runnable module and is executed by
 | [`collections`](collections/main.py) | `python -m examples.collections.main` | `collect()` gathering several handlers behind `list[Handler]`, and `explain()` on the collection. |
 | [`decoration`](decoration/main.py) | `python -m examples.decoration.main` | `decorate()` stacking a caching and a logging wrapper over one binding, and `explain()` on the chain. |
 | [`conditional`](conditional/main.py) | `python -m examples.conditional.main` | `when=` choosing between two implementations of one key, a binding switched off entirely, and `explain()` on the inactive note. |
+| [`declarative_discovery`](declarative_discovery/main.py) | `python -m examples.declarative_discovery.main` | A local `Catalog` with a class and configured factory, an explicitly imported `Manifest`, and container construction owned by `build()`. |
 | [`generic_keys`](generic_keys/main.py) | `python -m examples.generic_keys.main` | `Repo[User]` and `Repo[Order]` as two provider keys, a service depending on both, and `explain()` on one parameterisation. |
 | [`graph_diagnostics`](graph_diagnostics/main.py) | `python -m examples.graph_diagnostics.main` | `explain()` for one key, and the `mermaid` export of the whole graph. |
 | [`warmup`](warmup/main.py) | `python -m examples.warmup.main` | `warmup()` building every singleton in one pass, and a scoped provider it leaves alone. |
