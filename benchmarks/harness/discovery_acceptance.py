@@ -654,7 +654,8 @@ def _collect(
         head_samples.append(measured['head'])
         orders.append(f'{order[0].name}-{order[1].name}')
     captured = environment_module.capture()
-    captured['affinity'] = [] if cpu is None else [cpu]
+    affinity: list[int] = [] if cpu is None else [cpu]
+    captured['affinity'] = affinity
     payload: dict[str, object] = {
         'schema_version': SCHEMA_VERSION,
         'status': 'complete',

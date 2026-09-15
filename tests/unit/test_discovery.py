@@ -699,7 +699,9 @@ def test_manifest_staging_rejects_a_recursive_private_snapshot() -> None:
 def test_manifest_staging_rejects_an_owner_that_changes_during_staging(monkeypatch: pytest.MonkeyPatch) -> None:
     manifest = Manifest(__name__)
     original_manifest_module: object = getattr(discovery_module, _MANIFEST_MODULE_ATTRIBUTE)
-    if not callable(original_manifest_module):
+    if callable(original_manifest_module):
+        call_manifest_module = original_manifest_module
+    else:
         pytest.fail('_manifest_module is not callable')
     calls = 0
 
@@ -708,7 +710,7 @@ def test_manifest_staging_rejects_an_owner_that_changes_during_staging(monkeypat
         calls += 1
         if calls == 2:
             return 'changed.module'
-        module: object = original_manifest_module(value, context)
+        module: object = call_manifest_module(value, context)
         if not isinstance(module, str):
             pytest.fail('_manifest_module did not return a module name')
         return module

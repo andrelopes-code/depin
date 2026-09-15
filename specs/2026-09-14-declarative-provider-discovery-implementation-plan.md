@@ -27,6 +27,13 @@
 
 ## File map and locked responsibilities
 
+The final-verification reconciliation approved on 2026-09-15 replaces the
+earlier illustrative fixture filenames with the exact topology exercised by
+the completed import tests. It also records the existing registration corpus
+extension and the Pyrefly checkout-isolation flags required for the source
+gate to check the linked worktree instead of silently skipping it. This plan
+file may change only to record that approved scope reconciliation.
+
 ### Production surface
 
 | Path | Change | Exact responsibility |
@@ -57,6 +64,7 @@
 | `tests/fixtures/discovery_imports/regular/` | Create a small explicit-import application package reused as an editable tree and zipped wheel-shaped import artifact. |
 | `tests/fixtures/discovery_imports/namespace/` | Create two namespace-package portions and one explicit composition module. |
 | `tests/fixtures/discovery_imports/cycles/` | Create supported, early-failing, and partially initialized import packages. |
+| `conformance/corpus/core/c07_registration.py` | Extend the existing registration corpus to prove that `Manifest` satisfies `Bindings` and is accepted by `Container`. |
 | `conformance/corpus/core/c10_discovery.py` | Create the positive consumer-typing corpus for all four public names and seven provider forms. |
 | `conformance/negative/n08_discovery_scope.py` through `n15_catalog_ingestion.py` | Create one misuse per negative fixture: five metadata errors, direct construction, and direct catalogue ingestion through both consumers. |
 | `conformance/expected/negative.toml` | Add exact checker rule/line expectations for `n08`–`n15`. |
@@ -72,14 +80,40 @@
 | `examples/README.md` | List the executable example. |
 | `tests/integration/test_examples.py` | Execute and assert the example through the same integration gate as every existing example. |
 | `benchmarks/harness/discovery_acceptance.py` | Create the reproducible command that generates the fixed three-class fixture, runs the transferred paired protocol, proves structural equivalence, and applies the absolute and relative decision rule. |
+| `scripts/conformance/source.py` | Disable Pyrefly ignore-file and project-exclusion heuristics so the source gate checks the complete linked-worktree file list. |
+| `specs/2026-09-14-declarative-provider-discovery-implementation-plan.md` | Record the user-approved final file-map reconciliation only. |
 
 No checker configuration, source expected register, lockfile, dependency declaration, benchmark budget, or benchmark result file changes. The focused acceptance command and its deterministic unit tests are the only new benchmark-related source files; measurements remain temporary evidence and `benchmarks/budgets.toml` remains generated and untouched.
 
 The fixture directories above contain exactly these source-controlled files:
 
-- regular/editable/archive fixture: `regular/discovery_fixture/__init__.py`, `targets.py`, `providers.py`, `reexports.py`, and `manifest.py`;
-- namespace fixture: `namespace/portion_a/discovery_namespace/accounts/providers.py`, `namespace/portion_b/discovery_namespace/billing/providers.py`, `namespace/composition/discovery_application/__init__.py`, and `namespace/composition/discovery_application/manifest.py`; namespace directories intentionally omit `__init__.py` outside the composition application; and
-- cycle fixtures: `cycles/supported/cycle_supported/__init__.py`, `a.py`, `b.py`, and `manifest.py`; `cycles/early/cycle_early/__init__.py`, `a.py`, and `b.py`; `cycles/partial/partial_discovery/__init__.py`, `providers.py`, and `manifest.py`.
+- regular/editable/archive fixture:
+  - `tests/fixtures/discovery_imports/regular/discovery_layout/__init__.py`
+  - `tests/fixtures/discovery_imports/regular/discovery_layout/application.py`
+  - `tests/fixtures/discovery_imports/regular/discovery_layout/first.py`
+  - `tests/fixtures/discovery_imports/regular/discovery_layout/reexports.py`
+  - `tests/fixtures/discovery_imports/regular/discovery_layout/second.py`
+  - `tests/fixtures/discovery_imports/regular/discovery_layout/trap.py`
+  - `tests/fixtures/discovery_imports/regular/discovery_layout/unlisted.py`
+- namespace fixture; namespace directories intentionally omit `__init__.py`:
+  - `tests/fixtures/discovery_imports/namespace/portion_a/discovery_namespace/first.py`
+  - `tests/fixtures/discovery_imports/namespace/portion_b/discovery_namespace/application.py`
+  - `tests/fixtures/discovery_imports/namespace/portion_b/discovery_namespace/second.py`
+  - `tests/fixtures/discovery_imports/namespace/portion_b/discovery_namespace/trap.py`
+  - `tests/fixtures/discovery_imports/namespace/portion_unused/discovery_namespace/unlisted.py`
+- cycle fixtures:
+  - `tests/fixtures/discovery_imports/cycles/supported/__init__.py`
+  - `tests/fixtures/discovery_imports/cycles/supported/first.py`
+  - `tests/fixtures/discovery_imports/cycles/supported/second.py`
+  - `tests/fixtures/discovery_imports/cycles/early/__init__.py`
+  - `tests/fixtures/discovery_imports/cycles/early/first.py`
+  - `tests/fixtures/discovery_imports/cycles/early/second.py`
+  - `tests/fixtures/discovery_imports/cycles/early/state.py`
+  - `tests/fixtures/discovery_imports/cycles/partial/__init__.py`
+  - `tests/fixtures/discovery_imports/cycles/partial/application.py`
+  - `tests/fixtures/discovery_imports/cycles/partial/declarations.py`
+  - `tests/fixtures/discovery_imports/cycles/partial/failure.py`
+  - `tests/fixtures/discovery_imports/cycles/partial/state.py`
 
 ## Concrete representation and invariants
 
