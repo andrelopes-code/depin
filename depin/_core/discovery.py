@@ -345,6 +345,21 @@ class Catalog:
     A catalogue records only local `Provider` declarations. It is not a
     `Bindings` source: composition roots explicitly place completed catalogues
     inside a `Manifest` before ingestion.
+
+    Raises:
+        InvalidProviderError: The owner is not the caller, a member is not a
+            declaration, or a declaration belongs to another module.
+
+    Example:
+        ```pycon
+        >>> from depin import Catalog, provider
+        >>> class Service: ...
+        >>> declaration = provider(Service)
+        >>> providers = Catalog(__name__, declaration)
+        >>> providers.providers == (declaration,)
+        True
+
+        ```
     """
 
     _module: str
@@ -395,6 +410,21 @@ class Manifest:
     A manifest is the explicit discovery boundary and satisfies `Bindings`.
     Sources flatten left-to-right; repeated occurrences remain repeated. No
     package scan, name search, or de-duplication occurs.
+
+    Raises:
+        InvalidProviderError: The owner is not the caller or a source is not a
+            completed `Catalog` or `Manifest`.
+
+    Example:
+        ```pycon
+        >>> from depin import Catalog, Manifest, provider
+        >>> class Service: ...
+        >>> providers = Catalog(__name__, provider(Service))
+        >>> manifest = Manifest(__name__, providers)
+        >>> manifest.sources == (providers,)
+        True
+
+        ```
     """
 
     _module: str

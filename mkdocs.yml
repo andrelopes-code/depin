@@ -73,6 +73,7 @@ nav:
   - Reference:
       - Overview: reference/index.md
       - Container & Registry: reference/container.md
+      - Declarative discovery: reference/discovery.md
       - FrozenContainer: reference/frozen.md
       - Scope: reference/scope.md
       - Markers: reference/markers.md

@@ -110,14 +110,17 @@ def _public_value(path: str) -> object:
 @pytest.mark.parametrize(
     ('path', 'required'),
     [
-        ('Provider', ('immutable', 'provider(target)', 'InvalidProviderError', 'Example:')),
-        ('Provider.configure', ('replaces', 'Args:', 'Returns:', 'Raises:', 'Example:')),
-        ('provider', ('identity', 'Args:', 'Returns:', 'Raises:', 'Example:')),
-        ('Catalog', ('immutable', 'owning module', 'ordered')),
-        ('Catalog.__init__', ('Args:', 'Raises:', 'Example:')),
-        ('Manifest', ('immutable', 'Bindings', 'nested')),
-        ('Manifest.__init__', ('Args:', 'Raises:', 'Example:')),
-        ('Manifest.records', ('flatten', 'Returns:', 'Raises:', 'Example:')),
+        ('Provider', ('immutable', 'exact target identity', 'ownership', 'Raises:', 'Example:')),
+        ('Provider.configure', ('replaces', 'immutable', 'freeze()', 'Args:', 'Returns:', 'Raises:', 'Example:')),
+        ('provider', ('identity', 'no scanning', 'owning module', 'Args:', 'Returns:', 'Raises:', 'Example:')),
+        ('Catalog', ('immutable', 'owning module', 'ordered', 'Bindings', 'Raises:', 'Example:')),
+        ('Catalog.__init__', ('owner', 'lexical order', 'Args:', 'Raises:', 'Example:')),
+        (
+            'Manifest',
+            ('immutable', 'Bindings', 'nested', 'left-to-right', 'repeated', 'package scan', 'Raises:', 'Example:'),
+        ),
+        ('Manifest.__init__', ('owner', 'ingestion order', 'Args:', 'Raises:', 'Example:')),
+        ('Manifest.records', ('flatten', 'lexical order', 'repetition', 'not run', 'Returns:', 'Raises:', 'Example:')),
     ],
 )
 def test_declarative_discovery_public_docstrings_define_their_contract(
@@ -138,7 +141,7 @@ def test_existing_public_docs_integrate_manifest_ingestion_and_discovery_failure
         (inspect.getdoc(depin.Registry), ('Catalog', 'Manifest')),
         (inspect.getdoc(depin.Bindings), ('Manifest',)),
         (inspect.getdoc(depin.Container.include), ('Manifest', 'atomic', 'InvalidProviderError')),
-        (inspect.getdoc(InvalidProviderError), ('provider', 'Catalog', 'Manifest', 'records')),
+        (inspect.getdoc(InvalidProviderError), ('provider', 'Catalog', 'Manifest', 'records', 'Example:')),
     )
 
     for doc, fragments in contracts:

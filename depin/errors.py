@@ -92,6 +92,18 @@ class InvalidProviderError(DepinError, TypeError):
 
     Inherits ``TypeError``, so existing ``except TypeError`` handlers keep
     working.
+
+    Example:
+        ```pycon
+        >>> from depin import provider
+        >>> from depin.errors import InvalidProviderError
+        >>> try:
+        ...     provider(42)
+        ... except InvalidProviderError as error:
+        ...     str(error).startswith('cannot declare')
+        True
+
+        ```
     """
 
 
