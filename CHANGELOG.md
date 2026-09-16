@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0](https://github.com/andrelopes-code/depin/compare/v0.20.0...v0.21.0) (2026-09-16)
+
+
+### Features
+
+* add declarative provider discovery ([#117](https://github.com/andrelopes-code/depin/issues/117)) ([66be85d](https://github.com/andrelopes-code/depin/commit/66be85d99e1809d38f0831323b309adaef2476d3))
+
 ## [0.20.0](https://github.com/andrelopes-code/depin/compare/v0.19.0...v0.20.0) (2026-09-10)
 
 
