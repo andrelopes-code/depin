@@ -18,13 +18,17 @@ from typing import Protocol, assert_type
 
 from depin import (
     Bindings,
+    Catalog,
     Condition,
     Container,
     FrozenContainer,
+    Manifest,
+    Provider,
     Registry,
     Scope,
     ScopeDecorator,
     Token,
+    provider,
     provides,
 )
 
@@ -211,6 +215,17 @@ def a_registry_is_a_binding_source() -> None:
     assert_type(registry.bind(Config), Registry)
     assert_type(registry.value(port, 8080), Registry)
     _source: Bindings = registry
+
+
+def a_manifest_stages_declarative_providers_as_a_binding_source() -> None:
+    config_provider = provider(Config)
+    assert_type(config_provider, Provider[Config])
+    catalog = Catalog(__name__, config_provider)
+    assert_type(catalog, Catalog)
+    manifest = Manifest(__name__, catalog)
+    assert_type(manifest, Manifest)
+    _source: Bindings = manifest
+    assert_type(Container(manifest), Container)
 
 
 def two_registries_compose_with_the_or_operator() -> None:

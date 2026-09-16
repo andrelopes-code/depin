@@ -16,6 +16,9 @@ from examples.conditional.main import Checkout as SwitchedCheckout
 from examples.conditional.main import MemoryStore, Metrics, PostgresStore
 from examples.conditional.main import Settings as CheckoutSettings
 from examples.conditional.main import build as build_conditional
+from examples.declarative_discovery.main import build as build_declarative_discovery
+from examples.declarative_discovery.main import main as run_declarative_discovery
+from examples.declarative_discovery.providers import Greeter
 from examples.decoration.main import LOG as DECORATION_LOG
 from examples.decoration.main import READS as DECORATION_READS
 from examples.decoration.main import Page as DecoratedPage
@@ -183,6 +186,18 @@ def test_conditional_example_resolves_an_inactive_binding_to_none() -> None:
     assert isinstance(checkout.store, MemoryStore)
     assert checkout.metrics is None
     assert 'registered but inactive' in di.explain(Metrics)
+
+
+def test_declarative_discovery_example_resolves_the_imported_manifest() -> None:
+    di = build_declarative_discovery()
+
+    assert di[Greeter].render('depin') == 'Hello, depin!'
+
+
+def test_declarative_discovery_example_prints_the_resolved_value(capsys: pytest.CaptureFixture[str]) -> None:
+    run_declarative_discovery()
+
+    assert capsys.readouterr().out == 'Hello, depin!\n'
 
 
 def test_generic_keys_example_resolves_each_parameterisation_to_its_own_repo() -> None:

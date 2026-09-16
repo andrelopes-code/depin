@@ -73,3 +73,75 @@ pyright = "reportArgumentType"
 basedpyright = "reportArgumentType"
 ty = "invalid-argument-type"
 pyrefly = "bad-argument-type"
+
+[n08]
+misuse = "Provider.configure() given a scope that is not a Scope"
+line = 10
+mypy = "arg-type"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "invalid-argument-type"
+pyrefly = "bad-argument-type"
+
+[n09]
+misuse = "Provider.configure() given an invalid provider key"
+line = 10
+mypy = "arg-type"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "invalid-argument-type"
+pyrefly = "bad-argument-type"
+
+[n10]
+misuse = "Provider.configure() given a tag that is not a string"
+line = 10
+mypy = "arg-type"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "invalid-argument-type"
+pyrefly = "bad-argument-type"
+
+[n11]
+misuse = "Provider.configure() given an invalid condition"
+line = 10
+mypy = "arg-type"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "invalid-argument-type"
+pyrefly = "bad-argument-type"
+
+[n12]
+misuse = "Provider.configure() given a health check for an unrelated type"
+line = 17
+mypy = "arg-type"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "invalid-argument-type"
+pyrefly = "bad-argument-type"
+
+[n13]
+misuse = "Provider constructed directly without its private token"
+line = 10
+mypy = "call-arg"
+pyright = "reportCallIssue"
+basedpyright = "reportCallIssue"
+ty = "missing-argument"
+pyrefly = "bad-argument-count"
+
+[n14]
+misuse = "Container constructed with a bare Catalog"
+line = 11
+mypy = "arg-type"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "invalid-argument-type"
+pyrefly = "bad-argument-type"
+
+[n15]
+misuse = "Registry.include() given a bare Catalog"
+line = 11
+mypy = "arg-type"
+pyright = "reportArgumentType"
+basedpyright = "reportArgumentType"
+ty = "invalid-argument-type"
+pyrefly = "bad-argument-type"

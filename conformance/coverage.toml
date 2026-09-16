@@ -29,6 +29,9 @@ fixtures = ["corpus/ext_extras/x01_fastapi.py"]
 [Bindings]
 fixtures = ["corpus/core/c07_registration.py"]
 
+[Catalog]
+fixtures = ["corpus/core/c10_discovery.py"]
+
 [Condition]
 fixtures = ["corpus/core/c07_registration.py"]
 
@@ -72,8 +75,14 @@ fixtures = ["corpus/core/c08_diagnostics.py"]
 [Host]
 fixtures = ["corpus/core/c09_hosting.py"]
 
+[Manifest]
+fixtures = ["corpus/core/c10_discovery.py"]
+
 [Named]
 fixtures = ["corpus/core/c02_keys.py"]
+
+[Provider]
+fixtures = ["corpus/core/c10_discovery.py"]
 
 [ProviderKey]
 fixtures = ["corpus/core/c02_keys.py", "corpus/core/c08_diagnostics.py"]
@@ -125,6 +134,9 @@ fixtures = ["corpus/core/c05_injection.py"]
 
 [optional_hosted_container]
 fixtures = ["corpus/core/c09_hosting.py"]
+
+[provider]
+fixtures = ["corpus/core/c10_discovery.py"]
 
 [provides]
 fixtures = ["corpus/core/c07_registration.py"]

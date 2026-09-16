@@ -56,6 +56,7 @@ nav:
       - Overview: guide/index.md
       - Lifetimes and scopes: guide/lifetimes.md
       - Composing bindings: guide/composition.md
+      - Declarative discovery: guide/discovery.md
       - Resolution semantics: guide/resolution.md
       - Testing: guide/testing.md
       - Inspecting the graph: guide/diagnostics.md
@@ -73,6 +74,7 @@ nav:
   - Reference:
       - Overview: reference/index.md
       - Container & Registry: reference/container.md
+      - Declarative discovery: reference/discovery.md
       - FrozenContainer: reference/frozen.md
       - Scope: reference/scope.md
       - Markers: reference/markers.md

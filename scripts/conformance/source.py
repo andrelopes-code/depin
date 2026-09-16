@@ -171,6 +171,8 @@ def pyrefly_source(spec: str) -> tuple[str, ...]:
         'pyrefly.toml',
         '--preset',
         'strict',
+        '--use-ignore-files=false',
+        '--disable-project-excludes-heuristics=true',
         '--python-interpreter-path',
         str(venv_python(SOURCE_VENV)),
         '--output-format',

@@ -2,8 +2,9 @@
 
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Iterable, Sequence
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
-from typing import Self, final, overload
+from typing import Self, TypeGuard, final, overload
 
+from depin._core.discovery import Catalog
 from depin._core.markers import Token, TokenKeyBase
 from depin._core.scope import Scope
 from depin._core.spec import (
@@ -29,6 +30,69 @@ type _BindFn = Callable[
     ],
     None,
 ]
+
+
+def _is_object_iterable(value: object) -> TypeGuard[Iterable[object]]:
+    return isinstance(value, Iterable)
+
+
+def _bindings_correction() -> str:
+    return 'pass a Bindings source whose callable records() returns only BindRecord values'
+
+
+def _stage_binding_source(source: object) -> tuple[BindRecord, ...]:
+    if isinstance(source, Catalog):
+        raise InvalidProviderError(
+            f'cannot include Catalog {source!r} directly; compose it through Manifest(module, catalog) first.'
+        )
+    satisfies_protocol = isinstance(source, Bindings)
+    try:
+        records_member: object = source.__getattribute__('records')
+    except AttributeError as exc:
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because it has no records member; {_bindings_correction()}.'
+        ) from exc
+    except Exception as exc:
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because reading its records member raised {exc!r}; '
+            f'{_bindings_correction()}.'
+        ) from exc
+    if not callable(records_member):
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because records is not callable; {_bindings_correction()}.'
+        )
+    if not satisfies_protocol:
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because it does not satisfy Bindings; {_bindings_correction()}.'
+        )
+    try:
+        result: object = records_member()
+    except Exception as exc:
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because records() raised {exc!r}; '
+            f'fix records() and {_bindings_correction()}.'
+        ) from exc
+    if not _is_object_iterable(result):
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because records() returned non-iterable {result!r}; '
+            f'{_bindings_correction()}.'
+        )
+    try:
+        materialized = tuple(result)
+    except Exception as exc:
+        raise InvalidProviderError(
+            f'cannot include binding source {source!r} because iterating records() raised {exc!r}; '
+            f'fix records() and {_bindings_correction()}.'
+        ) from exc
+    staged: list[BindRecord] = []
+    for index, record in enumerate(materialized):
+        if not isinstance(record, BindRecord):
+            raise InvalidProviderError(
+                f'cannot include binding source {source!r} because records() yielded {record!r} at index {index}; '
+                f'{_bindings_correction()}.'
+            )
+        staged.append(record)
+    return tuple(staged)
 
 
 @final
@@ -579,24 +643,40 @@ class BindingCollector:
     def include(self, *sources: Bindings) -> Self:
         """Append the bindings of one or more sources, in order.
 
-        Each source is anything satisfying `Bindings` — usually a `Registry` or
-        another `Container`. Records are concatenated, not de-duplicated: a key
-        bound here and in a source raises `DuplicateProviderError` at
-        `Container.freeze()`.
+        Each source is anything satisfying `Bindings`, including a `Manifest`,
+        `Registry`, or another `Container`. A source is materialized and appended
+        atomically as one contiguous segment; if a later independent source
+        fails, earlier segments remain. Records are not de-duplicated: a repeated
+        key reaches `DuplicateProviderError` at `Container.freeze()`.
+
+        Args:
+            *sources: Completed binding sources in append order.
+
+        Returns:
+            ``self``, for chaining.
+
+        Raises:
+            InvalidProviderError: A source does not satisfy `Bindings`, exposes
+                a malformed `records()` member or result, yields something other
+                than a binding record, or is a `Catalog` not composed through a
+                `Manifest`.
 
         Example:
             ```pycon
-            >>> from depin import Container, Registry
+            >>> from depin import Catalog, Container, Manifest, provider
             >>> class Logger: ...
             >>> class Metrics: ...
-            >>> di = Container().include(Registry().bind(Logger), Registry().bind(Metrics)).freeze()
+            >>> providers = Catalog(__name__, provider(Logger), provider(Metrics))
+            >>> manifest = Manifest(__name__, providers)
+            >>> di = Container().include(manifest).freeze()
             >>> isinstance(di[Logger], Logger) and isinstance(di[Metrics], Metrics)
             True
 
             ```
         """
         for source in sources:
-            self._records.extend(source.records())
+            staged = _stage_binding_source(source)
+            self._records.extend(staged)
         return self
 
     def records(self) -> Iterable[BindRecord]:

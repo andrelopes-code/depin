@@ -83,15 +83,27 @@ class CaptiveDependencyError(DepinError):
 class InvalidProviderError(DepinError, TypeError):
     """A binding does not carry the type information depin needs.
 
-    Raised by `Container.freeze()` when a factory has no return annotation and
-    no ``provides=``, when a parameter has no type annotation and no default,
-    when a value cannot serve as a provider key, or when the registered source
-    is neither a class nor a callable. Also raised at resolution time if a
-    provider returns something incompatible with its declared shape — an
-    ``@contextmanager`` factory that returns a plain value, for instance.
+    Raised while declaring a `provider` or constructing a `Catalog` / `Manifest`
+    when its target, metadata, ownership, or members are invalid. It also reports
+    malformed `Bindings` sources and `records()` results before collector state
+    changes. At `Container.freeze()`, it identifies missing type information,
+    invalid keys, and unsupported provider shapes; at resolution time, it reports
+    a value incompatible with its declared shape.
 
     Inherits ``TypeError``, so existing ``except TypeError`` handlers keep
     working.
+
+    Example:
+        ```pycon
+        >>> from depin import provider
+        >>> from depin.errors import InvalidProviderError
+        >>> try:
+        ...     provider(42)
+        ... except InvalidProviderError as error:
+        ...     str(error).startswith('cannot declare')
+        True
+
+        ```
     """
 
 
