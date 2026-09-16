@@ -429,6 +429,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declarative discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/resolution/" class="md-nav__link">
         
   
@@ -947,6 +975,34 @@
     
   
     Container & Registry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declarative discovery
   
 
     
@@ -2266,15 +2322,27 @@ dependency a singleton.</p>
 
 
         <p>A binding does not carry the type information depin needs.</p>
-<p>Raised by <code>Container.freeze()</code> when a factory has no return annotation and
-no <code>provides=</code>, when a parameter has no type annotation and no default,
-when a value cannot serve as a provider key, or when the registered source
-is neither a class nor a callable. Also raised at resolution time if a
-provider returns something incompatible with its declared shape — an
-<code>@contextmanager</code> factory that returns a plain value, for instance.</p>
+<p>Raised while declaring a <code>provider</code> or constructing a <code>Catalog</code> / <code>Manifest</code>
+when its target, metadata, ownership, or members are invalid. It also reports
+malformed <code>Bindings</code> sources and <code>records()</code> results before collector state
+changes. At <code>Container.freeze()</code>, it identifies missing type information,
+invalid keys, and unsupported provider shapes; at resolution time, it reports
+a value incompatible with its declared shape.</p>
 <p>Inherits <code>TypeError</code>, so existing <code>except TypeError</code> handlers keep
 working.</p>
 
+
+<details class="example" open>
+  <summary>Example</summary>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">provider</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">InvalidProviderError</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">provider</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+<span class="gp">... </span><span class="k">except</span> <span class="n">InvalidProviderError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">'cannot declare'</span><span class="p">)</span>
+<span class="go">True</span>
+</code></pre></div>
+</details>
 
 
 

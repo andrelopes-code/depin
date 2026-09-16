@@ -16,7 +16,7 @@
         <link rel="prev" href="../">
       
       
-        <link rel="next" href="../frozen/">
+        <link rel="next" href="../discovery/">
       
       
         
@@ -409,6 +409,34 @@
     
   
     Composing bindings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declarative discovery
   
 
     
@@ -1368,6 +1396,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declarative discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../frozen/" class="md-nav__link">
         
   
@@ -2294,11 +2350,12 @@
 
         <p>Mutable builder for a dependency graph.</p>
 <p>Collect bindings with <code>bind()</code>, <code>value()</code>, <code>scope_value()</code>, <code>alias()</code>,
-<code>collect()</code>, <code>decorate()</code>, and the <code>singleton()</code> / <code>scoped()</code> / <code>transient()</code> decorators, then call
-<code>freeze()</code> to validate the graph and obtain an immutable <code>FrozenContainer</code>. A
-<code>Container</code> performs no resolution itself; nothing is constructed until you
-resolve from the frozen view. Registration order does not matter — providers
-are matched by key and ordered at <code>freeze()</code> time.</p>
+<code>collect()</code>, <code>decorate()</code>, explicit <code>Manifest</code> sources, and the
+<code>singleton()</code> / <code>scoped()</code> / <code>transient()</code> decorators, then call <code>freeze()</code>
+to validate the graph and obtain an immutable <code>FrozenContainer</code>. A
+<code>Container</code> performs no resolution itself; nothing is constructed until
+you resolve from the frozen view. Registration order does not matter —
+providers are matched by key and ordered at <code>freeze()</code> time.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2321,13 +2378,38 @@ are matched by key and ordered at <code>freeze()</code> time.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Binding sources to load up front — <code>Registry</code> instances, other
-containers, anything satisfying <code>Bindings</code>. Equivalent to calling
-<code>include()</code> with the same arguments.</p>
+                <p>Binding sources to load up front — <code>Manifest</code> or <code>Registry</code>
+instances, other containers, or anything satisfying <code>Bindings</code>.
+Equivalent to calling <code>include()</code> with the same arguments.</p>
               </div>
             </td>
             <td>
                   <code>()</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="InvalidProviderError">InvalidProviderError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A source does not satisfy <code>Bindings</code>, its
+<code>records()</code> result is malformed, or a <code>Catalog</code> is supplied without
+first composing it through a <code>Manifest</code>.</p>
+              </div>
             </td>
           </tr>
       </tbody>
@@ -3570,18 +3652,101 @@ A callable is evaluated inside <code>Container.freeze()</code>.</p>
     <div class="doc doc-contents ">
 
         <p>Append the bindings of one or more sources, in order.</p>
-<p>Each source is anything satisfying <code>Bindings</code> — usually a <code>Registry</code> or
-another <code>Container</code>. Records are concatenated, not de-duplicated: a key
-bound here and in a source raises <code>DuplicateProviderError</code> at
-<code>Container.freeze()</code>.</p>
+<p>Each source is anything satisfying <code>Bindings</code>, including a <code>Manifest</code>,
+<code>Registry</code>, or another <code>Container</code>. A source is materialized and appended
+atomically as one contiguous segment; if a later independent source
+fails, earlier segments remain. Records are not de-duplicated: a repeated
+key reaches <code>DuplicateProviderError</code> at <code>Container.freeze()</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>*sources</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Bindings (depin._core.spec.Bindings)" href="#depin.Bindings">Bindings</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Completed binding sources in append order.</p>
+              </div>
+            </td>
+            <td>
+                  <code>()</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.Self">Self</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>self</code>, for chaining.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="InvalidProviderError (depin.errors.InvalidProviderError)" href="../errors/#depin.errors.InvalidProviderError">InvalidProviderError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A source does not satisfy <code>Bindings</code>, exposes
+a malformed <code>records()</code> member or result, yields something other
+than a binding record, or is a <code>Catalog</code> not composed through a
+<code>Manifest</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 <details class="example" open>
   <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Registry</span>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Catalog</span><span class="p">,</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Manifest</span><span class="p">,</span> <span class="n">provider</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Logger</span><span class="p">:</span> <span class="o">...</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Metrics</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">Registry</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Logger</span><span class="p">),</span> <span class="n">Registry</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Metrics</span><span class="p">))</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">providers</span> <span class="o">=</span> <span class="n">Catalog</span><span class="p">(</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">provider</span><span class="p">(</span><span class="n">Logger</span><span class="p">),</span> <span class="n">provider</span><span class="p">(</span><span class="n">Metrics</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manifest</span> <span class="o">=</span> <span class="n">Manifest</span><span class="p">(</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">providers</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">isinstance</span><span class="p">(</span><span class="n">di</span><span class="p">[</span><span class="n">Logger</span><span class="p">],</span> <span class="n">Logger</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">di</span><span class="p">[</span><span class="n">Metrics</span><span class="p">],</span> <span class="n">Metrics</span><span class="p">)</span>
 <span class="go">True</span>
 </code></pre></div>
@@ -3775,9 +3940,9 @@ as transient, or such a decorator wraps a transient binding.</p>
 
         <p>A reusable, composable collection of bindings.</p>
 <p>A <code>Registry</code> holds the same kind of bindings as a <code>Container</code> but performs
-no validation and no resolution: it is a module-level catalogue you declare
-once and feed into one or more containers. Registries compose with <code>|</code>, and
-a container accepts any number of them at construction.</p>
+no validation and no resolution. Unlike an immutable provider-only <code>Catalog</code>,
+it is a mutable builder for every explicit binding form. Registries compose
+with <code>|</code>, can include a <code>Manifest</code>, and can feed one or more containers.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -5047,18 +5212,101 @@ A callable is evaluated inside <code>Container.freeze()</code>.</p>
     <div class="doc doc-contents ">
 
         <p>Append the bindings of one or more sources, in order.</p>
-<p>Each source is anything satisfying <code>Bindings</code> — usually a <code>Registry</code> or
-another <code>Container</code>. Records are concatenated, not de-duplicated: a key
-bound here and in a source raises <code>DuplicateProviderError</code> at
-<code>Container.freeze()</code>.</p>
+<p>Each source is anything satisfying <code>Bindings</code>, including a <code>Manifest</code>,
+<code>Registry</code>, or another <code>Container</code>. A source is materialized and appended
+atomically as one contiguous segment; if a later independent source
+fails, earlier segments remain. Records are not de-duplicated: a repeated
+key reaches <code>DuplicateProviderError</code> at <code>Container.freeze()</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>*sources</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Bindings (depin._core.spec.Bindings)" href="#depin.Bindings">Bindings</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Completed binding sources in append order.</p>
+              </div>
+            </td>
+            <td>
+                  <code>()</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.Self">Self</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>self</code>, for chaining.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="InvalidProviderError (depin.errors.InvalidProviderError)" href="../errors/#depin.errors.InvalidProviderError">InvalidProviderError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A source does not satisfy <code>Bindings</code>, exposes
+a malformed <code>records()</code> member or result, yields something other
+than a binding record, or is a <code>Catalog</code> not composed through a
+<code>Manifest</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 <details class="example" open>
   <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Registry</span>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Catalog</span><span class="p">,</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Manifest</span><span class="p">,</span> <span class="n">provider</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Logger</span><span class="p">:</span> <span class="o">...</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Metrics</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">Registry</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Logger</span><span class="p">),</span> <span class="n">Registry</span><span class="p">()</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Metrics</span><span class="p">))</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">providers</span> <span class="o">=</span> <span class="n">Catalog</span><span class="p">(</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">provider</span><span class="p">(</span><span class="n">Logger</span><span class="p">),</span> <span class="n">provider</span><span class="p">(</span><span class="n">Metrics</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manifest</span> <span class="o">=</span> <span class="n">Manifest</span><span class="p">(</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">providers</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">isinstance</span><span class="p">(</span><span class="n">di</span><span class="p">[</span><span class="n">Logger</span><span class="p">],</span> <span class="n">Logger</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">di</span><span class="p">[</span><span class="n">Metrics</span><span class="p">],</span> <span class="n">Metrics</span><span class="p">)</span>
 <span class="go">True</span>
 </code></pre></div>
@@ -5137,19 +5385,19 @@ other's when this one is unnamed.</p>
 
 
         <p>Anything that can hand a container a set of bindings.</p>
-<p>Both <code>Registry</code> and <code>Container</code> satisfy it, so either can seed a new
-container: <code>Container(infra, services)</code>. Implement it on your own type to
-plug a custom binding source into the same call.</p>
+<p><code>Manifest</code>, <code>Registry</code>, and <code>Container</code> satisfy it, so any of them can seed a
+new container. Implement it on your own type to plug a custom binding source
+into the same call.</p>
 
 
 <details class="example" open>
   <summary>Example</summary>
-  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Registry</span><span class="p">,</span> <span class="n">Bindings</span>
+  <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bindings</span><span class="p">,</span> <span class="n">Catalog</span><span class="p">,</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Manifest</span><span class="p">,</span> <span class="n">provider</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">class</span><span class="w"> </span><span class="nc">Svc</span><span class="p">:</span> <span class="o">...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">registry</span> <span class="o">=</span> <span class="n">Registry</span><span class="p">(</span><span class="s1">'infra'</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">Svc</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">isinstance</span><span class="p">(</span><span class="n">registry</span><span class="p">,</span> <span class="n">Bindings</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manifest</span> <span class="o">=</span> <span class="n">Manifest</span><span class="p">(</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">Catalog</span><span class="p">(</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">provider</span><span class="p">(</span><span class="n">Svc</span><span class="p">)))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">isinstance</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">Bindings</span><span class="p">)</span>
 <span class="go">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">registry</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">di</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">isinstance</span><span class="p">(</span><span class="n">di</span><span class="p">[</span><span class="n">Svc</span><span class="p">],</span> <span class="n">Svc</span><span class="p">)</span>
 <span class="go">True</span>
 </code></pre></div>

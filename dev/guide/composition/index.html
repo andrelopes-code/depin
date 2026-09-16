@@ -16,7 +16,7 @@
         <link rel="prev" href="../lifetimes/">
       
       
-        <link rel="next" href="../resolution/">
+        <link rel="next" href="../discovery/">
       
       
         
@@ -583,6 +583,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declarative discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../resolution/" class="md-nav__link">
         
   
@@ -1099,6 +1127,34 @@
     
   
     Container & Registry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declarative discovery
   
 
     
@@ -1777,6 +1833,8 @@
 <h1 id="composing-bindings">Composing bindings<a class="headerlink" href="#composing-bindings" title="Permanent link">&para;</a></h1>
 <p>A container is built from binding sources. A <code>Registry</code> is one; another
 container is one; so is anything implementing <code>Bindings</code>.</p>
+<p>For immutable provider-only module snapshots and explicit import composition,
+see <a href="../discovery/">declarative discovery</a>.</p>
 <h2 id="registries">Registries<a class="headerlink" href="#registries" title="Permanent link">&para;</a></h2>
 <p>A registry is a catalogue you declare once, at module level, and reuse:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">depin</span><span class="w"> </span><span class="kn">import</span> <span class="n">Registry</span>
